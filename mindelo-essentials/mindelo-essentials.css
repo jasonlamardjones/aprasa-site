@@ -81,12 +81,36 @@ h3 { margin:0; color:var(--green); font-size:1.2rem; line-height:1.3; font-weigh
   border:1px solid rgba(30,61,46,.2); border-radius:var(--radius);
 }
 .directory-card[hidden] { display:none; }
+.directory-card[data-map-selected="true"] {
+  border:3px solid var(--green);
+  padding:calc(1.25rem - 2px);
+  box-shadow:inset 6px 0 0 var(--ochre);
+}
+.directory-card[data-map-selected="true"]::before {
+  content:"Selected from map";
+  display:block;
+  margin:0 0 .65rem;
+  color:var(--green);
+  font-size:.78rem;
+  font-weight:700;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
 .directory-card p { margin:.7rem 0 0; }
 .record-context { margin:0 0 .55rem!important; color:var(--green); text-transform:uppercase; letter-spacing:.1em; font-size:.75rem; }
 .record-location, .record-source { font-size:.94rem; }
 .checked { color:var(--green); font-size:.84rem; }
 .record-actions { display:flex; flex-wrap:wrap; gap:.65rem 1rem; margin-top:auto; padding-top:1rem; }
-.record-actions a { min-height:44px; display:inline-flex; align-items:center; }
+.record-actions a, .record-actions button { min-height:44px; display:inline-flex; align-items:center; }
+.show-on-map {
+  border:1px solid var(--green);
+  border-radius:999px;
+  background:var(--white);
+  color:var(--green);
+  padding:.45rem .8rem;
+  cursor:pointer;
+}
+.show-on-map:hover { background:rgba(30,61,46,.06); }
 
 .map-layout { display:grid; gap:1rem; }
 .map-canvas {
@@ -98,6 +122,20 @@ h3 { margin:0; color:var(--green); font-size:1.2rem; line-height:1.3; font-weigh
 .mapped-list { background:var(--white); border:1px solid rgba(30,61,46,.2); border-radius:var(--radius); padding:1.25rem; }
 .mapped-list ul { padding-left:1.2rem; }
 .mapped-list li { margin:.5rem 0; }
+.essentials-marker { background:transparent; border:0; }
+.essentials-marker-dot {
+  display:block;
+  width:28px;
+  height:28px;
+  border:3px solid var(--green);
+  border-radius:50%;
+  background:var(--cream);
+  box-shadow:0 0 0 3px rgba(255,255,255,.9);
+}
+.essentials-marker:focus .essentials-marker-dot {
+  outline:3px solid var(--ochre);
+  outline-offset:3px;
+}
 
 .transit-grid article { min-width:0; }
 .corridor-list { list-style:none; padding:0; margin:1rem 0; }
