@@ -114,6 +114,11 @@ h3 { margin: 0; color: var(--green); font-size: 1.25rem; line-height: 1.3; font-
 .site-footer a { color: var(--cream); }
 .back-top { display: inline-flex; min-height: 44px; align-items: center; margin-top: 1rem; }
 
+@media (max-width: 43.99rem) {
+  .header-inner { flex-wrap: wrap; padding-block: .75rem; }
+  .site-nav { width: 100%; justify-content: flex-start; }
+}
+
 @media (min-width: 44rem) {
   .container { width: min(100% - 3rem, var(--max)); }
   .opening { padding: 4.5rem 0 3.5rem; }
