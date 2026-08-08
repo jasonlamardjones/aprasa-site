@@ -4,9 +4,7 @@
   "checked": "8 August 2026",
   "language": {
     "source": "en",
-    "available": [
-      "en"
-    ],
+    "available": ["en"],
     "future_ready": true
   },
   "categories": [
@@ -80,6 +78,35 @@
       "lat": null,
       "lon": null,
       "source": "https://eaip.asa.cv/2024-04-18-AIRAC/html/eAIP/GV-AD-2.GVSV-en-GB.html"
+    },
+    {
+      "id": "SV-MIN-HUB-001",
+      "name": "Praça Estrela",
+      "category": "Getting Around",
+      "context": "Transport hub / boarding area",
+      "description": "A usual Mindelo orientation area for aluguers serving selected São Vicente destination corridors.",
+      "location": "Praça Estrela, Mindelo",
+      "provider": "Public square / transport-orientation evidence",
+      "checked": "8 August 2026",
+      "caveat": "The mapped point represents the praça/boarding area at area-level precision, not an exact stand for a particular vehicle or destination.",
+      "map_status": "map-ready-area",
+      "lat": 16.883646,
+      "lon": -24.989157,
+      "directions": "https://www.google.com/maps/search/?api=1&query=16.883646,-24.989157"
+    },
+    {
+      "id": "SV-MIN-TRN-002",
+      "name": "Gare Marítima de Mindelo",
+      "category": "Getting Around",
+      "context": "Ferry terminal",
+      "description": "Mindelo’s maritime terminal for inter-island ferry travel and related passenger services.",
+      "location": "Avenida Marginal / Terminal de Cabotagem, Mindelo",
+      "provider": "Gare Marítima / ferry-service sources",
+      "checked": "8 August 2026",
+      "caveat": "The terminal identity and address are supported, but a canonical numeric coordinate has not yet been reconciled for this release. Location not pinned yet.",
+      "map_status": "map-ready-coordinate-pending",
+      "lat": null,
+      "lon": null
     },
     {
       "id": "SV-MIN-ADM-001",
@@ -174,25 +201,30 @@
   "transit": {
     "transcor": {
       "mode": "operator-supported directory/orientation",
-      "note": "Use only route fields supported by current operator evidence. No inferred route polylines are represented in Release 1."
+      "note": "Use only route fields supported by current operator evidence. No inferred route polylines are represented in Release 1.",
+      "urban_fare_cve": 42,
+      "l20_fare_cve": 150,
+      "routes": [
+        {"id": "SV-BUS-L01", "label": "L1", "endpoints": "Ribeirinha / Chã de Alecrim / Plateau"},
+        {"id": "SV-BUS-L02", "label": "L2", "endpoints": "Praça Tchetchenia / Portão Cemitério"},
+        {"id": "SV-BUS-L03", "label": "L3", "endpoints": "Regala / Chã de Alecrim / Regala"},
+        {"id": "SV-BUS-L04", "label": "L4", "endpoints": "Espia / Monte Sossego"},
+        {"id": "SV-BUS-L05", "label": "L5", "endpoints": "Liceu Velho / Chã de Marinha"},
+        {"id": "SV-BUS-L06", "label": "L6", "endpoints": "M. Hotel / Chã de Alecrim / M. Hotel"},
+        {"id": "SV-BUS-L07", "label": "L7", "endpoints": "Horta Seca / Madeiralzinho"},
+        {"id": "SV-BUS-L08", "label": "L8", "endpoints": "M. Hotel / Chã de Marinha"},
+        {"id": "SV-BUS-L09", "label": "L9", "endpoints": "P. Rolada / Chã de Alecrim"},
+        {"id": "SV-BUS-L10", "label": "L10", "endpoints": "Portelinha / Chã de Alecrim"},
+        {"id": "SV-BUS-L11", "label": "L11", "endpoints": "Madeiral / L. Tanque / Madeiral"},
+        {"id": "SV-BUS-L12", "label": "L12", "endpoints": "Liceu Velho / Vila Monte"},
+        {"id": "SV-BUS-L20", "label": "L20", "endpoints": "Rotunda / Festival Baía / Rotunda"}
+      ]
     },
     "aluguer_corridors": [
-      {
-        "origin": "Praça Estrela area",
-        "destination": "São Pedro"
-      },
-      {
-        "origin": "Praça Estrela area",
-        "destination": "Salamansa"
-      },
-      {
-        "origin": "Praça Estrela area",
-        "destination": "Baía das Gatas"
-      },
-      {
-        "origin": "Praça Estrela area",
-        "destination": "Calhau"
-      }
+      {"origin": "Praça Estrela area", "destination": "São Pedro"},
+      {"origin": "Praça Estrela area", "destination": "Salamansa"},
+      {"origin": "Praça Estrela area", "destination": "Baía das Gatas"},
+      {"origin": "Praça Estrela area", "destination": "Calhau"}
     ],
     "aluguer_note": "Ask at Praça Estrela for the vehicle to your destination. Aluguers commonly leave when sufficiently full rather than to a published timetable. Before travelling to an outlying settlement, ask where and roughly when to find the return service."
   }
