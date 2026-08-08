@@ -87,7 +87,7 @@ h3 { margin:0; color:var(--green); font-size:1.2rem; line-height:1.3; font-weigh
   box-shadow:inset 6px 0 0 var(--ochre);
 }
 .directory-card[data-map-selected="true"]::before {
-  content:"Selected from map";
+  content:"Selected location";
   display:block;
   margin:0 0 .65rem;
   color:var(--green);
