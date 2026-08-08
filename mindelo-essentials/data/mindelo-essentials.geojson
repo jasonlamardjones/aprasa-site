@@ -1,0 +1,56 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "SV-MIN-HLT-001",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -24.98527,
+          16.8845
+        ]
+      },
+      "properties": {
+        "id": "SV-MIN-HLT-001",
+        "name": "Hospital Dr. Baptista de Sousa",
+        "category": "Health & Pharmacy",
+        "location": "Largo do Tarrafal, Mindelo, São Vicente"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SV-MIN-HLT-002",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -24.986987,
+          16.892007
+        ]
+      },
+      "properties": {
+        "id": "SV-MIN-HLT-002",
+        "name": "Urgimed",
+        "category": "Health & Pharmacy",
+        "location": "Rua Senegal, corner with Avenida Professor Alberto Leite, Mindelo"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SV-MIN-PHA-001",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -24.985437,
+          16.88346
+        ]
+      },
+      "properties": {
+        "id": "SV-MIN-PHA-001",
+        "name": "Farmácia Jovem",
+        "category": "Health & Pharmacy",
+        "location": "Avenida 12 de Setembro, Mindelo, São Vicente"
+      }
+    }
+  ]
+}
