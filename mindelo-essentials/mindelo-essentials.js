@@ -37,7 +37,7 @@
       card.hidden = !show;
       if (show) visible += 1;
     });
-    if (status) status.textContent = `${visible} Release 1 record${visible === 1 ? "" : "s"} shown.`;
+    if (status) status.textContent = `${visible} place${visible === 1 ? "" : "s"} and service${visible === 1 ? "" : "s"} shown.`;
   }
 
   function setAllFilterState() {
