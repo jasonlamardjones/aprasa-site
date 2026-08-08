@@ -5,7 +5,27 @@
   const search = document.getElementById("directory-search");
   const filters = Array.from(document.querySelectorAll(".filter-chip"));
   const status = document.getElementById("result-status");
+  const language = document.getElementById("language-select");
+  const markerByRecordId = new Map();
   let activeFilter = "all";
+  let essentialsMap = null;
+
+  function safeStorageGet(key) {
+    try {
+      return window.localStorage?.getItem(key) || null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function safeStorageSet(key, value) {
+    try {
+      window.localStorage?.setItem(key, value);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
 
   function applyDirectoryFilter() {
     const query = (search?.value || "").trim().toLocaleLowerCase();
@@ -18,6 +38,69 @@
       if (show) visible += 1;
     });
     if (status) status.textContent = `${visible} Release 1 record${visible === 1 ? "" : "s"} shown.`;
+  }
+
+  function setAllFilterState() {
+    activeFilter = "all";
+    filters.forEach((item) => {
+      const active = item.dataset.filter === "all";
+      item.classList.toggle("is-active", active);
+      item.setAttribute("aria-pressed", String(active));
+    });
+  }
+
+  function clearMapSelection() {
+    cards.forEach((card) => {
+      card.removeAttribute("data-map-selected");
+      card.removeAttribute("aria-current");
+    });
+  }
+
+  function surfaceDirectoryRecord(recordId) {
+    const card = document.getElementById(`record-${recordId}`);
+    if (!card) return;
+
+    if (search) search.value = "";
+    setAllFilterState();
+    applyDirectoryFilter();
+    clearMapSelection();
+
+    card.setAttribute("data-map-selected", "true");
+    card.setAttribute("aria-current", "location");
+    card.setAttribute("tabindex", "-1");
+    card.scrollIntoView({behavior: "smooth", block: "center"});
+    card.focus({preventScroll: true});
+  }
+
+  function addDirectoryMapAction(recordId, marker, mapNode) {
+    const card = document.getElementById(`record-${recordId}`);
+    if (!card || card.querySelector("[data-show-on-map]")) return;
+
+    let actions = card.querySelector(".record-actions");
+    if (!actions) {
+      actions = document.createElement("div");
+      actions.className = "record-actions";
+      card.append(actions);
+    }
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "show-on-map";
+    button.dataset.showOnMap = recordId;
+    button.textContent = "Show on map";
+    button.setAttribute("aria-label", `Show ${card.querySelector("h3")?.textContent || "this location"} on the map`);
+    button.addEventListener("click", () => {
+      clearMapSelection();
+      card.setAttribute("data-map-selected", "true");
+      card.setAttribute("aria-current", "location");
+      mapNode.scrollIntoView({behavior: "smooth", block: "center"});
+      essentialsMap?.panTo(marker.getLatLng());
+      marker.openPopup();
+      const markerElement = marker.getElement?.();
+      if (markerElement) markerElement.focus({preventScroll: true});
+      else mapNode.focus({preventScroll: true});
+    });
+    actions.append(button);
   }
 
   search?.addEventListener("input", applyDirectoryFilter);
@@ -33,11 +116,11 @@
     });
   });
 
-  const language = document.getElementById("language-select");
   if (language) {
-    const stored = localStorage.getItem("aprasa-language");
+    const stored = safeStorageGet("aprasa-language");
     if (stored && Array.from(language.options).some((option) => option.value === stored)) language.value = stored;
-    language.addEventListener("change", () => localStorage.setItem("aprasa-language", language.value));
+    else language.value = "en";
+    language.addEventListener("change", () => safeStorageSet("aprasa-language", language.value));
   }
 
   async function enhanceMap() {
@@ -50,27 +133,47 @@
       const geojson = await response.json();
       if (!geojson.features?.length) return;
 
-      const map = L.map(mapNode, {scrollWheelZoom: false});
+      essentialsMap = L.map(mapNode, {scrollWheelZoom: false});
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19,
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-      }).addTo(map);
+      }).addTo(essentialsMap);
 
       const layer = L.geoJSON(geojson, {
-        pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
-          radius: 8, weight: 2, color: "#1E3D2E", fillColor: "#F6F0E2", fillOpacity: 1
-        }),
+        pointToLayer: (feature, latlng) => {
+          const props = feature.properties || {};
+          return L.marker(latlng, {
+            keyboard: true,
+            title: props.name || "Mindelo Essentials location",
+            icon: L.divIcon({
+              className: "essentials-marker",
+              html: '<span class="essentials-marker-dot" aria-hidden="true"></span>',
+              iconSize: [28, 28],
+              iconAnchor: [14, 14],
+              popupAnchor: [0, -13]
+            })
+          });
+        },
         onEachFeature: (feature, marker) => {
           const props = feature.properties || {};
+          if (!props.id) return;
+          markerByRecordId.set(props.id, marker);
           marker.bindPopup(`<strong>${escapeHtml(props.name || "")}</strong><br>${escapeHtml(props.location || "")}`);
-          marker.on("click", () => {
-            const card = document.getElementById(`record-${props.id}`);
-            if (card) card.setAttribute("data-map-selected", "true");
-          });
+          marker.on("click", () => surfaceDirectoryRecord(props.id));
         }
-      }).addTo(map);
+      }).addTo(essentialsMap);
 
-      map.fitBounds(layer.getBounds().pad(0.18), {maxZoom: 15});
+      layer.eachLayer((marker) => {
+        const feature = marker.feature || {};
+        const props = feature.properties || {};
+        const markerElement = marker.getElement?.();
+        if (markerElement) {
+          markerElement.setAttribute("aria-label", `Map marker: ${props.name || "Mindelo Essentials location"}. Activate to view the directory record.`);
+        }
+      });
+
+      markerByRecordId.forEach((marker, recordId) => addDirectoryMapAction(recordId, marker, mapNode));
+      essentialsMap.fitBounds(layer.getBounds().pad(0.18), {maxZoom: 15});
       mapNode.classList.add("is-enhanced");
     } catch (error) {
       console.warn("Mindelo Essentials map enhancement unavailable; directory fallback remains active.", error);
