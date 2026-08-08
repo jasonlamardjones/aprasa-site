@@ -39,9 +39,11 @@ a:focus-visible { outline: 3px solid var(--green); outline-offset: 4px; border-r
 
 .container { width: min(100% - 2rem, var(--max)); margin-inline: auto; }
 .site-header { border-bottom: 1px solid rgba(30,61,46,.18); background: rgba(246,240,226,.96); }
-.header-inner { min-height: 5.25rem; display: flex; align-items: center; }
+.header-inner { min-height: 5.25rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
 .brand, .footer-brand { display: inline-flex; align-items: center; min-height: 44px; }
 .brand img, .footer-brand img { width: 10.5rem; }
+.site-nav { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: .4rem .9rem; }
+.site-nav a { display: inline-flex; align-items: center; min-height: 44px; font-size: .92rem; font-weight: 600; }
 
 .opening { padding: 3rem 0 2.5rem; }
 .preview-label,
