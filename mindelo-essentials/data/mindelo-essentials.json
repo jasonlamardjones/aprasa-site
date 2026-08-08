@@ -1,0 +1,199 @@
+{
+  "release": "Mindelo Essentials Release 1",
+  "scope": "Mindelo and selected destinations across São Vicente.",
+  "checked": "8 August 2026",
+  "language": {
+    "source": "en",
+    "available": [
+      "en"
+    ],
+    "future_ready": true
+  },
+  "categories": [
+    "Money & Payments",
+    "Getting Around",
+    "Groceries & Everyday Shopping",
+    "Health & Pharmacy",
+    "Mobile, Internet & Work",
+    "Public & Administrative Services",
+    "Culture & Everyday Leisure",
+    "Beaches & Recreation",
+    "Personal & Household Services"
+  ],
+  "records": [
+    {
+      "id": "SV-MIN-HLT-001",
+      "name": "Hospital Dr. Baptista de Sousa",
+      "category": "Health & Pharmacy",
+      "context": "Hospital",
+      "description": "Mindelo’s hospital campus for hospital-level care and services.",
+      "location": "Largo do Tarrafal, Mindelo, São Vicente",
+      "provider": "Hospital Dr. Baptista de Sousa",
+      "checked": "8 August 2026",
+      "caveat": "Confirm the service you need and current access arrangements directly with the hospital.",
+      "map_status": "map-ready",
+      "lat": 16.8845,
+      "lon": -24.98527,
+      "directions": "https://www.google.com/maps/search/?api=1&query=16.88450,-24.98527"
+    },
+    {
+      "id": "SV-MIN-HLT-002",
+      "name": "Urgimed",
+      "category": "Health & Pharmacy",
+      "context": "Clinic",
+      "description": "A Mindelo clinic for non-hospital medical care and clinical services.",
+      "location": "Rua Senegal, corner with Avenida Professor Alberto Leite, Mindelo",
+      "provider": "Urgimed, Lda",
+      "checked": "8 August 2026",
+      "caveat": "Confirm the service, clinician availability and opening arrangements before travelling.",
+      "map_status": "map-ready",
+      "lat": 16.892007,
+      "lon": -24.986987,
+      "directions": "https://www.google.com/maps/search/?api=1&query=16.892007,-24.986987"
+    },
+    {
+      "id": "SV-MIN-PHA-001",
+      "name": "Farmácia Jovem",
+      "category": "Health & Pharmacy",
+      "context": "Pharmacy",
+      "description": "A Mindelo pharmacy; provider evidence also supports an adult food-supplement offering.",
+      "location": "Avenida 12 de Setembro, Mindelo, São Vicente",
+      "provider": "Farmácia Jovem",
+      "checked": "8 August 2026",
+      "caveat": "Do not assume a medicine or supplement is in stock. After-hours duty status rotates and is not a permanent attribute of this pharmacy.",
+      "map_status": "map-ready",
+      "lat": 16.88346,
+      "lon": -24.985437,
+      "directions": "https://www.google.com/maps/search/?api=1&query=16.883460,-24.985437"
+    },
+    {
+      "id": "SV-SAO-TRN-001",
+      "name": "Cesária Évora International Airport",
+      "category": "Getting Around",
+      "context": "Airport",
+      "description": "São Vicente’s airport at São Pedro and the main arrival/departure point for air travel.",
+      "location": "São Pedro, São Vicente",
+      "provider": "Airport operator / Cabo Verde aviation information system",
+      "checked": "8 August 2026",
+      "caveat": "Airport ATM availability can change. Do not assume SIM sales or foreign-currency exchange are available at the airport.",
+      "map_status": "map-ready-coordinate-pending",
+      "lat": null,
+      "lon": null,
+      "source": "https://eaip.asa.cv/2024-04-18-AIRAC/html/eAIP/GV-AD-2.GVSV-en-GB.html"
+    },
+    {
+      "id": "SV-MIN-ADM-001",
+      "name": "Casa do Cidadão — São Vicente",
+      "category": "Public & Administrative Services",
+      "context": "Public-service branch",
+      "description": "A São Vicente public-service branch for selected citizen and document services.",
+      "location": "Mindelo, São Vicente — current exact pin not confirmed",
+      "provider": "Casa do Cidadão / Ministry of Justice",
+      "checked": "8 August 2026",
+      "caveat": "Current branch operation is supported, but the exact 2026 street location has not been sufficiently reconfirmed. Location not pinned yet.",
+      "map_status": "directory-only",
+      "lat": null,
+      "lon": null,
+      "source": "https://justica.gov.cv/fr/faqs"
+    },
+    {
+      "id": "SV-MIN-UTL-001",
+      "name": "ELECTRA — São Vicente",
+      "category": "Personal & Household Services",
+      "context": "Water utility / customer service",
+      "description": "The São Vicente utility/customer-service point for piped-water distribution, billing and service questions.",
+      "location": "Rua / Avenida Dr. Baltazar Lopes da Silva, nº 10, Mindelo",
+      "provider": "ELECTRA, S.A.",
+      "checked": "8 August 2026",
+      "caveat": "This is a network-water utility/customer-service record, not a bottled-water refill, 20L bottle supplier or delivery depot. Location not pinned yet.",
+      "map_status": "directory-only",
+      "lat": null,
+      "lon": null,
+      "source": "https://www.electra.cv/index.php/2014-05-20-16-31-17/empresa/actividades-sul"
+    },
+    {
+      "id": "SV-MIN-LAU-001",
+      "name": "Lavandaria DnD — Vila Nova",
+      "category": "Personal & Household Services",
+      "context": "Laundry",
+      "description": "Laundry service supporting washing, drying and ironing; provider-originated evidence also references collection/delivery.",
+      "location": "Rua Jolly — Vila Nova / Cruz de Papa, Mindelo",
+      "provider": "Lavandaria DnD, Lda.",
+      "checked": "8 August 2026",
+      "caveat": "Confirm current hours, prices and collection/delivery arrangements directly. Exact coordinates are not established; location not pinned yet.",
+      "map_status": "directory-only",
+      "lat": null,
+      "lon": null,
+      "source": "https://www.cleaners10.com/CV/Mindelo/108080661085199/Lavandaria-DnD%2C-Lda"
+    },
+    {
+      "id": "SV-MIN-LAU-002",
+      "name": "Lavandaria DnD — Chã de Alecrim",
+      "category": "Personal & Household Services",
+      "context": "Laundry · neighborhood-level location",
+      "description": "A second DnD laundry branch supported at neighborhood level in Chã de Alecrim.",
+      "location": "Chã de Alecrim, Mindelo — neighborhood-level precision only",
+      "provider": "Lavandaria DnD, Lda.",
+      "checked": "8 August 2026",
+      "caveat": "The branch is supported at neighborhood level, not at a precise street/site. Confirm current arrangements directly; location not pinned yet.",
+      "map_status": "directory-only",
+      "lat": null,
+      "lon": null,
+      "source": "https://www.cleaners10.com/CV/Mindelo/108080661085199/Lavandaria-DnD%2C-Lda"
+    },
+    {
+      "id": "SV-MIN-ELE-001",
+      "name": "Cleber Moreira Phone Dealer — Mindelo",
+      "category": "Personal & Household Services",
+      "context": "Electronics & repair",
+      "description": "Phones and accessories plus technical assistance including screen, battery, software and water-damage repair.",
+      "location": "Av. Holanda, Monte Sossego, Mindelo",
+      "provider": "Cleber Moreira Phone Dealer",
+      "checked": "8 August 2026",
+      "caveat": "Confirm parts, brand support and same-day repair availability before travelling. Location not pinned yet.",
+      "map_status": "directory-only",
+      "lat": null,
+      "lon": null,
+      "source": "https://www.clebermoreirapd.cv/"
+    },
+    {
+      "id": "SV-MIN-MKT-001",
+      "name": "Mercado de Peixe do Mindelo",
+      "category": "Groceries & Everyday Shopping",
+      "context": "Fish market · transition-aware",
+      "description": "The traditional/permanent Mindelo fish-market identity, retained while redevelopment and relocation remain in transition.",
+      "location": "Traditional waterfront market context, Mindelo",
+      "provider": "Public market / municipal-redevelopment sources",
+      "checked": "8 August 2026",
+      "caveat": "A PRASA has not confirmed that the temporary Praça Estrela market became operational. Do not treat Praça Estrela as the current fish-market location.",
+      "map_status": "directory-only",
+      "lat": null,
+      "lon": null
+    }
+  ],
+  "transit": {
+    "transcor": {
+      "mode": "operator-supported directory/orientation",
+      "note": "Use only route fields supported by current operator evidence. No inferred route polylines are represented in Release 1."
+    },
+    "aluguer_corridors": [
+      {
+        "origin": "Praça Estrela area",
+        "destination": "São Pedro"
+      },
+      {
+        "origin": "Praça Estrela area",
+        "destination": "Salamansa"
+      },
+      {
+        "origin": "Praça Estrela area",
+        "destination": "Baía das Gatas"
+      },
+      {
+        "origin": "Praça Estrela area",
+        "destination": "Calhau"
+      }
+    ],
+    "aluguer_note": "Ask at Praça Estrela for the vehicle to your destination. Aluguers commonly leave when sufficiently full rather than to a published timetable. Before travelling to an outlying settlement, ask where and roughly when to find the return service."
+  }
+}
