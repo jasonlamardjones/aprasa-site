@@ -126,6 +126,7 @@
   async function enhanceMap() {
     const mapNode = document.getElementById("essentials-map");
     if (!mapNode || typeof window.L === "undefined") return;
+    if (window.matchMedia("(max-width: 43.99rem)").matches) return;
 
     try {
       const response = await fetch("data/mindelo-essentials.geojson", {cache: "no-store"});
