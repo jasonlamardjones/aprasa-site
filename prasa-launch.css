@@ -104,7 +104,7 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
 }
 .hero-visual { margin:0; height:10.25rem; min-height:0; border-radius:var(--radius); }
 .image-fade-hero::before { width: 26%; }
-.hero-visual img { object-position: center center; }
+.hero-visual img { object-position: center 60%; }
 
 .page-nav {
   display: flex;
@@ -122,7 +122,11 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
 .shelf { padding: 2.25rem 0 2.8rem; border-top: 1px solid rgba(30,61,46,.17); }
 .section-visual { height: 7.75rem; margin: 0 0 1.35rem; border-radius: var(--radius); }
 .section-visual img { object-position: center 52%; }
-.image-fade-kiosk img { object-position: 30% 45%; }
+/* Section focal points: each approved scene keeps its own subject band in the slim crop. */
+.image-fade-things img { object-position: center 50%; }
+.image-fade-trainings img { object-position: center 56%; }
+.image-fade-help img { object-position: center 55%; }
+.image-fade-kiosk img { object-position: center 60%; }
 .section-heading { max-width: 46rem; margin-bottom: 1.2rem; }
 .section-heading > p:last-child { margin: .6rem 0 0; }
 

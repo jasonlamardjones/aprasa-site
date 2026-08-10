@@ -50,7 +50,7 @@ button, input, select { font:inherit; }
 }
 .env-orientation { margin:0; height:14rem; }
 .env-orientation picture, .env-orientation img { width:100%; height:100%; }
-.env-orientation img { object-fit:cover; object-position:30% 45%; }
+.env-orientation img { object-fit:cover; object-position:center 62%; }
 
 .hero { padding:2.4rem 0 2.15rem; }
 .eyebrow { margin:0 0 .6rem; color:var(--green); text-transform:uppercase; letter-spacing:.11em; font-size:.72rem; }
