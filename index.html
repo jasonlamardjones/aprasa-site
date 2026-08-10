@@ -3,12 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="A PRASA founding preview: a small, independent digital praça for useful opportunities and practical local information.">
-<title>A PRASA — Founding Preview</title>
+<meta name="description" content="A PRASA is an independent digital praça for useful opportunities, things to do, ways to help, and practical local information.">
+<title>A PRASA — Useful things. One place to start.</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Baskerville&family=Work+Sans&display=swap">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="prasa-launch.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
+<script src="prasa-launch.js" defer></script>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
@@ -18,120 +21,247 @@
     <a class="brand" href="index.html" aria-label="A PRASA — Home">
       <img src="assets/brand/A_PRASA_Wordmark_Primary_Green.svg" alt="" width="215" height="70">
     </a>
+    <nav class="site-nav" aria-label="Site navigation">
+      <a href="index.html" aria-current="page">Home</a>
+      <a href="mindelo-essentials/">Mindelo Essentials</a>
+    </nav>
   </div>
 </header>
 
 <main id="main">
   <section class="opening container" aria-labelledby="page-title">
-    <p class="preview-label">Founding Preview</p>
-    <h1 id="page-title">A PRASA is a shared place where paths, people, and possibilities meet.</h1>
-    <div class="intro-copy">
-      <p>A PRASA is an independent platform being built to make useful opportunities and practical local information easier to find and reach.</p>
-      <p>Think of it as a small digital praça: a place to discover useful starting points and go directly to the people and organizations behind them.</p>
-      <p>This early edition begins with a carefully limited selection rather than trying to cover everything at once.</p>
-      <p>A PRASA will grow gradually as information is reviewed, improved and shown to be genuinely useful.</p>
+    <div class="opening-grid">
+      <div class="opening-copy">
+        <p class="preview-label">Independent digital praça</p>
+        <div class="hero-wordmark" aria-hidden="true"><img src="assets/brand/A_PRASA_Wordmark_Primary_Green.svg" alt="" width="215" height="70"></div>
+        <h1 id="page-title"><span class="sr-only">A PRASA </span>is a shared place where paths, people, and possibilities meet.</h1>
+        <div class="intro-copy">
+          <p>A PRASA brings together useful starting points for learning and work, current things to do, practical ways to help, and local orientation.</p>
+          <p>Each record names its provider or source and links you to the place where you can check current details.</p>
+          <p>Start with what you need. A PRASA will keep growing as information is reviewed, corrected and shown to be useful.</p>
+        </div>
+      </div>
+      <figure class="hero-visual image-fade image-fade-hero">
+        <picture>
+          <source type="image/avif" srcset="assets/environment/praca-hero-shared-480.avif 480w, assets/environment/praca-hero-shared-800.avif 800w, assets/environment/praca-hero-shared-1200.avif 1200w, assets/environment/praca-hero-shared-1672.avif 1672w" sizes="(min-width: 64rem) 42rem, (min-width: 44rem) 55vw, calc(100vw - 2rem)" width="1672" height="941">
+          <source type="image/webp" srcset="assets/environment/praca-hero-shared-480.webp 480w, assets/environment/praca-hero-shared-800.webp 800w, assets/environment/praca-hero-shared-1200.webp 1200w, assets/environment/praca-hero-shared-1672.webp 1672w" sizes="(min-width: 64rem) 42rem, (min-width: 44rem) 55vw, calc(100vw - 2rem)" width="1672" height="941">
+          <img src="assets/environment/praca-hero-shared-1200.jpg" width="1200" height="675" alt="Illustrated Mindelo praça scene with people talking, reading and spending time beneath trees." fetchpriority="high" decoding="async">
+        </picture>
+      </figure>
     </div>
     <nav class="page-nav" aria-label="On this page">
       <span>On this page</span>
-      <a href="#learn-work">Learn &amp; Work</a>
-      <a href="#things-to-do">Things to Do This Week</a>
-      <a href="#organizations-help">Organizations &amp; Ways to Help</a>
+      <a href="#things-to-do">Things to Do</a>
+      <a href="#trainings-tools">Trainings, Tools &amp; Opportunities</a>
+      <a href="#organizations-help">Ways to Help</a>
       <a href="#mindelo-essentials">Mindelo Essentials</a>
-      <a href="#about">About A PRASA</a>
+      <a href="#about">About</a>
     </nav>
-  </section>
-
-  <section class="shelf" id="learn-work" aria-labelledby="learn-work-title">
-    <div class="container">
-      <div class="section-heading">
-        <p class="section-kicker">Useful starting points</p>
-        <h2 id="learn-work-title">Learn &amp; Work</h2>
-        <p>Explore a small selection of learning and work pathways. Check the provider’s page for current details, requirements and deadlines.</p>
-      </div>
-
-      <div class="resource-grid">
-        <article class="resource-card">
-          <p class="provider">HP Foundation / HP LIFE</p>
-          <h3>HP LIFE: free business and digital-skills courses</h3>
-          <p>HP LIFE offers 32 free online courses in business, digital skills, entrepreneurship, communication, finance, marketing, and professional development. All 32 courses are currently available in eight languages, including Portuguese. Learners who complete a course can receive a free Certificate of Completion.</p>
-          <p class="caveat">You must create an account and sign in to enroll. HP LIFE Certificates of Completion are not accredited or endorsed by educational bodies.</p>
-          <p class="checked">Checked 8 August 2026 against information published by the provider.</p>
-          <a class="resource-link" href="https://www.life-global.org/" target="_blank" rel="noopener noreferrer" aria-label="Explore HP LIFE courses — external link">Explore HP LIFE courses <span aria-hidden="true">↗</span></a>
-        </article>
-
-        <article class="resource-card">
-          <p class="provider">The Open University / OpenLearn</p>
-          <h3>OpenLearn: free courses from The Open University</h3>
-          <p>OpenLearn provides hundreds of free courses across nine subject areas, including digital and computing, languages, money and business, science, and society. All OpenLearn courses are free to study and are available to start now.</p>
-          <p class="caveat">The material checked for this record was in English; Portuguese availability has not been confirmed. Successful completion can provide a free Statement of Participation, but OpenLearn free courses do not carry formal credit toward a qualification, and digital badges are available only on some courses.</p>
-          <p class="checked">Checked 8 August 2026 against information published by the provider.</p>
-          <a class="resource-link" href="https://www.open.edu/openlearn/free-courses" target="_blank" rel="noopener noreferrer" aria-label="Browse OpenLearn courses — external link">Browse OpenLearn courses <span aria-hidden="true">↗</span></a>
-        </article>
-
-        <article class="resource-card">
-          <p class="provider">Instituto do Emprego e Formação Profissional (IEFP)</p>
-          <h3>IEFP PEPE: employment and professional-internship portal</h3>
-          <p>PEPE is IEFP's platform for employment and professional-internship opportunities in Cabo Verde. Visitors can review listings, create a candidate account, and sign in to apply directly through the provider.</p>
-          <p class="caveat">An account and sign-in are required to apply. Each listing has its own deadline and conditions. A listing shown on PEPE should not be treated as current without checking its individual details.</p>
-          <p class="checked">Checked 8 August 2026 against information published by the provider.</p>
-          <a class="resource-link" href="https://pepe.iefp.cv/frontend/web/index.php/pt/site" target="_blank" rel="noopener noreferrer" aria-label="View IEFP opportunities — external link">View IEFP opportunities <span aria-hidden="true">↗</span></a>
-        </article>
-      </div>
-    </div>
   </section>
 
   <section class="shelf" id="things-to-do" aria-labelledby="things-to-do-title">
     <div class="container">
+      <figure class="section-visual image-fade image-fade-things">
+        <picture>
+          <source type="image/avif" srcset="assets/environment/praca-things-to-do-480.avif 480w, assets/environment/praca-things-to-do-800.avif 800w, assets/environment/praca-things-to-do-1200.avif 1200w, assets/environment/praca-things-to-do-1672.avif 1672w" sizes="(min-width: 44rem) min(72rem, calc(100vw - 3rem)), calc(100vw - 2rem)" width="1672" height="941">
+          <source type="image/webp" srcset="assets/environment/praca-things-to-do-480.webp 480w, assets/environment/praca-things-to-do-800.webp 800w, assets/environment/praca-things-to-do-1200.webp 1200w, assets/environment/praca-things-to-do-1672.webp 1672w" sizes="(min-width: 44rem) min(72rem, calc(100vw - 3rem)), calc(100vw - 2rem)" width="1672" height="941">
+          <img src="assets/environment/praca-things-to-do-1200.jpg" width="1200" height="675" alt="" loading="lazy" decoding="async">
+        </picture>
+      </figure>
       <div class="section-heading">
-        <p class="section-kicker">8–14 August · Mindelo &amp; São Vicente</p>
-        <h2 id="things-to-do-title">Things to Do This Week</h2>
-        <p>A few current things happening in and around Mindelo — not a complete events calendar.</p>
+        <p class="section-kicker">Mindelo &amp; São Vicente</p>
+        <h2 id="things-to-do-title">Things to Do</h2>
+        <p>Current things happening in and around Mindelo and São Vicente. This is a curated guide, not a complete events calendar.</p>
       </div>
 
       <div class="resource-grid things-grid">
         <article class="resource-card">
-          <p class="provider">Festival da Baía das Gatas / Câmara Municipal de São Vicente</p>
+          <p class="card-status">8–9 August 2026</p>
           <h3>Baía das Gatas Festival — Final Weekend</h3>
-          <p class="event-meta">8–9 August 2026</p>
-          <p class="event-meta">Baía das Gatas, São Vicente</p>
-          <p>The 42nd Baía das Gatas Festival continues through Sunday at Baía das Gatas, bringing Cape Verdean and international artists together for the final weekend of one of São Vicente’s major music events.</p>
-          <p class="caveat">Programme details can change. Check the organizer’s latest information before travelling to Baía das Gatas.</p>
+          <p class="card-meta">Baía das Gatas, São Vicente</p>
+          <p class="provider">Festival da Baía das Gatas / Câmara Municipal de São Vicente</p>
           <p class="checked">Checked 8 August 2026</p>
-          <a class="resource-link" href="https://www.facebook.com/baiadasgatas" target="_blank" rel="noopener noreferrer" aria-label="See current festival information — external link">See current festival information <span aria-hidden="true">↗</span></a>
+          <div class="card-actions">
+            <button class="details-button" type="button" data-details>Details</button>
+            <a class="resource-link" href="https://www.facebook.com/baiadasgatas" target="_blank" rel="noopener noreferrer">Event information <span aria-hidden="true">↗</span></a>
+          </div>
+          <template class="details-template">
+            <div class="dialog-record">
+              <p class="provider">Festival da Baía das Gatas / Câmara Municipal de São Vicente</p>
+              <h2>Baía das Gatas Festival — Final Weekend</h2>
+              <dl class="detail-list"><div><dt>When</dt><dd>8–9 August 2026</dd></div><div><dt>Where</dt><dd>Baía das Gatas, São Vicente</dd></div></dl>
+              <h3>Details</h3>
+              <p>The 42nd Baía das Gatas Festival continues through Sunday at Baía das Gatas, bringing Cape Verdean and international artists together for the final weekend of one of São Vicente’s major music events.</p>
+              <h3>Good to know</h3>
+              <p>Programme details can change. Check the organizer’s latest information before travelling to Baía das Gatas.</p>
+              <p class="checked">Checked 8 August 2026</p>
+              <a class="dialog-link" href="https://www.facebook.com/baiadasgatas" target="_blank" rel="noopener noreferrer">See current festival information <span aria-hidden="true">↗</span></a>
+            </div>
+          </template>
         </article>
 
         <article class="resource-card">
-          <p class="provider">CNAD — Centro Nacional de Arte, Artesanato e Design</p>
+          <p class="card-status">Through 14 August 2026</p>
           <h3>KONTRASTE at CNAD</h3>
-          <p class="event-meta">Through 14 August 2026</p>
-          <p class="event-meta">Galeria Luísa Queirós, CNAD · Praça Amílcar Cabral, Mindelo</p>
-          <p>An exhibition by illustrator Ayrton Cruz (ZURC), bringing illustration into dialogue with works connected to Cape Verdean identity, memory, relationships and transformation.</p>
-          <p class="caveat">CNAD’s published general visitor admission applies at the ticket office; confirm current exhibition access when visiting.</p>
+          <p class="card-meta">Galeria Luísa Queirós, CNAD · Praça Amílcar Cabral, Mindelo</p>
+          <p class="provider">CNAD — Centro Nacional de Arte, Artesanato e Design</p>
           <p class="checked">Checked 8 August 2026</p>
-          <a class="resource-link" href="https://cnad.cv/en/info/" target="_blank" rel="noopener noreferrer" aria-label="Check CNAD visitor information — external link">Check CNAD visitor information <span aria-hidden="true">↗</span></a>
+          <div class="card-actions">
+            <button class="details-button" type="button" data-details>Details</button>
+            <a class="resource-link" href="https://cnad.cv/en/info/" target="_blank" rel="noopener noreferrer">Visitor information <span aria-hidden="true">↗</span></a>
+          </div>
+          <template class="details-template">
+            <div class="dialog-record">
+              <p class="provider">CNAD — Centro Nacional de Arte, Artesanato e Design</p>
+              <h2>KONTRASTE at CNAD</h2>
+              <dl class="detail-list"><div><dt>When</dt><dd>Through 14 August 2026</dd></div><div><dt>Where</dt><dd>Galeria Luísa Queirós, CNAD · Praça Amílcar Cabral, Mindelo</dd></div></dl>
+              <h3>Details</h3>
+              <p>An exhibition by illustrator Ayrton Cruz (ZURC), bringing illustration into dialogue with works connected to Cape Verdean identity, memory, relationships and transformation.</p>
+              <h3>Good to know</h3>
+              <p>CNAD’s published general visitor admission applies at the ticket office; confirm current exhibition access when visiting.</p>
+              <p class="checked">Checked 8 August 2026</p>
+              <a class="dialog-link" href="https://cnad.cv/en/info/" target="_blank" rel="noopener noreferrer">Check CNAD visitor information <span aria-hidden="true">↗</span></a>
+            </div>
+          </template>
         </article>
 
         <article class="resource-card">
-          <p class="provider">Mindelo Cultural</p>
+          <p class="card-status">Daily except Sunday · 17:00</p>
           <h3>Learn Cape Verdean Dance in Mindelo</h3>
-          <p class="event-meta">Offered this week · 17:00 daily except Sunday · booking and availability apply</p>
-          <p class="event-meta">Starts at Palácio do Povo, Mindelo</p>
-          <p class="event-price">€60</p>
-          <p>Join a 1.5-hour workshop exploring six Cape Verdean rhythms with live music. Mindelo Cultural offers the participatory dance experience for visitors who want a more direct introduction to local music and dance traditions.</p>
-          <p class="caveat">Advance booking and availability apply. Mindelo Cultural states that bookings should be made 24 hours in advance.</p>
+          <p class="card-meta">Starts at Palácio do Povo, Mindelo</p>
+          <p class="event-price">€60 · Booking required</p>
+          <p class="provider">Mindelo Cultural</p>
           <p class="checked">Checked 8 August 2026</p>
-          <a class="resource-link" href="https://mindelocultural.com/" target="_blank" rel="noopener noreferrer" aria-label="Check availability and book — external link">Check availability and book <span aria-hidden="true">↗</span></a>
+          <div class="card-actions">
+            <button class="details-button" type="button" data-details>Details</button>
+            <a class="resource-link" href="https://mindelocultural.com/" target="_blank" rel="noopener noreferrer">Check availability <span aria-hidden="true">↗</span></a>
+          </div>
+          <template class="details-template">
+            <div class="dialog-record">
+              <p class="provider">Mindelo Cultural</p>
+              <h2>Learn Cape Verdean Dance in Mindelo</h2>
+              <dl class="detail-list"><div><dt>When</dt><dd>17:00 daily except Sunday · booking and availability apply</dd></div><div><dt>Where</dt><dd>Starts at Palácio do Povo, Mindelo</dd></div><div><dt>Price</dt><dd>€60</dd></div></dl>
+              <h3>Details</h3>
+              <p>Join a 1.5-hour workshop exploring six Cape Verdean rhythms with live music. Mindelo Cultural offers the participatory dance experience for visitors who want a more direct introduction to local music and dance traditions.</p>
+              <h3>Good to know</h3>
+              <p>Advance booking and availability apply. Mindelo Cultural states that bookings should be made 24 hours in advance.</p>
+              <p class="checked">Checked 8 August 2026</p>
+              <a class="dialog-link" href="https://mindelocultural.com/" target="_blank" rel="noopener noreferrer">Check availability and book <span aria-hidden="true">↗</span></a>
+            </div>
+          </template>
         </article>
 
         <article class="resource-card">
-          <p class="provider">Road Runner Rentals</p>
+          <p class="card-status">By reservation · Availability applies</p>
           <h3>Water &amp; Adventure Activities in Mindelo</h3>
-          <p class="event-meta">Offered this week · reservation and availability apply</p>
-          <p class="event-meta">Mindelo, São Vicente · confirm the activity meeting point with Road Runner when booking</p>
-          <p>Choose from activities including jet skis, clear kayaks, paddleboards, parasailing, buggy excursions, private boats and other rentals with Road Runner Rentals. Select an activity and request your preferred date directly with the provider.</p>
-          <p class="caveat">Activities, equipment and times are subject to availability. Individual activities have their own age, swimming, capacity or safety requirements.</p>
+          <p class="card-meta">Mindelo, São Vicente · meeting point confirmed when booking</p>
+          <p class="provider">Road Runner Rentals</p>
           <p class="checked">Checked 8 August 2026</p>
-          <a class="resource-link" href="https://3rroadrunnerrentals.com/reservations/" target="_blank" rel="noopener noreferrer" aria-label="Check activities and request a booking — external link">Check activities and request a booking <span aria-hidden="true">↗</span></a>
+          <div class="card-actions">
+            <button class="details-button" type="button" data-details>Details</button>
+            <a class="resource-link" href="https://3rroadrunnerrentals.com/reservations/" target="_blank" rel="noopener noreferrer">Activities &amp; booking <span aria-hidden="true">↗</span></a>
+          </div>
+          <template class="details-template">
+            <div class="dialog-record">
+              <p class="provider">Road Runner Rentals</p>
+              <h2>Water &amp; Adventure Activities in Mindelo</h2>
+              <dl class="detail-list"><div><dt>When</dt><dd>Reservation and availability apply</dd></div><div><dt>Where</dt><dd>Mindelo, São Vicente · confirm the activity meeting point with Road Runner when booking</dd></div></dl>
+              <h3>Details</h3>
+              <p>Choose from activities including jet skis, clear kayaks, paddleboards, parasailing, buggy excursions, private boats and other rentals with Road Runner Rentals. Select an activity and request your preferred date directly with the provider.</p>
+              <h3>Good to know</h3>
+              <p>Activities, equipment and times are subject to availability. Individual activities have their own age, swimming, capacity or safety requirements.</p>
+              <p class="checked">Checked 8 August 2026</p>
+              <a class="dialog-link" href="https://3rroadrunnerrentals.com/reservations/" target="_blank" rel="noopener noreferrer">Check activities and request a booking <span aria-hidden="true">↗</span></a>
+            </div>
+          </template>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="shelf" id="trainings-tools" aria-labelledby="trainings-tools-title">
+    <div class="container">
+      <figure class="section-visual image-fade image-fade-trainings">
+        <picture>
+          <source type="image/avif" srcset="assets/environment/praca-trainings-480.avif 480w, assets/environment/praca-trainings-800.avif 800w, assets/environment/praca-trainings-1200.avif 1200w, assets/environment/praca-trainings-1672.avif 1672w" sizes="(min-width: 44rem) min(72rem, calc(100vw - 3rem)), calc(100vw - 2rem)" width="1672" height="941">
+          <source type="image/webp" srcset="assets/environment/praca-trainings-480.webp 480w, assets/environment/praca-trainings-800.webp 800w, assets/environment/praca-trainings-1200.webp 1200w, assets/environment/praca-trainings-1672.webp 1672w" sizes="(min-width: 44rem) min(72rem, calc(100vw - 3rem)), calc(100vw - 2rem)" width="1672" height="941">
+          <img src="assets/environment/praca-trainings-1200.jpg" width="1200" height="675" alt="" loading="lazy" decoding="async">
+        </picture>
+      </figure>
+      <div class="section-heading">
+        <p class="section-kicker">Practical routes to build your next step</p>
+        <h2 id="trainings-tools-title">Trainings, Tools &amp; Opportunities</h2>
+        <p>Training, professional-development resources, business tools and work-related opportunities you can explore directly with the provider.</p>
+      </div>
+
+      <div class="resource-grid training-grid">
+        <article class="resource-card">
+          <p class="card-status">Free · Online</p>
+          <h3>HP LIFE: business and digital-skills courses</h3>
+          <p class="provider">HP Foundation / HP LIFE</p>
+          <p class="checked">Checked 8 August 2026</p>
+          <div class="card-actions">
+            <button class="details-button" type="button" data-details>Details</button>
+            <a class="resource-link" href="https://www.life-global.org/" target="_blank" rel="noopener noreferrer">Explore courses <span aria-hidden="true">↗</span></a>
+          </div>
+          <template class="details-template">
+            <div class="dialog-record">
+              <p class="provider">HP Foundation / HP LIFE</p>
+              <h2>HP LIFE: free business and digital-skills courses</h2>
+              <h3>Details</h3>
+              <p>HP LIFE offers 32 free online courses in business, digital skills, entrepreneurship, communication, finance, marketing, and professional development. All 32 courses are currently available in eight languages, including Portuguese. Learners who complete a course can receive a free Certificate of Completion.</p>
+              <h3>Good to know</h3>
+              <p>You must create an account and sign in to enroll. HP LIFE Certificates of Completion are not accredited or endorsed by educational bodies.</p>
+              <p class="checked">Checked 8 August 2026 against information published by the provider.</p>
+              <a class="dialog-link" href="https://www.life-global.org/" target="_blank" rel="noopener noreferrer">Explore HP LIFE courses <span aria-hidden="true">↗</span></a>
+            </div>
+          </template>
+        </article>
+
+        <article class="resource-card">
+          <p class="card-status">Free · Online</p>
+          <h3>OpenLearn: free courses from The Open University</h3>
+          <p class="provider">The Open University / OpenLearn</p>
+          <p class="checked">Checked 8 August 2026</p>
+          <div class="card-actions">
+            <button class="details-button" type="button" data-details>Details</button>
+            <a class="resource-link" href="https://www.open.edu/openlearn/free-courses" target="_blank" rel="noopener noreferrer">Browse courses <span aria-hidden="true">↗</span></a>
+          </div>
+          <template class="details-template">
+            <div class="dialog-record">
+              <p class="provider">The Open University / OpenLearn</p>
+              <h2>OpenLearn: free courses from The Open University</h2>
+              <h3>Details</h3>
+              <p>OpenLearn provides hundreds of free courses across nine subject areas, including digital and computing, languages, money and business, science, and society. All OpenLearn courses are free to study and are available to start now.</p>
+              <h3>Good to know</h3>
+              <p>The material checked for this record was in English; Portuguese availability has not been confirmed. Successful completion can provide a free Statement of Participation, but OpenLearn free courses do not carry formal credit toward a qualification, and digital badges are available only on some courses.</p>
+              <p class="checked">Checked 8 August 2026 against information published by the provider.</p>
+              <a class="dialog-link" href="https://www.open.edu/openlearn/free-courses" target="_blank" rel="noopener noreferrer">Browse OpenLearn courses <span aria-hidden="true">↗</span></a>
+            </div>
+          </template>
+        </article>
+
+        <article class="resource-card">
+          <p class="card-status">Employment &amp; internship portal</p>
+          <h3>IEFP PEPE: employment and professional-internship portal</h3>
+          <p class="provider">Instituto do Emprego e Formação Profissional (IEFP)</p>
+          <p class="checked">Checked 8 August 2026</p>
+          <div class="card-actions">
+            <button class="details-button" type="button" data-details>Details</button>
+            <a class="resource-link" href="https://pepe.iefp.cv/frontend/web/index.php/pt/site" target="_blank" rel="noopener noreferrer">View opportunities <span aria-hidden="true">↗</span></a>
+          </div>
+          <template class="details-template">
+            <div class="dialog-record">
+              <p class="provider">Instituto do Emprego e Formação Profissional (IEFP)</p>
+              <h2>IEFP PEPE: employment and professional-internship portal</h2>
+              <h3>Details</h3>
+              <p>PEPE is IEFP's platform for employment and professional-internship opportunities in Cabo Verde. Visitors can review listings, create a candidate account, and sign in to apply directly through the provider.</p>
+              <h3>Good to know</h3>
+              <p>An account and sign-in are required to apply. Each listing has its own deadline and conditions. A listing shown on PEPE should not be treated as current without checking its individual details.</p>
+              <p class="checked">Checked 8 August 2026 against information published by the provider.</p>
+              <a class="dialog-link" href="https://pepe.iefp.cv/frontend/web/index.php/pt/site" target="_blank" rel="noopener noreferrer">View IEFP opportunities <span aria-hidden="true">↗</span></a>
+            </div>
+          </template>
         </article>
       </div>
     </div>
@@ -139,70 +269,102 @@
 
   <section class="shelf" id="organizations-help" aria-labelledby="organizations-help-title">
     <div class="container">
+      <figure class="section-visual image-fade image-fade-help">
+        <picture>
+          <source type="image/avif" srcset="assets/environment/praca-ways-to-help-480.avif 480w, assets/environment/praca-ways-to-help-800.avif 800w, assets/environment/praca-ways-to-help-1200.avif 1200w, assets/environment/praca-ways-to-help-1672.avif 1672w" sizes="(min-width: 44rem) min(72rem, calc(100vw - 3rem)), calc(100vw - 2rem)" width="1672" height="941">
+          <source type="image/webp" srcset="assets/environment/praca-ways-to-help-480.webp 480w, assets/environment/praca-ways-to-help-800.webp 800w, assets/environment/praca-ways-to-help-1200.webp 1200w, assets/environment/praca-ways-to-help-1672.webp 1672w" sizes="(min-width: 44rem) min(72rem, calc(100vw - 3rem)), calc(100vw - 2rem)" width="1672" height="941">
+          <img src="assets/environment/praca-ways-to-help-1200.jpg" width="1200" height="675" alt="" loading="lazy" decoding="async">
+        </picture>
+      </figure>
       <div class="section-heading">
         <p class="section-kicker">Practical ways to contribute</p>
         <h2 id="organizations-help-title">Organizations &amp; Ways to Help</h2>
+        <p>Current, concrete ways to volunteer, donate, contribute useful goods or take part directly. Check with each organization for its present needs and arrangements.</p>
       </div>
 
-      <div class="resource-grid">
+      <div class="resource-grid help-grid">
         <article class="resource-card">
-          <p class="provider">Cruz Vermelha de Cabo Verde</p>
-          <h3>Volunteer with the Red Cross in São Vicente</h3>
-          <p class="event-meta">Volunteer · Donate money</p>
-          <p>Cruz Vermelha de Cabo Verde accepts volunteer registrations through its national volunteer network and has a local council in São Vicente. Prospective volunteers can register with the provider and coordinate their activities directly with the Red Cross.</p>
-          <p class="caveat">Volunteer activities, placement, training and schedules are arranged by Cruz Vermelha de Cabo Verde. The online registration system is national; contact the São Vicente council for local arrangements.</p>
-          <p class="checked">Checked 8 August 2026 against information published by the provider.</p>
-          <a class="resource-link" href="https://voluntarios.cruzvermelha.org.cv/registar" target="_blank" rel="noopener noreferrer" aria-label="Register to volunteer — external link">Register to volunteer <span aria-hidden="true">↗</span></a>
+          <p class="action-tags"><span>Volunteer</span><span>Donate money</span></p>
+          <h3>Cruz Vermelha de Cabo Verde</h3>
+          <p class="provider">São Vicente local council / national volunteer network</p>
+          <p class="checked">Checked 8 August 2026</p>
+          <div class="card-actions">
+            <button class="details-button" type="button" data-details>Details</button>
+            <a class="resource-link" href="https://voluntarios.cruzvermelha.org.cv/registar" target="_blank" rel="noopener noreferrer">Volunteer registration <span aria-hidden="true">↗</span></a>
+          </div>
+          <template class="details-template"><div class="dialog-record"><p class="action-tags"><span>Volunteer</span><span>Donate money</span></p><h2>Cruz Vermelha de Cabo Verde</h2><h3>Details</h3><p>Cruz Vermelha de Cabo Verde accepts volunteer registrations through its national volunteer network and has a local council in São Vicente. Prospective volunteers can register with the provider and coordinate their activities directly with the Red Cross.</p><h3>Good to know</h3><p>Volunteer activities, placement, training and schedules are arranged by Cruz Vermelha de Cabo Verde. The online registration system is national; contact the São Vicente council for local arrangements.</p><p class="checked">Checked 8 August 2026 against information published by the provider.</p><a class="dialog-link" href="https://voluntarios.cruzvermelha.org.cv/registar" target="_blank" rel="noopener noreferrer">Register to volunteer <span aria-hidden="true">↗</span></a></div></template>
         </article>
 
         <article class="resource-card">
-          <p class="provider">Biosfera</p>
-          <h3>Volunteer with Biosfera in São Vicente</h3>
-          <p class="event-meta">Conservation volunteering · Communication/environmental education · Fundraising</p>
-          <p>Mindelo-based Biosfera recruits volunteers for conservation and environmental-awareness work in São Vicente and nearby islands. Current routes include turtle-conservation work, communication and environmental education, with fundraising skills also specifically requested.</p>
-          <p class="caveat">Turtle-conservation volunteering is seasonal, normally June–October. Roles have different skills and physical requirements; confirm current capacity and arrangements directly with Biosfera before making plans.</p>
-          <p class="checked">Checked 8 August 2026 against information published by the provider.</p>
-          <a class="resource-link" href="https://www.biosfera1.com/voluntariado/" target="_blank" rel="noopener noreferrer" aria-label="See Biosfera volunteer opportunities — external link">See Biosfera volunteer opportunities <span aria-hidden="true">↗</span></a>
+          <p class="action-tags"><span>Volunteer</span><span>Fundraise</span></p>
+          <h3>Biosfera</h3>
+          <p class="provider">Conservation · environmental education · communication</p>
+          <p class="checked">Checked 8 August 2026</p>
+          <div class="card-actions">
+            <button class="details-button" type="button" data-details>Details</button>
+            <a class="resource-link" href="https://www.biosfera1.com/voluntariado/" target="_blank" rel="noopener noreferrer">Volunteer opportunities <span aria-hidden="true">↗</span></a>
+          </div>
+          <template class="details-template"><div class="dialog-record"><p class="action-tags"><span>Volunteer</span><span>Fundraise</span></p><h2>Biosfera</h2><h3>Details</h3><p>Mindelo-based Biosfera recruits volunteers for conservation and environmental-awareness work in São Vicente and nearby islands. Current routes include turtle-conservation work, communication and environmental education, with fundraising skills also specifically requested.</p><h3>Good to know</h3><p>Turtle-conservation volunteering is seasonal, normally June–October. Roles have different skills and physical requirements; confirm current capacity and arrangements directly with Biosfera before making plans.</p><p class="checked">Checked 8 August 2026 against information published by the provider.</p><a class="dialog-link" href="https://www.biosfera1.com/voluntariado/" target="_blank" rel="noopener noreferrer">See Biosfera volunteer opportunities <span aria-hidden="true">↗</span></a></div></template>
         </article>
 
         <article class="resource-card">
-          <p class="provider">Nô Bai Associação</p>
-          <h3>Volunteer with Nô Bai in São Vicente</h3>
-          <p class="event-meta">Community volunteering</p>
-          <p>Nô Bai Associação works with communities in São Vicente through activities spanning education, health, the environment and community support. Its international volunteer program accepts applications throughout the year for placements in São Vicente.</p>
-          <p class="caveat">Applications involve a form, motivation letter and interview. Seven days is the stated minimum stay, with at least 15 days preferred. Pre-departure training is mandatory; volunteers pay for their own flights and the program has stay-related costs.</p>
-          <p class="checked">Checked 8 August 2026 against information published by the provider.</p>
-          <a class="resource-link" href="https://no-bai.com/voluntariado/" target="_blank" rel="noopener noreferrer" aria-label="See Nô Bai volunteering — external link">See Nô Bai volunteering <span aria-hidden="true">↗</span></a>
+          <p class="action-tags"><span>Volunteer</span></p>
+          <h3>Nô Bai Associação</h3>
+          <p class="provider">Community volunteering in São Vicente</p>
+          <p class="checked">Checked 8 August 2026</p>
+          <div class="card-actions">
+            <button class="details-button" type="button" data-details>Details</button>
+            <a class="resource-link" href="https://no-bai.com/voluntariado/" target="_blank" rel="noopener noreferrer">Volunteering information <span aria-hidden="true">↗</span></a>
+          </div>
+          <template class="details-template"><div class="dialog-record"><p class="action-tags"><span>Volunteer</span></p><h2>Nô Bai Associação</h2><h3>Details</h3><p>Nô Bai Associação works with communities in São Vicente through activities spanning education, health, the environment and community support. Its international volunteer program accepts applications throughout the year for placements in São Vicente.</p><h3>Good to know</h3><p>Applications involve a form, motivation letter and interview. Seven days is the stated minimum stay, with at least 15 days preferred. Pre-departure training is mandatory; volunteers pay for their own flights and the program has stay-related costs.</p><p class="checked">Checked 8 August 2026 against information published by the provider.</p><a class="dialog-link" href="https://no-bai.com/voluntariado/" target="_blank" rel="noopener noreferrer">See Nô Bai volunteering <span aria-hidden="true">↗</span></a></div></template>
         </article>
 
         <article class="resource-card">
-          <p class="provider">Associação Espaço Jovem</p>
-          <h3>Support young people with Espaço Jovem</h3>
-          <p class="event-meta">Volunteer · Donate money · Donate useful goods</p>
-          <p>Espaço Jovem runs youth centers and activities for children and young people in Mindelo. The organization currently invites people to volunteer, contribute financially, or donate useful materials and food for its programs.</p>
-          <p class="caveat">Contact Espaço Jovem before bringing material donations or arranging volunteer work so the organization can confirm its current needs and practical arrangements.</p>
-          <p class="checked">Checked 8 August 2026 against information published by the provider.</p>
-          <a class="resource-link" href="https://www.espacojovemsv.org/apoia-nos" target="_blank" rel="noopener noreferrer" aria-label="See ways to support Espaço Jovem — external link">See ways to support Espaço Jovem <span aria-hidden="true">↗</span></a>
+          <p class="action-tags"><span>Volunteer</span><span>Donate money</span><span>Donate goods</span></p>
+          <h3>Associação Espaço Jovem</h3>
+          <p class="provider">Youth programs and community support in Mindelo</p>
+          <p class="checked">Checked 8 August 2026</p>
+          <div class="card-actions">
+            <button class="details-button" type="button" data-details>Details</button>
+            <a class="resource-link" href="https://www.espacojovemsv.org/apoia-nos" target="_blank" rel="noopener noreferrer">Ways to support <span aria-hidden="true">↗</span></a>
+          </div>
+          <template class="details-template"><div class="dialog-record"><p class="action-tags"><span>Volunteer</span><span>Donate money</span><span>Donate goods</span></p><h2>Associação Espaço Jovem</h2><h3>Details</h3><p>Espaço Jovem runs youth centers and activities for children and young people in Mindelo. The organization currently invites people to volunteer, contribute financially, or donate useful materials and food for its programs.</p><h3>Good to know</h3><p>Contact Espaço Jovem before bringing material donations or arranging volunteer work so the organization can confirm its current needs and practical arrangements.</p><p class="checked">Checked 8 August 2026 against information published by the provider.</p><a class="dialog-link" href="https://www.espacojovemsv.org/apoia-nos" target="_blank" rel="noopener noreferrer">See ways to support Espaço Jovem <span aria-hidden="true">↗</span></a></div></template>
         </article>
       </div>
     </div>
   </section>
 
-  <section class="shelf" id="mindelo-essentials" aria-labelledby="mindelo-essentials-title">
+  <section class="shelf mindelo-home-section" id="mindelo-essentials" aria-labelledby="mindelo-essentials-title">
     <div class="container">
-      <div class="section-heading">
-        <p class="section-kicker">Practical local orientation</p>
-        <h2 id="mindelo-essentials-title">Mindelo Essentials</h2>
-        <p>A dedicated quick guide, directory, optional map and transit orientation for Mindelo and selected destinations across São Vicente.</p>
-      </div>
-      <div class="resource-grid">
-        <article class="resource-card">
-          <p class="provider">A PRASA · Release 1 candidate</p>
-          <h3>Find a useful place. Understand a local system.</h3>
-          <p>Start with arrival basics, everyday services, health and pharmacy, public services, and carefully bounded transport guidance.</p>
-          <p class="caveat">The directory remains useful even when a location is intentionally not pinned. Map and transit information do not add precision beyond the reviewed source evidence.</p>
-          <a class="resource-link" href="mindelo-essentials/">Open Mindelo Essentials</a>
-        </article>
+      <figure class="section-visual image-fade image-fade-kiosk">
+        <picture>
+          <source type="image/avif" srcset="assets/environment/praca-kiosk-orientation-480.avif 480w, assets/environment/praca-kiosk-orientation-800.avif 800w, assets/environment/praca-kiosk-orientation-1200.avif 1200w, assets/environment/praca-kiosk-orientation-1672.avif 1672w" sizes="(min-width: 44rem) min(72rem, calc(100vw - 3rem)), calc(100vw - 2rem)" width="1672" height="941">
+          <source type="image/webp" srcset="assets/environment/praca-kiosk-orientation-480.webp 480w, assets/environment/praca-kiosk-orientation-800.webp 800w, assets/environment/praca-kiosk-orientation-1200.webp 1200w, assets/environment/praca-kiosk-orientation-1672.webp 1672w" sizes="(min-width: 44rem) min(72rem, calc(100vw - 3rem)), calc(100vw - 2rem)" width="1672" height="941">
+          <img src="assets/environment/praca-kiosk-orientation-1200.jpg" width="1200" height="675" alt="" loading="lazy" decoding="async">
+        </picture>
+      </figure>
+      <div class="mindelo-home-grid">
+        <div class="section-heading">
+          <p class="section-kicker">Practical local orientation</p>
+          <h2 id="mindelo-essentials-title">Mindelo Essentials</h2>
+          <p>A dedicated quick guide, directory, optional map and transit orientation for Mindelo and selected destinations across São Vicente.</p>
+          <a class="primary-cta" href="mindelo-essentials/">Explore Mindelo Essentials</a>
+        </div>
+        <div class="home-map-panel">
+          <div id="home-map" class="home-map-canvas" role="region" aria-label="Compact map of spatially cleared Mindelo Essentials locations" tabindex="0">
+            <div class="home-map-fallback">
+              <p><strong>Four checked locations are mapped in Mindelo Essentials.</strong></p>
+              <ul>
+                <li>Hospital Dr. Baptista de Sousa</li>
+                <li>Urgimed</li>
+                <li>Farmácia Jovem</li>
+                <li>Praça Estrela — area-level</li>
+              </ul>
+              <p>Use the full directory for places without a reliable pin.</p>
+            </div>
+          </div>
+          <p class="map-caption">The directory remains canonical. The map uses only already-cleared coordinates and never guesses missing locations.</p>
+        </div>
       </div>
     </div>
   </section>
@@ -210,7 +372,7 @@
   <section class="about-section" id="about" aria-labelledby="about-title">
     <div class="container about-grid">
       <div>
-        <p class="section-kicker">About this preview</p>
+        <p class="section-kicker">About A PRASA</p>
         <h2 id="about-title">Independent, source-led and intentionally small.</h2>
       </div>
       <div class="about-copy">
@@ -223,12 +385,19 @@
   </section>
 </main>
 
+<dialog class="details-dialog" id="details-dialog" aria-labelledby="details-dialog-title">
+  <div class="dialog-shell">
+    <button class="dialog-close" type="button" data-dialog-close aria-label="Close details"><span aria-hidden="true">×</span></button>
+    <div id="details-dialog-content"></div>
+  </div>
+</dialog>
+
 <footer class="site-footer">
   <div class="container footer-inner">
     <a class="footer-brand" href="index.html" aria-label="A PRASA — Home">
       <img src="assets/brand/A_PRASA_Wordmark_Reversed_Cream.svg" alt="" width="215" height="70">
     </a>
-    <p>A small digital praça, starting carefully.</p>
+    <p>Useful things. One place to start.</p>
     <p class="footer-note">A PRASA is independent and does not act on behalf of the providers linked here.</p>
     <a class="back-top" href="#main">Back to top</a>
   </div>

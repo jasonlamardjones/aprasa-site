@@ -37,7 +37,7 @@
       card.hidden = !show;
       if (show) visible += 1;
     });
-    if (status) status.textContent = `${visible} Release 1 record${visible === 1 ? "" : "s"} shown.`;
+    if (status) status.textContent = `${visible} place${visible === 1 ? "" : "s"} and service${visible === 1 ? "" : "s"} shown.`;
   }
 
   function setAllFilterState() {
@@ -126,6 +126,7 @@
   async function enhanceMap() {
     const mapNode = document.getElementById("essentials-map");
     if (!mapNode || typeof window.L === "undefined") return;
+    if (window.matchMedia("(max-width: 43.99rem)").matches) return;
 
     try {
       const response = await fetch("data/mindelo-essentials.geojson", {cache: "no-store"});
