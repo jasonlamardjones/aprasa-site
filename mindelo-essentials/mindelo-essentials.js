@@ -103,6 +103,14 @@
     actions.append(button);
   }
 
+  function enhanceMapGuidance(mapNode) {
+    const caption = mapNode.closest(".map-layout")?.querySelector(".map-caption");
+    if (!caption) return;
+    caption.textContent = "Map tiles are a visual aid. Drag the map or use the arrow keys to move; use +/− to zoom. On touch devices, pinch with two fingers to zoom. Trackpad or mouse-wheel zoom is intentionally disabled so normal page scrolling is not trapped by the map.";
+    caption.id = caption.id || "map-guidance";
+    mapNode.setAttribute("aria-describedby", caption.id);
+  }
+
   search?.addEventListener("input", applyDirectoryFilter);
   filters.forEach((button) => {
     button.addEventListener("click", () => {
@@ -135,10 +143,19 @@
       if (!geojson.features?.length) return;
 
       essentialsMap = L.map(mapNode, {scrollWheelZoom: false});
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      const tileLayer = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19,
+        keepBuffer: 4,
+        updateWhenIdle: false,
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       }).addTo(essentialsMap);
+
+      tileLayer.on("tileerror", () => {
+        mapNode.classList.add("has-tile-error");
+      });
+      tileLayer.on("load", () => {
+        mapNode.classList.remove("has-tile-error");
+      });
 
       const layer = L.geoJSON(geojson, {
         pointToLayer: (feature, latlng) => {
@@ -175,6 +192,8 @@
 
       markerByRecordId.forEach((marker, recordId) => addDirectoryMapAction(recordId, marker, mapNode));
       essentialsMap.fitBounds(layer.getBounds().pad(0.18), {maxZoom: 15});
+      essentialsMap.whenReady(() => essentialsMap.invalidateSize({pan: false}));
+      enhanceMapGuidance(mapNode);
       mapNode.classList.add("is-enhanced");
     } catch (error) {
       console.warn("Mindelo Essentials map enhancement unavailable; directory fallback remains active.", error);
