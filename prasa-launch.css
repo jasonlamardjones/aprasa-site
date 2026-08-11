@@ -128,32 +128,31 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
 }
 
 .home-narrative {
-  position: relative;
   padding: 1.8rem 0 2rem;
   background: rgba(255,255,255,.3);
   border-top: 1px solid rgba(30,61,46,.17);
   border-bottom: 1px solid rgba(30,61,46,.17);
+}
+.narrative-grid { display: grid; gap: 1.25rem; }
+.narrative-heading {
+  position: relative;
+  isolation: isolate;
   overflow: hidden;
 }
-.home-narrative::before {
+.narrative-heading::before {
   content: "";
   position: absolute;
   inset: 0;
-  z-index: 0;
+  z-index: -1;
   background-image: url("assets/environment/praca-why-aerial-480.jpg");
   background-repeat: no-repeat;
-  background-position: right -1.5rem top .5rem;
-  background-size: 13rem auto;
+  background-position: center 65%;
+  background-size: cover;
   opacity: .2;
-  -webkit-mask-image: radial-gradient(ellipse 72% 85% at 88% 8%, #000 0%, rgba(0,0,0,.5) 40%, transparent 76%);
-  mask-image: radial-gradient(ellipse 72% 85% at 88% 8%, #000 0%, rgba(0,0,0,.5) 40%, transparent 76%);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, rgba(0,0,0,.4) 26%, rgba(0,0,0,.55) 55%, rgba(0,0,0,.25) 85%, transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0%, rgba(0,0,0,.4) 26%, rgba(0,0,0,.55) 55%, rgba(0,0,0,.25) 85%, transparent 100%);
   pointer-events: none;
 }
-.home-narrative > .container {
-  position: relative;
-  z-index: 1;
-}
-.narrative-grid { display: grid; gap: 1.25rem; }
 .narrative-title .line {
   display: block;
 }
@@ -365,14 +364,7 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
   .opening-copy { grid-column: 1; grid-row: 1; align-self: end; }
   .hero-visual { grid-column: 2; grid-row: 1 / span 2; align-self: center; height: 21rem; }
   .hero-intro { grid-column: 1; grid-row: 2; align-self: start; max-width: none; }
-  .narrative-grid { grid-template-columns: minmax(0,.62fr) minmax(0,1.38fr); gap: 2rem; align-items: start; }
-  .home-narrative::before {
-    background-position: left .5rem bottom -2rem;
-    background-size: 15rem auto;
-    opacity: .26;
-    -webkit-mask-image: radial-gradient(ellipse 60% 82% at 16% 100%, #000 0%, rgba(0,0,0,.45) 34%, transparent 60%);
-    mask-image: radial-gradient(ellipse 60% 82% at 16% 100%, #000 0%, rgba(0,0,0,.45) 34%, transparent 60%);
-  }
+  .narrative-grid { grid-template-columns: minmax(0,.62fr) minmax(0,1.38fr); gap: 2rem; align-items: stretch; }
   .section-visual { height: 9.5rem; }
   .resource-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .training-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -387,15 +379,6 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
   .things-grid, .help-grid { grid-template-columns: repeat(4, minmax(0,1fr)); }
   .shelf { padding: 2.45rem 0 3.1rem; }
   .section-visual { height: 10.5rem; }
-}
-
-@media (min-width: 90rem) {
-  .home-narrative::before {
-    background-position: calc((100vw - 72rem) / 2 + 14rem) bottom -2.5rem;
-    background-size: 28rem auto;
-    -webkit-mask-image: radial-gradient(ellipse 74% 90% at calc((100vw - 72rem) / 2 + 14rem) 100%, #000 0%, rgba(0,0,0,.5) 46%, transparent 76%);
-    mask-image: radial-gradient(ellipse 74% 90% at calc((100vw - 72rem) / 2 + 14rem) 100%, #000 0%, rgba(0,0,0,.5) 46%, transparent 76%);
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
