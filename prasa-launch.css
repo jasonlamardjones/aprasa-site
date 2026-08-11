@@ -91,7 +91,7 @@ h1 { max-width: 19ch; margin: .45rem 0 0; font-size: clamp(1.45rem, 5.2vw, 2.35r
 .opening-copy h1 {
   display: block;
   max-width: 19ch;
-  margin: .65rem 0 0;
+  margin: .3rem 0 0;
   font-size: clamp(1.85rem, 7vw, 2.85rem);
   line-height: 1.12;
   text-wrap: balance;
@@ -139,7 +139,7 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
   background-repeat: no-repeat;
   background-position: right -2rem bottom -1.5rem;
   background-size: 13rem auto;
-  opacity: .12;
+  opacity: .2;
   -webkit-mask-image: radial-gradient(ellipse 70% 90% at 85% 100%, #000 0%, transparent 72%);
   mask-image: radial-gradient(ellipse 70% 90% at 85% 100%, #000 0%, transparent 72%);
   pointer-events: none;
@@ -149,6 +149,12 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
   z-index: 1;
 }
 .narrative-grid { display: grid; gap: 1.25rem; }
+.narrative-title .line {
+  display: block;
+}
+.narrative-title .line-nobreak {
+  white-space: nowrap;
+}
 .narrative-copy { max-width: 48rem; }
 .narrative-copy > p { margin: 0 0 .9rem; text-wrap: pretty; }
 .trust-support {
@@ -358,7 +364,7 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
   .home-narrative::before {
     background-position: left -1.5rem bottom -2.5rem;
     background-size: 22rem auto;
-    opacity: .14;
+    opacity: .26;
     -webkit-mask-image: radial-gradient(ellipse 78% 92% at 18% 100%, #000 0%, transparent 74%);
     mask-image: radial-gradient(ellipse 78% 92% at 18% 100%, #000 0%, transparent 74%);
   }
