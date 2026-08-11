@@ -59,7 +59,7 @@ button { font: inherit; }
 .site-nav a { display: inline-flex; align-items: center; min-height: 44px; font-size: .86rem; font-weight: 600; }
 
 .opening { padding: 2.15rem 0 1.2rem; }
-.opening-grid { display: grid; gap: 1.25rem; align-items: center; }
+.opening-grid { display: grid; gap: .95rem; align-items: center; }
 .opening-copy { min-width: 0; }
 .preview-label,
 .section-kicker,
@@ -119,7 +119,8 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
   background: linear-gradient(0deg, var(--cream) 0%, rgba(246,240,226,.7) 26%, rgba(246,240,226,0) 100%);
 }
 .hero-visual { margin:0; height:10.25rem; min-height:0; border-radius:var(--radius); }
-.image-fade-hero::before { width: 26%; }
+.image-fade-hero::before { width: 16%; }
+.image-fade-hero::after { height: 15%; }
 .hero-visual img { object-position: center 60%; }
 
 .home-narrative {
@@ -140,8 +141,8 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
   background-position: right -2rem bottom -1.5rem;
   background-size: 13rem auto;
   opacity: .2;
-  -webkit-mask-image: radial-gradient(ellipse 70% 90% at 85% 100%, #000 0%, transparent 72%);
-  mask-image: radial-gradient(ellipse 70% 90% at 85% 100%, #000 0%, transparent 72%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 90% at 85% 100%, #000 0%, rgba(0,0,0,.5) 40%, transparent 76%);
+  mask-image: radial-gradient(ellipse 70% 90% at 85% 100%, #000 0%, rgba(0,0,0,.5) 40%, transparent 76%);
   pointer-events: none;
 }
 .home-narrative > .container {
@@ -362,11 +363,11 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
   .hero-intro { grid-column: 1; grid-row: 2; align-self: start; max-width: none; }
   .narrative-grid { grid-template-columns: minmax(0,.62fr) minmax(0,1.38fr); gap: 2rem; align-items: start; }
   .home-narrative::before {
-    background-position: left -1.5rem bottom -2.5rem;
-    background-size: 22rem auto;
+    background-position: left 3.5rem bottom -2.5rem;
+    background-size: 20rem auto;
     opacity: .26;
-    -webkit-mask-image: radial-gradient(ellipse 78% 92% at 18% 100%, #000 0%, transparent 74%);
-    mask-image: radial-gradient(ellipse 78% 92% at 18% 100%, #000 0%, transparent 74%);
+    -webkit-mask-image: radial-gradient(ellipse 70% 88% at 30% 100%, #000 0%, rgba(0,0,0,.5) 42%, transparent 72%);
+    mask-image: radial-gradient(ellipse 70% 88% at 30% 100%, #000 0%, rgba(0,0,0,.5) 42%, transparent 72%);
   }
   .section-visual { height: 9.5rem; }
   .resource-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
