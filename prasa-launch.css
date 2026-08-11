@@ -123,21 +123,32 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
 .hero-visual img { object-position: center 60%; }
 
 .home-narrative {
+  position: relative;
   padding: 1.8rem 0 2rem;
   background: rgba(255,255,255,.3);
   border-top: 1px solid rgba(30,61,46,.17);
   border-bottom: 1px solid rgba(30,61,46,.17);
+  overflow: hidden;
+}
+.home-narrative::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image: url("assets/environment/praca-why-aerial-480.jpg");
+  background-repeat: no-repeat;
+  background-position: right -2rem bottom -1.5rem;
+  background-size: 13rem auto;
+  opacity: .12;
+  -webkit-mask-image: radial-gradient(ellipse 70% 90% at 85% 100%, #000 0%, transparent 72%);
+  mask-image: radial-gradient(ellipse 70% 90% at 85% 100%, #000 0%, transparent 72%);
+  pointer-events: none;
+}
+.home-narrative > .container {
+  position: relative;
+  z-index: 1;
 }
 .narrative-grid { display: grid; gap: 1.25rem; }
-.narrative-grid > div:first-child::after {
-  content: "";
-  display: block;
-  width: min(100%, 11.5rem);
-  aspect-ratio: 3 / 4;
-  margin: 1.75rem auto 0;
-  border-radius: var(--radius);
-  background: url("assets/environment/praca-why-aerial-480.jpg") center / contain no-repeat;
-}
 .narrative-copy { max-width: 48rem; }
 .narrative-copy > p { margin: 0 0 .9rem; text-wrap: pretty; }
 .trust-support {
@@ -344,7 +355,13 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
   .hero-visual { grid-column: 2; grid-row: 1 / span 2; align-self: center; height: 21rem; }
   .hero-intro { grid-column: 1; grid-row: 2; align-self: start; max-width: none; }
   .narrative-grid { grid-template-columns: minmax(0,.62fr) minmax(0,1.38fr); gap: 2rem; align-items: start; }
-  .narrative-grid > div:first-child::after { width: min(100%, 12.5rem); margin: 2rem 0 0; }
+  .home-narrative::before {
+    background-position: left -1.5rem bottom -2.5rem;
+    background-size: 22rem auto;
+    opacity: .14;
+    -webkit-mask-image: radial-gradient(ellipse 78% 92% at 18% 100%, #000 0%, transparent 74%);
+    mask-image: radial-gradient(ellipse 78% 92% at 18% 100%, #000 0%, transparent 74%);
+  }
   .section-visual { height: 9.5rem; }
   .resource-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .training-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
