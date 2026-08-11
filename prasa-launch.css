@@ -59,7 +59,7 @@ button { font: inherit; }
 .site-nav a { display: inline-flex; align-items: center; min-height: 44px; font-size: .86rem; font-weight: 600; }
 
 .opening { padding: 2.15rem 0 1.2rem; }
-.opening-grid { display: grid; gap: .95rem; align-items: center; }
+.opening-grid { display: grid; gap: .7rem; align-items: center; }
 .opening-copy { min-width: 0; }
 .preview-label,
 .section-kicker,
@@ -119,9 +119,13 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
   background: linear-gradient(0deg, var(--cream) 0%, rgba(246,240,226,.7) 26%, rgba(246,240,226,0) 100%);
 }
 .hero-visual { margin:0; height:10.25rem; min-height:0; border-radius:var(--radius); }
-.image-fade-hero::before { width: 16%; }
-.image-fade-hero::after { height: 15%; }
-.hero-visual img { object-position: center 60%; }
+.image-fade-hero::before,
+.image-fade-hero::after { display: none; }
+.hero-visual img {
+  object-position: center 60%;
+  -webkit-mask-image: radial-gradient(ellipse 62% 58% at 2% 102%, transparent 0%, #000 100%);
+  mask-image: radial-gradient(ellipse 62% 58% at 2% 102%, transparent 0%, #000 100%);
+}
 
 .home-narrative {
   position: relative;
@@ -138,11 +142,11 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
   z-index: 0;
   background-image: url("assets/environment/praca-why-aerial-480.jpg");
   background-repeat: no-repeat;
-  background-position: right -2rem bottom -1.5rem;
+  background-position: right -1.5rem top .5rem;
   background-size: 13rem auto;
   opacity: .2;
-  -webkit-mask-image: radial-gradient(ellipse 70% 90% at 85% 100%, #000 0%, rgba(0,0,0,.5) 40%, transparent 76%);
-  mask-image: radial-gradient(ellipse 70% 90% at 85% 100%, #000 0%, rgba(0,0,0,.5) 40%, transparent 76%);
+  -webkit-mask-image: radial-gradient(ellipse 72% 85% at 88% 8%, #000 0%, rgba(0,0,0,.5) 40%, transparent 76%);
+  mask-image: radial-gradient(ellipse 72% 85% at 88% 8%, #000 0%, rgba(0,0,0,.5) 40%, transparent 76%);
   pointer-events: none;
 }
 .home-narrative > .container {
@@ -383,6 +387,15 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
   .things-grid, .help-grid { grid-template-columns: repeat(4, minmax(0,1fr)); }
   .shelf { padding: 2.45rem 0 3.1rem; }
   .section-visual { height: 10.5rem; }
+}
+
+@media (min-width: 90rem) {
+  .home-narrative::before {
+    background-position: calc((100vw - 72rem) / 2 + 2rem) bottom -2.5rem;
+    background-size: 24rem auto;
+    -webkit-mask-image: radial-gradient(ellipse 70% 88% at calc((100vw - 72rem) / 2 + 2rem) 100%, #000 0%, rgba(0,0,0,.5) 42%, transparent 72%);
+    mask-image: radial-gradient(ellipse 70% 88% at calc((100vw - 72rem) / 2 + 2rem) 100%, #000 0%, rgba(0,0,0,.5) 42%, transparent 72%);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
