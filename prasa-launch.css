@@ -349,7 +349,7 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
   .resource-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .training-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .mindelo-home-grid { grid-template-columns: minmax(0,.8fr) minmax(0,1.2fr); align-items: start; }
-  .about-grid { grid-template-columns: minmax(0,.95fr) minmax(0,1.05fr); align-items: start; gap:1.7rem; }
+  .about-grid { grid-template-columns: minmax(0,.95fr) minmax(0,1.05fr); align-items: start; gap: 1.7rem; }
   .detail-list { grid-template-columns: repeat(2, minmax(0,1fr)); }
 }
 
