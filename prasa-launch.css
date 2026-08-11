@@ -129,6 +129,15 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
   border-bottom: 1px solid rgba(30,61,46,.17);
 }
 .narrative-grid { display: grid; gap: 1.25rem; }
+.narrative-grid > div:first-child::after {
+  content: "";
+  display: block;
+  width: min(100%, 13rem);
+  aspect-ratio: 3 / 4;
+  margin: 1rem auto 0;
+  border-radius: var(--radius);
+  background: url("assets/environment/praca-why-aerial-480.jpg") center / contain no-repeat;
+}
 .narrative-copy { max-width: 48rem; }
 .narrative-copy > p { margin: 0 0 .9rem; text-wrap: pretty; }
 .trust-support {
@@ -335,11 +344,12 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
   .hero-visual { grid-column: 2; grid-row: 1 / span 2; align-self: center; height: 21rem; }
   .hero-intro { grid-column: 1; grid-row: 2; align-self: start; max-width: none; }
   .narrative-grid { grid-template-columns: minmax(0,.62fr) minmax(0,1.38fr); gap: 2rem; align-items: start; }
+  .narrative-grid > div:first-child::after { width: min(100%, 15rem); margin: 1rem 0 0; }
   .section-visual { height: 9.5rem; }
   .resource-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .training-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .mindelo-home-grid { grid-template-columns: minmax(0,.8fr) minmax(0,1.2fr); align-items: start; }
-  .about-grid { grid-template-columns: minmax(0,.95fr) minmax(0,1.05fr); align-items: start; gap: 1.7rem; }
+  .about-grid { grid-template-columns: minmax(0,.95fr) minmax(0,1.05fr); align-items: start; gap:1.7rem; }
   .detail-list { grid-template-columns: repeat(2, minmax(0,1fr)); }
 }
 
