@@ -59,7 +59,7 @@ button { font: inherit; }
 .site-nav a { display: inline-flex; align-items: center; min-height: 44px; font-size: .86rem; font-weight: 600; }
 
 .opening { padding: 2.15rem 0 1.2rem; }
-.opening-grid { display: grid; gap: 1.25rem; align-items: center; }
+.opening-grid { display: grid; gap: .7rem; align-items: center; }
 .opening-copy { min-width: 0; }
 .preview-label,
 .section-kicker,
@@ -91,7 +91,7 @@ h1 { max-width: 19ch; margin: .45rem 0 0; font-size: clamp(1.45rem, 5.2vw, 2.35r
 .opening-copy h1 {
   display: block;
   max-width: 19ch;
-  margin: .65rem 0 0;
+  margin: .3rem 0 0;
   font-size: clamp(1.85rem, 7vw, 2.85rem);
   line-height: 1.12;
   text-wrap: balance;
@@ -119,8 +119,13 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
   background: linear-gradient(0deg, var(--cream) 0%, rgba(246,240,226,.7) 26%, rgba(246,240,226,0) 100%);
 }
 .hero-visual { margin:0; height:10.25rem; min-height:0; border-radius:var(--radius); }
-.image-fade-hero::before { width: 26%; }
-.hero-visual img { object-position: center 60%; }
+.image-fade-hero::before,
+.image-fade-hero::after { display: none; }
+.hero-visual img {
+  object-position: center 60%;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 11%, #000 100%);
+  mask-image: linear-gradient(90deg, transparent 0%, #000 11%, #000 100%);
+}
 
 .home-narrative {
   padding: 1.8rem 0 2rem;
@@ -129,14 +134,30 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
   border-bottom: 1px solid rgba(30,61,46,.17);
 }
 .narrative-grid { display: grid; gap: 1.25rem; }
-.narrative-grid > div:first-child::after {
+.narrative-heading {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+.narrative-heading::before {
   content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: url("assets/environment/praca-why-aerial-480.jpg");
+  background-repeat: no-repeat;
+  background-position: center 65%;
+  background-size: cover;
+  opacity: .2;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, rgba(0,0,0,.4) 26%, rgba(0,0,0,.55) 55%, rgba(0,0,0,.25) 85%, transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0%, rgba(0,0,0,.4) 26%, rgba(0,0,0,.55) 55%, rgba(0,0,0,.25) 85%, transparent 100%);
+  pointer-events: none;
+}
+.narrative-title .line {
   display: block;
-  width: min(100%, 11.5rem);
-  aspect-ratio: 3 / 4;
-  margin: 1.75rem auto 0;
-  border-radius: var(--radius);
-  background: url("assets/environment/praca-why-aerial-480.jpg") center / contain no-repeat;
+}
+.narrative-title .line-nobreak {
+  white-space: nowrap;
 }
 .narrative-copy { max-width: 48rem; }
 .narrative-copy > p { margin: 0 0 .9rem; text-wrap: pretty; }
@@ -343,8 +364,7 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
   .opening-copy { grid-column: 1; grid-row: 1; align-self: end; }
   .hero-visual { grid-column: 2; grid-row: 1 / span 2; align-self: center; height: 21rem; }
   .hero-intro { grid-column: 1; grid-row: 2; align-self: start; max-width: none; }
-  .narrative-grid { grid-template-columns: minmax(0,.62fr) minmax(0,1.38fr); gap: 2rem; align-items: start; }
-  .narrative-grid > div:first-child::after { width: min(100%, 12.5rem); margin: 2rem 0 0; }
+  .narrative-grid { grid-template-columns: minmax(0,.62fr) minmax(0,1.38fr); gap: 2rem; align-items: stretch; }
   .section-visual { height: 9.5rem; }
   .resource-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .training-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
