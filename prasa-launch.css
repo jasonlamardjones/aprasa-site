@@ -128,31 +128,35 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
 }
 
 .home-narrative {
-  padding: 1.8rem 0 2rem;
-  background: rgba(255,255,255,.3);
-  border-top: 1px solid rgba(30,61,46,.17);
-  border-bottom: 1px solid rgba(30,61,46,.17);
-}
-.narrative-grid { display: grid; gap: 1.25rem; }
-.narrative-heading {
   position: relative;
   isolation: isolate;
   overflow: hidden;
+  padding: 1.8rem 0 2rem;
+  background: var(--cream);
+  border-top: 1px solid rgba(30,61,46,.17);
+  border-bottom: 1px solid rgba(30,61,46,.17);
 }
-.narrative-heading::before {
+.home-narrative::before {
   content: "";
   position: absolute;
   inset: 0;
-  z-index: -1;
-  background-image: url("assets/environment/praca-why-aerial-480.jpg");
+  z-index: -2;
+  background-image: url("assets/environment/praca-why-aerial-sketch.jpg");
   background-repeat: no-repeat;
-  background-position: center 65%;
+  background-position: 68% 22%;
   background-size: cover;
-  opacity: .2;
-  -webkit-mask-image: linear-gradient(180deg, transparent 0%, rgba(0,0,0,.4) 26%, rgba(0,0,0,.55) 55%, rgba(0,0,0,.25) 85%, transparent 100%);
-  mask-image: linear-gradient(180deg, transparent 0%, rgba(0,0,0,.4) 26%, rgba(0,0,0,.55) 55%, rgba(0,0,0,.25) 85%, transparent 100%);
+  opacity: .68;
   pointer-events: none;
 }
+.home-narrative::after {
+  content: "";
+  position: absolute;
+  inset: -15% -10%;
+  z-index: -1;
+  background: radial-gradient(ellipse 62% 62% at 46% 50%, var(--cream) 0%, rgba(246,240,226,.92) 42%, rgba(246,240,226,.55) 66%, rgba(246,240,226,0) 100%);
+  pointer-events: none;
+}
+.narrative-grid { display: grid; gap: 1.25rem; }
 .narrative-title .line {
   display: block;
 }
@@ -338,16 +342,23 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
 
 @media (min-width: 44rem) {
   .container { width: min(100% - 3rem, var(--max)); }
+  .opening.container { width: 100%; max-width: none; margin-inline: 0; }
   .opening { padding: 2.8rem 0 1.4rem; }
   .opening-grid {
-    grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+    grid-template-columns: minmax(0,26rem) 1fr;
     grid-template-rows: auto auto;
     gap: 1rem 1.6rem;
     align-items: start;
+    padding-left: max(1.5rem, calc((100vw - var(--max)) / 2));
   }
   .opening-copy { grid-column: 1; grid-row: 1; align-self: end; }
-  .hero-visual { grid-column: 2; grid-row: 1 / span 2; align-self: center; height: 21rem; }
-  .hero-intro { grid-column: 1; grid-row: 2; align-self: start; max-width: none; }
+  .hero-visual { grid-column: 2; grid-row: 1 / span 2; align-self: center; height: 22rem; border-radius: 0; }
+  .hero-intro { grid-column: 1; grid-row: 2; align-self: start; max-width: none; padding-right: 1.5rem; }
+  .hero-visual img {
+    object-position: center 56%;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 14%, #000 100%);
+    mask-image: linear-gradient(90deg, transparent 0%, #000 14%, #000 100%);
+  }
   .narrative-grid { grid-template-columns: minmax(0,.62fr) minmax(0,1.38fr); gap: 2rem; align-items: stretch; }
   .env-orientation { height: 21rem; }
   .resource-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -358,11 +369,18 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
 }
 
 @media (min-width: 64rem) {
-  .opening-grid { grid-template-columns: minmax(25rem,1.02fr) minmax(0,.98fr); gap: 1rem 2rem; }
-  .hero-visual { height:23rem; }
+  .opening-grid { grid-template-columns: minmax(0,32rem) 1fr; gap: 1rem 2rem; }
+  .hero-visual { height:27rem; }
   .things-grid, .help-grid { grid-template-columns: repeat(4, minmax(0,1fr)); }
   .shelf { padding: 2.45rem 0 3.1rem; }
   .env-orientation { height: 25rem; }
+}
+
+@media (max-width: 43.99rem) {
+  .home-narrative::before { opacity: .4; background-position: 58% 15%; }
+  .home-narrative::after {
+    background: radial-gradient(ellipse 75% 78% at 50% 42%, var(--cream) 0%, rgba(246,240,226,.96) 45%, rgba(246,240,226,.7) 68%, rgba(246,240,226,.15) 100%);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
