@@ -212,6 +212,10 @@
         },
         onEachFeature: (feature, marker) => {
           const props = feature.properties || {};
+          if (props.feature_kind === "orientation-landmark") {
+            marker.bindPopup(`<strong>${escapeHtml(props.name || "")}</strong><br>${escapeHtml(props.location || "")}${props.description ? `<br>${escapeHtml(props.description)}` : ""}`);
+            return;
+          }
           if (!props.id) return;
           markerByRecordId.set(props.id, marker);
           marker.bindPopup(`<strong>${escapeHtml(props.name || "")}</strong><br>${escapeHtml(props.location || "")}`);
@@ -224,7 +228,10 @@
         const props = feature.properties || {};
         const markerElement = marker.getElement?.();
         if (markerElement) {
-          markerElement.setAttribute("aria-label", `Map marker: ${props.name || "Mindelo Essentials location"}. Activate to view the directory record.`);
+          const label = props.feature_kind === "orientation-landmark"
+            ? `Map marker: ${props.name || "Orientation landmark"}. Activate to view orientation details.`
+            : `Map marker: ${props.name || "Mindelo Essentials location"}. Activate to view the directory record.`;
+          markerElement.setAttribute("aria-label", label);
         }
       });
 

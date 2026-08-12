@@ -23,9 +23,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Baskerville&family=Work+Sans&display=swap">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="prasa-launch.css">
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
 <script src="prasa-launch.js" defer></script>
 <!-- Privacy-friendly analytics by Plausible -->
 <script async src="https://plausible.io/js/pa-eShJ2lYHDu0B2CdpzVYvZ.js"></script>
@@ -467,24 +465,24 @@
       <div class="mindelo-home-grid">
         <div class="section-heading">
           <p class="section-kicker">Practical local orientation</p>
-          <h2 id="mindelo-essentials-title">Mindelo Essentials</h2>
-          <p>A dedicated quick guide, directory, optional map and transit orientation for Mindelo and selected destinations across São Vicente.</p>
+          <h2 id="mindelo-essentials-title">Get oriented in Mindelo.</h2>
+          <p>Explore practical places and services across Mindelo and São Vicente with a checked directory and mapped locations where coordinates have been verified.</p>
+          <p class="section-subline">More locations are being added and verified.</p>
           <a class="primary-cta" href="mindelo-essentials/">Explore Mindelo Essentials</a>
         </div>
         <div class="home-map-panel">
-          <div id="home-map" class="home-map-canvas" role="region" aria-label="Compact map of spatially cleared Mindelo Essentials locations" tabindex="0">
-            <div class="home-map-fallback">
-              <p><strong>Four checked locations are mapped in Mindelo Essentials.</strong></p>
-              <ul>
-                <li>Hospital Dr. Baptista de Sousa</li>
-                <li>Urgimed</li>
-                <li>Farmácia Jovem</li>
-                <li>Praça Estrela — area-level</li>
-              </ul>
-              <p>Use the full directory for places without a reliable pin.</p>
-            </div>
+          <div class="home-map-preview" role="img" aria-label="Stylized orientation map of Mindelo and São Vicente with a few example points scattered across the area, for general geographic orientation only.">
+            <svg viewBox="0 0 320 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+              <rect x="0" y="0" width="320" height="200" rx="10" fill="rgba(30,61,46,.05)"></rect>
+              <path d="M18 150 C 60 120, 90 170, 140 140 S 230 100, 300 130" fill="none" stroke="rgba(30,61,46,.28)" stroke-width="2"></path>
+              <path d="M40 60 C 90 40, 160 55, 210 35 S 290 30, 305 55" fill="none" stroke="rgba(30,61,46,.16)" stroke-width="1.5"></path>
+              <circle cx="70" cy="70" r="5" fill="var(--green)"></circle>
+              <circle cx="150" cy="115" r="5" fill="var(--green)"></circle>
+              <circle cx="205" cy="80" r="5" fill="var(--green)"></circle>
+              <circle cx="250" cy="150" r="5" fill="var(--green)"></circle>
+            </svg>
           </div>
-          <p class="map-caption">The directory remains canonical. The map uses only already-cleared coordinates and never guesses missing locations.</p>
+          <p class="map-caption">Example orientation points only — not the complete directory or a ranking of places. The directory remains canonical.</p>
         </div>
       </div>
     </div>

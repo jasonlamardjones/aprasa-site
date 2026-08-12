@@ -72,6 +72,18 @@
       "id": "SV-MIN-TEC-003",
       "geometry": {"type": "Point", "coordinates": [-24.9867549, 16.8854695]},
       "properties": {"id": "SV-MIN-TEC-003", "name": "Charles Company — São Vicente", "category": "Mobile, Internet & Work", "location": "Praça Dr. Regala, Mindelo"}
+    },
+    {
+      "type": "Feature",
+      "id": "SV-MIN-LDM-PRACA-NOVA",
+      "geometry": {"type": "Point", "coordinates": [-24.9879524, 16.8896754]},
+      "properties": {
+        "id": "SV-MIN-LDM-PRACA-NOVA",
+        "feature_kind": "orientation-landmark",
+        "name": "Praça Nova (Praça Amílcar Cabral)",
+        "location": "Public square / orientation landmark",
+        "description": "Marker represents the square as a public orientation area, not an entrance, individual building, kiosk, or business."
+      }
     }
   ]
 }
