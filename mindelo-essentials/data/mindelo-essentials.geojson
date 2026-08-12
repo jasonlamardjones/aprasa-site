@@ -24,6 +24,30 @@
       "id": "SV-MIN-HUB-001",
       "geometry": {"type": "Point", "coordinates": [-24.989157, 16.883646]},
       "properties": {"id": "SV-MIN-HUB-001", "name": "Praça Estrela", "category": "Getting Around", "location": "Praça Estrela, Mindelo · area-level orientation"}
+    },
+    {
+      "type": "Feature",
+      "id": "SV-MIN-BNK-001",
+      "geometry": {"type": "Point", "coordinates": [-24.988464, 16.886657]},
+      "properties": {"id": "SV-MIN-BNK-001", "name": "BCA — Agência São Vicente", "category": "Money & Payments", "location": "Rua Santo António, Mindelo"}
+    },
+    {
+      "type": "Feature",
+      "id": "SV-MIN-BNK-002",
+      "geometry": {"type": "Point", "coordinates": [-24.988312, 16.887947]},
+      "properties": {"id": "SV-MIN-BNK-002", "name": "Caixa Económica — Agência Mindelo", "category": "Money & Payments", "location": "Avenida 5 de Julho, Mindelo"}
+    },
+    {
+      "type": "Feature",
+      "id": "SV-MIN-BNK-003",
+      "geometry": {"type": "Point", "coordinates": [-24.989763, 16.886332]},
+      "properties": {"id": "SV-MIN-BNK-003", "name": "BCN — Agência Avenida Marginal", "category": "Money & Payments", "location": "Edifício Pont d’Água / Avenida Marginal, Mindelo"}
+    },
+    {
+      "type": "Feature",
+      "id": "SV-MIN-BNK-004",
+      "geometry": {"type": "Point", "coordinates": [-24.98762, 16.88961]},
+      "properties": {"id": "SV-MIN-BNK-004", "name": "Banco Interatlântico — Agência Mindelo", "category": "Money & Payments", "location": "Avenida Amílcar Cabral, near Praça Amílcar Cabral / Praça Nova, Mindelo"}
     }
   ]
 }
