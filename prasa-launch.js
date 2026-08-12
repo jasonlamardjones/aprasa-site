@@ -7,6 +7,10 @@
   let dialogTrigger = null;
   let scrollPosition = 0;
 
+  function trackPlausibleEvent(name) {
+    if (typeof window.plausible === "function") window.plausible(name);
+  }
+
   function closeDetails() {
     if (!dialog) return;
     if (typeof dialog.close === "function" && dialog.open) dialog.close();
@@ -36,7 +40,12 @@
       if (typeof dialog.showModal === "function") dialog.showModal();
       else dialog.setAttribute("open", "");
       closeButton?.focus({preventScroll: true});
+      trackPlausibleEvent("Details Opened");
     });
+  });
+
+  document.querySelectorAll('a[href^="mailto:"][href*="correction"]').forEach((link) => {
+    link.addEventListener("click", () => trackPlausibleEvent("Correction Started"));
   });
 
   closeButton?.addEventListener("click", closeDetails);

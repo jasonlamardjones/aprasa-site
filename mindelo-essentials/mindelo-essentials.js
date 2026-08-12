@@ -9,6 +9,11 @@
   const markerByRecordId = new Map();
   let activeFilter = "all";
   let essentialsMap = null;
+  let searchInteractionTracked = false;
+
+  function trackPlausibleEvent(name) {
+    if (typeof window.plausible === "function") window.plausible(name);
+  }
 
   function safeStorageGet(key) {
     try {
@@ -61,6 +66,7 @@
     if (!card) return;
 
     if (search) search.value = "";
+    searchInteractionTracked = false;
     setAllFilterState();
     applyDirectoryFilter();
     clearMapSelection();
@@ -111,7 +117,21 @@
     mapNode.setAttribute("aria-describedby", caption.id);
   }
 
-  search?.addEventListener("input", applyDirectoryFilter);
+  search?.addEventListener("input", () => {
+    applyDirectoryFilter();
+    const hasQuery = search.value.trim().length > 0;
+    if (hasQuery && !searchInteractionTracked) {
+      trackPlausibleEvent("Directory Search Used");
+      searchInteractionTracked = true;
+    } else if (!hasQuery) {
+      searchInteractionTracked = false;
+    }
+  });
+
+  document.querySelectorAll('a[href^="mailto:"][href*="correction"]').forEach((link) => {
+    link.addEventListener("click", () => trackPlausibleEvent("Correction Started"));
+  });
+
   filters.forEach((button) => {
     button.addEventListener("click", () => {
       activeFilter = button.dataset.filter || "all";
