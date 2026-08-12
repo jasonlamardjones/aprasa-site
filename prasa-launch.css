@@ -188,8 +188,9 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
 }
 
 .shelf { padding: 2.25rem 0 2.8rem; border-top: 1px solid rgba(30,61,46,.17); }
-.section-visual { height: 7.75rem; margin: 0 0 1.35rem; border-radius: var(--radius); }
-.section-visual img { object-position: center 52%; }
+.env-orientation { margin: 0; height: 12.5rem; }
+.env-orientation picture, .env-orientation img { width: 100%; height: 100%; }
+.env-orientation img { object-fit: cover; object-position: center 52%; }
 /* Section focal points: each approved scene keeps its own subject band in the slim crop. */
 .image-fade-things img { object-position: center 50%; }
 .image-fade-trainings img { object-position: center 56%; }
@@ -348,7 +349,7 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
   .hero-visual { grid-column: 2; grid-row: 1 / span 2; align-self: center; height: 21rem; }
   .hero-intro { grid-column: 1; grid-row: 2; align-self: start; max-width: none; }
   .narrative-grid { grid-template-columns: minmax(0,.62fr) minmax(0,1.38fr); gap: 2rem; align-items: stretch; }
-  .section-visual { height: 9.5rem; }
+  .env-orientation { height: 21rem; }
   .resource-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .training-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .mindelo-home-grid { grid-template-columns: minmax(0,.8fr) minmax(0,1.2fr); align-items: start; }
@@ -361,7 +362,7 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
   .hero-visual { height:23rem; }
   .things-grid, .help-grid { grid-template-columns: repeat(4, minmax(0,1fr)); }
   .shelf { padding: 2.45rem 0 3.1rem; }
-  .section-visual { height: 10.5rem; }
+  .env-orientation { height: 25rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
