@@ -146,6 +146,10 @@
   function openRowFromMap(recordId) {
     const row = document.getElementById(`record-${recordId}`);
     if (!row) return;
+    if (searchInput && searchInput.value) {
+      searchInput.value = "";
+      applySearch();
+    }
     const group = row.closest(".provider-row--group");
     const cat = row.closest(".category-group");
     if (cat) cat.open = true;
