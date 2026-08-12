@@ -274,13 +274,9 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
   border-radius: var(--radius);
   background: rgba(255,255,255,.55);
   overflow: hidden;
-  min-height: 12rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: .75rem;
+  padding: .5rem;
 }
-.home-map-preview svg { width: 100%; height: auto; display: block; }
+.home-map-preview img { width: 100%; height: auto; display: block; border-radius: calc(var(--radius) - 4px); }
 .map-caption { margin: .55rem 0 0; color: var(--green); font-size: .78rem; }
 
 .details-dialog {
