@@ -15,39 +15,45 @@
     },
     {
       "type": "Feature",
-      "id": "SV-MIN-PHA-001",
-      "geometry": {"type": "Point", "coordinates": [-24.985437, 16.88346]},
-      "properties": {"id": "SV-MIN-PHA-001", "name": "Farmácia Jovem", "category": "Health & Pharmacy", "location": "Avenida 12 de Setembro, Mindelo, São Vicente"}
-    },
-    {
-      "type": "Feature",
       "id": "SV-MIN-HUB-001",
       "geometry": {"type": "Point", "coordinates": [-24.989157, 16.883646]},
       "properties": {"id": "SV-MIN-HUB-001", "name": "Praça Estrela", "category": "Getting Around", "location": "Praça Estrela, Mindelo · area-level orientation"}
     },
     {
       "type": "Feature",
-      "id": "SV-MIN-BNK-001",
-      "geometry": {"type": "Point", "coordinates": [-24.988464, 16.886657]},
-      "properties": {"id": "SV-MIN-BNK-001", "name": "BCA — Agência São Vicente", "category": "Money & Payments", "location": "Rua Santo António, Mindelo"}
+      "id": "SV-MIN-PHO-001",
+      "geometry": {"type": "Point", "coordinates": [-24.988438, 16.887536]},
+      "properties": {"id": "SV-MIN-PHO-001", "name": "Foto Express", "category": "Mobile, Internet & Work", "location": "Mindelo"}
     },
     {
       "type": "Feature",
-      "id": "SV-MIN-BNK-002",
-      "geometry": {"type": "Point", "coordinates": [-24.988312, 16.887947]},
-      "properties": {"id": "SV-MIN-BNK-002", "name": "Caixa Económica — Agência Mindelo", "category": "Money & Payments", "location": "Avenida 5 de Julho, Mindelo"}
+      "id": "SV-MIN-HDW-001",
+      "geometry": {"type": "Point", "coordinates": [-24.985601, 16.886734]},
+      "properties": {"id": "SV-MIN-HDW-001", "name": "Bricodeló", "category": "Personal & Household Services", "location": "Mindelo"}
     },
     {
       "type": "Feature",
-      "id": "SV-MIN-BNK-003",
-      "geometry": {"type": "Point", "coordinates": [-24.989763, 16.886332]},
-      "properties": {"id": "SV-MIN-BNK-003", "name": "BCN — Agência Avenida Marginal", "category": "Money & Payments", "location": "Edifício Pont d’Água / Avenida Marginal, Mindelo"}
+      "id": "SV-MIN-GDN-001",
+      "geometry": {"type": "Point", "coordinates": [-24.98628, 16.88891]},
+      "properties": {"id": "SV-MIN-GDN-001", "name": "Garden Center", "category": "Personal & Household Services", "location": "Mindelo"}
     },
     {
       "type": "Feature",
-      "id": "SV-MIN-BNK-004",
-      "geometry": {"type": "Point", "coordinates": [-24.98762, 16.88961]},
-      "properties": {"id": "SV-MIN-BNK-004", "name": "Banco Interatlântico — Agência Mindelo", "category": "Money & Payments", "location": "Avenida Amílcar Cabral, near Praça Amílcar Cabral / Praça Nova, Mindelo"}
+      "id": "SV-MIN-CUL-002",
+      "geometry": {"type": "Point", "coordinates": [-24.98865, 16.88555]},
+      "properties": {"id": "SV-MIN-CUL-002", "name": "Bombu Mininu", "category": "Culture & Everyday Leisure", "location": "Mindelo"}
+    },
+    {
+      "type": "Feature",
+      "id": "SV-MIN-LAU-003",
+      "geometry": {"type": "Point", "coordinates": [-24.98903, 16.88539]},
+      "properties": {"id": "SV-MIN-LAU-003", "name": "Lavandaria Mindelo Expresso", "category": "Personal & Household Services", "location": "central Mindelo / Praça Dom Luís vicinity"}
+    },
+    {
+      "type": "Feature",
+      "id": "SV-MIN-BCH-001",
+      "geometry": {"type": "Point", "coordinates": [-24.99296, 16.89297]},
+      "properties": {"id": "SV-MIN-BCH-001", "name": "Kalimba Beach Club by Oásis Atlântico", "category": "Beaches & Recreation", "location": "São Vicente"}
     }
   ]
 }
