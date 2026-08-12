@@ -54,6 +54,24 @@
       "id": "SV-MIN-BCH-001",
       "geometry": {"type": "Point", "coordinates": [-24.99296, 16.89297]},
       "properties": {"id": "SV-MIN-BCH-001", "name": "Kalimba Beach Club by Oásis Atlântico", "category": "Beaches & Recreation", "location": "São Vicente"}
+    },
+    {
+      "type": "Feature",
+      "id": "SV-SAO-TRN-001",
+      "geometry": {"type": "Point", "coordinates": [-25.0551708, 16.8345053]},
+      "properties": {"id": "SV-SAO-TRN-001", "name": "Cesária Évora International Airport", "category": "Getting Around", "location": "São Pedro, São Vicente"}
+    },
+    {
+      "type": "Feature",
+      "id": "SV-MIN-TRN-002",
+      "geometry": {"type": "Point", "coordinates": [-24.99383, 16.88923]},
+      "properties": {"id": "SV-MIN-TRN-002", "name": "Gare Marítima de Mindelo", "category": "Getting Around", "location": "Avenida Marginal / Terminal de Cabotagem, Mindelo"}
+    },
+    {
+      "type": "Feature",
+      "id": "SV-MIN-TEC-003",
+      "geometry": {"type": "Point", "coordinates": [-24.9867549, 16.8854695]},
+      "properties": {"id": "SV-MIN-TEC-003", "name": "Charles Company — São Vicente", "category": "Mobile, Internet & Work", "location": "Praça Dr. Regala, Mindelo"}
     }
   ]
 }
