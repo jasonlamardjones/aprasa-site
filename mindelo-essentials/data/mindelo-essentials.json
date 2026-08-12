@@ -544,8 +544,7 @@
       "lon": -24.985601,
       "directions": "https://www.google.com/maps/search/?api=1&query=16.886734,-24.985601",
       "publication_status": "published",
-      "missing_fields": ["source"],
-      "source_unresolved_note": "Delta specifies source treatment as a current provider-originated social mirror, but no exact governed social-media URL for Bricodeló is recoverable from accessible evidence. Not substituted; flagged for Project 03/25."
+      "source": "https://www.findglocal.com/CV/Mindelo/327837070404274/Bricodelo-Home"
     },
     {
       "id": "SV-MIN-HDW-002",
@@ -594,8 +593,7 @@
       "lon": -24.98628,
       "directions": "https://www.google.com/maps/search/?api=1&query=16.888910,-24.986280",
       "publication_status": "published",
-      "missing_fields": ["source"],
-      "source_unresolved_note": "Delta specifies source treatment as a current provider-originated social mirror, but no exact governed social-media URL for Garden Center is recoverable from accessible evidence. Not substituted; flagged for Project 03/25."
+      "source": "https://www.findglocal.com/CV/Mindelo/1790965590923498/Garden-Center"
     },
     {
       "id": "SV-MIN-PHA-001",
