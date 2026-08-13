@@ -118,14 +118,15 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
   height: 23%;
   background: linear-gradient(0deg, var(--cream) 0%, rgba(246,240,226,.7) 26%, rgba(246,240,226,0) 100%);
 }
-.hero-visual { margin:0; height:10.25rem; min-height:0; border-radius:var(--radius); }
-.image-fade-hero::before,
-.image-fade-hero::after { display: none; }
-.hero-visual img {
-  object-position: center 60%;
-  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 11%, #000 100%);
-  mask-image: linear-gradient(90deg, transparent 0%, #000 11%, #000 100%);
+.hero-visual {
+  margin: 0;
+  margin-inline: calc(50% - 50vw);
+  width: 100vw;
+  height: 13rem;
+  min-height: 0;
+  border-radius: 0;
 }
+.hero-visual img { object-position: center 58%; }
 
 .home-narrative {
   position: relative;
@@ -352,8 +353,10 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
     padding-left: max(1.5rem, calc((100vw - var(--max)) / 2));
   }
   .opening-copy { grid-column: 1; grid-row: 1; align-self: end; }
-  .hero-visual { grid-column: 2; grid-row: 1 / span 2; align-self: center; height: 22rem; border-radius: 0; }
+  .hero-visual { grid-column: 2; grid-row: 1 / span 2; align-self: center; height: 22rem; margin-inline: 0; width: auto; border-radius: 0; }
   .hero-intro { grid-column: 1; grid-row: 2; align-self: start; max-width: none; padding-right: 1.5rem; }
+  .image-fade-hero::before,
+  .image-fade-hero::after { display: none; }
   .hero-visual img {
     object-position: center 56%;
     -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 14%, #000 100%);
@@ -369,8 +372,10 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
 }
 
 @media (min-width: 64rem) {
-  .opening-grid { grid-template-columns: minmax(0,32rem) 1fr; gap: 1rem 2rem; }
-  .hero-visual { height:27rem; }
+  .opening { padding-bottom: .6rem; }
+  .opening-grid { grid-template-columns: minmax(0,36rem) 1fr; gap: 1rem 2rem; }
+  .hero-visual { height:30rem; }
+  .home-narrative { padding-top: 1rem; }
   .things-grid, .help-grid { grid-template-columns: repeat(4, minmax(0,1fr)); }
   .shelf { padding: 2.45rem 0 3.1rem; }
   .env-orientation { height: 25rem; }
@@ -381,6 +386,12 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
   .home-narrative::after {
     background: radial-gradient(ellipse 75% 78% at 50% 42%, var(--cream) 0%, rgba(246,240,226,.96) 45%, rgba(246,240,226,.7) 68%, rgba(246,240,226,.15) 100%);
   }
+}
+
+@media (max-height: 30rem) and (orientation: landscape) {
+  .opening { padding: 1.1rem 0 .5rem; }
+  .hero-visual { height: 9.5rem; }
+  .home-narrative { padding: .9rem 0 1.1rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
