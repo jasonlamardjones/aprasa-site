@@ -372,10 +372,10 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
 }
 
 @media (min-width: 64rem) {
-  .opening { padding-bottom: .6rem; }
+  .opening { padding-bottom: 1rem; }
   .opening-grid { grid-template-columns: minmax(0,36rem) 1fr; gap: 1rem 2rem; }
   .hero-visual { height:30rem; }
-  .home-narrative { padding-top: 1rem; }
+  .home-narrative { padding-top: 1.4rem; }
   .things-grid, .help-grid { grid-template-columns: repeat(4, minmax(0,1fr)); }
   .shelf { padding: 2.45rem 0 3.1rem; }
   .env-orientation { height: 25rem; }
@@ -388,7 +388,7 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
   }
 }
 
-@media (max-height: 30rem) and (orientation: landscape) {
+@media (max-width: 43.99rem) and (max-height: 30rem) and (orientation: landscape) {
   .opening { padding: 1.1rem 0 .5rem; }
   .hero-visual { height: 9.5rem; }
   .home-narrative { padding: .9rem 0 1.1rem; }
