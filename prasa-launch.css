@@ -51,10 +51,10 @@ button { font: inherit; }
   position: relative;
   z-index: 5;
 }
-.header-inner { min-height: 4.7rem; display: flex; justify-content: space-between; align-items: center; gap: .65rem; }
+.header-inner { min-height: 4.7rem; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .5rem .65rem; row-gap: .4rem; padding: .5rem 0; }
 .brand, .footer-brand { display: inline-flex; align-items: center; min-height: 44px; flex: 0 0 auto; }
-.brand img { width: 9.25rem; }
-.footer-brand img { width: 9.5rem; }
+.brand img { width: 15.25rem; }
+.footer-brand img { width: 15.5rem; }
 .site-nav { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: .2rem .7rem; min-width: 0; }
 .site-nav a { display: inline-flex; align-items: center; min-height: 44px; font-size: .86rem; font-weight: 600; }
 
@@ -84,7 +84,7 @@ h1 { max-width: 19ch; margin: .45rem 0 0; font-size: clamp(1.45rem, 5.2vw, 2.35r
 .hero-wordmark { display: block; margin-top: .7rem; }
 .hero-wordmark img {
   display: block;
-  width: clamp(10.75rem, 36vw, 14.25rem);
+  width: clamp(15rem, 42vw, 19rem);
   height: auto;
   margin: 0;
 }
@@ -336,13 +336,14 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
 .back-top { display: inline-flex; min-height: 44px; align-items: center; margin-top: .7rem; }
 
 @media (max-width: 24rem) {
-  .brand img { width: 8.6rem; }
   .site-nav { gap: .15rem .5rem; }
   .site-nav a { font-size: .8rem; }
 }
 
 @media (min-width: 44rem) {
   .container { width: min(100% - 3rem, var(--max)); }
+  .brand img { width: 18rem; }
+  .footer-brand img { width: 18.25rem; }
   .opening.container { width: 100%; max-width: none; margin-inline: 0; }
   .opening { padding: 2.8rem 0 1.4rem; }
   .opening-grid {
@@ -372,6 +373,8 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
 }
 
 @media (min-width: 64rem) {
+  .brand img { width: 20rem; }
+  .footer-brand img { width: 20.25rem; }
   .opening { padding-bottom: 1rem; }
   .opening-grid { grid-template-columns: minmax(0,36rem) 1fr; gap: 1rem 2rem; }
   .hero-visual { height:30rem; }
