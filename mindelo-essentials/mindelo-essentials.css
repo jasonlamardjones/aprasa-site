@@ -25,9 +25,9 @@ button, input, select { font:inherit; }
 .container { width:min(100% - 2rem,var(--max)); margin-inline:auto; }
 
 .site-header { border-bottom:1px solid rgba(30,61,46,.18); background:rgba(246,240,226,.97); }
-.header-inner { min-height:4.7rem; display:flex; justify-content:space-between; align-items:center; gap:.65rem; }
+.header-inner { min-height:4.7rem; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:.5rem .65rem; row-gap:.4rem; padding:.5rem 0; }
 .brand, .footer-brand { display:inline-flex; min-height:44px; align-items:center; flex:0 0 auto; }
-.brand img { width:9.25rem; }
+.brand img { width:15.25rem; }
 .header-actions { display:flex; align-items:center; justify-content:flex-end; gap:.5rem .8rem; min-width:0; }
 .site-nav { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:.2rem .7rem; }
 .site-nav a { display:inline-flex; align-items:center; min-height:44px; font-size:.86rem; font-weight:600; }
@@ -177,7 +177,7 @@ h3 { margin:0; color:var(--green); font-size:1.05rem; line-height:1.28; font-wei
 .source-section { background:rgba(255,255,255,.34); }
 .site-footer { background:var(--green); color:var(--cream); }
 .footer-inner { padding:1.8rem 0 2.2rem; }
-.footer-brand img { width:9.5rem; }
+.footer-brand img { width:15.5rem; }
 .site-footer a { color:var(--cream); }
 .site-footer p { max-width:42rem; }
 
@@ -196,6 +196,8 @@ h3 { margin:0; color:var(--green); font-size:1.05rem; line-height:1.28; font-wei
 }
 @media (min-width:44rem) {
   .container { width:min(100% - 3rem,var(--max)); }
+  .brand img { width:18rem; }
+  .footer-brand img { width:18.25rem; }
   .env-orientation { height:21rem; }
   .hero { padding:3rem 0 2.55rem; }
   .journey-grid, .guide-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
@@ -208,6 +210,8 @@ h3 { margin:0; color:var(--green); font-size:1.05rem; line-height:1.28; font-wei
   .map-canvas.is-enhanced { min-height:22rem; }
 }
 @media (min-width:64rem) {
+  .brand img { width:20rem; }
+  .footer-brand img { width:20.25rem; }
   .env-orientation { height:25rem; }
   .journey-grid { grid-template-columns:repeat(4,minmax(0,1fr)); }
   .guide-grid { grid-template-columns:repeat(4,minmax(0,1fr)); }
