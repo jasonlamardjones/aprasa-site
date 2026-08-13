@@ -394,6 +394,10 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
   .home-narrative { padding: .9rem 0 1.1rem; }
 }
 
+@media (min-width: 44rem) and (max-width: 63.99rem) and (max-height: 32rem) and (orientation: landscape) {
+  .hero-visual { height: auto; align-self: stretch; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
 }
