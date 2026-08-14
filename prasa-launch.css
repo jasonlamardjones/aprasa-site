@@ -4,6 +4,7 @@
   --ink: #111111;
   --white: #FFFFFF;
   --ochre: #C0872E;
+  --ochre-text: #8F5F1C;
   --serif: "Libre Baskerville", Georgia, "Times New Roman", serif;
   --sans: "Work Sans", "Segoe UI", Arial, sans-serif;
   --radius: 10px;
@@ -103,7 +104,7 @@ h1 { max-width: 19ch; margin: .45rem 0 0; font-size: clamp(1.45rem, 5.2vw, 2.35r
   color: var(--green);
 }
 .hero-close { margin-top: 1rem; font-size: 1.05rem; }
-.hero-close .accent-word { color: var(--ochre); font-style: italic; }
+.hero-close .accent-word { color: var(--ochre-text); font-style: italic; }
 h2 { margin: 0; font-size: clamp(1.55rem, 5vw, 2.45rem); line-height: 1.18; }
 h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font-weight: 500; }
 
