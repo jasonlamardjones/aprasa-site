@@ -98,12 +98,15 @@ h1 { max-width: 19ch; margin: .45rem 0 0; font-size: clamp(1.45rem, 5.2vw, 2.35r
   text-wrap: balance;
 }
 .opening-copy .hero-tagline {
+  max-width: none;
   margin-top: 1.75rem;
-  font-size: clamp(1.35rem, 4.4vw, 1.9rem);
+  font-size: clamp(1.3rem, 4.1vw, 1.75rem);
+  font-style: italic;
   color: var(--green);
+  white-space: normal;
 }
 .hero-close { margin-top: 1rem; font-size: 1.05rem; }
-.accent-word { color: var(--ochre-text); font-style: italic; }
+.hero-close .accent-word { color: var(--ochre-text); font-style: italic; }
 h2 { margin: 0; font-size: clamp(1.55rem, 5vw, 2.45rem); line-height: 1.18; }
 h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font-weight: 500; }
 
@@ -175,8 +178,8 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
 .narrative-copy { max-width: 48rem; }
 .narrative-copy > p { margin: 0 0 .9rem; text-wrap: pretty; }
 .emphasis-square { font-weight: 600; color: var(--green); }
-.lang-forms { font-style: italic; font-weight: 700; color: var(--green); }
-.narrative-copy strong { font-weight: 700; color: var(--green); }
+.lang-forms { font-style: italic; font-weight: 600; color: var(--green); }
+.narrative-copy strong { font-weight: 600; color: var(--green); }
 .trust-support {
   margin-top: 1.2rem;
   padding-top: 1rem;
