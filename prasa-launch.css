@@ -106,7 +106,13 @@ h1 { max-width: 19ch; margin: .45rem 0 0; font-size: clamp(1.45rem, 5.2vw, 2.35r
   white-space: normal;
 }
 .hero-close { margin-top: 1rem; font-size: 1.05rem; }
-.hero-close .accent-word { color: var(--ochre-text); font-style: italic; }
+.hero-close .accent-word {
+  color: var(--ochre-text);
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.2em;
+  letter-spacing: .01em;
+}
 h2 { margin: 0; font-size: clamp(1.55rem, 5vw, 2.45rem); line-height: 1.18; }
 h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font-weight: 500; }
 
@@ -228,9 +234,12 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
 .section-heading { max-width: 46rem; margin-bottom: 1.2rem; }
 .section-heading > p:last-child { margin: .6rem 0 0; }
 .section-submission-note {
+  max-width: none;
+  margin-top: .6rem;
   color: var(--green);
   font-size: .86rem;
   font-style: italic;
+  white-space: normal;
 }
 .section-submission-note a { font-style: normal; font-weight: 650; }
 
