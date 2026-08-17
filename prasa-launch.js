@@ -120,6 +120,136 @@
     return media;
   }
 
+  const providerMedia = new Map([
+    ["Water & Adventure Activities in Mindelo", {
+      src: "assets/card-media/things-to-do/road-runner-clear-kayak.webp",
+      alt: "Two people paddle clear kayaks through bright turquoise water.",
+      width: 800,
+      height: 600
+    }],
+    ["Sinergia da Matéria: Entre o Bruto e o Traço", {
+      src: "assets/card-media/things-to-do/sinergia-da-materia-editorial-fallback.webp",
+      alt: "",
+      width: 1200,
+      height: 900
+    }],
+    ["Street Art in Mindelo", {
+      src: "assets/card-media/things-to-do/mindelo-cultural-street-art.webp",
+      alt: "Street-art mural in Mindelo showing people gathered near a waterfront.",
+      width: 400,
+      height: 300
+    }],
+    ["Myrtle Atividades Educativas", {
+      src: "assets/card-media/trainings-tools/myrtle-learning-programs.webp",
+      alt: "An educator and student work together with learning materials beside a periodic table.",
+      width: 960,
+      height: 720
+    }],
+    ["HP LIFE", {
+      src: "assets/card-media/trainings-tools/hp-life-online-learning.webp",
+      alt: "A learner works on a laptop during an HP LIFE study session.",
+      width: 472,
+      height: 354
+    }],
+    ["OpenLearn: free courses from The Open University", {
+      src: "assets/card-media/trainings-tools/openlearn-free-courses.webp",
+      alt: "OpenLearn free-courses banner with learners and a colorful connected-dot pattern.",
+      width: 464,
+      height: 348
+    }],
+    ["IEFP PEPE: employment and professional-internship portal", {
+      src: "assets/card-media/trainings-tools/iefp-pepe-professional-internship.webp",
+      alt: "A professional-internship participant works at a computer in Cabo Verde.",
+      width: 480,
+      height: 360
+    }],
+    ["IEFP — Training in São Vicente", {
+      src: "assets/card-media/trainings-tools/iefp-sao-vicente-training.webp",
+      alt: "A trainee works on an electrical installation panel.",
+      width: 484,
+      height: 363
+    }],
+    ["IBM SkillsBuild", {
+      src: "assets/card-media/trainings-tools/ibm-skillsbuild-learning.webp",
+      alt: "Three learners collaborate around a laptop during a technology project.",
+      width: 800,
+      height: 600
+    }],
+    ["Microsoft Learn", {
+      src: "assets/card-media/trainings-tools/microsoft-learn-students.webp",
+      alt: "Students collaborate around laptops and a tablet.",
+      width: 400,
+      height: 300
+    }],
+    ["Cruz Vermelha de Cabo Verde", {
+      src: "assets/card-media/organizations-help/cruz-vermelha-voluntariado.webp",
+      alt: "Hands clasp in front of a red cross and the word Voluntariado.",
+      width: 456,
+      height: 342
+    }],
+    ["Biosfera", {
+      src: "assets/card-media/organizations-help/biosfera-conservation-volunteers.webp",
+      alt: "Biosfera volunteers survey wildlife with binoculars in a dry island landscape.",
+      width: 960,
+      height: 720
+    }],
+    ["Nô Bai Associação", {
+      src: "assets/card-media/organizations-help/no-bai-voluntariado.webp",
+      alt: "A circle of volunteers stack their hands together.",
+      width: 960,
+      height: 720
+    }],
+    ["Associação Espaço Jovem", {
+      src: "assets/card-media/organizations-help/espaco-jovem-youth-support.webp",
+      alt: "Espaço Jovem volunteers and children gather around a youth art activity.",
+      width: 624,
+      height: 468
+    }],
+    ["Aldeias Infantis SOS Cabo Verde", {
+      src: "assets/card-media/organizations-help/aldeias-sos-cabo-verde-family.webp",
+      alt: "A smiling family embraces outdoors in Cabo Verde.",
+      width: 500,
+      height: 375
+    }],
+    ["SabMais", {
+      src: "assets/card-media/organizations-help/sabmais-study-volunteering.webp",
+      alt: "A SabMais volunteer and student study together in a Mindelo classroom.",
+      width: 960,
+      height: 720
+    }]
+  ]);
+
+  function createProviderMedia(className, media) {
+    const wrapper = document.createElement("div");
+    wrapper.className = className;
+    const image = document.createElement("img");
+    image.src = media.src;
+    image.alt = media.alt;
+    image.width = media.width;
+    image.height = media.height;
+    image.loading = "lazy";
+    image.decoding = "async";
+    wrapper.append(image);
+    return wrapper;
+  }
+
+  function applyProviderMedia() {
+    providerMedia.forEach((media, title) => {
+      const card = ["things-to-do", "trainings-tools", "organizations-help"]
+        .map((sectionId) => getCardByTitle(sectionId, title))
+        .find(Boolean);
+      if (!card) return;
+
+      card.querySelector(":scope > .card-media")?.remove();
+      card.prepend(createProviderMedia("card-media", media));
+
+      const record = card.querySelector(".details-template")?.content.querySelector(".dialog-record");
+      if (!record) return;
+      record.querySelector(":scope > .dialog-media")?.remove();
+      record.prepend(createProviderMedia("dialog-media", media));
+    });
+  }
+
   function ensureSectionMediaSlots(sectionId, label, note) {
     const section = document.getElementById(sectionId);
     if (!section) return;
@@ -253,6 +383,7 @@
     removeRecurringDanceRecord();
     updateMonPikeninFreshness();
     addLearningSpotlight();
+    applyProviderMedia();
 
     ensureSectionMediaSlots(
       "things-to-do",
