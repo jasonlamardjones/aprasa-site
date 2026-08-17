@@ -20,7 +20,23 @@ const escapeHtml = (value) => value
   .replaceAll('"', '&quot;')
   .replaceAll("'", '&#39;');
 const hasText = (value) => typeof value === 'string' && value.trim().length > 0;
-const isIsoDate = (value) => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
+const isIsoDate = (value) => {
+  if (typeof value !== 'string') return false;
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return false;
+
+  const [, yearText, monthText, dayText] = match;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const date = new Date(0);
+  date.setUTCHours(0, 0, 0, 0);
+  date.setUTCFullYear(year, month - 1, day);
+
+  return date.getUTCFullYear() === year
+    && date.getUTCMonth() === month - 1
+    && date.getUTCDate() === day;
+};
 
 for (const record of manifest.records) {
   const label = `${record.section} :: ${record.title}`;
@@ -35,7 +51,7 @@ for (const record of manifest.records) {
       errors.push(`${label}: media_asset does not exist: ${record.media_asset}`);
     }
     if (!hasText(record.media_provenance)) errors.push(`${label}: authentic-present requires media_provenance`);
-    if (!isIsoDate(record.media_checked_date)) errors.push(`${label}: authentic-present requires media_checked_date in YYYY-MM-DD format`);
+    if (!isIsoDate(record.media_checked_date)) errors.push(`${label}: authentic-present requires a valid calendar date in YYYY-MM-DD format`);
     if (!hasText(record.media_alt)) errors.push(`${label}: authentic-present requires informative media_alt`);
   }
 
