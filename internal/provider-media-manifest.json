@@ -106,6 +106,22 @@
     },
     {
       "section": "trainings-tools",
+      "title": "Academia de Estudo Crescer — Study-Room Monitor Recruitment",
+      "provider": "Academia de Estudo Crescer",
+      "source_url": "Founder-supplied recruitment poster received through a local church/community chat on 2026-08-17",
+      "media_type": "provider-supplied",
+      "media_state": "authentic-present",
+      "media_source": "Founder-supplied Academia de Estudo Crescer recruitment poster",
+      "media_asset": "assets/card-media/trainings-tools/academia-crescer-recruitment-2026-2027.webp",
+      "fallback_category": "opportunities-jobs-employment",
+      "fallback_reason": null,
+      "media_provenance": "Recruitment poster supplied by the founder after receipt through a local church/community chat on 17 August 2026; the notice itself was not independently located on a provider website.",
+      "media_asset_source_url": null,
+      "media_checked_date": "2026-08-17",
+      "media_alt": "Recruitment poster from Academia de Estudo Crescer for study-room monitors in Mathematics, Basic Education, Special Education and Physics/Chemistry for the 2026/2027 school year."
+    },
+    {
+      "section": "trainings-tools",
       "title": "HP LIFE",
       "provider": "HP Foundation",
       "source_url": "https://www.life-global.org/",
