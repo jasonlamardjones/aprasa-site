@@ -13,10 +13,16 @@ const allowedStates = new Set(['authentic-present', 'authentic-available-needs-i
 
 const errors = [];
 const warnings = [];
+const escapeHtml = (value) => value
+  .replaceAll('&', '&amp;')
+  .replaceAll('<', '&lt;')
+  .replaceAll('>', '&gt;')
+  .replaceAll('"', '&quot;')
+  .replaceAll("'", '&#39;');
 
 for (const record of manifest.records) {
   const label = `${record.section} :: ${record.title}`;
-  if (!html.includes(`<h3>${record.title}</h3>`)) errors.push(`${label}: card title not found in index.html`);
+  if (!html.includes(`<h3>${escapeHtml(record.title)}</h3>`)) errors.push(`${label}: card title not found in index.html`);
   if (!record.source_url) errors.push(`${label}: missing source_url`);
   if (!allowedTypes.has(record.media_type)) errors.push(`${label}: invalid media_type ${record.media_type}`);
   if (!allowedStates.has(record.media_state)) errors.push(`${label}: invalid media_state ${record.media_state}`);
