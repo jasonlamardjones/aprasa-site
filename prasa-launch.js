@@ -64,18 +64,36 @@
         line-height: 1.2;
       }
       .media-fallback-note {
-        max-width: 24ch;
+        max-width: 28ch;
         font-size: .72rem;
         line-height: 1.35;
       }
       .dialog-media.media-fallback {
         min-height: 12rem;
       }
+      .spotlight-label {
+        display: inline-flex;
+        width: fit-content;
+        margin: 0 0 .15rem;
+        padding: .28rem .55rem;
+        border: 1px solid currentColor;
+        border-radius: 999px;
+        font-size: .72rem;
+        font-weight: 700;
+        letter-spacing: .04em;
+        line-height: 1.2;
+        text-transform: uppercase;
+      }
+      .spotlight-disclosure {
+        margin: .15rem 0 .65rem;
+        font-size: .78rem;
+        line-height: 1.45;
+      }
     `;
     document.head.append(style);
   }
 
-  function createEditorialFallback(className) {
+  function createEditorialFallback(className, label = "Things to Do", note = "A PRASA editorial thumbnail — not an image of this specific activity.") {
     const media = document.createElement("div");
     media.className = `${className} media-fallback`;
     media.setAttribute("aria-hidden", "true");
@@ -89,36 +107,170 @@
     symbol.width = 725;
     symbol.height = 725;
 
-    const label = document.createElement("span");
-    label.className = "media-fallback-label";
-    label.textContent = "Things to Do";
+    const fallbackLabel = document.createElement("span");
+    fallbackLabel.className = "media-fallback-label";
+    fallbackLabel.textContent = label;
 
-    const note = document.createElement("span");
-    note.className = "media-fallback-note";
-    note.textContent = "A PRASA editorial thumbnail — not an image of this specific activity.";
+    const fallbackNote = document.createElement("span");
+    fallbackNote.className = "media-fallback-note";
+    fallbackNote.textContent = note;
 
-    inner.append(symbol, label, note);
+    inner.append(symbol, fallbackLabel, fallbackNote);
     media.append(inner);
     return media;
   }
 
-  function ensureThingsToDoMediaSlots() {
-    const section = document.getElementById("things-to-do");
+  function ensureSectionMediaSlots(sectionId, label, note) {
+    const section = document.getElementById(sectionId);
     if (!section) return;
 
     addMediaFoundationStyles();
 
     section.querySelectorAll(".resource-card").forEach((card) => {
       if (!card.querySelector(":scope > .card-media")) {
-        card.prepend(createEditorialFallback("card-media"));
+        card.prepend(createEditorialFallback("card-media", label, note));
       }
 
       const template = card.querySelector(".details-template");
       const record = template?.content.querySelector(".dialog-record");
       if (record && !record.querySelector(":scope > .dialog-media")) {
-        record.prepend(createEditorialFallback("dialog-media"));
+        record.prepend(createEditorialFallback("dialog-media", label, note));
       }
     });
+  }
+
+  function getCardByTitle(sectionId, title) {
+    const section = document.getElementById(sectionId);
+    if (!section) return null;
+    return Array.from(section.querySelectorAll(".resource-card")).find((card) => card.querySelector("h3")?.textContent.trim() === title) || null;
+  }
+
+  function removeRecurringDanceRecord() {
+    getCardByTitle("things-to-do", "Learn Cape Verdean Dance in Mindelo")?.remove();
+  }
+
+  function updateMonPikeninFreshness() {
+    const card = getCardByTitle("things-to-do", "Mon Pikenin");
+    if (!card) return;
+
+    const status = card.querySelector(":scope > .card-status");
+    if (status) status.textContent = "29 August 2026 · 10:00–12:00";
+
+    const cardChecked = card.querySelector(":scope > .checked");
+    if (cardChecked) cardChecked.textContent = "Checked 17 August 2026";
+
+    const record = card.querySelector(".details-template")?.content.querySelector(".dialog-record");
+    if (!record) return;
+
+    record.querySelectorAll(".detail-list > div").forEach((row) => {
+      if (row.querySelector("dt")?.textContent.trim() === "Dates") {
+        const value = row.querySelector("dd");
+        if (value) value.textContent = "29 August 2026 · 10:00–12:00";
+      }
+    });
+
+    const detailHeading = Array.from(record.querySelectorAll("h3")).find((heading) => heading.textContent.trim() === "Details");
+    const detailCopy = detailHeading?.nextElementSibling;
+    if (detailCopy?.tagName === "P") {
+      detailCopy.textContent = "A children’s session hosted by Alternativa Galeria; the poster does not specify further activity details beyond age and time.";
+    }
+
+    const recordChecked = record.querySelector(".checked");
+    if (recordChecked) recordChecked.textContent = "Checked 17 August 2026 against the organizer’s published event poster.";
+  }
+
+  function applyLocalSpotlight() {
+    const card = getCardByTitle("things-to-do", "Water & Adventure Activities in Mindelo");
+    if (!card || card.dataset.localSpotlight === "true") return;
+    card.dataset.localSpotlight = "true";
+
+    const badge = document.createElement("p");
+    badge.className = "spotlight-label";
+    badge.textContent = "Local Spotlight";
+
+    const media = card.querySelector(":scope > .card-media");
+    if (media) media.insertAdjacentElement("afterend", badge);
+    else card.prepend(badge);
+
+    const disclosure = document.createElement("p");
+    disclosure.className = "spotlight-disclosure";
+    disclosure.textContent = "Local Spotlight is a rotating editorial feature. Businesses do not pay to be selected, and selection does not imply sponsorship or endorsement.";
+    const checked = card.querySelector(":scope > .checked");
+    if (checked) checked.insertAdjacentElement("afterend", disclosure);
+    else card.append(disclosure);
+
+    const record = card.querySelector(".details-template")?.content.querySelector(".dialog-record");
+    if (!record) return;
+
+    const dialogBadge = badge.cloneNode(true);
+    record.prepend(dialogBadge);
+
+    const dialogDisclosure = disclosure.cloneNode(true);
+    const recordChecked = record.querySelector(".checked");
+    if (recordChecked) recordChecked.insertAdjacentElement("afterend", dialogDisclosure);
+    else record.append(dialogDisclosure);
+  }
+
+  function addLearningSpotlight() {
+    const section = document.getElementById("trainings-tools");
+    const grid = section?.querySelector(".resource-grid");
+    if (!grid || grid.querySelector('[data-learning-spotlight="myrtle"]')) return;
+
+    const card = document.createElement("article");
+    card.className = "resource-card";
+    card.dataset.learningSpotlight = "myrtle";
+    card.innerHTML = `
+      <p class="spotlight-label">Learning Spotlight</p>
+      <p class="card-status">Mindelo · Learning programs</p>
+      <h3>Myrtle Atividades Educativas</h3>
+      <p class="card-meta">Language, computer, workplace-English and other learning programs</p>
+      <p class="provider">Myrtle Atividades Educativas</p>
+      <p>Explore language, computer, workplace-English and other learning programs from Myrtle Atividades Educativas in Mindelo.</p>
+      <p class="checked">Checked 17 August 2026 against the provider’s current first-party site.</p>
+      <div class="card-actions">
+        <button class="details-button" type="button" data-details>Details</button>
+        <a class="resource-link" href="https://myrtleducativas.com/" target="_blank" rel="noopener noreferrer">Explore Myrtle programs <span aria-hidden="true">↗</span></a>
+      </div>
+      <template class="details-template">
+        <div class="dialog-record">
+          <p class="spotlight-label">Learning Spotlight</p>
+          <p class="provider">Myrtle Atividades Educativas</p>
+          <h2>Myrtle Atividades Educativas</h2>
+          <h3>Details</h3>
+          <p>Explore language, computer, workplace-English and other learning programs from Myrtle Atividades Educativas in Mindelo.</p>
+          <h3>Good to know</h3>
+          <p>Programs, schedules, prices and enrollment availability can change. Check current information directly with Myrtle before acting.</p>
+          <p class="checked">Checked 17 August 2026 against the provider’s current first-party site.</p>
+          <a class="dialog-link" href="https://myrtleducativas.com/" target="_blank" rel="noopener noreferrer">Explore Myrtle programs <span aria-hidden="true">↗</span></a>
+        </div>
+      </template>
+    `;
+
+    grid.prepend(card);
+  }
+
+  function prepareHomeEditorialState() {
+    removeRecurringDanceRecord();
+    updateMonPikeninFreshness();
+    addLearningSpotlight();
+
+    ensureSectionMediaSlots(
+      "things-to-do",
+      "Things to Do",
+      "A PRASA editorial thumbnail — not an image of this specific activity."
+    );
+    ensureSectionMediaSlots(
+      "trainings-tools",
+      "Trainings, Tools & Opportunities",
+      "A PRASA section thumbnail — not provider-specific imagery."
+    );
+    ensureSectionMediaSlots(
+      "organizations-help",
+      "Organizations & Ways to Help",
+      "A PRASA section thumbnail — not provider-specific imagery."
+    );
+
+    applyLocalSpotlight();
   }
 
   function closeDetails() {
@@ -135,7 +287,7 @@
   }
 
   applyMultilingualSequenceMetadata();
-  ensureThingsToDoMediaSlots();
+  prepareHomeEditorialState();
 
   document.querySelectorAll("[data-details]").forEach((button) => {
     button.addEventListener("click", () => {
