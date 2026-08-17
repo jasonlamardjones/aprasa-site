@@ -19,6 +19,8 @@ const escapeHtml = (value) => value
   .replaceAll('>', '&gt;')
   .replaceAll('"', '&quot;')
   .replaceAll("'", '&#39;');
+const hasText = (value) => typeof value === 'string' && value.trim().length > 0;
+const isIsoDate = (value) => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
 
 for (const record of manifest.records) {
   const label = `${record.section} :: ${record.title}`;
@@ -32,6 +34,9 @@ for (const record of manifest.records) {
     if (record.media_asset && !fs.existsSync(path.join(root, record.media_asset))) {
       errors.push(`${label}: media_asset does not exist: ${record.media_asset}`);
     }
+    if (!hasText(record.media_provenance)) errors.push(`${label}: authentic-present requires media_provenance`);
+    if (!isIsoDate(record.media_checked_date)) errors.push(`${label}: authentic-present requires media_checked_date in YYYY-MM-DD format`);
+    if (!hasText(record.media_alt)) errors.push(`${label}: authentic-present requires informative media_alt`);
   }
 
   if (record.media_type === 'provider-owned' || record.media_type === 'provider-supplied') {
