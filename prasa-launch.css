@@ -372,6 +372,18 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
 .detail-list dd { margin: .18rem 0 0; }
 .dialog-link { justify-content: flex-start; margin-top: .8rem; }
 
+.record-page { padding: 2.25rem 0 2.8rem; }
+.breadcrumb { margin: 0 0 1.1rem; font-size: .86rem; }
+.breadcrumb a { min-height: 44px; display: inline-flex; align-items: center; }
+.record-article { max-width: 42rem; }
+.record-article .record-media { margin: 0 0 1.2rem; border-radius: var(--radius); overflow: hidden; }
+.record-article .record-media img { width: 100%; height: auto; display: block; }
+.record-article h1 { max-width: none; margin: 0; font-size: clamp(1.7rem, 4.5vw, 2.3rem); line-height: 1.2; text-wrap: pretty; }
+.record-article h2 { margin-top: 1.25rem; font-size: 1rem; font-weight: 700; color: var(--green); }
+.record-article .provider { margin: 0 0 .4rem !important; }
+.record-article p { margin: .5rem 0 0; }
+.record-article .detail-list { margin: 1rem 0; }
+
 .about-section { padding: 2.7rem 0 3rem; background: rgba(255,255,255,.34); border-top: 1px solid rgba(30,61,46,.17); }
 .about-grid { display: grid; gap: 1.2rem; }
 #about-title { font-size: clamp(1.7rem, 4vw, 2.05rem); line-height: 1.2; max-width: 22ch; text-wrap: balance; }
