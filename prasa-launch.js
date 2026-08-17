@@ -127,6 +127,12 @@
       width: 800,
       height: 600
     }],
+    ["Sinergia da Matéria: Entre o Bruto e o Traço", {
+      src: "assets/card-media/things-to-do/sinergia-da-materia-editorial-fallback.webp",
+      alt: "",
+      width: 1200,
+      height: 900
+    }],
     ["Street Art in Mindelo", {
       src: "assets/card-media/things-to-do/mindelo-cultural-street-art.webp",
       alt: "Street-art mural in Mindelo showing people gathered near a waterfront.",

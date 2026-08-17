@@ -62,12 +62,12 @@
       "provider": "CNAD",
       "source_url": "https://cnad.cv/info/",
       "media_type": "editorial-fallback",
-      "media_state": "fallback-temporary",
+      "media_state": "fallback-final",
       "media_source": null,
-      "media_asset": null,
+      "media_asset": "assets/card-media/things-to-do/sinergia-da-materia-editorial-fallback.webp",
       "fallback_category": "things-visual-arts",
-      "fallback_reason": "Exhibition-specific provider-controlled image not yet resolved.",
-      "media_provenance": "CNAD’s official Info page was inspected on 2026-08-17; it exposed general venue imagery but no image verifiably specific to this exhibition, so the temporary decorative editorial fallback is retained.",
+      "fallback_reason": "No verified exhibition-specific provider-controlled image was available from CNAD; approved A PRASA editorial fallback used.",
+      "media_provenance": "A PRASA-generated editorial fallback image approved for this record.",
       "media_asset_source_url": null,
       "media_checked_date": "2026-08-17",
       "media_alt": ""
@@ -298,4 +298,3 @@
     }
   ]
 }
-
