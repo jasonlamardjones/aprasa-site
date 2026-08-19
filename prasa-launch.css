@@ -388,13 +388,132 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
 .record-article p { margin: .5rem 0 0; }
 .record-article .detail-list { margin: 1rem 0; }
 
-.about-section { padding: 2.7rem 0 3rem; background: rgba(255,255,255,.34); border-top: 1px solid rgba(30,61,46,.17); }
-.about-grid { display: grid; gap: 1.2rem; }
-#about-title { font-size: clamp(1.7rem, 4vw, 2.05rem); line-height: 1.2; max-width: 22ch; text-wrap: balance; }
-.about-lead { margin: .6rem 0 0; max-width: 28ch; color: var(--green); font-weight: 600; text-wrap: pretty; }
+.about-section { padding: 2.6rem 0; border-top: 1px solid rgba(30,61,46,.17); }
+.about-section-tinted { background: rgba(255,255,255,.4); }
+.about-copy-block { max-width: 46rem; }
+.about-copy-block h2 { margin: .3rem 0 1rem; }
+.about-copy-block > p { margin: 0 0 .85rem; text-wrap: pretty; }
+#about-title { font-size: clamp(1.9rem, 4.6vw, 2.65rem); line-height: 1.16; max-width: 18ch; text-wrap: balance; }
+.about-lead { margin: .7rem 0 .9rem; font-family: var(--serif); font-style: italic; font-size: clamp(1.15rem, 3vw, 1.4rem); color: var(--green); text-wrap: pretty; }
+.about-hero { padding: 2rem 0 2.6rem; }
+.about-hero-grid { display: grid; gap: 1.5rem; align-items: center; }
+.about-hero-copy { order: 2; }
+.about-visual-anchor { order: 1; }
+.about-hero-copy p:not(.about-lead) { margin: 0 0 .8rem; text-wrap: pretty; }
+.about-grid-block { display: grid; gap: 1.6rem; align-items: center; }
 .about-copy p { margin: 0 0 .85rem; text-wrap: pretty; }
-.about-copy h3 { margin: 1.5rem 0 .3rem; }
-.about-copy h2 { margin: 1.5rem 0 .3rem; font-size: 1.08rem; font-weight: 500; line-height: 1.28; }
+.about-copy h2 { margin: .3rem 0 1rem; }
+.lang-sequence { margin: 0 0 .85rem; }
+.about-list { margin: 0 0 .85rem; padding-left: 1.2rem; }
+.about-list li { margin: 0 0 .4rem; text-wrap: pretty; }
+.about-mission { margin-top: 1.4rem; padding-top: 1.2rem; border-top: 1px solid rgba(30,61,46,.17); }
+.about-mission-statement { margin: 0; font-family: var(--serif); font-size: 1.1rem; line-height: 1.45; color: var(--green); text-wrap: pretty; }
+
+.about-visual { margin: 0; }
+.about-visual picture, .about-visual img { display: block; width: 100%; height: 100%; }
+.about-visual img { object-fit: cover; }
+.about-visual-portrait { aspect-ratio: 4 / 3; }
+
+/* Hero bleeds full-width on mobile for a stronger, more confident presence; becomes a normal grid column at desktop */
+.about-visual-anchor {
+  margin: 0 calc(50% - 50vw);
+  width: 100vw;
+}
+.about-visual-hero { aspect-ratio: 1672 / 941; }
+
+/* Closing banner (Take Part) always spans full width as a distinct visual moment before the accordion.
+   It's already a direct child of <section>, outside .container, so plain 100% width reaches the edge
+   without the vw-based bleed hack (which overflows by the scrollbar width on desktop). */
+.about-visual-banner {
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  margin-bottom: 1.8rem;
+}
+
+/* Soft watercolor edge-dissolve for the paired editorial illustrations (How It Works).
+   Radial-gradient color-stop percentages are normalized to the ellipse's OWN radius, not
+   the element box: with radii given as %-of-box-dimension, the box edge sits at a gradient
+   position of (50 / radius%). Prior attempts used radii >=70%, putting the box edge at only
+   ~69-71% through the gradient — short of the 100% transparent stop, leaving a visible edge.
+   Radii here are kept under 50% so the box edge (50/45 = ~111%) falls past the transparent
+   stop with real margin, guaranteeing full transparency at the actual visible perimeter. */
+.about-visual-soft {
+  -webkit-mask-image: radial-gradient(ellipse 45% 45% at 50% 50%, #000 40%, rgba(0,0,0,.92) 55%, rgba(0,0,0,.45) 78%, transparent 100%);
+  mask-image: radial-gradient(ellipse 45% 45% at 50% 50%, #000 40%, rgba(0,0,0,.92) 55%, rgba(0,0,0,.45) 78%, transparent 100%);
+}
+
+/* Founder photograph (Rooted in Cabo Verde): native aspect ratio, no crop, no watercolor mask —
+   a deliberate documentary contrast against the illustrated sections elsewhere on the page. */
+.about-visual-photo { aspect-ratio: 1536 / 918; }
+
+/* Feature background treatment reused from the Home "why it exists" pattern, for the conceptual "What is A PRASA?" section */
+.about-section-feature { position: relative; isolation: isolate; overflow: hidden; padding: 2.8rem 0; }
+.about-feature-bg {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 68% 22%;
+  opacity: .55;
+}
+.about-section-feature::after {
+  content: "";
+  position: absolute;
+  inset: -15% -10%;
+  z-index: -1;
+  background: radial-gradient(ellipse 62% 62% at 46% 50%, var(--cream) 0%, rgba(246,240,226,.92) 42%, rgba(246,240,226,.55) 66%, rgba(246,240,226,0) 100%);
+  pointer-events: none;
+}
+
+.about-section-closing { padding-top: 0; }
+
+.about-section-heading { max-width: 46rem; margin-bottom: 1.4rem; }
+.about-section-heading > p:last-child { margin: .6rem 0 0; }
+.about-find-grid { display: grid; gap: 1.5rem; }
+.about-find-item { padding-top: 1.2rem; border-top: 1px solid rgba(30,61,46,.17); }
+.about-find-item:first-child { border-top: 0; padding-top: 0; }
+.about-find-kicker { margin: 0 0 .2rem; font-size: .78rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ochre-text); }
+.about-find-item h3 { margin: 0 0 .5rem; font-family: var(--serif); font-size: 1.25rem; font-weight: 400; }
+.about-find-item p { margin: 0 0 .6rem; text-wrap: pretty; }
+
+.about-more { padding-bottom: 3rem; }
+.about-accordion-item {
+  margin-top: 1rem;
+  border: 1px solid rgba(30,61,46,.22);
+  border-radius: var(--radius);
+  background: var(--white);
+  overflow: hidden;
+}
+.about-accordion-item summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 44px;
+  padding: .9rem 1.1rem;
+  cursor: pointer;
+  list-style: none;
+  font-family: var(--serif);
+}
+.about-accordion-item summary::-webkit-details-marker { display: none; }
+.about-accordion-item summary h3 { margin: 0; font-size: 1.05rem; font-weight: 400; }
+.about-accordion-item summary::after {
+  content: "+";
+  flex: 0 0 auto;
+  font-size: 1.3rem;
+  line-height: 1;
+  color: var(--ochre-text);
+}
+.about-accordion-item[open] summary::after { content: "\2212"; }
+.about-accordion-item summary:focus-visible {
+  outline: 3px solid var(--green);
+  outline-offset: -3px;
+  border-radius: 4px;
+}
+.about-accordion-body { padding: 0 1.1rem 1.1rem; border-top: 1px solid rgba(30,61,46,.14); }
+.about-accordion-body p { margin: .8rem 0 0; text-wrap: pretty; }
 
 .site-footer { background: var(--green); color: var(--cream); }
 .footer-inner { padding: 1.8rem 0 2.2rem; }
@@ -439,8 +558,24 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
   .resource-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .training-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .mindelo-home-grid { grid-template-columns: minmax(0,.8fr) minmax(0,1.2fr); align-items: start; }
-  .about-grid { grid-template-columns: minmax(0,.95fr) minmax(0,1.05fr); align-items: start; gap: 1.7rem; }
   .detail-list { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .about-hero-grid { grid-template-columns: minmax(0,1.18fr) minmax(0,.82fr); gap: 2.5rem; }
+  .about-visual-anchor {
+    margin: 0;
+    width: auto;
+    /* Image sits in the left column at this breakpoint (order: 1) with copy to its right:
+       a restrained feather on the outer left edge, fully opaque center, and a broader
+       dissolve on the inner right edge toward the copy column. */
+    -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 7%, #000 88%, transparent 100%);
+    mask-image: linear-gradient(90deg, transparent 0%, #000 7%, #000 88%, transparent 100%);
+  }
+  .about-grid-block { grid-template-columns: minmax(0,1.15fr) minmax(0,.85fr); gap: 2.6rem; }
+  .about-grid-block-text-right { grid-template-columns: minmax(0,.85fr) minmax(0,1.15fr); }
+  .about-grid-block-text-right .about-copy { order: 1; }
+  .about-grid-block-text-right .about-visual { order: 2; }
+  .about-find-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2rem 1.8rem; }
+  .about-find-item { border-top: 0; padding-top: 0; }
+  .about-visual-banner { aspect-ratio: 2 / 1; }
 }
 
 @media (min-width: 64rem) {
