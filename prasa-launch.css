@@ -397,6 +397,8 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
 .about-lead { margin: .7rem 0 .9rem; font-family: var(--serif); font-style: italic; font-size: clamp(1.15rem, 3vw, 1.4rem); color: var(--green); text-wrap: pretty; }
 .about-hero { padding: 2rem 0 2.6rem; }
 .about-hero-grid { display: grid; gap: 1.5rem; align-items: center; }
+.about-hero-copy { order: 2; }
+.about-visual-anchor { order: 1; }
 .about-hero-copy p:not(.about-lead) { margin: 0 0 .8rem; text-wrap: pretty; }
 .about-grid-block { display: grid; gap: 1.6rem; align-items: center; }
 .about-copy p { margin: 0 0 .85rem; text-wrap: pretty; }
@@ -407,12 +409,55 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
 .about-mission { margin-top: 1.4rem; padding-top: 1.2rem; border-top: 1px solid rgba(30,61,46,.17); }
 .about-mission-statement { margin: 0; font-family: var(--serif); font-size: 1.1rem; line-height: 1.45; color: var(--green); text-wrap: pretty; }
 
-.about-visual { margin: 0; border-radius: var(--radius); }
-.about-visual img { width: 100%; height: 100%; object-fit: cover; }
-.about-visual-hero { aspect-ratio: 1672 / 941; }
-.about-visual-square { aspect-ratio: 1458 / 994; }
-.about-visual-square img { object-fit: contain; }
+.about-visual { margin: 0; }
+.about-visual picture, .about-visual img { display: block; width: 100%; height: 100%; }
+.about-visual img { object-fit: cover; }
 .about-visual-portrait { aspect-ratio: 4 / 3; }
+
+/* Hero bleeds full-width on mobile for a stronger, more confident presence; becomes a normal grid column at desktop */
+.about-visual-anchor {
+  margin: 0 calc(50% - 50vw);
+  width: 100vw;
+}
+.about-visual-hero { aspect-ratio: 1672 / 941; }
+
+/* Closing banner (Take Part) always spans full width as a distinct visual moment before the accordion.
+   It's already a direct child of <section>, outside .container, so plain 100% width reaches the edge
+   without the vw-based bleed hack (which overflows by the scrollbar width on desktop). */
+.about-visual-banner {
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  margin-bottom: 1.8rem;
+}
+
+/* Soft watercolor edge-dissolve for the paired editorial images (Rooted / How It Works) */
+.about-visual-soft {
+  -webkit-mask-image: radial-gradient(ellipse 92% 92% at 50% 50%, #000 58%, transparent 100%);
+  mask-image: radial-gradient(ellipse 92% 92% at 50% 50%, #000 58%, transparent 100%);
+}
+
+/* Feature background treatment reused from the Home "why it exists" pattern, for the conceptual "What is A PRASA?" section */
+.about-section-feature { position: relative; isolation: isolate; overflow: hidden; padding: 2.8rem 0; }
+.about-feature-bg {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 68% 22%;
+  opacity: .55;
+}
+.about-section-feature::after {
+  content: "";
+  position: absolute;
+  inset: -15% -10%;
+  z-index: -1;
+  background: radial-gradient(ellipse 62% 62% at 46% 50%, var(--cream) 0%, rgba(246,240,226,.92) 42%, rgba(246,240,226,.55) 66%, rgba(246,240,226,0) 100%);
+  pointer-events: none;
+}
+
+.about-section-closing { padding-top: 0; }
 
 .about-section-heading { max-width: 46rem; margin-bottom: 1.4rem; }
 .about-section-heading > p:last-child { margin: .6rem 0 0; }
@@ -504,12 +549,20 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
   .training-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .mindelo-home-grid { grid-template-columns: minmax(0,.8fr) minmax(0,1.2fr); align-items: start; }
   .detail-list { grid-template-columns: repeat(2, minmax(0,1fr)); }
-  .about-hero-grid { grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 2.5rem; }
-  .about-grid-block { grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 2.5rem; }
-  .about-grid-block-reverse { direction: rtl; }
-  .about-grid-block-reverse > * { direction: ltr; }
+  .about-hero-grid { grid-template-columns: minmax(0,1.18fr) minmax(0,.82fr); gap: 2.5rem; }
+  .about-visual-anchor {
+    margin: 0;
+    width: auto;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 10%, #000 100%);
+    mask-image: linear-gradient(90deg, transparent 0%, #000 10%, #000 100%);
+  }
+  .about-grid-block { grid-template-columns: minmax(0,1.15fr) minmax(0,.85fr); gap: 2.6rem; }
+  .about-grid-block-text-right { grid-template-columns: minmax(0,.85fr) minmax(0,1.15fr); }
+  .about-grid-block-text-right .about-copy { order: 1; }
+  .about-grid-block-text-right .about-visual { order: 2; }
   .about-find-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2rem 1.8rem; }
   .about-find-item { border-top: 0; padding-top: 0; }
+  .about-visual-banner { aspect-ratio: 2 / 1; }
 }
 
 @media (min-width: 64rem) {
