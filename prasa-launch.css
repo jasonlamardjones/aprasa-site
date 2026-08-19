@@ -431,11 +431,15 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
 }
 
 /* Soft watercolor edge-dissolve for the paired editorial illustrations (How It Works).
-   Radii are sized close to the element's own bounds (not far beyond them) so the
-   transparent stop actually reaches the visible perimeter before the box clips it. */
+   Radial-gradient color-stop percentages are normalized to the ellipse's OWN radius, not
+   the element box: with radii given as %-of-box-dimension, the box edge sits at a gradient
+   position of (50 / radius%). Prior attempts used radii >=70%, putting the box edge at only
+   ~69-71% through the gradient — short of the 100% transparent stop, leaving a visible edge.
+   Radii here are kept under 50% so the box edge (50/45 = ~111%) falls past the transparent
+   stop with real margin, guaranteeing full transparency at the actual visible perimeter. */
 .about-visual-soft {
-  -webkit-mask-image: radial-gradient(ellipse 72% 70% at 50% 50%, #000 48%, rgba(0,0,0,.95) 60%, rgba(0,0,0,.55) 78%, transparent 100%);
-  mask-image: radial-gradient(ellipse 72% 70% at 50% 50%, #000 48%, rgba(0,0,0,.95) 60%, rgba(0,0,0,.55) 78%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 45% 45% at 50% 50%, #000 40%, rgba(0,0,0,.92) 55%, rgba(0,0,0,.45) 78%, transparent 100%);
+  mask-image: radial-gradient(ellipse 45% 45% at 50% 50%, #000 40%, rgba(0,0,0,.92) 55%, rgba(0,0,0,.45) 78%, transparent 100%);
 }
 
 /* Founder photograph (Rooted in Cabo Verde): native aspect ratio, no crop, no watercolor mask —
