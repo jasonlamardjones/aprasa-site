@@ -430,10 +430,12 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
   margin-bottom: 1.8rem;
 }
 
-/* Soft watercolor edge-dissolve for the paired editorial illustrations (How It Works) */
+/* Soft watercolor edge-dissolve for the paired editorial illustrations (How It Works).
+   Radii are sized close to the element's own bounds (not far beyond them) so the
+   transparent stop actually reaches the visible perimeter before the box clips it. */
 .about-visual-soft {
-  -webkit-mask-image: radial-gradient(ellipse 96% 94% at 50% 50%, #000 50%, rgba(0,0,0,.96) 62%, transparent 100%);
-  mask-image: radial-gradient(ellipse 96% 94% at 50% 50%, #000 50%, rgba(0,0,0,.96) 62%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 72% 70% at 50% 50%, #000 48%, rgba(0,0,0,.95) 60%, rgba(0,0,0,.55) 78%, transparent 100%);
+  mask-image: radial-gradient(ellipse 72% 70% at 50% 50%, #000 48%, rgba(0,0,0,.95) 60%, rgba(0,0,0,.55) 78%, transparent 100%);
 }
 
 /* Founder photograph (Rooted in Cabo Verde): native aspect ratio, no crop, no watercolor mask —
