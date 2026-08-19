@@ -8,8 +8,8 @@
   let scrollPosition = 0;
 
   function applyMultilingualSequenceMetadata() {
-    const sequence = document.querySelector(".lang-forms");
-    if (!sequence) return;
+    const sequences = document.querySelectorAll(".lang-forms");
+    if (!sequences.length) return;
 
     const forms = [
       ["prasa", "kea"],
@@ -21,16 +21,17 @@
       ["площа", "uk"]
     ];
 
-    const fragment = document.createDocumentFragment();
-    forms.forEach(([label, lang], index) => {
-      const span = document.createElement("span");
-      span.lang = lang;
-      span.textContent = label;
-      fragment.append(span);
-      if (index < forms.length - 1) fragment.append(document.createTextNode(" · "));
+    sequences.forEach((sequence) => {
+      const fragment = document.createDocumentFragment();
+      forms.forEach(([label, lang], index) => {
+        const span = document.createElement("span");
+        span.lang = lang;
+        span.textContent = label;
+        fragment.append(span);
+        if (index < forms.length - 1) fragment.append(document.createTextNode(" · "));
+      });
+      sequence.replaceChildren(fragment);
     });
-
-    sequence.replaceChildren(fragment);
   }
 
   function addMediaFoundationStyles() {
