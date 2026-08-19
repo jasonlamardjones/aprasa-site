@@ -430,11 +430,15 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
   margin-bottom: 1.8rem;
 }
 
-/* Soft watercolor edge-dissolve for the paired editorial images (Rooted / How It Works) */
+/* Soft watercolor edge-dissolve for the paired editorial illustrations (How It Works) */
 .about-visual-soft {
   -webkit-mask-image: radial-gradient(ellipse 92% 92% at 50% 50%, #000 58%, transparent 100%);
   mask-image: radial-gradient(ellipse 92% 92% at 50% 50%, #000 58%, transparent 100%);
 }
+
+/* Founder photograph (Rooted in Cabo Verde): native aspect ratio, no crop, no watercolor mask —
+   a deliberate documentary contrast against the illustrated sections elsewhere on the page. */
+.about-visual-photo { aspect-ratio: 1536 / 918; }
 
 /* Feature background treatment reused from the Home "why it exists" pattern, for the conceptual "What is A PRASA?" section */
 .about-section-feature { position: relative; isolation: isolate; overflow: hidden; padding: 2.8rem 0; }
