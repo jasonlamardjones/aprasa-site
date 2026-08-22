@@ -4,7 +4,15 @@ const input = new URL('../data/things-to-do-events.json', import.meta.url);
 const records = JSON.parse(fs.readFileSync(input, 'utf8')).records;
 
 const asOfArg = process.argv.find((arg) => arg.startsWith('--as-of='));
-const asOf = asOfArg ? asOfArg.split('=')[1] : new Date().toISOString().slice(0, 10);
+if (!asOfArg) {
+  console.error('Missing required --as-of=YYYY-MM-DD');
+  process.exit(1);
+}
+const asOf = asOfArg.split('=')[1];
+if (!/^\d{4}-\d{2}-\d{2}$/.test(asOf)) {
+  console.error(`Invalid --as-of date: ${asOf}`);
+  process.exit(1);
+}
 
 function isCurrent(record) {
   if (!record.end_date) return true;
@@ -35,5 +43,4 @@ console.log(JSON.stringify({
   records: fragments
 }, null, 2));
 
-// Phase 1 adapter only.
-// It intentionally does not replace incumbent HTML until output equivalence is verified.
+// Diagnostic adapter only: reports deterministic current fragments without mutating files.
