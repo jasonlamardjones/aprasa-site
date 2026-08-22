@@ -91,6 +91,14 @@ jobs:
           path: validation-artifacts/generated-surfaces.patch
           if-no-files-found: error
 
+      - name: Verify committed surfaces match canonical generation
+        run: |
+          git diff --exit-code -- index.html \
+            things-to-do/part-ilhas-nuno-miranda/index.html \
+            things-to-do/mon-pikenin/index.html \
+            things-to-do/arquitectura-da-imperfeicao/index.html \
+            things-to-do/sinergia-da-materia/index.html
+
       - name: Verify expiration behavior after PART_ILHAS
         shell: bash
         run: |
