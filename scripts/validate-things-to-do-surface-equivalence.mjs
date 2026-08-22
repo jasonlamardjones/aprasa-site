@@ -21,8 +21,8 @@ for (const record of data.records ?? []) {
     errors.push(`${label}: detail route missing from Home markup`);
   }
 
-  if (!indexHtml.includes(record.source_url)) {
-    errors.push(`${label}: source URL missing from Home markup`);
+  if (record.card_action?.url && !indexHtml.includes(record.card_action.url)) {
+    errors.push(`${label}: Home action URL missing from Home markup`);
   }
 
   if (record.media?.asset && !indexHtml.includes(record.media.asset)) {
@@ -41,8 +41,8 @@ for (const record of data.records ?? []) {
   if (!detailHtml.includes(record.provider)) {
     errors.push(`${label}: provider missing from detail page`);
   }
-  if (!detailHtml.includes(record.source_url) && record.card_action) {
-    errors.push(`${label}: source URL missing from detail page`);
+  if (record.card_action?.url && !detailHtml.includes(record.card_action.url)) {
+    errors.push(`${label}: action URL missing from detail page`);
   }
   if (record.media?.asset) {
     const relativeMedia = `../../${record.media.asset}`;
