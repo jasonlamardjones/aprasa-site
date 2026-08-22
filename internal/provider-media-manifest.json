@@ -106,6 +106,22 @@
     },
     {
       "section": "trainings-tools",
+      "title": "Kafê Djan Djan — Assistente de Restauração",
+      "provider": "Kafê Djan Djan, Mindelo",
+      "source_url": "Founder-supplied hiring flyer, uploaded 2026-08-22",
+      "media_type": "editorial-fallback",
+      "media_state": "fallback-temporary",
+      "media_source": null,
+      "media_asset": null,
+      "fallback_category": "opportunities-jobs-employment",
+      "fallback_reason": "Founder approved this hiring flyer and supplied its exact text for this follow-up patch, but the flyer image file itself was not present anywhere in this session's environment (verified via filesystem search and the session's attachment mount point) despite being expected. The listing was published as text only, using the founder-supplied wording verbatim, with the standard A PRASA editorial fallback rendering in place of the flyer image. Ingest the flyer image in a future session once it is actually accessible.",
+      "media_provenance": null,
+      "media_asset_source_url": null,
+      "media_checked_date": "2026-08-22",
+      "media_alt": null
+    },
+    {
+      "section": "trainings-tools",
       "title": "Myrtle Atividades Educativas",
       "provider": "Myrtle Atividades Educativas",
       "source_url": "https://myrtleducativas.com/",
