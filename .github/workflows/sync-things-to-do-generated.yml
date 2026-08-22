@@ -1,9 +1,9 @@
 name: Sync generated Things to Do surfaces
 
 on:
-  push:
+  pull_request:
     branches:
-      - claude/structured-event-currentness-v1
+      - main
     paths:
       - '.github/workflows/sync-things-to-do-generated.yml'
 
@@ -12,6 +12,7 @@ permissions:
 
 jobs:
   sync:
+    if: github.head_ref == 'claude/structured-event-currentness-v1'
     runs-on: ubuntu-latest
     steps:
       - name: Check out feature branch
