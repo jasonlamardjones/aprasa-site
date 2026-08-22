@@ -1,0 +1,63 @@
+name: Sync generated Things to Do surfaces
+
+on:
+  push:
+    branches:
+      - claude/structured-event-currentness-v1
+    paths:
+      - '.github/workflows/sync-things-to-do-generated.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: claude/structured-event-currentness-v1
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Generate canonical surfaces
+        run: node scripts/generate-things-to-do.mjs --as-of=2026-08-22 --write
+
+      - name: Validate generated surfaces
+        run: |
+          node scripts/validate-things-to-do-events.mjs
+          node scripts/validate-things-to-do-currentness.mjs --as-of=2026-08-22
+          node scripts/validate-things-to-do-surface-equivalence.mjs --as-of=2026-08-22
+          node scripts/validate-things-to-do-sitemap.mjs
+          git diff --check
+
+      - name: Verify sync scope
+        shell: bash
+        run: |
+          unexpected=$(git diff --name-only | grep -Ev '^(index\.html|things-to-do/(part-ilhas-nuno-miranda|mon-pikenin|arquitectura-da-imperfeicao|sinergia-da-materia)/index\.html)$' || true)
+          if [ -n "$unexpected" ]; then
+            echo "Generator changed unexpected files:"
+            echo "$unexpected"
+            exit 1
+          fi
+
+      - name: Commit generated surfaces
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo 'Generated surfaces already synchronized.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html \
+            things-to-do/part-ilhas-nuno-miranda/index.html \
+            things-to-do/mon-pikenin/index.html \
+            things-to-do/arquitectura-da-imperfeicao/index.html \
+            things-to-do/sinergia-da-materia/index.html
+          git commit -m 'Synchronize generated Things to Do surfaces'
+          git push origin HEAD:claude/structured-event-currentness-v1
