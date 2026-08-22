@@ -83,7 +83,7 @@ function renderSchema(record, expired) {
   if (record.start_datetime) schema.startDate = record.start_datetime;
   else if (record.start_date) schema.startDate = record.start_date;
   if (record.end_datetime) schema.endDate = record.end_datetime;
-  else if (record.end_date) schema.endDate = record.end_date;
+  else if (record.start_date && record.end_date) schema.endDate = record.end_date;
   if (typeof record.free_admission === 'boolean') schema.isAccessibleForFree = record.free_admission;
   if (record.media?.asset) schema.image = `https://aprasa.org/${record.media.asset}`;
 
