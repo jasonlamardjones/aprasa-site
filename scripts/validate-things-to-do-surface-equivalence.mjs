@@ -47,6 +47,9 @@ for (const record of data.records ?? []) {
   if (expired && detailHtml.includes('EventScheduled') && detailHtml.includes('Generated from data/things-to-do-events.json')) {
     errors.push(`${label}: generated expired detail page still reports EventScheduled`);
   }
+  if (detailHtml.includes('https://schema.org/EventCompleted')) {
+    errors.push(`${label}: detail page emits invalid Schema.org EventCompleted status`);
+  }
 }
 
 if (errors.length) {

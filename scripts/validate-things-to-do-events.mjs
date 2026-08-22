@@ -12,6 +12,7 @@ const mediaTitles = new Set();
 const isoDate = /^\d{4}-\d{2}-\d{2}$/;
 const isoDateTime = /^\d{4}-\d{2}-\d{2}T/;
 const allowedPublicationStates = new Set(['draft', 'published', 'expired', 'withdrawn']);
+const allowedMediaPolicies = new Set(['required', 'fallback_allowed']);
 
 for (const record of data.records ?? []) {
   const label = record.title ?? record.id ?? 'unknown';
@@ -41,6 +42,12 @@ for (const record of data.records ?? []) {
     errors.push(`${label}: end_date before start_date`);
   }
 
+  if (!allowedMediaPolicies.has(record.media_policy)) {
+    errors.push(`${label}: missing or invalid media_policy (expected "required" or "fallback_allowed")`);
+  }
+  const mediaRequired = record.media_policy === 'required';
+
+  let mediaRecord = null;
   if (record.media_manifest_title) {
     if (mediaTitles.has(record.media_manifest_title)) {
       errors.push(`${label}: duplicate media manifest title`);
@@ -51,7 +58,7 @@ for (const record of data.records ?? []) {
     if (matches.length !== 1) {
       errors.push(`${label}: expected exactly one matching things-to-do media manifest record, found ${matches.length}`);
     } else {
-      const mediaRecord = matches[0];
+      mediaRecord = matches[0];
       if (mediaRecord.provider !== record.provider) errors.push(`${label}: provider differs from media manifest`);
       if (record.media?.asset && mediaRecord.media_asset !== record.media.asset) errors.push(`${label}: media asset differs from media manifest`);
     }
@@ -61,6 +68,31 @@ for (const record of data.records ?? []) {
 
   if (record.media && !record.media.asset) {
     errors.push(`${label}: media record missing asset reference`);
+  }
+
+  if (mediaRequired) {
+    if (!record.media || !record.media.asset) {
+      errors.push(`${label}: media_policy is "required" but canonical media is missing`);
+    } else if (mediaRecord) {
+      if (mediaRecord.media_state !== 'authentic-present') {
+        errors.push(`${label}: media_policy is "required" but media manifest state is "${mediaRecord.media_state}", not authentic-present`);
+      }
+      if (mediaRecord.media_asset !== record.media.asset) {
+        errors.push(`${label}: media_policy is "required" but manifest asset does not match canonical media asset`);
+      }
+      if (!fs.existsSync(new URL(`../${record.media.asset}`, import.meta.url))) {
+        errors.push(`${label}: media_policy is "required" but canonical media asset does not exist: ${record.media.asset}`);
+      }
+      if ((mediaRecord.media_alt ?? '') !== (record.media.alt ?? '')) {
+        errors.push(`${label}: media_policy is "required" but media manifest alt text does not match canonical media alt text`);
+      }
+      if (typeof mediaRecord.media_width === 'number' && mediaRecord.media_width !== record.media.width) {
+        errors.push(`${label}: media_policy is "required" but manifest media_width does not match canonical media width`);
+      }
+      if (typeof mediaRecord.media_height === 'number' && mediaRecord.media_height !== record.media.height) {
+        errors.push(`${label}: media_policy is "required" but manifest media_height does not match canonical media height`);
+      }
+    }
   }
 }
 

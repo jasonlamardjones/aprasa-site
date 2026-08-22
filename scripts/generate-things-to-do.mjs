@@ -66,7 +66,9 @@ function renderSchema(record, expired) {
     name: record.title,
     url: `https://aprasa.org/${record.detail_page}`,
     description: record.summary,
-    eventStatus: expired ? 'https://schema.org/EventCompleted' : 'https://schema.org/EventScheduled',
+    // Schema.org EventStatusType has no "completed" value; omit eventStatus
+    // for expired events rather than emit an invalid enumeration member.
+    ...(expired ? {} : { eventStatus: 'https://schema.org/EventScheduled' }),
     eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
     location: {
       '@type': 'Place',
@@ -222,18 +224,24 @@ ${renderSchema(record, expired)}
 `;
 }
 
-function replaceHomeArticle(homeHtml, record) {
-  const titleNeedle = `<h3>${record.title}</h3>`;
-  const titleIndex = homeHtml.indexOf(titleNeedle);
-  if (titleIndex === -1) throw new Error(`${record.id}: could not locate Home card by exact title`);
+// Home dated-event slots are bounded by stable, never-removed generated
+// markers keyed on the canonical event id (not visible title text). Every
+// run replaces only the content between a record's own markers, so output
+// depends solely on data/things-to-do-events.json + --as-of, never on
+// whatever Home currently contains. This keeps repeated/later runs
+// idempotent even after earlier runs have expired-and-emptied a slot.
+function replaceGeneratedEvent(homeHtml, record) {
+  const beginMarker = `<!-- BEGIN GENERATED EVENT: ${record.id} -->`;
+  const endMarker = `<!-- END GENERATED EVENT: ${record.id} -->`;
+  const beginIndex = homeHtml.indexOf(beginMarker);
+  const endIndex = homeHtml.indexOf(endMarker);
+  if (beginIndex === -1 || endIndex === -1 || endIndex < beginIndex) {
+    throw new Error(`${record.id}: could not locate generated event markers in Home`);
+  }
 
-  const start = homeHtml.lastIndexOf('        <article class="resource-card"', titleIndex);
-  const end = homeHtml.indexOf('        </article>', titleIndex);
-  if (start === -1 || end === -1) throw new Error(`${record.id}: could not resolve Home article boundaries`);
-
-  const after = end + '        </article>'.length;
-  const replacement = isExpired(record) ? '' : renderHomeArticle(record);
-  return homeHtml.slice(0, start) + replacement + homeHtml.slice(after);
+  const contentStart = beginIndex + beginMarker.length;
+  const body = isExpired(record) ? '' : `\n${renderHomeArticle(record)}\n        `;
+  return homeHtml.slice(0, contentStart) + body + homeHtml.slice(endIndex);
 }
 
 const selected = requestedId ? records.filter((record) => record.id === requestedId) : records;
@@ -247,7 +255,7 @@ let homeHtml = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 for (const record of selected) {
   const output = renderDetailPage(record);
   const target = path.join(root, record.detail_page, 'index.html');
-  homeHtml = replaceHomeArticle(homeHtml, record);
+  homeHtml = replaceGeneratedEvent(homeHtml, record);
 
   if (write) {
     fs.writeFileSync(target, output);

@@ -99,7 +99,7 @@ jobs:
             things-to-do/arquitectura-da-imperfeicao/index.html \
             things-to-do/sinergia-da-materia/index.html
 
-      - name: Verify expiration behavior after PART_ILHAS
+      - name: Verify expiration is deterministic and idempotent
         shell: bash
         run: |
           git reset --hard HEAD
@@ -114,7 +114,34 @@ jobs:
             echo 'PART_ILHAS detail page is not marked Past event after expiration.'
             exit 1
           fi
-          if ! grep -q 'https://schema.org/EventCompleted' things-to-do/part-ilhas-nuno-miranda/index.html; then
-            echo 'PART_ILHAS detail schema is not EventCompleted after expiration.'
+          if grep -q 'https://schema.org/EventCompleted' things-to-do/part-ilhas-nuno-miranda/index.html; then
+            echo 'PART_ILHAS detail schema emits invalid Schema.org EventCompleted status.'
             exit 1
           fi
+
+          cp index.html /tmp/as-of-2026-08-23-index.html
+          cp things-to-do/part-ilhas-nuno-miranda/index.html /tmp/as-of-2026-08-23-part-ilhas.html
+
+          node scripts/generate-things-to-do.mjs --as-of=2026-08-23 --write
+          if ! diff -q /tmp/as-of-2026-08-23-index.html index.html; then
+            echo 'Repeated generation for the same --as-of is not byte-identical.'
+            exit 1
+          fi
+          if ! diff -q /tmp/as-of-2026-08-23-part-ilhas.html things-to-do/part-ilhas-nuno-miranda/index.html; then
+            echo 'Repeated detail-page generation for the same --as-of is not byte-identical.'
+            exit 1
+          fi
+
+          node scripts/generate-things-to-do.mjs --as-of=2026-08-30 --write
+          node scripts/validate-things-to-do-currentness.mjs --as-of=2026-08-30
+          node scripts/validate-things-to-do-surface-equivalence.mjs --as-of=2026-08-30
+          if grep -q '<h3>Mon Pikenin</h3>' index.html; then
+            echo 'Mon Pikenin incorrectly remains on Home after 2026-08-29, even though an earlier record (PART_ILHAS) already expired.'
+            exit 1
+          fi
+          if grep -rq 'https://schema.org/EventCompleted' things-to-do/*/index.html; then
+            echo 'A generated detail page emits invalid Schema.org EventCompleted status.'
+            exit 1
+          fi
+
+          git reset --hard HEAD
