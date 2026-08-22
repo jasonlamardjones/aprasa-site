@@ -134,12 +134,6 @@
       width: 1200,
       height: 900
     }],
-    ["Street Art in Mindelo", {
-      src: "assets/card-media/things-to-do/mindelo-cultural-street-art.webp",
-      alt: "Street-art mural in Mindelo showing people gathered near a waterfront.",
-      width: 400,
-      height: 300
-    }],
     ["Myrtle Atividades Educativas", {
       src: "assets/card-media/trainings-tools/myrtle-learning-programs.webp",
       alt: "An educator and student work together with learning materials beside a periodic table.",
