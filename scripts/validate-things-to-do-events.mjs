@@ -6,7 +6,9 @@ const data = JSON.parse(fs.readFileSync(file, 'utf8'));
 const errors = [];
 const ids = new Set();
 const routes = new Set();
+const mediaTitles = new Set();
 const isoDate = /^\d{4}-\d{2}-\d{2}$/;
+const isoDateTime = /^\d{4}-\d{2}-\d{2}T/;
 
 for (const record of data.records ?? []) {
   const label = record.title ?? record.id ?? 'unknown';
@@ -19,14 +21,17 @@ for (const record of data.records ?? []) {
   if (!record.title) errors.push(`${label}: missing title`);
   if (!record.provider) errors.push(`${label}: missing provider`);
   if (!record.source_url) errors.push(`${label}: missing source_url`);
+  if (!record.source_type) errors.push(`${label}: missing source_type`);
   if (!record.detail_page) errors.push(`${label}: missing detail_page`);
 
   if (routes.has(record.detail_page)) errors.push(`${label}: duplicate detail route`);
   routes.add(record.detail_page);
 
   if (!isoDate.test(record.checked_at)) errors.push(`${label}: invalid checked_at`);
-  if (record.end_date && !isoDate.test(record.end_date)) errors.push(`${label}: invalid end_date`);
   if (record.start_date && !isoDate.test(record.start_date)) errors.push(`${label}: invalid start_date`);
+  if (record.end_date && !isoDate.test(record.end_date)) errors.push(`${label}: invalid end_date`);
+  if (record.start_datetime && !isoDateTime.test(record.start_datetime)) errors.push(`${label}: invalid start_datetime`);
+  if (record.end_datetime && !isoDateTime.test(record.end_datetime)) errors.push(`${label}: invalid end_datetime`);
 
   if (record.end_date && record.start_date && record.end_date < record.start_date) {
     errors.push(`${label}: end_date before start_date`);
@@ -34,6 +39,17 @@ for (const record of data.records ?? []) {
 
   if (record.publication_state === 'published' && !record.source_url) {
     errors.push(`${label}: published record requires source`);
+  }
+
+  if (record.media_manifest_title) {
+    if (mediaTitles.has(record.media_manifest_title)) {
+      errors.push(`${label}: duplicate media manifest title`);
+    }
+    mediaTitles.add(record.media_manifest_title);
+  }
+
+  if (record.media && !record.media.asset) {
+    errors.push(`${label}: media record missing asset reference`);
   }
 }
 
