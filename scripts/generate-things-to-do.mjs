@@ -9,9 +9,25 @@ const records = JSON.parse(fs.readFileSync(input, 'utf8')).records;
 
 const asOfArg = process.argv.find((arg) => arg.startsWith('--as-of='));
 const idArg = process.argv.find((arg) => arg.startsWith('--id='));
-const asOf = asOfArg ? asOfArg.split('=')[1] : new Date().toISOString().slice(0, 10);
+if (!asOfArg) {
+  console.error('Missing required --as-of=YYYY-MM-DD');
+  process.exit(1);
+}
+const asOf = asOfArg.split('=')[1];
+if (!/^\d{4}-\d{2}-\d{2}$/.test(asOf)) {
+  console.error(`Invalid --as-of date: ${asOf}`);
+  process.exit(1);
+}
 const requestedId = idArg ? idArg.split('=')[1] : null;
 const write = process.argv.includes('--write');
+
+const sitewideSocialFallback = {
+  asset: 'assets/social/aprasa-social-share-card-identity-v2.jpg',
+  type: 'image/jpeg',
+  width: 1536,
+  height: 807,
+  alt: 'A PRASA Identity v2.0 social card with the A PRASA symbol and wordmark, the line A place to find what moves you., aprasa.org, and an illustrated Mindelo praça scene.'
+};
 
 function escapeHtml(value = '') {
   return String(value)
@@ -24,6 +40,16 @@ function escapeHtml(value = '') {
 
 function isExpired(record) {
   return Boolean(record.end_date && record.end_date < asOf);
+}
+
+function mediaType(asset) {
+  if (asset.endsWith('.png')) return 'image/png';
+  if (asset.endsWith('.webp')) return 'image/webp';
+  return 'image/jpeg';
+}
+
+function detailMediaClass(record) {
+  return record.id === 'part-ilhas-nuno-miranda' ? 'dialog-media' : 'record-media';
 }
 
 function renderFacts(facts = []) {
@@ -95,10 +121,22 @@ function renderHomeArticle(record) {
         </article>`;
 }
 
+function renderSocialMeta(record) {
+  const social = record.media ? {
+    asset: record.media.asset,
+    type: mediaType(record.media.asset),
+    width: record.media.width,
+    height: record.media.height,
+    alt: record.media.alt
+  } : sitewideSocialFallback;
+
+  return `<meta property="og:image" content="https://aprasa.org/${escapeHtml(social.asset)}">\n<meta property="og:image:type" content="${social.type}">\n<meta property="og:image:width" content="${social.width}">\n<meta property="og:image:height" content="${social.height}">\n<meta property="og:image:alt" content="${escapeHtml(social.alt)}">\n<meta name="twitter:card" content="summary_large_image">\n<meta name="twitter:title" content="${escapeHtml(record.title)}">\n<meta name="twitter:description" content="${escapeHtml(record.seo.description)}">\n<meta name="twitter:image" content="https://aprasa.org/${escapeHtml(social.asset)}">`;
+}
+
 function renderDetailPage(record) {
   const expired = isExpired(record);
   const canonical = `https://aprasa.org/${record.detail_page}`;
-  const media = record.media ? `\n      <div class="dialog-media"><img src="../../${escapeHtml(record.media.asset)}" alt="${escapeHtml(record.media.alt)}" loading="lazy" width="${record.media.width}" height="${record.media.height}"></div>` : '';
+  const media = record.media ? `\n      <div class="${detailMediaClass(record)}"><img src="../../${escapeHtml(record.media.asset)}" alt="${escapeHtml(record.media.alt)}" loading="lazy" width="${record.media.width}" height="${record.media.height}"></div>` : '';
   const pastStatus = expired ? '\n      <p class="card-status">Past event</p>' : '';
   const goodToKnow = record.detail?.good_to_know ? `\n      <h2>Good to know</h2>\n      <p>${escapeHtml(record.detail.good_to_know)}</p>` : '';
   const action = record.detail?.action_label ? `\n      <a class="dialog-link" href="${escapeHtml(record.source_url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(record.detail.action_label)} <span aria-hidden="true">↗</span></a>` : '';
@@ -115,10 +153,8 @@ function renderDetailPage(record) {
 <meta property="og:site_name" content="A PRASA">
 <meta property="og:title" content="${escapeHtml(record.title)}">
 <meta property="og:description" content="${escapeHtml(record.seo.description)}">
-<meta property="og:url" content="${canonical}">${record.media ? `\n<meta property="og:image" content="https://aprasa.org/${escapeHtml(record.media.asset)}">\n<meta property="og:image:width" content="${record.media.width}">\n<meta property="og:image:height" content="${record.media.height}">\n<meta property="og:image:alt" content="${escapeHtml(record.media.alt)}">` : ''}
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="${escapeHtml(record.title)}">
-<meta name="twitter:description" content="${escapeHtml(record.seo.description)}">${record.media ? `\n<meta name="twitter:image" content="https://aprasa.org/${escapeHtml(record.media.asset)}">` : ''}
+<meta property="og:url" content="${canonical}">
+${renderSocialMeta(record)}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Baskerville&family=Work+Sans&display=swap">
