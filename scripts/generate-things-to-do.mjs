@@ -64,6 +64,37 @@ function renderSchema(record, expired) {
   return JSON.stringify(schema, null, 2);
 }
 
+function renderHomeArticle(record) {
+  const media = record.media ? `\n          <div class="card-media"><img src="${escapeHtml(record.media.asset)}" alt="${escapeHtml(record.media.alt)}" loading="lazy" width="${record.media.width}" height="${record.media.height}"></div>` : '';
+  const externalAction = record.card_action ? `\n            <a class="resource-link" href="${escapeHtml(record.card_action.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(record.card_action.label)} <span aria-hidden="true">↗</span></a>` : '';
+  const dialogMedia = record.media ? `\n              <div class="dialog-media"><img src="${escapeHtml(record.media.asset)}" alt="${escapeHtml(record.media.alt)}" loading="lazy" width="${record.media.width}" height="${record.media.height}"></div>` : '';
+  const goodToKnow = record.detail?.good_to_know ? `\n              <h3>Good to know</h3>\n              <p>${escapeHtml(record.detail.good_to_know)}</p>` : '';
+  const dialogAction = record.detail?.action_label ? `\n              <a class="dialog-link" href="${escapeHtml(record.source_url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(record.detail.action_label)} <span aria-hidden="true">↗</span></a>` : '';
+  const endAttribute = record.end_date ? ` data-event-end="${record.end_date}"` : '';
+
+  return `        <article class="resource-card" data-event-id="${escapeHtml(record.id)}"${endAttribute} data-checked="${escapeHtml(record.checked_at)}">${media}
+          <p class="card-status">${escapeHtml(record.display?.status)}</p>
+          <h3>${escapeHtml(record.title)}</h3>
+          <p class="card-meta">${escapeHtml(record.display?.meta)}</p>
+          <p class="provider">${escapeHtml(record.provider)}</p>
+          <p class="checked">${escapeHtml(record.display?.checked)}</p>
+          <div class="card-actions">
+            <button class="details-button" type="button" data-details>Details</button>${externalAction}
+            <a class="resource-link" href="${escapeHtml(record.detail_page)}">View page</a>
+          </div>
+          <template class="details-template">
+            <div class="dialog-record" data-event-id="${escapeHtml(record.id)}">${dialogMedia}
+              <p class="provider">${escapeHtml(record.provider)}</p>
+              <h2>${escapeHtml(record.title)}</h2>
+              <dl class="detail-list">${renderFacts(record.detail?.facts)}</dl>
+              <h3>Details</h3>
+              <p>${escapeHtml(record.detail?.body)}</p>${goodToKnow}
+              <p class="checked">${escapeHtml(record.detail?.checked)}</p>${dialogAction}
+            </div>
+          </template>
+        </article>`;
+}
+
 function renderDetailPage(record) {
   const expired = isExpired(record);
   const canonical = `https://aprasa.org/${record.detail_page}`;
@@ -155,20 +186,42 @@ ${renderSchema(record, expired)}
 `;
 }
 
+function replaceHomeArticle(homeHtml, record) {
+  const titleNeedle = `<h3>${record.title}</h3>`;
+  const titleIndex = homeHtml.indexOf(titleNeedle);
+  if (titleIndex === -1) throw new Error(`${record.id}: could not locate Home card by exact title`);
+
+  const start = homeHtml.lastIndexOf('        <article class="resource-card"', titleIndex);
+  const end = homeHtml.indexOf('        </article>', titleIndex);
+  if (start === -1 || end === -1) throw new Error(`${record.id}: could not resolve Home article boundaries`);
+
+  const after = end + '        </article>'.length;
+  const replacement = isExpired(record) ? '' : renderHomeArticle(record);
+  return homeHtml.slice(0, start) + replacement + homeHtml.slice(after);
+}
+
 const selected = requestedId ? records.filter((record) => record.id === requestedId) : records;
 if (requestedId && selected.length !== 1) {
   console.error(`Unknown event id: ${requestedId}`);
   process.exit(1);
 }
 
+let homeHtml = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+
 for (const record of selected) {
   const output = renderDetailPage(record);
   const target = path.join(root, record.detail_page, 'index.html');
+  homeHtml = replaceHomeArticle(homeHtml, record);
+
   if (write) {
     fs.writeFileSync(target, output);
     console.log(`Wrote ${record.detail_page}index.html as of ${asOf}`);
   } else {
-    console.log(`--- ${record.id} (${isExpired(record) ? 'past' : 'current'}) ---`);
-    console.log(output);
+    console.log(`Prepared ${record.id}: ${isExpired(record) ? 'past detail + removed from Home' : 'current detail + Home card'}`);
   }
+}
+
+if (write) {
+  fs.writeFileSync(path.join(root, 'index.html'), homeHtml);
+  console.log(`Wrote index.html as of ${asOf}`);
 }
