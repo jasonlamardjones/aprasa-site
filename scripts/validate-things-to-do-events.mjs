@@ -1,7 +1,9 @@
 import fs from 'node:fs';
 
 const file = new URL('../data/things-to-do-events.json', import.meta.url);
+const manifestFile = new URL('../internal/provider-media-manifest.json', import.meta.url);
 const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+const manifest = JSON.parse(fs.readFileSync(manifestFile, 'utf8'));
 
 const errors = [];
 const ids = new Set();
@@ -9,6 +11,7 @@ const routes = new Set();
 const mediaTitles = new Set();
 const isoDate = /^\d{4}-\d{2}-\d{2}$/;
 const isoDateTime = /^\d{4}-\d{2}-\d{2}T/;
+const allowedPublicationStates = new Set(['draft', 'published', 'expired', 'withdrawn']);
 
 for (const record of data.records ?? []) {
   const label = record.title ?? record.id ?? 'unknown';
@@ -23,6 +26,7 @@ for (const record of data.records ?? []) {
   if (!record.source_url) errors.push(`${label}: missing source_url`);
   if (!record.source_type) errors.push(`${label}: missing source_type`);
   if (!record.detail_page) errors.push(`${label}: missing detail_page`);
+  if (!allowedPublicationStates.has(record.publication_state)) errors.push(`${label}: invalid publication_state`);
 
   if (routes.has(record.detail_page)) errors.push(`${label}: duplicate detail route`);
   routes.add(record.detail_page);
@@ -37,15 +41,22 @@ for (const record of data.records ?? []) {
     errors.push(`${label}: end_date before start_date`);
   }
 
-  if (record.publication_state === 'published' && !record.source_url) {
-    errors.push(`${label}: published record requires source`);
-  }
-
   if (record.media_manifest_title) {
     if (mediaTitles.has(record.media_manifest_title)) {
       errors.push(`${label}: duplicate media manifest title`);
     }
     mediaTitles.add(record.media_manifest_title);
+
+    const matches = manifest.records.filter((item) => item.section === 'things-to-do' && item.title === record.media_manifest_title);
+    if (matches.length !== 1) {
+      errors.push(`${label}: expected exactly one matching things-to-do media manifest record, found ${matches.length}`);
+    } else {
+      const mediaRecord = matches[0];
+      if (mediaRecord.provider !== record.provider) errors.push(`${label}: provider differs from media manifest`);
+      if (record.media?.asset && mediaRecord.media_asset !== record.media.asset) errors.push(`${label}: media asset differs from media manifest`);
+    }
+  } else {
+    errors.push(`${label}: missing media_manifest_title`);
   }
 
   if (record.media && !record.media.asset) {
@@ -58,4 +69,4 @@ if (errors.length) {
   process.exit(1);
 }
 
-console.log(`Validated ${data.records.length} dated Things to Do records.`);
+console.log(`Validated ${data.records.length} dated Things to Do records and media-manifest relationships.`);
