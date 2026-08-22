@@ -1,7 +1,11 @@
 import fs from 'node:fs';
+import path from 'node:path';
 
-const input = new URL('../data/things-to-do-events.json', import.meta.url);
+const root = process.cwd();
+const input = path.join(root, 'data', 'things-to-do-events.json');
+const indexPath = path.join(root, 'index.html');
 const records = JSON.parse(fs.readFileSync(input, 'utf8')).records;
+const indexHtml = fs.readFileSync(indexPath, 'utf8');
 
 const asOfArg = process.argv.find((arg) => arg.startsWith('--as-of='));
 const asOf = asOfArg ? asOfArg.split('=')[1] : new Date().toISOString().slice(0, 10);
@@ -10,19 +14,20 @@ const errors = [];
 
 for (const record of records) {
   if (record.kind !== 'dated-event') continue;
+  if (!record.end_date) continue;
 
-  const expired = Boolean(record.end_date && record.end_date < asOf);
+  const expired = record.end_date < asOf;
+  const appearsOnHome = indexHtml.includes(`<h3>${record.title}</h3>`);
 
-  if (expired && record.publication_state === 'published') {
-    if (!['expired', 'withdrawn'].includes(record.publication_state)) {
-      errors.push(`${record.id}: expired event remains published as of ${asOf}`);
-    }
+  if (expired && appearsOnHome) {
+    errors.push(`${record.id}: expired ${record.end_date} but still appears in Home current Things to Do markup as of ${asOf}`);
   }
 }
 
 if (errors.length) {
-  console.error(errors.join('\n'));
+  console.error('Things to Do currentness errors:');
+  for (const error of errors) console.error(`- ${error}`);
   process.exit(1);
 }
 
-console.log(`Currentness validation passed for ${records.length} records as of ${asOf}.`);
+console.log(`Currentness validation passed as of ${asOf}.`);
