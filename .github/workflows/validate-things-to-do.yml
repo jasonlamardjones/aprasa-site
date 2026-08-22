@@ -1,0 +1,112 @@
+name: Validate Things to Do currentness
+
+on:
+  pull_request:
+    paths:
+      - 'data/things-to-do-events.json'
+      - 'internal/provider-media-manifest.json'
+      - 'scripts/generate-things-to-do.mjs'
+      - 'scripts/render-things-to-do-adapter.mjs'
+      - 'scripts/validate-things-to-do-*.mjs'
+      - 'scripts/validate-card-media.mjs'
+      - 'index.html'
+      - 'sitemap.xml'
+      - 'things-to-do/**'
+      - '.github/workflows/validate-things-to-do.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out PR
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Validate canonical records
+        run: node scripts/validate-things-to-do-events.mjs
+
+      - name: Validate incumbent surfaces as of 2026-08-22
+        run: |
+          node scripts/validate-things-to-do-currentness.mjs --as-of=2026-08-22
+          node scripts/validate-things-to-do-surface-equivalence.mjs --as-of=2026-08-22
+          node scripts/validate-things-to-do-sitemap.mjs
+
+      - name: Validate card media
+        shell: bash
+        run: |
+          set +e
+          node scripts/validate-card-media.mjs
+          code=$?
+          set -e
+          if [ "$code" -eq 1 ]; then
+            exit 1
+          fi
+          if [ "$code" -eq 2 ]; then
+            echo "Media validator reported warnings/pending records; no hard errors."
+          fi
+
+      - name: Generate canonical surfaces as of 2026-08-22
+        run: node scripts/generate-things-to-do.mjs --as-of=2026-08-22 --write
+
+      - name: Validate generated current surfaces
+        run: |
+          node scripts/validate-things-to-do-currentness.mjs --as-of=2026-08-22
+          node scripts/validate-things-to-do-surface-equivalence.mjs --as-of=2026-08-22
+          node scripts/validate-things-to-do-sitemap.mjs
+          git diff --check
+
+      - name: Verify generated diff scope
+        shell: bash
+        run: |
+          unexpected=$(git diff --name-only | grep -Ev '^(index\.html|things-to-do/(part-ilhas-nuno-miranda|mon-pikenin|arquitectura-da-imperfeicao|sinergia-da-materia)/index\.html)$' || true)
+          if [ -n "$unexpected" ]; then
+            echo "Generator changed unexpected files:"
+            echo "$unexpected"
+            exit 1
+          fi
+          echo "Generated diff is limited to Home and the four canonical dated-event detail pages."
+
+      - name: Save generated diff
+        shell: bash
+        run: |
+          mkdir -p validation-artifacts
+          git diff -- index.html \
+            things-to-do/part-ilhas-nuno-miranda/index.html \
+            things-to-do/mon-pikenin/index.html \
+            things-to-do/arquitectura-da-imperfeicao/index.html \
+            things-to-do/sinergia-da-materia/index.html \
+            > validation-artifacts/generated-surfaces.patch
+
+      - name: Upload generated diff
+        uses: actions/upload-artifact@v4
+        with:
+          name: things-to-do-generated-surfaces
+          path: validation-artifacts/generated-surfaces.patch
+          if-no-files-found: error
+
+      - name: Verify expiration behavior after PART_ILHAS
+        shell: bash
+        run: |
+          git reset --hard HEAD
+          node scripts/generate-things-to-do.mjs --as-of=2026-08-23 --write
+          node scripts/validate-things-to-do-currentness.mjs --as-of=2026-08-23
+          node scripts/validate-things-to-do-surface-equivalence.mjs --as-of=2026-08-23
+          if grep -q '<h3>PART_ILHAS — ciclo de conversas com Nuno Miranda</h3>' index.html; then
+            echo 'PART_ILHAS incorrectly remains on Home after 2026-08-22.'
+            exit 1
+          fi
+          if ! grep -q 'Past event' things-to-do/part-ilhas-nuno-miranda/index.html; then
+            echo 'PART_ILHAS detail page is not marked Past event after expiration.'
+            exit 1
+          fi
+          if ! grep -q 'https://schema.org/EventCompleted' things-to-do/part-ilhas-nuno-miranda/index.html; then
+            echo 'PART_ILHAS detail schema is not EventCompleted after expiration.'
+            exit 1
+          fi
