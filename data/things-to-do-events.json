@@ -135,7 +135,7 @@
       "summary": "See “Eclipse”, an exhibition by visual artist Yuran Henrique at Centro Cultural do Mindelo, on view through 12 September.",
       "category": "visual-arts",
       "location": {"name": "Centro Cultural do Mindelo", "locality": "Mindelo, São Vicente"},
-      "source_url": "https://www.agendacultural.cv/",
+      "source_url": "https://www.agendacultural.cv/eventos/exposicao-eclipse-do-artista-plastico-yuran-henrique-no-centro-cultural-do-mindelo",
       "source_type": "official-event-listing",
       "start_datetime": null,
       "end_datetime": null,
@@ -149,13 +149,13 @@
       "free_admission": null,
       "display": {"status": "13 August – 12 September 2026", "meta": "Exhibition by Yuran Henrique", "checked": "Checked 24 August 2026"},
       "media": null,
-      "card_action": {"label": "Agenda Cultural de Cabo Verde", "url": "https://www.agendacultural.cv/"},
+      "card_action": {"label": "Event listing", "url": "https://www.agendacultural.cv/eventos/exposicao-eclipse-do-artista-plastico-yuran-henrique-no-centro-cultural-do-mindelo"},
       "detail": {
         "facts": [{"label": "Dates", "value": "13 August – 12 September 2026"}, {"label": "Artist", "value": "Yuran Henrique"}, {"label": "Where", "value": "Centro Cultural do Mindelo, Mindelo, São Vicente"}],
         "body": "See “Eclipse”, an exhibition by visual artist Yuran Henrique at Centro Cultural do Mindelo, on view through 12 September.",
         "good_to_know": null,
         "checked": "Checked 24 August 2026 against Agenda Cultural de Cabo Verde / CVCultural.",
-        "action_label": "Agenda Cultural de Cabo Verde"
+        "action_label": "Event listing"
       },
       "seo": {"description": "Eclipse is an exhibition by visual artist Yuran Henrique at Centro Cultural do Mindelo, on view 13 August–12 September 2026.", "title": "Exposição “Eclipse” — Yuran Henrique at Centro Cultural do Mindelo | A PRASA", "schema_type": "ExhibitionEvent"}
     },
