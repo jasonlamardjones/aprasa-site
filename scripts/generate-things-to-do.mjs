@@ -6,6 +6,8 @@ const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(scriptDir, '..');
 const input = path.join(root, 'data', 'things-to-do-events.json');
 const records = JSON.parse(fs.readFileSync(input, 'utf8')).records;
+const thingsToDoRoot = path.join(root, 'things-to-do');
+const detailRoutePattern = /^things-to-do\/[a-z0-9]+(?:-[a-z0-9]+)*\/$/;
 
 const asOfArg = process.argv.find((arg) => arg.startsWith('--as-of='));
 const idArg = process.argv.find((arg) => arg.startsWith('--id='));
@@ -39,7 +41,26 @@ function escapeHtml(value = '') {
 }
 
 function isExpired(record) {
-  return Boolean(record.end_date && record.end_date < asOf);
+  return record.publication_state === 'expired' || Boolean(record.end_date && record.end_date < asOf);
+}
+
+function resolveDetailTarget(record) {
+  if (typeof record.detail_page !== 'string' || !detailRoutePattern.test(record.detail_page)) {
+    throw new Error(`${record.id}: invalid detail_page; expected things-to-do/<slug>/`);
+  }
+
+  const targetDir = path.resolve(root, record.detail_page);
+  const allowedPrefix = `${thingsToDoRoot}${path.sep}`;
+  if (!targetDir.startsWith(allowedPrefix)) {
+    throw new Error(`${record.id}: detail_page resolves outside things-to-do/`);
+  }
+
+  const target = path.join(targetDir, 'index.html');
+  if (!target.startsWith(allowedPrefix)) {
+    throw new Error(`${record.id}: detail output resolves outside things-to-do/`);
+  }
+
+  return target;
 }
 
 function mediaType(asset) {
@@ -253,11 +274,12 @@ if (requestedId && selected.length !== 1) {
 let homeHtml = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
 for (const record of selected) {
+  const target = resolveDetailTarget(record);
   const output = renderDetailPage(record);
-  const target = path.join(root, record.detail_page, 'index.html');
   homeHtml = replaceGeneratedEvent(homeHtml, record);
 
   if (write) {
+    fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.writeFileSync(target, output);
     console.log(`Wrote ${record.detail_page}index.html as of ${asOf}`);
   } else {

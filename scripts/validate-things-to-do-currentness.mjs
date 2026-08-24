@@ -22,13 +22,16 @@ const errors = [];
 
 for (const record of records) {
   if (record.kind !== 'dated-event') continue;
-  if (!record.end_date) continue;
 
-  const expired = record.end_date < asOf;
+  const expiredByState = record.publication_state === 'expired';
+  const expiredByDate = Boolean(record.end_date && record.end_date < asOf);
+  if (!expiredByState && !expiredByDate) continue;
+
   const appearsOnHome = indexHtml.includes(`<h3>${record.title}</h3>`);
 
-  if (expired && appearsOnHome) {
-    errors.push(`${record.id}: expired ${record.end_date} but still appears in Home current Things to Do markup as of ${asOf}`);
+  if (appearsOnHome) {
+    const reason = expiredByDate ? `expired ${record.end_date}` : 'publication_state "expired"';
+    errors.push(`${record.id}: ${reason} but still appears in Home current Things to Do markup as of ${asOf}`);
   }
 }
 

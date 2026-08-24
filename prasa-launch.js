@@ -122,12 +122,6 @@
   }
 
   const providerMedia = new Map([
-    ["Water & Adventure Activities in Mindelo", {
-      src: "assets/card-media/things-to-do/road-runner-clear-kayak.webp",
-      alt: "Two people paddle clear kayaks through bright turquoise water.",
-      width: 800,
-      height: 600
-    }],
     ["Sinergia da Matéria: Entre o Bruto e o Traço", {
       src: "assets/card-media/things-to-do/sinergia-da-materia-editorial-fallback.webp",
       alt: "",
@@ -305,7 +299,7 @@
   }
 
   function applyLocalSpotlight() {
-    const card = getCardByTitle("things-to-do", "Water & Adventure Activities in Mindelo");
+    const card = getCardByTitle("things-to-do", "Green Line Tours — São Vicente Guided Tours");
     if (!card || card.dataset.localSpotlight === "true") return;
     card.dataset.localSpotlight = "true";
 

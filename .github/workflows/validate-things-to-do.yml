@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'data/things-to-do-events.json'
+      - 'data/things-to-do-currentness.json'
       - 'internal/provider-media-manifest.json'
       - 'scripts/generate-things-to-do.mjs'
       - 'scripts/render-things-to-do-adapter.mjs'
@@ -29,13 +30,20 @@ jobs:
         with:
           node-version: '24'
 
+      - name: Load explicit currentness date
+        shell: bash
+        run: |
+          AS_OF=$(node -e "const fs=require('fs'); const value=JSON.parse(fs.readFileSync('data/things-to-do-currentness.json','utf8')).as_of; if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) process.exit(1); process.stdout.write(value)")
+          echo "AS_OF=$AS_OF" >> "$GITHUB_ENV"
+          echo "Validating committed Things to Do surfaces as of $AS_OF"
+
       - name: Validate canonical records
         run: node scripts/validate-things-to-do-events.mjs
 
-      - name: Validate incumbent surfaces as of 2026-08-22
+      - name: Validate committed current surfaces
         run: |
-          node scripts/validate-things-to-do-currentness.mjs --as-of=2026-08-22
-          node scripts/validate-things-to-do-surface-equivalence.mjs --as-of=2026-08-22
+          node scripts/validate-things-to-do-currentness.mjs --as-of="$AS_OF"
+          node scripts/validate-things-to-do-surface-equivalence.mjs --as-of="$AS_OF"
           node scripts/validate-things-to-do-sitemap.mjs
 
       - name: Validate card media
@@ -52,26 +60,26 @@ jobs:
             echo "Media validator reported warnings/pending records; no hard errors."
           fi
 
-      - name: Generate canonical surfaces as of 2026-08-22
-        run: node scripts/generate-things-to-do.mjs --as-of=2026-08-22 --write
+      - name: Generate canonical surfaces for tracked currentness date
+        run: node scripts/generate-things-to-do.mjs --as-of="$AS_OF" --write
 
       - name: Validate generated current surfaces
         run: |
-          node scripts/validate-things-to-do-currentness.mjs --as-of=2026-08-22
-          node scripts/validate-things-to-do-surface-equivalence.mjs --as-of=2026-08-22
+          node scripts/validate-things-to-do-currentness.mjs --as-of="$AS_OF"
+          node scripts/validate-things-to-do-surface-equivalence.mjs --as-of="$AS_OF"
           node scripts/validate-things-to-do-sitemap.mjs
           git diff --check
 
       - name: Verify generated diff scope
         shell: bash
         run: |
-          unexpected=$(git diff --name-only | grep -Ev '^(index\.html|things-to-do/(part-ilhas-nuno-miranda|mon-pikenin|arquitectura-da-imperfeicao|sinergia-da-materia)/index\.html)$' || true)
+          unexpected=$(git diff --name-only | grep -Ev '^(index\.html|things-to-do/(part-ilhas-nuno-miranda|mon-pikenin|arquitectura-da-imperfeicao|sinergia-da-materia|eclipse-yuran-henrique|oficina-contemporanea-lata)/index\.html)$' || true)
           if [ -n "$unexpected" ]; then
             echo "Generator changed unexpected files:"
             echo "$unexpected"
             exit 1
           fi
-          echo "Generated diff is limited to Home and the four canonical dated-event detail pages."
+          echo "Generated diff is limited to Home and the six canonical dated-event detail pages."
 
       - name: Save generated diff
         shell: bash
@@ -82,6 +90,8 @@ jobs:
             things-to-do/mon-pikenin/index.html \
             things-to-do/arquitectura-da-imperfeicao/index.html \
             things-to-do/sinergia-da-materia/index.html \
+            things-to-do/eclipse-yuran-henrique/index.html \
+            things-to-do/oficina-contemporanea-lata/index.html \
             > validation-artifacts/generated-surfaces.patch
 
       - name: Upload generated diff
@@ -97,48 +107,80 @@ jobs:
             things-to-do/part-ilhas-nuno-miranda/index.html \
             things-to-do/mon-pikenin/index.html \
             things-to-do/arquitectura-da-imperfeicao/index.html \
-            things-to-do/sinergia-da-materia/index.html
+            things-to-do/sinergia-da-materia/index.html \
+            things-to-do/eclipse-yuran-henrique/index.html \
+            things-to-do/oficina-contemporanea-lata/index.html
 
-      - name: Verify expiration is deterministic and idempotent
+      - name: Verify currentness behavior is deterministic and idempotent across tracked dates
         shell: bash
         run: |
+          set -e
           git reset --hard HEAD
-          node scripts/generate-things-to-do.mjs --as-of=2026-08-23 --write
-          node scripts/validate-things-to-do-currentness.mjs --as-of=2026-08-23
-          node scripts/validate-things-to-do-surface-equivalence.mjs --as-of=2026-08-23
-          if grep -q '<h3>PART_ILHAS — ciclo de conversas com Nuno Miranda</h3>' index.html; then
-            echo 'PART_ILHAS incorrectly remains on Home after 2026-08-22.'
-            exit 1
-          fi
-          if ! grep -q 'Past event' things-to-do/part-ilhas-nuno-miranda/index.html; then
-            echo 'PART_ILHAS detail page is not marked Past event after expiration.'
-            exit 1
-          fi
-          if grep -q 'https://schema.org/EventCompleted' things-to-do/part-ilhas-nuno-miranda/index.html; then
-            echo 'PART_ILHAS detail schema emits invalid Schema.org EventCompleted status.'
+
+          check_home_present() {
+            if ! grep -q "<h3>$2</h3>" index.html; then
+              echo "$1 incorrectly absent from Home as of $3."
+              exit 1
+            fi
+          }
+          check_home_absent() {
+            if grep -q "<h3>$2</h3>" index.html; then
+              echo "$1 incorrectly present on Home as of $3."
+              exit 1
+            fi
+          }
+          require_past_event() {
+            if ! grep -q 'Past event' "things-to-do/$1/index.html"; then
+              echo "$1 detail page is not marked Past event as of $2."
+              exit 1
+            fi
+          }
+
+          # --- 2026-08-24: tracked currentness date ---
+          node scripts/generate-things-to-do.mjs --as-of=2026-08-24 --write
+          node scripts/validate-things-to-do-currentness.mjs --as-of=2026-08-24
+          node scripts/validate-things-to-do-surface-equivalence.mjs --as-of=2026-08-24
+          check_home_absent part-ilhas "PART_ILHAS — ciclo de conversas com Nuno Miranda" 2026-08-24
+          check_home_absent arquitectura "Arquitectura da Imperfeição" 2026-08-24
+          check_home_present mon-pikenin "Mon Pikenin" 2026-08-24
+          check_home_present sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-08-24
+          check_home_present eclipse "Exposição “Eclipse”" 2026-08-24
+          check_home_present oficina "Exposição dos trabalhos finais do projeto Oficina Contemporânea Lata" 2026-08-24
+          require_past_event part-ilhas-nuno-miranda 2026-08-24
+          require_past_event arquitectura-da-imperfeicao 2026-08-24
+          if grep -rq 'https://schema.org/EventCompleted' things-to-do/*/index.html; then
+            echo 'A generated detail page emits invalid Schema.org EventCompleted status.'
             exit 1
           fi
 
-          cp index.html /tmp/as-of-2026-08-23-index.html
-          cp things-to-do/part-ilhas-nuno-miranda/index.html /tmp/as-of-2026-08-23-part-ilhas.html
-
-          node scripts/generate-things-to-do.mjs --as-of=2026-08-23 --write
-          if ! diff -q /tmp/as-of-2026-08-23-index.html index.html; then
+          cp index.html /tmp/as-of-2026-08-24-index.html
+          node scripts/generate-things-to-do.mjs --as-of=2026-08-24 --write
+          if ! diff -q /tmp/as-of-2026-08-24-index.html index.html; then
             echo 'Repeated generation for the same --as-of is not byte-identical.'
             exit 1
           fi
-          if ! diff -q /tmp/as-of-2026-08-23-part-ilhas.html things-to-do/part-ilhas-nuno-miranda/index.html; then
-            echo 'Repeated detail-page generation for the same --as-of is not byte-identical.'
-            exit 1
-          fi
 
+          # --- 2026-08-30 ---
           node scripts/generate-things-to-do.mjs --as-of=2026-08-30 --write
           node scripts/validate-things-to-do-currentness.mjs --as-of=2026-08-30
           node scripts/validate-things-to-do-surface-equivalence.mjs --as-of=2026-08-30
-          if grep -q '<h3>Mon Pikenin</h3>' index.html; then
-            echo 'Mon Pikenin incorrectly remains on Home after 2026-08-29, even though an earlier record (PART_ILHAS) already expired.'
+          check_home_absent part-ilhas "PART_ILHAS — ciclo de conversas com Nuno Miranda" 2026-08-30
+          check_home_absent arquitectura "Arquitectura da Imperfeição" 2026-08-30
+          check_home_absent mon-pikenin "Mon Pikenin" 2026-08-30
+          check_home_absent oficina "Exposição dos trabalhos finais do projeto Oficina Contemporânea Lata" 2026-08-30
+          check_home_present sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-08-30
+          check_home_present eclipse "Exposição “Eclipse”" 2026-08-30
+          if grep -rq 'https://schema.org/EventCompleted' things-to-do/*/index.html; then
+            echo 'A generated detail page emits invalid Schema.org EventCompleted status.'
             exit 1
           fi
+
+          # --- 2026-09-01 ---
+          node scripts/generate-things-to-do.mjs --as-of=2026-09-01 --write
+          node scripts/validate-things-to-do-currentness.mjs --as-of=2026-09-01
+          node scripts/validate-things-to-do-surface-equivalence.mjs --as-of=2026-09-01
+          check_home_absent sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-09-01
+          check_home_present eclipse "Exposição “Eclipse”" 2026-09-01
           if grep -rq 'https://schema.org/EventCompleted' things-to-do/*/index.html; then
             echo 'A generated detail page emits invalid Schema.org EventCompleted status.'
             exit 1

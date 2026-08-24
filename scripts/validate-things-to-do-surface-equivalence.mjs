@@ -22,7 +22,7 @@ const errors = [];
 for (const record of data.records ?? []) {
   const label = `${record.id} :: ${record.title}`;
   const detailFile = path.join(root, record.detail_page, 'index.html');
-  const expired = Boolean(record.end_date && record.end_date < asOf);
+  const expired = record.publication_state === 'expired' || Boolean(record.end_date && record.end_date < asOf);
   const onHome = indexHtml.includes(`<h3>${record.title}</h3>`);
 
   if (!expired && !onHome) errors.push(`${label}: current record missing from Home Things to Do markup`);

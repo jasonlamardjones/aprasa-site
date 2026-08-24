@@ -15,6 +15,7 @@ if (!/^\d{4}-\d{2}-\d{2}$/.test(asOf)) {
 }
 
 function isCurrent(record) {
+  if (record.publication_state === 'expired') return false;
   if (!record.end_date) return true;
   return record.end_date >= asOf;
 }
