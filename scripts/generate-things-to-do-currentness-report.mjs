@@ -14,8 +14,12 @@ if (!/^\d{4}-\d{2}-\d{2}$/.test(asOf)) {
   process.exit(1);
 }
 
-const current = records.filter((record) => !record.end_date || record.end_date >= asOf);
-const expired = records.filter((record) => record.end_date && record.end_date < asOf);
+function isExpiredRecord(record) {
+  return record.publication_state === 'expired' || Boolean(record.end_date && record.end_date < asOf);
+}
+
+const current = records.filter((record) => !isExpiredRecord(record));
+const expired = records.filter(isExpiredRecord);
 
 console.log(JSON.stringify({
   asOf,

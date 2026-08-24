@@ -39,7 +39,7 @@ function escapeHtml(value = '') {
 }
 
 function isExpired(record) {
-  return Boolean(record.end_date && record.end_date < asOf);
+  return record.publication_state === 'expired' || Boolean(record.end_date && record.end_date < asOf);
 }
 
 function mediaType(asset) {
@@ -258,6 +258,7 @@ for (const record of selected) {
   homeHtml = replaceGeneratedEvent(homeHtml, record);
 
   if (write) {
+    fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.writeFileSync(target, output);
     console.log(`Wrote ${record.detail_page}index.html as of ${asOf}`);
   } else {

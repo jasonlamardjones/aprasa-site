@@ -60,8 +60,7 @@ for (const record of manifest.records) {
   const isExpiredDatedEvent = Boolean(
     canonicalEvent
     && canonicalEvent.kind === 'dated-event'
-    && canonicalEvent.end_date
-    && canonicalEvent.end_date < asOf
+    && (canonicalEvent.publication_state === 'expired' || (canonicalEvent.end_date && canonicalEvent.end_date < asOf))
   );
 
   if (!appearsOnHome && !isExpiredDatedEvent) {
