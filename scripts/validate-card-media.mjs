@@ -4,9 +4,14 @@ import path from 'node:path';
 const root = process.cwd();
 const manifestPath = path.join(root, 'internal', 'provider-media-manifest.json');
 const htmlPath = path.join(root, 'index.html');
+const eventsPath = path.join(root, 'data', 'things-to-do-events.json');
+const currentnessPath = path.join(root, 'data', 'things-to-do-currentness.json');
 
 const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 const html = fs.readFileSync(htmlPath, 'utf8');
+const eventRecords = JSON.parse(fs.readFileSync(eventsPath, 'utf8')).records ?? [];
+const currentness = JSON.parse(fs.readFileSync(currentnessPath, 'utf8'));
+const asOf = currentness.as_of;
 
 const allowedTypes = new Set(['provider-supplied', 'provider-owned', 'editorial-fallback']);
 const allowedStates = new Set(['authentic-present', 'authentic-available-needs-ingestion', 'fallback-temporary', 'fallback-final']);
@@ -38,9 +43,30 @@ const isIsoDate = (value) => {
     && date.getUTCDate() === day;
 };
 
+if (!isIsoDate(asOf)) {
+  errors.push(`things-to-do currentness: invalid as_of date ${asOf}`);
+}
+
+const canonicalEventByManifestTitle = new Map(
+  eventRecords.map((record) => [record.media_manifest_title, record])
+);
+
 for (const record of manifest.records) {
   const label = `${record.section} :: ${record.title}`;
-  if (!html.includes(`<h3>${escapeHtml(record.title)}</h3>`)) errors.push(`${label}: card title not found in index.html`);
+  const appearsOnHome = html.includes(`<h3>${escapeHtml(record.title)}</h3>`);
+  const canonicalEvent = record.section === 'things-to-do'
+    ? canonicalEventByManifestTitle.get(record.title)
+    : null;
+  const isExpiredDatedEvent = Boolean(
+    canonicalEvent
+    && canonicalEvent.kind === 'dated-event'
+    && canonicalEvent.end_date
+    && canonicalEvent.end_date < asOf
+  );
+
+  if (!appearsOnHome && !isExpiredDatedEvent) {
+    errors.push(`${label}: card title not found in index.html`);
+  }
   if (!record.source_url) errors.push(`${label}: missing source_url`);
   if (!allowedTypes.has(record.media_type)) errors.push(`${label}: invalid media_type ${record.media_type}`);
   if (!allowedStates.has(record.media_state)) errors.push(`${label}: invalid media_state ${record.media_state}`);
