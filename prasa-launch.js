@@ -122,6 +122,12 @@
   }
 
   const providerMedia = new Map([
+    ["Green Line Tours — São Vicente Guided Tours", {
+      src: "assets/card-media/things-to-do/green-line-tours-sao-vicente.jpg",
+      alt: "View across Mindelo toward Porto Grande and Monte Cara.",
+      width: 1024,
+      height: 683
+    }],
     ["Sinergia da Matéria: Entre o Bruto e o Traço", {
       src: "assets/card-media/things-to-do/sinergia-da-materia-editorial-fallback.webp",
       alt: "",
