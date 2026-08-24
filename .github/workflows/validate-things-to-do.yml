@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'data/things-to-do-events.json'
+      - 'data/things-to-do-currentness.json'
       - 'internal/provider-media-manifest.json'
       - 'scripts/generate-things-to-do.mjs'
       - 'scripts/render-things-to-do-adapter.mjs'
@@ -29,13 +30,20 @@ jobs:
         with:
           node-version: '24'
 
+      - name: Load explicit currentness date
+        shell: bash
+        run: |
+          AS_OF=$(node -e "const fs=require('fs'); const value=JSON.parse(fs.readFileSync('data/things-to-do-currentness.json','utf8')).as_of; if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) process.exit(1); process.stdout.write(value)")
+          echo "AS_OF=$AS_OF" >> "$GITHUB_ENV"
+          echo "Validating committed Things to Do surfaces as of $AS_OF"
+
       - name: Validate canonical records
         run: node scripts/validate-things-to-do-events.mjs
 
-      - name: Validate incumbent surfaces as of 2026-08-22
+      - name: Validate committed current surfaces
         run: |
-          node scripts/validate-things-to-do-currentness.mjs --as-of=2026-08-22
-          node scripts/validate-things-to-do-surface-equivalence.mjs --as-of=2026-08-22
+          node scripts/validate-things-to-do-currentness.mjs --as-of="$AS_OF"
+          node scripts/validate-things-to-do-surface-equivalence.mjs --as-of="$AS_OF"
           node scripts/validate-things-to-do-sitemap.mjs
 
       - name: Validate card media
@@ -52,13 +60,13 @@ jobs:
             echo "Media validator reported warnings/pending records; no hard errors."
           fi
 
-      - name: Generate canonical surfaces as of 2026-08-22
-        run: node scripts/generate-things-to-do.mjs --as-of=2026-08-22 --write
+      - name: Generate canonical surfaces for tracked currentness date
+        run: node scripts/generate-things-to-do.mjs --as-of="$AS_OF" --write
 
       - name: Validate generated current surfaces
         run: |
-          node scripts/validate-things-to-do-currentness.mjs --as-of=2026-08-22
-          node scripts/validate-things-to-do-surface-equivalence.mjs --as-of=2026-08-22
+          node scripts/validate-things-to-do-currentness.mjs --as-of="$AS_OF"
+          node scripts/validate-things-to-do-surface-equivalence.mjs --as-of="$AS_OF"
           node scripts/validate-things-to-do-sitemap.mjs
           git diff --check
 
