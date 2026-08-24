@@ -11,6 +11,7 @@ const routes = new Set();
 const mediaTitles = new Set();
 const isoDate = /^\d{4}-\d{2}-\d{2}$/;
 const isoDateTime = /^\d{4}-\d{2}-\d{2}T/;
+const detailRoutePattern = /^things-to-do\/[a-z0-9]+(?:-[a-z0-9]+)*\/$/;
 const allowedPublicationStates = new Set(['draft', 'published', 'expired', 'withdrawn']);
 const allowedMediaPolicies = new Set(['required', 'fallback_allowed']);
 
@@ -27,6 +28,7 @@ for (const record of data.records ?? []) {
   if (!record.source_url) errors.push(`${label}: missing source_url`);
   if (!record.source_type) errors.push(`${label}: missing source_type`);
   if (!record.detail_page) errors.push(`${label}: missing detail_page`);
+  else if (!detailRoutePattern.test(record.detail_page)) errors.push(`${label}: invalid detail_page; expected things-to-do/<slug>/`);
   if (!allowedPublicationStates.has(record.publication_state)) errors.push(`${label}: invalid publication_state`);
 
   if (routes.has(record.detail_page)) errors.push(`${label}: duplicate detail route`);
