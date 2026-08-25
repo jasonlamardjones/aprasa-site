@@ -269,6 +269,14 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
 .dialog-media img { width: 100%; height: auto; display: block; }
 .dialog-media-poster { background: var(--white); }
 .dialog-media-poster img { object-fit: contain; }
+/* Locale-matched media: both language variants are present in the shared
+   EN source (pt/index.html is mechanically derived from it, so a single
+   markup block is the only way to keep locale-specific images without a
+   second content model); this shows only the variant matching the page's
+   own <html lang>. */
+img.lang-only-pt { display: none; }
+html[lang="pt"] img.lang-only-en { display: none; }
+html[lang="pt"] img.lang-only-pt { display: block; }
 .card-status {
   margin: 0 0 .55rem !important;
   color: var(--green);
