@@ -21,7 +21,10 @@
       mapEnhancedGuidance:
         "Map tiles are a visual aid. Drag the map or use the arrow keys to move; use +/− to zoom. On touch devices, pinch with two fingers to zoom. Trackpad or mouse-wheel zoom is intentionally disabled so normal page scrolling is not trapped by the map.",
       mapDefaultMarkerTitle: "Mindelo Essentials location",
-      markerNameOnly: false,
+      markerOrientationAccessibleNameTemplate: "Map marker: {name}. Activate to view orientation details.",
+      markerDirectoryAccessibleNameTemplate: "Map marker: {name}. Activate to view the directory record.",
+      markerOrientationDefaultName: "Orientation landmark",
+      markerDirectoryDefaultName: "Mindelo Essentials location",
     };
     try {
       const node = document.getElementById("i18n-strings");
@@ -300,15 +303,12 @@
         const props = feature.properties || {};
         const markerElement = marker.getElement?.();
         if (markerElement) {
-          // The overlay has no governed PT text for the "Activate to view
-          // ..." instructional suffix (documented gap pending Project 09
-          // review) — PT markers use the place name alone rather than
-          // inventing a translation or silently shipping English.
-          const label = I18N.markerNameOnly
-            ? props.name || I18N.mapDefaultMarkerTitle
-            : props.feature_kind === "orientation-landmark"
-              ? `Map marker: ${props.name || "Orientation landmark"}. Activate to view orientation details.`
-              : `Map marker: ${props.name || "Mindelo Essentials location"}. Activate to view the directory record.`;
+          const isOrientation = props.feature_kind === "orientation-landmark";
+          const template = isOrientation
+            ? I18N.markerOrientationAccessibleNameTemplate
+            : I18N.markerDirectoryAccessibleNameTemplate;
+          const defaultName = isOrientation ? I18N.markerOrientationDefaultName : I18N.markerDirectoryDefaultName;
+          const label = template.replace("{name}", props.name || defaultName);
           markerElement.setAttribute("aria-label", label);
         }
       });

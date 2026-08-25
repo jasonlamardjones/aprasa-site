@@ -122,20 +122,22 @@ function collectCanonicalIdentityStrings() {
 }
 
 // Runtime strings mindelo-essentials.js needs at runtime (search result
-// count pluralization, map guidance/fallback text) — embedded as a JSON
-// island rather than hardcoded in the shared JS file, so the same script
-// renders correct EN or PT text based on which page loaded it. The one
-// documented gap: the overlay has no governed text for the marker
-// "Activate to view..." instructional aria-label suffix, so PT markers use
-// just the place name (see markerNameOnly below) instead of inventing a
-// translation or silently shipping the English sentence.
+// count pluralization, map guidance/fallback text, marker accessible-name
+// templates) — embedded as a JSON island rather than hardcoded in the
+// shared JS file, so the same script renders correct EN or PT text based
+// on which page loaded it. The r3 delta governs the marker accessible-name
+// templates and fallback names in full; the {name} placeholder is
+// interpolated client-side by mindelo-essentials.js, never here.
 function runtimeStringsScript(locale) {
   const strings = {
     searchCountOne: t('mindelo.search.result_count.one', locale),
     searchCountManyTemplate: t('mindelo.search.result_count.many', locale),
     mapEnhancedGuidance: t('mindelo.map.enhanced_guidance', locale),
     mapDefaultMarkerTitle: t('mindelo.map.default_marker_title', locale),
-    markerNameOnly: locale === 'pt',
+    markerOrientationAccessibleNameTemplate: t('mindelo.map.marker.orientation_accessible_name', locale),
+    markerDirectoryAccessibleNameTemplate: t('mindelo.map.marker.directory_accessible_name', locale),
+    markerOrientationDefaultName: t('mindelo.map.marker.orientation_default_name', locale),
+    markerDirectoryDefaultName: t('mindelo.map.marker.directory_default_name', locale),
   };
   return `<script type="application/json" id="i18n-strings">${JSON.stringify(strings)}</script>`;
 }
@@ -230,16 +232,16 @@ const localized = rawLocalized.replaceAll('<!--i18n:skip-->', '').replaceAll('<!
 const canonicalIdentity = collectCanonicalIdentityStrings();
 const realGaps = unmatchedEnglish.filter((u) => !canonicalIdentity.has(u.text));
 
-if (write) {
-  fs.mkdirSync(path.dirname(enPath), { recursive: true });
-  fs.writeFileSync(enPath, enSource);
-}
-
+// Atomicity invariant: never write EN infrastructure (hreflang/lang-switch
+// advertising a PT counterpart) unless the PT page itself actually
+// generates. A blocked run leaves both files untouched on disk.
 if (realGaps.length) {
-  console.error(`[build-mindelo-pt] BLOCKED: ${realGaps.length} required English string(s) have no governed PT value — PT page NOT generated:`);
+  console.error(`[build-mindelo-pt] BLOCKED: ${realGaps.length} required English string(s) have no governed PT value — neither EN infrastructure nor PT page written:`);
   for (const g of realGaps) console.error(`  - [${g.where}] "${g.text}"`);
   process.exitCode = 1;
 } else if (write) {
+  fs.mkdirSync(path.dirname(enPath), { recursive: true });
+  fs.writeFileSync(enPath, enSource);
   fs.mkdirSync(path.dirname(ptPath), { recursive: true });
   fs.writeFileSync(ptPath, localized);
   console.log(`[build-mindelo-pt] wrote mindelo-essentials/index.html (infra-updated) and pt/mindelo-essentials/index.html`);

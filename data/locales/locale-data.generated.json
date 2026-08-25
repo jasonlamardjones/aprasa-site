@@ -1,6 +1,6 @@
 {
   "provenance": {
-    "source_revision": "P03-PT-SOURCE-2026-08-25-r2",
+    "source_revision": "P03-PT-SOURCE-2026-08-25-r3",
     "source_package_id": "aprasa-pt-launch-source-concrete-rows",
     "semantic_authority": "Project 03 — A PRASA Business, Brand & Administration",
     "project_09_verdict": "READY FOR PROJECT 04 IMPLEMENTATION HANDOFF",
@@ -9,13 +9,19 @@
       "commit": "d52a76e43b1837f751cc3d91ec313b0ff9dcc518"
     },
     "generated_by": "scripts/build-locale-data.mjs",
-    "generated_from": "data/locales/pt-overlay-r2.source.json"
+    "generated_from": [
+      "data/locales/pt-overlay-r2.source.json",
+      "data/locales/pt-overlay-r3-delta.source.json"
+    ],
+    "base_revision": "P03-PT-SOURCE-2026-08-25-r2",
+    "delta_revision": "P03-PT-SOURCE-2026-08-25-r3"
   },
   "counts": {
-    "total_rows": 732,
-    "required_for_pt_launch": 705,
-    "intentionally_unchanged": 27,
-    "approved_rows_total": 732
+    "total_rows": 753,
+    "required_for_pt_launch": 725,
+    "intentionally_unchanged": 28,
+    "approved_rows_total": 753,
+    "r3_delta_rows": 21
   },
   "keys": {
     "global.skip_to_content": {
@@ -8801,6 +8807,258 @@
       "source_revision": "P03-PT-SOURCE-2026-08-25-r2",
       "context_notes": "Generic user-visible status indicating that a record or item is current. Do not use this key as a substitute for more specific dated/currentness presentation where a record already has its own approved status.",
       "linguistic_notes": "Preferido para estado genérico curto. Não substituir estados específicos ou informação de atualidade datada."
+    },
+    "ui.cv_delivery": {
+      "key": "ui.cv_delivery",
+      "en": "CV delivery",
+      "pt": "Entrega do CV",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r3",
+      "context_notes": "Fact label for where a curriculum vitae may be delivered.",
+      "linguistic_notes": ""
+    },
+    "ui.delivery_hours": {
+      "key": "ui.delivery_hours",
+      "en": "Delivery hours",
+      "pt": "Horário de entrega",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r3",
+      "context_notes": "Fact label for document/application delivery hours.",
+      "linguistic_notes": ""
+    },
+    "home.training.record.openlearn.card_action": {
+      "key": "home.training.record.openlearn.card_action",
+      "en": "Browse courses",
+      "pt": "Ver cursos",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "openlearn",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r3",
+      "context_notes": "Short card-facing action for OpenLearn; distinct from the already approved longer action 'Browse OpenLearn courses'.",
+      "linguistic_notes": ""
+    },
+    "home.training.record.iefp-pepe.card_action": {
+      "key": "home.training.record.iefp-pepe.card_action",
+      "en": "View opportunities",
+      "pt": "Ver oportunidades",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "iefp-pepe",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r3",
+      "context_notes": "Short card-facing action for IEFP PEPE.",
+      "linguistic_notes": ""
+    },
+    "home.help.record.cruz-vermelha.card_action": {
+      "key": "home.help.record.cruz-vermelha.card_action",
+      "en": "Volunteer registration",
+      "pt": "Inscrição para voluntariado",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "cruz-vermelha",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r3",
+      "context_notes": "Short card-facing action.",
+      "linguistic_notes": ""
+    },
+    "home.help.record.biosfera.card_action": {
+      "key": "home.help.record.biosfera.card_action",
+      "en": "Volunteer opportunities",
+      "pt": "Oportunidades de voluntariado",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "biosfera",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r3",
+      "context_notes": "Short card-facing action.",
+      "linguistic_notes": ""
+    },
+    "home.help.record.no-bai.card_action": {
+      "key": "home.help.record.no-bai.card_action",
+      "en": "Volunteering information",
+      "pt": "Informações sobre voluntariado",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "no-bai",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r3",
+      "context_notes": "Short card-facing action.",
+      "linguistic_notes": ""
+    },
+    "home.help.record.espaco-jovem.card_action": {
+      "key": "home.help.record.espaco-jovem.card_action",
+      "en": "Ways to support",
+      "pt": "Formas de apoiar",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "espaco-jovem",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r3",
+      "context_notes": "Short card-facing action.",
+      "linguistic_notes": ""
+    },
+    "standalone.mindelo_cultural.meta.title": {
+      "key": "standalone.mindelo_cultural.meta.title",
+      "en": "Mindelo Cultural | A PRASA",
+      "pt": "Mindelo Cultural | A PRASA",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "PRESERVE_PROVIDER_IDENTITY_TRANSLATE_DESCRIPTIVE_PORTION",
+      "record_id": "mindelo-cultural",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r3",
+      "context_notes": "Document title for /things-to-do/street-art-mindelo/. Provider and brand identities are preserved.",
+      "linguistic_notes": ""
+    },
+    "standalone.mindelo_cultural.meta.description": {
+      "key": "standalone.mindelo_cultural.meta.description",
+      "en": "Mindelo Cultural is an independently operated resource for discovering local cultural experiences, activities and things to do in Mindelo and São Vicente.",
+      "pt": "Mindelo Cultural é um recurso gerido de forma independente para descobrir experiências culturais locais, atividades e o que fazer em Mindelo e São Vicente.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY_PRESERVE_PROVIDER",
+      "record_id": "mindelo-cultural",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r3",
+      "context_notes": "Meta/social description for the standalone Mindelo Cultural route.",
+      "linguistic_notes": "Project 09 linguistic refinement from supplied PT: 'Mindelo Cultural é um recurso operado de forma independente para descobrir experiências culturais locais, atividades e coisas para fazer em Mindelo e São Vicente.' → 'Mindelo Cultural é um recurso gerido de forma independente para descobrir experiências culturais locais, atividades e o que fazer em Mindelo e São Vicente.'. Meaning unchanged; revised for natural European Portuguese / terminology fidelity."
+    },
+    "standalone.mindelo_cultural.social.title": {
+      "key": "standalone.mindelo_cultural.social.title",
+      "en": "Mindelo Cultural",
+      "pt": "Mindelo Cultural",
+      "scope_status": "INTENTIONALLY_UNCHANGED",
+      "identity_policy": "PRESERVE_PROVIDER_IDENTITY",
+      "record_id": "mindelo-cultural",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r3",
+      "context_notes": "Shared OG/Twitter title. Exact provider identity.",
+      "linguistic_notes": ""
+    },
+    "standalone.mindelo_cultural.social.description": {
+      "key": "standalone.mindelo_cultural.social.description",
+      "en": "Mindelo Cultural is an independently operated resource for discovering local cultural experiences, activities and things to do in Mindelo and São Vicente.",
+      "pt": "Mindelo Cultural é um recurso gerido de forma independente para descobrir experiências culturais locais, atividades e o que fazer em Mindelo e São Vicente.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY_PRESERVE_PROVIDER",
+      "record_id": "mindelo-cultural",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r3",
+      "context_notes": "OG and Twitter description. Same source value as standalone.mindelo_cultural.meta.description; implementation may reuse the translated value.",
+      "linguistic_notes": "Project 09 linguistic refinement from supplied PT: 'Mindelo Cultural é um recurso operado de forma independente para descobrir experiências culturais locais, atividades e coisas para fazer em Mindelo e São Vicente.' → 'Mindelo Cultural é um recurso gerido de forma independente para descobrir experiências culturais locais, atividades e o que fazer em Mindelo e São Vicente.'. Meaning unchanged; revised for natural European Portuguese / terminology fidelity."
+    },
+    "standalone.green_line.meta.title": {
+      "key": "standalone.green_line.meta.title",
+      "en": "Green Line Tours — São Vicente Guided Tours | A PRASA",
+      "pt": "Green Line Tours — Visitas Guiadas em São Vicente | A PRASA",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_DESCRIPTIVE_PORTION_PRESERVE_PROVIDER_AND_BRAND",
+      "record_id": "green-line-tours",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r3",
+      "context_notes": "Document title for /things-to-do/water-adventure-activities-mindelo/.",
+      "linguistic_notes": ""
+    },
+    "standalone.green_line.meta.description": {
+      "key": "standalone.green_line.meta.description",
+      "en": "Explore São Vicente with Green Line Tours, a Mindelo-based local tour company offering guided cultural, coastal and nature outings.",
+      "pt": "Explore São Vicente com a Green Line Tours, uma empresa local de turismo sediada em Mindelo que oferece passeios guiados de caráter cultural, costeiro e de natureza.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY_PRESERVE_PROVIDER",
+      "record_id": "green-line-tours",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r3",
+      "context_notes": "Meta/social description for the standalone Green Line Tours route.",
+      "linguistic_notes": ""
+    },
+    "standalone.green_line.social.title": {
+      "key": "standalone.green_line.social.title",
+      "en": "Green Line Tours — São Vicente Guided Tours",
+      "pt": "Green Line Tours — Visitas Guiadas em São Vicente",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_DESCRIPTIVE_PORTION_PRESERVE_PROVIDER",
+      "record_id": "green-line-tours",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r3",
+      "context_notes": "Shared OG/Twitter title.",
+      "linguistic_notes": ""
+    },
+    "standalone.green_line.social.description": {
+      "key": "standalone.green_line.social.description",
+      "en": "Explore São Vicente with Green Line Tours, a Mindelo-based local tour company offering guided cultural, coastal and nature outings.",
+      "pt": "Explore São Vicente com a Green Line Tours, uma empresa local de turismo sediada em Mindelo que oferece passeios guiados de caráter cultural, costeiro e de natureza.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY_PRESERVE_PROVIDER",
+      "record_id": "green-line-tours",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r3",
+      "context_notes": "OG and Twitter description. Same source value as standalone.green_line.meta.description; implementation may reuse the translated value.",
+      "linguistic_notes": ""
+    },
+    "standalone.green_line.image_alt": {
+      "key": "standalone.green_line.image_alt",
+      "en": "View across Mindelo toward Porto Grande and Monte Cara.",
+      "pt": "Vista sobre Mindelo em direção a Porto Grande e ao Monte Cara.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY_PRESERVE_PLACE_NAMES",
+      "record_id": "green-line-tours",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r3",
+      "context_notes": "Descriptive image alt used both in-page and for the social image.",
+      "linguistic_notes": ""
+    },
+    "mindelo.map.marker.orientation_accessible_name": {
+      "key": "mindelo.map.marker.orientation_accessible_name",
+      "en": "Map marker: {name}. Activate to view orientation details.",
+      "pt": "Marcador no mapa: {name}. Ative para ver os detalhes de orientação.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_TEMPLATE_PRESERVE_NAME_PLACEHOLDER",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r3",
+      "context_notes": "Runtime accessible-name template for an orientation-landmark map marker. Preserve {name} exactly as a placeholder.",
+      "linguistic_notes": ""
+    },
+    "mindelo.map.marker.directory_accessible_name": {
+      "key": "mindelo.map.marker.directory_accessible_name",
+      "en": "Map marker: {name}. Activate to view the directory record.",
+      "pt": "Marcador no mapa: {name}. Ative para ver o registo no diretório.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_TEMPLATE_PRESERVE_NAME_PLACEHOLDER",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r3",
+      "context_notes": "Runtime accessible-name template for a directory-record map marker. Preserve {name} exactly as a placeholder.",
+      "linguistic_notes": ""
+    },
+    "mindelo.map.marker.orientation_default_name": {
+      "key": "mindelo.map.marker.orientation_default_name",
+      "en": "Orientation landmark",
+      "pt": "Ponto de referência para orientação",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r3",
+      "context_notes": "Fallback name used only when an orientation landmark lacks a display name.",
+      "linguistic_notes": "Project 09 linguistic refinement from supplied PT: 'Ponto de referência' → 'Ponto de referência para orientação'. Meaning unchanged; revised for natural European Portuguese / terminology fidelity."
+    },
+    "mindelo.map.marker.directory_default_name": {
+      "key": "mindelo.map.marker.directory_default_name",
+      "en": "Mindelo Essentials location",
+      "pt": "Localização dos Essenciais de Mindelo",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_DESCRIPTIVE_LABEL",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r3",
+      "context_notes": "Fallback marker name used only when a directory map feature lacks a display name.",
+      "linguistic_notes": ""
     }
   }
 }

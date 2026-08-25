@@ -201,21 +201,22 @@ function buildPage({ name, enPath, ptPath, canonicalEn, canonicalPt, enHrefFromR
   const localized = rawLocalized.replaceAll('<!--i18n:skip-->', '').replaceAll('<!--/i18n:skip-->', '');
   const realGaps = unmatchedEnglish.filter((u) => !ALLOWED_UNTRANSLATED.has(u.text));
 
-  // The EN infrastructure update (hreflang + lang-switch) never depends on
-  // the governed PT overlay having every string, so it's safe to write
-  // regardless of whether the PT page itself is blocked below.
-  if (write) {
-    fs.mkdirSync(path.dirname(enAbs), { recursive: true });
-    fs.writeFileSync(enAbs, enSource);
-  }
-
+  // Atomicity invariant: an EN page must never advertise or visibly link to
+  // a PT counterpart unless that counterpart actually exists. enSource
+  // above already has the hreflang/lang-switch infrastructure baked in
+  // in-memory, but nothing is written to disk — for either file — until we
+  // know the PT page itself succeeded. A blocked page leaves BOTH files
+  // exactly as they were on disk (no dangling EN→PT link, no partial PT
+  // write), so re-running the pipeline is always safe.
   if (realGaps.length) {
-    console.error(`[build-static-pages] BLOCKED (${name}): ${realGaps.length} required English string(s) have no governed PT value in the overlay — PT page NOT generated (no-silent-fallback contract):`);
+    console.error(`[build-static-pages] BLOCKED (${name}): ${realGaps.length} required English string(s) have no governed PT value in the overlay — neither EN infrastructure nor PT page written (no-silent-fallback / no-dangling-link contract):`);
     for (const g of realGaps) console.error(`  - [${g.where}] "${g.text}"`);
     return { name, blocked: true, gaps: realGaps };
   }
 
   if (write) {
+    fs.mkdirSync(path.dirname(enAbs), { recursive: true });
+    fs.writeFileSync(enAbs, enSource);
     fs.mkdirSync(path.dirname(ptAbs), { recursive: true });
     fs.writeFileSync(ptAbs, localized);
     console.log(`[build-static-pages] wrote ${enPath} (infra-updated) and ${ptPath}`);

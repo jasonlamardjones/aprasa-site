@@ -21,14 +21,61 @@ function fail(msg) {
 const data = loadLocaleData();
 const keys = Object.values(data.keys);
 
-// --- Overlay contract (counts) ---
-if (keys.length !== 732) fail(`expected 732 total keys, got ${keys.length}`);
+// --- Overlay contract (counts) — combined r2 base (732) + r3 delta (21) ---
+if (keys.length !== 753) fail(`expected 753 total keys (732 r2 + 21 r3), got ${keys.length}`);
 const required = keys.filter((k) => k.scope_status === "REQUIRED_FOR_PT_LAUNCH");
 const unchanged = keys.filter((k) => k.scope_status === "INTENTIONALLY_UNCHANGED");
-if (required.length !== 705) fail(`expected 705 REQUIRED_FOR_PT_LAUNCH keys, got ${required.length}`);
-if (unchanged.length !== 27) fail(`expected 27 INTENTIONALLY_UNCHANGED keys, got ${unchanged.length}`);
-if (data.provenance.source_revision !== "P03-PT-SOURCE-2026-08-25-r2") {
-  fail(`unexpected source_revision: ${data.provenance.source_revision}`);
+if (required.length !== 725) fail(`expected 725 REQUIRED_FOR_PT_LAUNCH keys (705 + 20), got ${required.length}`);
+if (unchanged.length !== 28) fail(`expected 28 INTENTIONALLY_UNCHANGED keys (27 + 1), got ${unchanged.length}`);
+if (data.provenance.delta_revision !== "P03-PT-SOURCE-2026-08-25-r3") {
+  fail(`unexpected delta_revision: ${data.provenance.delta_revision}`);
+}
+if (data.provenance.base_revision !== "P03-PT-SOURCE-2026-08-25-r2") {
+  fail(`unexpected base_revision: ${data.provenance.base_revision}`);
+}
+
+// --- r3 delta spot checks ---
+const r3Keys = [
+  "ui.cv_delivery",
+  "ui.delivery_hours",
+  "home.training.record.openlearn.card_action",
+  "home.training.record.iefp-pepe.card_action",
+  "home.help.record.cruz-vermelha.card_action",
+  "home.help.record.biosfera.card_action",
+  "home.help.record.no-bai.card_action",
+  "home.help.record.espaco-jovem.card_action",
+  "standalone.mindelo_cultural.meta.title",
+  "standalone.mindelo_cultural.meta.description",
+  "standalone.mindelo_cultural.social.title",
+  "standalone.mindelo_cultural.social.description",
+  "standalone.green_line.meta.title",
+  "standalone.green_line.meta.description",
+  "standalone.green_line.social.title",
+  "standalone.green_line.social.description",
+  "standalone.green_line.image_alt",
+  "mindelo.map.marker.orientation_accessible_name",
+  "mindelo.map.marker.directory_accessible_name",
+  "mindelo.map.marker.orientation_default_name",
+  "mindelo.map.marker.directory_default_name",
+];
+for (const k of r3Keys) {
+  if (!data.keys[k]) fail(`r3 key missing from locale data: ${k}`);
+}
+const orientationName = data.keys["mindelo.map.marker.orientation_default_name"];
+if (orientationName && orientationName.pt !== "Ponto de referência para orientação") {
+  fail(`mindelo.map.marker.orientation_default_name PT does not match approved r3 refinement`);
+}
+const mcDesc = data.keys["standalone.mindelo_cultural.meta.description"];
+if (
+  mcDesc &&
+  mcDesc.pt !==
+    "Mindelo Cultural é um recurso gerido de forma independente para descobrir experiências culturais locais, atividades e o que fazer em Mindelo e São Vicente."
+) {
+  fail(`standalone.mindelo_cultural.meta.description PT does not match approved r3 refinement`);
+}
+for (const templKey of ["mindelo.map.marker.orientation_accessible_name", "mindelo.map.marker.directory_accessible_name"]) {
+  const row = data.keys[templKey];
+  if (row && !row.pt.includes("{name}")) fail(`${templKey}: PT value does not preserve the {name} placeholder`);
 }
 
 // --- No missing mandatory PT ---
