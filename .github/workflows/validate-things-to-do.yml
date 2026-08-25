@@ -10,7 +10,9 @@ on:
       - 'scripts/render-things-to-do-adapter.mjs'
       - 'scripts/validate-things-to-do-*.mjs'
       - 'scripts/validate-card-media.mjs'
+      - 'scripts/validate-training-opportunities-currentness.mjs'
       - 'index.html'
+      - 'pt/index.html'
       - 'sitemap.xml'
       - 'things-to-do/**'
       - '.github/workflows/validate-things-to-do.yml'
@@ -45,6 +47,9 @@ jobs:
           node scripts/validate-things-to-do-currentness.mjs --as-of="$AS_OF"
           node scripts/validate-things-to-do-surface-equivalence.mjs --as-of="$AS_OF"
           node scripts/validate-things-to-do-sitemap.mjs
+
+      - name: Validate training opportunity currentness (EN + PT Home)
+        run: node scripts/validate-training-opportunities-currentness.mjs --as-of="$AS_OF" --home=index.html --home=pt/index.html
 
       - name: Validate card media
         shell: bash

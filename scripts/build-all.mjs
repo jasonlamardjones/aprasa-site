@@ -59,6 +59,16 @@ function run(script, args) {
 //
 // 5/6. Mindelo Essentials and the sitemap are independent of the Home
 //    event-region ordering above and can run last.
+//
+// 7. validate-training-opportunities-currentness.mjs runs last, against both
+//    the EN and PT Home output this run just produced, using the same
+//    resolved --as-of as every other step above. This is the canonical gate
+//    for the hand-authored (non-Things-to-Do) Home opportunity records: it
+//    fails the build if either Home surface still presents a record past its
+//    governed end date, so a stale opportunity can't ship unnoticed through
+//    the one script that already builds the full site. It is intentionally
+//    separate from the Things-to-Do currentness system above and does not
+//    change that system's semantics.
 
 run('scripts/build-locale-data.mjs', []);
 run('scripts/generate-things-to-do.mjs', [`--as-of=${asOf}`, '--locale=en', '--write']);
@@ -66,5 +76,6 @@ run('scripts/build-static-pages.mjs', ['--write']);
 run('scripts/generate-things-to-do.mjs', [`--as-of=${asOf}`, '--locale=pt', '--home=pt/index.html', '--write']);
 run('scripts/build-mindelo-pt.mjs', ['--write']);
 run('scripts/build-sitemap.mjs', ['--write']);
+run('scripts/validate-training-opportunities-currentness.mjs', [`--as-of=${asOf}`, '--home=index.html', '--home=pt/index.html']);
 
 console.log('\n[build-all] done.');
