@@ -39,6 +39,13 @@ jobs:
           echo "AS_OF=$AS_OF" >> "$GITHUB_ENV"
           echo "Validating committed Things to Do surfaces as of $AS_OF"
 
+          # EMAR/Kre+ training-opportunity currentness is resolved independently
+          # of the Things-to-Do tracked date above: it must reflect the actual
+          # current date, not a curated value a maintainer could forget to bump.
+          AS_OF_EMAR=$(node -e "console.log(new Intl.DateTimeFormat('en-CA', { timeZone: 'Atlantic/Cape_Verde', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()))")
+          echo "AS_OF_EMAR=$AS_OF_EMAR" >> "$GITHUB_ENV"
+          echo "Validating EMAR/Kre+ opportunity currentness as of $AS_OF_EMAR (Atlantic/Cape_Verde, live)"
+
       - name: Validate canonical records
         run: node scripts/validate-things-to-do-events.mjs
 
@@ -49,7 +56,7 @@ jobs:
           node scripts/validate-things-to-do-sitemap.mjs
 
       - name: Validate training opportunity currentness (EN + PT Home)
-        run: node scripts/validate-training-opportunities-currentness.mjs --as-of="$AS_OF" --home=index.html --home=pt/index.html
+        run: node scripts/validate-training-opportunities-currentness.mjs --as-of="$AS_OF_EMAR" --home=index.html --home=pt/index.html
 
       - name: Validate card media
         shell: bash

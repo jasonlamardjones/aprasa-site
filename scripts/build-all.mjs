@@ -8,7 +8,19 @@
 //
 // Usage: node scripts/build-all.mjs [--as-of=YYYY-MM-DD]
 // Defaults --as-of to data/things-to-do-currentness.json's own as_of value,
-// matching what the Things-to-Do CI workflow already does.
+// matching what the Things-to-Do CI workflow already does. This tracked
+// value is a deliberately curated "as of" date for Things-to-Do content
+// (see that system's own docs) — it is NOT live wall-clock time, and stays
+// that way regardless of the EMAR resolution below.
+//
+// The EMAR/Kre+ training-opportunity currentness check (step 7 below) is
+// resolved separately: an explicit --as-of on the command line still
+// overrides it (so deterministic testing works exactly as it does for
+// Things-to-Do), but with no explicit --as-of it defaults to today's actual
+// calendar date in Atlantic/Cape_Verde, not the tracked Things-to-Do date.
+// This is intentional — unlike the curated Things-to-Do date, EMAR expiry
+// must not depend on a maintainer remembering to bump a tracked file, or a
+// closed application could keep shipping as "current" indefinitely.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -19,6 +31,19 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 const asOfArg = process.argv.find((a) => a.startsWith('--as-of='));
 const asOf = asOfArg ? asOfArg.split('=')[1] : JSON.parse(fs.readFileSync(path.join(root, 'data', 'things-to-do-currentness.json'), 'utf8')).as_of;
+
+// Atlantic/Cape_Verde is a fixed UTC-01:00 offset with no DST, so this is a
+// pure local-clock calculation — no network/time-service call involved.
+function capeVerdeToday() {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Atlantic/Cape_Verde',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+}
+
+const emarAsOf = asOfArg ? asOfArg.split('=')[1] : capeVerdeToday();
 
 function run(script, args) {
   console.log(`\n[build-all] node ${script} ${args.join(' ')}`);
@@ -61,14 +86,14 @@ function run(script, args) {
 //    event-region ordering above and can run last.
 //
 // 7. validate-training-opportunities-currentness.mjs runs last, against both
-//    the EN and PT Home output this run just produced, using the same
-//    resolved --as-of as every other step above. This is the canonical gate
-//    for the hand-authored (non-Things-to-Do) Home opportunity records: it
-//    fails the build if either Home surface still presents a record past its
-//    governed end date, so a stale opportunity can't ship unnoticed through
-//    the one script that already builds the full site. It is intentionally
-//    separate from the Things-to-Do currentness system above and does not
-//    change that system's semantics.
+//    the EN and PT Home output this run just produced. This is the canonical
+//    gate for the hand-authored (non-Things-to-Do) Home opportunity records:
+//    it fails the build if either Home surface still presents a record past
+//    its governed end date, so a stale opportunity can't ship unnoticed
+//    through the one script that already builds the full site. It uses
+//    emarAsOf (see above), NOT asOf/Things-to-Do's tracked date — an
+//    unrelated resolution kept intentionally separate from the Things-to-Do
+//    currentness system, which is untouched by this step.
 
 run('scripts/build-locale-data.mjs', []);
 run('scripts/generate-things-to-do.mjs', [`--as-of=${asOf}`, '--locale=en', '--write']);
@@ -76,6 +101,6 @@ run('scripts/build-static-pages.mjs', ['--write']);
 run('scripts/generate-things-to-do.mjs', [`--as-of=${asOf}`, '--locale=pt', '--home=pt/index.html', '--write']);
 run('scripts/build-mindelo-pt.mjs', ['--write']);
 run('scripts/build-sitemap.mjs', ['--write']);
-run('scripts/validate-training-opportunities-currentness.mjs', [`--as-of=${asOf}`, '--home=index.html', '--home=pt/index.html']);
+run('scripts/validate-training-opportunities-currentness.mjs', [`--as-of=${emarAsOf}`, '--home=index.html', '--home=pt/index.html']);
 
 console.log('\n[build-all] done.');
