@@ -95,6 +95,14 @@ function findTagEnd(html, start) {
 // what makes a segment like "A PRASA — " (meaningful trailing space before
 // hidden text) match its governed key exactly, PT trailing space included.
 // Falls back to a trimmed match for ordinary indentation-padded block text.
+// A leading "— " (bullet-style dash before an inline value, e.g. "<strong>L1</strong> — Ribeirinha...")
+// or a trailing ":" (a label rendered as "Location:" where the governed key
+// is just "Location") is punctuation the template adds around a governed
+// value, not part of the governed text itself — strip it before matching
+// and restore it around the translated result.
+const AAFFIX_PREFIX = '— ';
+const AFFIX_SUFFIX = ':';
+
 function lookup(rawText, enIndex, unmatched, where) {
   const exact = decodeEntities(rawText);
   const exactHit = enIndex.get(exact);
@@ -103,12 +111,22 @@ function lookup(rawText, enIndex, unmatched, where) {
   const trimmed = decodeEntities(rawText.trim());
   if (!trimmed) return null;
   const hit = enIndex.get(trimmed);
-  if (!hit) {
-    if (/[A-Za-z]{3,}/.test(trimmed)) unmatched.push({ where, text: trimmed });
-    return null;
+  if (hit) {
+    if (hit.ambiguous) return reportAmbiguous(trimmed, unmatched, where);
+    return { ...hit, matchedText: trimmed, trimmed: true };
   }
-  if (hit.ambiguous) return reportAmbiguous(trimmed, unmatched, where);
-  return { ...hit, matchedText: trimmed, trimmed: true };
+
+  if (trimmed.startsWith(AAFFIX_PREFIX)) {
+    const inner = lookup(trimmed.slice(AAFFIX_PREFIX.length), enIndex, [], where);
+    if (inner) return { ...inner, pt: AAFFIX_PREFIX + inner.pt, matchedText: trimmed, trimmed: true };
+  }
+  if (trimmed.endsWith(AFFIX_SUFFIX)) {
+    const inner = lookup(trimmed.slice(0, -AFFIX_SUFFIX.length), enIndex, [], where);
+    if (inner) return { ...inner, pt: inner.pt + AFFIX_SUFFIX, matchedText: trimmed, trimmed: true };
+  }
+
+  if (/[A-Za-z]{3,}/.test(trimmed)) unmatched.push({ where, text: trimmed });
+  return null;
 }
 
 function reportAmbiguous(text, unmatched, where) {
