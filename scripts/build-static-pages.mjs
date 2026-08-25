@@ -162,6 +162,27 @@ function applyAboutFounderFixup(html, locale) {
   );
 }
 
+// localizeStaticHtml deliberately treats <script> content as opaque raw
+// text (it must never attempt to parse/rewrite arbitrary JavaScript) —
+// which means the governed presentation text inside Home's Organization
+// JSON-LD block was silently carried over from EN unchanged. This is a
+// narrow, explicit exception for that one known structured-data payload:
+// parse it as JSON, replace ONLY the governed `description` field, and
+// re-serialize — every other field (canonical @type/name/url/logo, and the
+// factual areaServed place records) passes through byte-for-byte.
+function applyHomeStructuredDataFixup(html, locale) {
+  if (locale !== 'pt') return html;
+  return html.replace(
+    /(<script type="application\/ld\+json">\n)([\s\S]*?)(\n<\/script>)/,
+    (whole, open, jsonText, close) => {
+      const schema = JSON.parse(jsonText);
+      if (schema['@type'] !== 'Organization') return whole;
+      schema.description = t('home.structured_data.organization_description', 'pt');
+      return `${open}${JSON.stringify(schema, null, 2)}${close}`;
+    }
+  );
+}
+
 function buildPage({ name, enPath, ptPath, canonicalEn, canonicalPt, enHrefFromRoot, ptHrefFromRoot }) {
   const enAbs = path.join(root, enPath);
   const ptAbs = path.join(root, ptPath);
@@ -188,6 +209,7 @@ function buildPage({ name, enPath, ptPath, canonicalEn, canonicalPt, enHrefFromR
   ptSource = deepenSharedAssetPaths(ptSource);
   ptSource = applyHomeHeroFixups(ptSource, name === 'home' ? 'pt' : 'en');
   ptSource = applyAboutFounderFixup(ptSource, name === 'about' ? 'pt' : 'en');
+  ptSource = applyHomeStructuredDataFixup(ptSource, name === 'home' ? 'pt' : 'en');
 
   const { html: rawLocalized, unmatchedEnglish } = localizeStaticHtml(ptSource, 'pt');
   const localized = rawLocalized.replaceAll('<!--i18n:skip-->', '').replaceAll('<!--/i18n:skip-->', '');

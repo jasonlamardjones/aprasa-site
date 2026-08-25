@@ -1,12 +1,15 @@
 #!/usr/bin/env node
-// Regression guard for the defect where pt/index.html's generated Things-to-Do
-// event regions ended up containing English presentation content — the
-// static-page localizer deliberately passes those regions through
-// unchanged (they're generate-things-to-do.mjs's territory), so a wrong
-// pipeline order could silently leave English content committed there
-// while every other locale-contract check (lang="pt", hreflang, etc.)
-// still passed. This validator inspects the actual generated content of
-// each event region, not just page-level metadata.
+// Regression guard for pt/index.html content that the generic
+// locale-contract validator can't see because it lives inside regions the
+// static-page localizer deliberately treats as opaque: the generated
+// Things-to-Do event regions (generate-things-to-do.mjs's territory, only
+// passed through unchanged by the static-page localizer) and the
+// Organization JSON-LD block (<script> content is never run through the
+// text localizer, since it must never attempt to parse/rewrite arbitrary
+// JavaScript). Both categories previously let English content survive on
+// pt/index.html while every page-level check (lang="pt", hreflang, etc.)
+// still passed. This validator inspects the actual generated content, not
+// just page-level metadata.
 //
 // For every current Things-to-Do record, it independently re-derives the
 // expected PT presentation strings via the same governed locale keys the
@@ -108,10 +111,58 @@ if (checkedRecords === 0) {
   errors.push('no current generated event regions found in pt/index.html — nothing was validated (is pt/index.html generated?)');
 }
 
+// --- Organization JSON-LD structured data ---
+// Regression guard for the defect where pt/index.html's Organization
+// schema description was carried over from EN unchanged: static-page
+// localization deliberately treats <script> content as opaque raw text
+// (it must never attempt to parse/rewrite arbitrary JavaScript), so the
+// governed presentation text inside this one known JSON-LD payload needs
+// its own explicit check rather than relying on the generic text
+// localizer or a loose substring grep.
+{
+  const enHome = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+  const jsonLdMatch = homeHtml.match(/<script type="application\/ld\+json">\n([\s\S]*?)\n<\/script>/);
+  const enJsonLdMatch = enHome.match(/<script type="application\/ld\+json">\n([\s\S]*?)\n<\/script>/);
+  if (!jsonLdMatch) {
+    errors.push('pt/index.html: Organization JSON-LD block not found');
+  } else {
+    let schema;
+    try {
+      schema = JSON.parse(jsonLdMatch[1]);
+    } catch (e) {
+      errors.push(`pt/index.html: Organization JSON-LD does not parse as valid JSON: ${e.message}`);
+    }
+    if (schema) {
+      const expectedPt = t('home.structured_data.organization_description', 'pt');
+      const expectedEn = t('home.structured_data.organization_description', 'en');
+      if (schema.description !== expectedPt) {
+        errors.push(`pt/index.html: Organization JSON-LD description is "${schema.description}", expected governed PT value "${expectedPt}"`);
+      }
+      if (expectedEn !== expectedPt && schema.description === expectedEn) {
+        errors.push(`pt/index.html: Organization JSON-LD description still holds the English value`);
+      }
+      if (schema.name !== 'A PRASA') {
+        errors.push(`pt/index.html: Organization JSON-LD name changed from the protected brand string: "${schema.name}"`);
+      }
+      if (schema['@context'] !== 'https://schema.org' || schema['@type'] !== 'Organization') {
+        errors.push('pt/index.html: Organization JSON-LD @context/@type changed unexpectedly');
+      }
+      if (enJsonLdMatch) {
+        const enSchema = JSON.parse(enJsonLdMatch[1]);
+        if (schema.url !== enSchema.url) errors.push(`pt/index.html: Organization JSON-LD url changed from the canonical value ("${enSchema.url}" -> "${schema.url}")`);
+        if (schema.logo !== enSchema.logo) errors.push('pt/index.html: Organization JSON-LD logo URL changed');
+        if (JSON.stringify(schema.areaServed) !== JSON.stringify(enSchema.areaServed)) {
+          errors.push('pt/index.html: Organization JSON-LD areaServed factual records diverged from EN (should be locale-independent)');
+        }
+      }
+    }
+  }
+}
+
 if (errors.length) {
   console.error(`[validate-pt-home-events] FAILED with ${errors.length} error(s):`);
   for (const e of errors) console.error(`  - ${e}`);
   process.exit(1);
 }
 
-console.log(`[validate-pt-home-events] OK — ${checkedRecords} generated event region(s) on pt/index.html verified free of English presentation content.`);
+console.log(`[validate-pt-home-events] OK — ${checkedRecords} generated event region(s) and the Organization JSON-LD block on pt/index.html verified free of English presentation content.`);
