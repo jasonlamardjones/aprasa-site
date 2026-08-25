@@ -9,6 +9,42 @@
   let essentialsMap = null;
   let selectedRecordId = null;
 
+  // Runtime EN/PT strings for this page, embedded by
+  // scripts/build-mindelo-pt.mjs as a JSON island (#i18n-strings) so this
+  // one shared script renders correct text on both the EN and PT page
+  // without hardcoding English. Falls back to the pre-localization English
+  // defaults if the island is absent (e.g. a page not yet rebuilt).
+  const I18N = (() => {
+    const fallback = {
+      searchCountOne: "1 place and service shown.",
+      searchCountManyTemplate: "{count} places and services shown.",
+      mapEnhancedGuidance:
+        "Map tiles are a visual aid. Drag the map or use the arrow keys to move; use +/− to zoom. On touch devices, pinch with two fingers to zoom. Trackpad or mouse-wheel zoom is intentionally disabled so normal page scrolling is not trapped by the map.",
+      mapDefaultMarkerTitle: "Mindelo Essentials location",
+      markerOrientationAccessibleNameTemplate: "Map marker: {name}. Activate to view orientation details.",
+      markerDirectoryAccessibleNameTemplate: "Map marker: {name}. Activate to view the directory record.",
+      markerOrientationDefaultName: "Orientation landmark",
+      markerDirectoryDefaultName: "Mindelo Essentials location",
+    };
+    try {
+      const node = document.getElementById("i18n-strings");
+      return node ? {...fallback, ...JSON.parse(node.textContent)} : fallback;
+    } catch (error) {
+      return fallback;
+    }
+  })();
+
+  // mindelo-essentials.js is one shared file loaded from both
+  // mindelo-essentials/index.html (src="mindelo-essentials.js") and
+  // pt/mindelo-essentials/index.html (src="../mindelo-essentials.js").
+  // fetch() below resolves relative to the *page* URL, not this script's
+  // own location, so a plain "data/..." path would 404 from the PT page
+  // (pt/mindelo-essentials/data/... doesn't exist — the canonical data
+  // directory is never duplicated per-locale). Resolve against this
+  // script's own src instead so the same relative fetch works from either
+  // page.
+  const scriptBase = document.currentScript ? new URL(".", document.currentScript.src) : new URL(".", location.href);
+
   function safeStorageGet(key) {
     try {
       return window.localStorage?.getItem(key) || null;
@@ -31,12 +67,50 @@
   const categoryGroups = Array.from(directoryList.querySelectorAll(".category-group"));
   const recordRows = Array.from(directoryList.querySelectorAll("[data-record-id]"));
 
+  // Locale-independent search index: for each record, a deterministic,
+  // normalized token blob combining canonical identity (name/location/
+  // provider) with both the EN and PT category/type presentation — built
+  // by scripts/build-mindelo-pt.mjs (mirrors its normalizeToken exactly).
+  // This lets an EN-page visitor find a record via its approved Portuguese
+  // category term and vice versa, without any translation-guessing at
+  // runtime. Falls back to plain DOM textContent search (pre-existing
+  // behavior) if the index is missing.
+  const searchIndex = (() => {
+    try {
+      const node = document.getElementById("search-index");
+      return node ? JSON.parse(node.textContent) : null;
+    } catch (error) {
+      return null;
+    }
+  })();
+
+  function normalizeToken(s) {
+    return (s || "")
+      .normalize("NFKD")
+      .replace(/[̀-ͯ]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim()
+      .replace(/\s+/g, " ");
+  }
+
+  function rowMatches(row, normalizedQuery) {
+    if (!normalizedQuery) return true;
+    if (searchIndex) {
+      const recordId = row.dataset.recordId;
+      const blob = recordId ? searchIndex[recordId] : null;
+      if (blob != null) return blob.includes(normalizedQuery);
+    }
+    return row.textContent.toLocaleLowerCase().includes(normalizedQuery);
+  }
+
   function countText(n) {
-    return `${n} place${n === 1 ? "" : "s"} and service${n === 1 ? "" : "s"} shown.`;
+    if (n === 1) return I18N.searchCountOne;
+    return I18N.searchCountManyTemplate.replace("{count}", n);
   }
 
   function applySearch() {
-    const query = (searchInput?.value || "").trim().toLocaleLowerCase();
+    const query = normalizeToken(searchInput?.value || "");
     let visibleCount = 0;
 
     categoryGroups.forEach((catGroup) => {
@@ -46,7 +120,7 @@
 
       const directRows = Array.from(panel.querySelectorAll(":scope > .provider-row:not(.provider-row--group)"));
       directRows.forEach((row) => {
-        const match = !query || row.textContent.toLocaleLowerCase().includes(query);
+        const match = rowMatches(row, query);
         row.hidden = !match;
         if (match) {
           catHasMatch = true;
@@ -56,12 +130,14 @@
 
       const groups = Array.from(panel.querySelectorAll(":scope > .provider-row--group"));
       groups.forEach((group) => {
-        const providerNameMatches =
-          !query || (group.querySelector(".provider-name")?.textContent || "").toLocaleLowerCase().includes(query);
+        // The group header (e.g. "Medicentro") isn't itself a canonical
+        // record with a search-index entry, so it stays a plain normalized
+        // substring check rather than an index lookup.
+        const providerNameMatches = !query || normalizeToken(group.querySelector(".provider-name")?.textContent).includes(query);
         const branchRows = Array.from(group.querySelectorAll(".branch-row"));
         let groupHasMatch = false;
         branchRows.forEach((branch) => {
-          const match = !query || providerNameMatches || branch.textContent.toLocaleLowerCase().includes(query);
+          const match = providerNameMatches || rowMatches(branch, query);
           branch.hidden = !match;
           if (match) {
             groupHasMatch = true;
@@ -164,8 +240,7 @@
   function enhanceMapGuidance(mapNode) {
     const caption = mapNode.closest(".map-pane")?.querySelector(".map-caption");
     if (!caption) return;
-    caption.textContent =
-      "Map tiles are a visual aid. Drag the map or use the arrow keys to move; use +/− to zoom. On touch devices, pinch with two fingers to zoom. Trackpad or mouse-wheel zoom is intentionally disabled so normal page scrolling is not trapped by the map.";
+    caption.textContent = I18N.mapEnhancedGuidance;
     caption.id = caption.id || "map-guidance";
     mapNode.setAttribute("aria-describedby", caption.id);
   }
@@ -175,7 +250,7 @@
     if (!mapNode || typeof window.L === "undefined") return;
 
     try {
-      const response = await fetch("data/mindelo-essentials.geojson", {cache: "no-store"});
+      const response = await fetch(new URL("data/mindelo-essentials.geojson", scriptBase), {cache: "no-store"});
       if (!response.ok) throw new Error(`GeoJSON HTTP ${response.status}`);
       const geojson = await response.json();
       if (!geojson.features?.length) return;
@@ -200,7 +275,7 @@
           const props = feature.properties || {};
           return L.marker(latlng, {
             keyboard: true,
-            title: props.name || "Mindelo Essentials location",
+            title: props.name || I18N.mapDefaultMarkerTitle,
             icon: L.divIcon({
               className: "essentials-marker",
               html: '<span class="essentials-marker-dot" aria-hidden="true"></span>',
@@ -228,9 +303,12 @@
         const props = feature.properties || {};
         const markerElement = marker.getElement?.();
         if (markerElement) {
-          const label = props.feature_kind === "orientation-landmark"
-            ? `Map marker: ${props.name || "Orientation landmark"}. Activate to view orientation details.`
-            : `Map marker: ${props.name || "Mindelo Essentials location"}. Activate to view the directory record.`;
+          const isOrientation = props.feature_kind === "orientation-landmark";
+          const template = isOrientation
+            ? I18N.markerOrientationAccessibleNameTemplate
+            : I18N.markerDirectoryAccessibleNameTemplate;
+          const defaultName = isOrientation ? I18N.markerOrientationDefaultName : I18N.markerDirectoryDefaultName;
+          const label = template.replace("{name}", props.name || defaultName);
           markerElement.setAttribute("aria-label", label);
         }
       });

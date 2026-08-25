@@ -7,6 +7,20 @@
   let dialogTrigger = null;
   let scrollPosition = 0;
 
+  // prasa-launch.js is one shared file loaded from every page at whatever
+  // depth that page lives at (src="prasa-launch.js" from the root pages,
+  // src="../prasa-launch.js" from about/, src="../../prasa-launch.js" from
+  // pt/things-to-do/<slug>/, etc). The runtime-injected asset paths below
+  // are root-relative ("assets/..."), so resolve them against this
+  // script's own location (like mindelo-essentials.js already does for its
+  // GeoJSON fetch) instead of leaving them to resolve against whichever
+  // page happens to load the script — otherwise every page except the true
+  // root 404s on these images.
+  const assetBase = document.currentScript ? new URL(".", document.currentScript.src) : new URL(".", location.href);
+  function assetUrl(relativePath) {
+    return new URL(relativePath, assetBase).pathname;
+  }
+
   function applyMultilingualSequenceMetadata() {
     const sequences = document.querySelectorAll(".lang-forms");
     if (!sequences.length) return;
@@ -103,7 +117,7 @@
     inner.className = "media-fallback-inner";
 
     const symbol = document.createElement("img");
-    symbol.src = "assets/brand/A_PRASA_Symbol_v2_Primary_Green.svg";
+    symbol.src = assetUrl("assets/brand/A_PRASA_Symbol_v2_Primary_Green.svg");
     symbol.alt = "";
     symbol.width = 725;
     symbol.height = 725;
@@ -218,7 +232,7 @@
     const wrapper = document.createElement("div");
     wrapper.className = className;
     const image = document.createElement("img");
-    image.src = media.src;
+    image.src = assetUrl(media.src);
     image.alt = media.alt;
     image.width = media.width;
     image.height = media.height;

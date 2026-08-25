@@ -1,16 +1,20 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { t, hasKey } from './lib/locale.mjs';
+import { factKeyBase } from './lib/things-to-do-keys.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(scriptDir, '..');
 const input = path.join(root, 'data', 'things-to-do-events.json');
 const records = JSON.parse(fs.readFileSync(input, 'utf8')).records;
 const thingsToDoRoot = path.join(root, 'things-to-do');
+const ptThingsToDoRoot = path.join(root, 'pt', 'things-to-do');
 const detailRoutePattern = /^things-to-do\/[a-z0-9]+(?:-[a-z0-9]+)*\/$/;
 
 const asOfArg = process.argv.find((arg) => arg.startsWith('--as-of='));
 const idArg = process.argv.find((arg) => arg.startsWith('--id='));
+const localeArg = process.argv.find((arg) => arg.startsWith('--locale='));
 if (!asOfArg) {
   console.error('Missing required --as-of=YYYY-MM-DD');
   process.exit(1);
@@ -22,6 +26,84 @@ if (!/^\d{4}-\d{2}-\d{2}$/.test(asOf)) {
 }
 const requestedId = idArg ? idArg.split('=')[1] : null;
 const write = process.argv.includes('--write');
+const locale = localeArg ? localeArg.split('=')[1] : 'en';
+if (locale !== 'en' && locale !== 'pt') {
+  console.error(`Invalid --locale: ${locale} (expected "en" or "pt")`);
+  process.exit(1);
+}
+
+// Governed per-record presentation lookup. Canonical facts (provider,
+// location.name, source_url, ids, coordinates, dates) come straight from
+// data/things-to-do-events.json for BOTH locales and are never looked up
+// here — only presentation/copy fields are locale-keyed. For locale "en"
+// this returns the JSON's own English value unchanged (zero EN regression
+// risk); for "pt" it throws if the governed overlay has no approved value,
+// per the no-silent-fallback contract.
+function evt(record, suffix, jsonValue) {
+  if (locale === 'en') return jsonValue;
+  return t(`event.${record.id}.${suffix}`, 'pt');
+}
+
+// Reconstructs a locale-localized value_html for a fact whose English value
+// carries markup (links). Anchor tags are canonical (URLs are locale-
+// independent) and are preserved as-is; only the connecting text around them
+// is swapped for the governed PT display text. Throws rather than guessing
+// if the PT text doesn't contain the same anchor visible-text in the same
+// order, so this never silently mangles a link.
+function localizeFactValueHtml(enHtml, ptDisplay, record, fact) {
+  const anchors = enHtml.match(/<a\b[^>]*>.*?<\/a>/gs) || [];
+  if (anchors.length === 0) return escapeHtml(ptDisplay);
+  const anchorTexts = anchors.map((a) => a.replace(/<[^>]+>/g, ''));
+  let rest = ptDisplay;
+  const segments = [];
+  for (const text of anchorTexts) {
+    const idx = rest.indexOf(text);
+    if (idx === -1) {
+      throw new Error(
+        `${record.id}: cannot safely localize HTML value for fact "${fact.label}" — governed PT display text does not contain expected link text "${text}"`
+      );
+    }
+    segments.push(rest.slice(0, idx));
+    rest = rest.slice(idx + text.length);
+  }
+  segments.push(rest);
+  let result = '';
+  anchors.forEach((anchor, i) => {
+    result += escapeHtml(segments[i]) + anchor;
+  });
+  result += escapeHtml(segments[anchors.length]);
+  return result;
+}
+
+function localeRoutePrefix() {
+  return locale === 'pt' ? 'pt/' : '';
+}
+
+// Site chrome strings (nav/footer/generic UI copy shared by every generated
+// page) resolved once per run. For locale "en" these come from the
+// governed overlay's own source_en values (sanctioned by the localization
+// spec section 12E) and are verified to match the pre-existing hardcoded
+// EN copy; for "pt" a missing value throws (no-silent-fallback contract).
+const CHROME = {
+  skipToContent: t('global.skip_to_content', locale),
+  navHome: t('nav.home', locale),
+  navMindelo: t('nav.mindelo_essentials', locale),
+  navAbout: t('nav.about', locale),
+  navAria: t('nav.site_navigation', locale),
+  brandAria: t('home.brand_aria', locale),
+  breadcrumbAria: t('things.shared.breadcrumb_aria', locale),
+  backToThings: t('things.shared.back_to_things', locale),
+  detailsHeading: t('things.shared.details_heading', locale),
+  goodToKnowHeading: t('things.shared.good_to_know_heading', locale),
+  pastEvent: t('ui.past_event', locale),
+  viewPage: t('ui.view_page', locale),
+  backToTop: t('ui.back_to_top', locale),
+  footerTagline: t('footer.tagline', locale),
+  footerIndependence: t('footer.independence_note', locale),
+  footerContactTitle: t('footer.contact_title', locale),
+  footerContactPrompt: t('footer.contact_prompt', locale),
+  footerContactAction: t('footer.contact_action', locale),
+};
 
 const sitewideSocialFallback = {
   asset: 'assets/social/aprasa-social-share-card-identity-v2.jpg',
@@ -49,8 +131,10 @@ function resolveDetailTarget(record) {
     throw new Error(`${record.id}: invalid detail_page; expected things-to-do/<slug>/`);
   }
 
-  const targetDir = path.resolve(root, record.detail_page);
-  const allowedPrefix = `${thingsToDoRoot}${path.sep}`;
+  const base = locale === 'pt' ? path.join(root, 'pt') : root;
+  const allowedRoot = locale === 'pt' ? ptThingsToDoRoot : thingsToDoRoot;
+  const targetDir = path.resolve(base, record.detail_page);
+  const allowedPrefix = `${allowedRoot}${path.sep}`;
   if (!targetDir.startsWith(allowedPrefix)) {
     throw new Error(`${record.id}: detail_page resolves outside things-to-do/`);
   }
@@ -73,6 +157,45 @@ function detailMediaClass(record) {
   return record.id === 'part-ilhas-nuno-miranda' ? 'dialog-media' : 'record-media';
 }
 
+// Builds the locale-resolved presentation view of a record. Canonical facts
+// (provider, location.name, source_url, ids, coordinates, dates) are read
+// straight off `record` for both locales, never looked up here. For
+// locale "en" every field below is the JSON's own English value, so the
+// English generation path has no dependency on the locale overlay at all.
+function localizeRecord(record) {
+  const facts = (record.detail?.facts || []).map((fact) => {
+    if (locale === 'en') {
+      return fact.value_html
+        ? { label: fact.label, value_html: fact.value_html }
+        : { label: fact.label, value: fact.value };
+    }
+    const base = factKeyBase(record.id, fact);
+    const label = t(`event.${record.id}.detail.fact.${base}.label`, 'pt');
+    if (fact.value_html) {
+      const ptDisplay = t(`event.${record.id}.detail.fact.${base}.value_display`, 'pt');
+      return { label, value_html: localizeFactValueHtml(fact.value_html, ptDisplay, record, fact) };
+    }
+    return { label, value: t(`event.${record.id}.detail.fact.${base}.value_display`, 'pt') };
+  });
+
+  return {
+    title: evt(record, 'title', record.title),
+    summary: evt(record, 'summary', record.summary),
+    displayStatus: evt(record, 'display.status', record.display?.status),
+    displayMeta: evt(record, 'display.meta', record.display?.meta),
+    displayChecked: evt(record, 'display.checked', record.display?.checked),
+    mediaAlt: record.media ? evt(record, 'media.alt', record.media.alt) : null,
+    cardActionLabel: record.card_action ? evt(record, 'card_action.label', record.card_action.label) : null,
+    goodToKnow: record.detail?.good_to_know ? evt(record, 'detail.good_to_know', record.detail.good_to_know) : null,
+    detailBody: evt(record, 'detail.body', record.detail?.body),
+    detailChecked: evt(record, 'detail.checked', record.detail?.checked),
+    actionLabel: record.detail?.action_label ? evt(record, 'detail.action_label', record.detail.action_label) : null,
+    seoDescription: evt(record, 'seo.description', record.seo.description),
+    seoTitle: evt(record, 'seo.title', record.seo.title),
+    facts,
+  };
+}
+
 function renderFacts(facts = []) {
   return facts.map((fact) => {
     const value = fact.value_html ?? escapeHtml(fact.value ?? '');
@@ -80,13 +203,13 @@ function renderFacts(facts = []) {
   }).join('');
 }
 
-function renderSchema(record, expired) {
+function renderSchema(record, loc, expired) {
   const schema = {
     '@context': 'https://schema.org',
     '@type': record.seo?.schema_type ?? 'Event',
-    name: record.title,
-    url: `https://aprasa.org/${record.detail_page}`,
-    description: record.summary,
+    name: loc.title,
+    url: `https://aprasa.org/${localeRoutePrefix()}${record.detail_page}`,
+    description: loc.summary,
     // Schema.org EventStatusType has no "completed" value; omit eventStatus
     // for expired events rather than emit an invalid enumeration member.
     ...(expired ? {} : { eventStatus: 'https://schema.org/EventScheduled' }),
@@ -113,76 +236,114 @@ function renderSchema(record, expired) {
   return JSON.stringify(schema, null, 2);
 }
 
-function renderHomeArticle(record) {
-  const media = record.media ? `\n          <div class="card-media"><img src="${escapeHtml(record.media.asset)}" alt="${escapeHtml(record.media.alt)}" loading="lazy" width="${record.media.width}" height="${record.media.height}"></div>` : '';
-  const externalAction = record.card_action ? `\n            <a class="resource-link" href="${escapeHtml(record.card_action.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(record.card_action.label)} <span aria-hidden="true">↗</span></a>` : '';
-  const dialogMedia = record.media ? `\n              <div class="dialog-media"><img src="${escapeHtml(record.media.asset)}" alt="${escapeHtml(record.media.alt)}" loading="lazy" width="${record.media.width}" height="${record.media.height}"></div>` : '';
-  const goodToKnow = record.detail?.good_to_know ? `\n              <h3>Good to know</h3>\n              <p>${escapeHtml(record.detail.good_to_know)}</p>` : '';
-  const dialogAction = record.detail?.action_label ? `\n              <a class="dialog-link" href="${escapeHtml(record.source_url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(record.detail.action_label)} <span aria-hidden="true">↗</span></a>` : '';
+function renderHomeArticle(record, loc) {
+  // Home lives at index.html (EN) or pt/index.html (PT), and detail pages at
+  // things-to-do/<slug>/ or pt/things-to-do/<slug>/ respectively — Home and
+  // its detail pages are always siblings-under-the-same-root, so the
+  // relative link is identical text in both locales; it must NOT be
+  // prefixed with "pt/" here (that would double up once pt/index.html
+  // itself lives under pt/, producing pt/pt/things-to-do/...).
+  const detailHref = record.detail_page;
+  // Home's own media path (unlike detailHref above) IS locale-depth
+  // sensitive: EN Home lives at the true root (asset path unprefixed is
+  // correct), PT Home lives one directory deeper at pt/index.html and
+  // needs the same single "../" every other shared asset on that page
+  // gets (see build-static-pages.mjs's deepenSharedAssetPaths).
+  const homeMediaPrefix = locale === 'pt' ? '../' : '';
+  const media = record.media ? `\n          <div class="card-media"><img src="${homeMediaPrefix}${escapeHtml(record.media.asset)}" alt="${escapeHtml(loc.mediaAlt)}" loading="lazy" width="${record.media.width}" height="${record.media.height}"></div>` : '';
+  const externalAction = record.card_action ? `\n            <a class="resource-link" href="${escapeHtml(record.card_action.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(loc.cardActionLabel)} <span aria-hidden="true">↗</span></a>` : '';
+  const dialogMedia = record.media ? `\n              <div class="dialog-media"><img src="${homeMediaPrefix}${escapeHtml(record.media.asset)}" alt="${escapeHtml(loc.mediaAlt)}" loading="lazy" width="${record.media.width}" height="${record.media.height}"></div>` : '';
+  const goodToKnow = loc.goodToKnow ? `\n              <h3>${escapeHtml(CHROME.goodToKnowHeading)}</h3>\n              <p>${escapeHtml(loc.goodToKnow)}</p>` : '';
+  const dialogAction = loc.actionLabel ? `\n              <a class="dialog-link" href="${escapeHtml(record.source_url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(loc.actionLabel)} <span aria-hidden="true">↗</span></a>` : '';
   const endAttribute = record.end_date ? ` data-event-end="${record.end_date}"` : '';
 
   return `        <article class="resource-card" data-event-id="${escapeHtml(record.id)}"${endAttribute} data-checked="${escapeHtml(record.checked_at)}">${media}
-          <p class="card-status">${escapeHtml(record.display?.status)}</p>
-          <h3>${escapeHtml(record.title)}</h3>
-          <p class="card-meta">${escapeHtml(record.display?.meta)}</p>
+          <p class="card-status">${escapeHtml(loc.displayStatus)}</p>
+          <h3>${escapeHtml(loc.title)}</h3>
+          <p class="card-meta">${escapeHtml(loc.displayMeta)}</p>
           <p class="provider">${escapeHtml(record.provider)}</p>
-          <p class="checked">${escapeHtml(record.display?.checked)}</p>
+          <p class="checked">${escapeHtml(loc.displayChecked)}</p>
           <div class="card-actions">
-            <button class="details-button" type="button" data-details>Details</button>${externalAction}
-            <a class="resource-link" href="${escapeHtml(record.detail_page)}">View page</a>
+            <button class="details-button" type="button" data-details>${escapeHtml(CHROME.detailsHeading)}</button>${externalAction}
+            <a class="resource-link" href="${escapeHtml(detailHref)}">${escapeHtml(CHROME.viewPage)}</a>
           </div>
           <template class="details-template">
             <div class="dialog-record" data-event-id="${escapeHtml(record.id)}">${dialogMedia}
               <p class="provider">${escapeHtml(record.provider)}</p>
-              <h2>${escapeHtml(record.title)}</h2>
-              <dl class="detail-list">${renderFacts(record.detail?.facts)}</dl>
-              <h3>Details</h3>
-              <p>${escapeHtml(record.detail?.body)}</p>${goodToKnow}
-              <p class="checked">${escapeHtml(record.detail?.checked)}</p>${dialogAction}
+              <h2>${escapeHtml(loc.title)}</h2>
+              <dl class="detail-list">${renderFacts(loc.facts)}</dl>
+              <h3>${escapeHtml(CHROME.detailsHeading)}</h3>
+              <p>${escapeHtml(loc.detailBody)}</p>${goodToKnow}
+              <p class="checked">${escapeHtml(loc.detailChecked)}</p>${dialogAction}
             </div>
           </template>
         </article>`;
 }
 
-function renderSocialMeta(record) {
+function renderSocialMeta(record, loc) {
   const social = record.media ? {
     asset: record.media.asset,
     type: mediaType(record.media.asset),
     width: record.media.width,
     height: record.media.height,
-    alt: record.media.alt
+    alt: loc.mediaAlt
   } : sitewideSocialFallback;
 
-  return `<meta property="og:image" content="https://aprasa.org/${escapeHtml(social.asset)}">\n<meta property="og:image:type" content="${social.type}">\n<meta property="og:image:width" content="${social.width}">\n<meta property="og:image:height" content="${social.height}">\n<meta property="og:image:alt" content="${escapeHtml(social.alt)}">\n<meta name="twitter:card" content="summary_large_image">\n<meta name="twitter:title" content="${escapeHtml(record.title)}">\n<meta name="twitter:description" content="${escapeHtml(record.seo.description)}">\n<meta name="twitter:image" content="https://aprasa.org/${escapeHtml(social.asset)}">`;
+  return `<meta property="og:image" content="https://aprasa.org/${escapeHtml(social.asset)}">\n<meta property="og:image:type" content="${social.type}">\n<meta property="og:image:width" content="${social.width}">\n<meta property="og:image:height" content="${social.height}">\n<meta property="og:image:alt" content="${escapeHtml(social.alt)}">\n<meta name="twitter:card" content="summary_large_image">\n<meta name="twitter:title" content="${escapeHtml(loc.title)}">\n<meta name="twitter:description" content="${escapeHtml(loc.seoDescription)}">\n<meta name="twitter:image" content="https://aprasa.org/${escapeHtml(social.asset)}">`;
 }
 
-function renderDetailPage(record) {
+// href targets for the language switch and nav links, relative to a detail
+// page at things-to-do/<slug>/ (EN, 2 levels deep) or pt/things-to-do/<slug>/
+// (PT, 3 levels deep).
+function detailPageLinks(record) {
+  const rootPrefix = locale === 'pt' ? '../../../' : '../../';
+  const slug = record.detail_page.replace(/^things-to-do\//, '').replace(/\/$/, '');
+  return {
+    rootPrefix,
+    home: locale === 'en' ? `${rootPrefix}index.html` : `${rootPrefix}pt/`,
+    mindelo: locale === 'en' ? `${rootPrefix}mindelo-essentials/` : `${rootPrefix}pt/mindelo-essentials/`,
+    about: locale === 'en' ? `${rootPrefix}about/` : `${rootPrefix}pt/about/`,
+    // Equivalent-page mapping for the language switch: the same slug under
+    // things-to-do/ (EN) or pt/things-to-do/ (PT), relative from either page.
+    enHref: `${rootPrefix}things-to-do/${slug}/`,
+    ptHref: `${rootPrefix}pt/things-to-do/${slug}/`,
+  };
+}
+
+function renderDetailPage(record, loc) {
   const expired = isExpired(record);
-  const canonical = `https://aprasa.org/${record.detail_page}`;
-  const media = record.media ? `\n      <div class="${detailMediaClass(record)}"><img src="../../${escapeHtml(record.media.asset)}" alt="${escapeHtml(record.media.alt)}" loading="lazy" width="${record.media.width}" height="${record.media.height}"></div>` : '';
-  const pastStatus = expired ? '\n      <p class="card-status">Past event</p>' : '';
-  const goodToKnow = record.detail?.good_to_know ? `\n      <h2>Good to know</h2>\n      <p>${escapeHtml(record.detail.good_to_know)}</p>` : '';
-  const action = record.detail?.action_label ? `\n      <a class="dialog-link" href="${escapeHtml(record.source_url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(record.detail.action_label)} <span aria-hidden="true">↗</span></a>` : '';
+  const canonicalEn = `https://aprasa.org/${record.detail_page}`;
+  const canonicalPt = `https://aprasa.org/pt/${record.detail_page}`;
+  const canonical = locale === 'pt' ? canonicalPt : canonicalEn;
+  const links = detailPageLinks(record);
+  const media = record.media ? `\n      <div class="${detailMediaClass(record)}"><img src="${links.rootPrefix}${escapeHtml(record.media.asset)}" alt="${escapeHtml(loc.mediaAlt)}" loading="lazy" width="${record.media.width}" height="${record.media.height}"></div>` : '';
+  const pastStatus = expired ? `\n      <p class="card-status">${escapeHtml(CHROME.pastEvent)}</p>` : '';
+  const goodToKnow = loc.goodToKnow ? `\n      <h2>${escapeHtml(CHROME.goodToKnowHeading)}</h2>\n      <p>${escapeHtml(loc.goodToKnow)}</p>` : '';
+  const action = loc.actionLabel ? `\n      <a class="dialog-link" href="${escapeHtml(record.source_url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(loc.actionLabel)} <span aria-hidden="true">↗</span></a>` : '';
 
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${locale}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="${escapeHtml(record.seo.description)}">
-<title>${escapeHtml(record.seo.title)}</title>
+<meta name="description" content="${escapeHtml(loc.seoDescription)}">
+<title>${escapeHtml(loc.seoTitle)}</title>
 <link rel="canonical" href="${canonical}">
+<link rel="alternate" hreflang="en" href="${canonicalEn}">
+<link rel="alternate" hreflang="pt" href="${canonicalPt}">
+<link rel="alternate" hreflang="x-default" href="${canonicalEn}">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="A PRASA">
-<meta property="og:title" content="${escapeHtml(record.title)}">
-<meta property="og:description" content="${escapeHtml(record.seo.description)}">
+<meta property="og:title" content="${escapeHtml(loc.title)}">
+<meta property="og:description" content="${escapeHtml(loc.seoDescription)}">
 <meta property="og:url" content="${canonical}">
-${renderSocialMeta(record)}
+<meta property="og:locale" content="${locale === 'pt' ? 'pt_PT' : 'en_US'}">
+${renderSocialMeta(record, loc)}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Baskerville&family=Work+Sans&display=swap">
-<link rel="stylesheet" href="../../prasa-launch.css">
-<script src="../../prasa-launch.js" defer></script>
+<link rel="stylesheet" href="${links.rootPrefix}prasa-launch.css">
+<script src="${links.rootPrefix}prasa-launch.js" defer></script>
 <!-- Privacy-friendly analytics by Plausible -->
 <script async src="https://plausible.io/js/pa-eShJ2lYHDu0B2CdpzVYvZ.js"></script>
 <script>
@@ -190,54 +351,60 @@ ${renderSocialMeta(record)}
   plausible.init()
 </script>
 <script type="application/ld+json">
-${renderSchema(record, expired)}
+${renderSchema(record, loc, expired)}
 </script>
 </head>
 <body>
-<!-- Generated from data/things-to-do-events.json: ${escapeHtml(record.id)} -->
-<a class="skip-link" href="#main">Skip to content</a>
+<!-- Generated from data/things-to-do-events.json: ${escapeHtml(record.id)} (locale: ${locale}) -->
+<a class="skip-link" href="#main">${escapeHtml(CHROME.skipToContent)}</a>
 
 <header class="site-header" aria-label="A PRASA">
   <div class="container header-inner">
-    <a class="brand" href="../../index.html" aria-label="A PRASA — Home">
-      <img src="../../assets/brand/A_PRASA_Lockup_Horizontal_v2_Primary_Green.svg" alt="" width="4959" height="725">
+    <a class="brand" href="${links.home}" aria-label="${escapeHtml(CHROME.brandAria)}">
+      <img src="${links.rootPrefix}assets/brand/A_PRASA_Lockup_Horizontal_v2_Primary_Green.svg" alt="" width="4959" height="725">
     </a>
-    <nav class="site-nav" aria-label="Site navigation">
-      <a href="../../index.html">Home</a>
-      <a href="../../mindelo-essentials/">Mindelo Essentials</a>
-      <a href="../../about/">About</a>
-    </nav>
+    <div class="header-actions">
+      <nav class="site-nav" aria-label="${escapeHtml(CHROME.navAria)}">
+        <a href="${links.home}">${escapeHtml(CHROME.navHome)}</a>
+        <a href="${links.mindelo}">${escapeHtml(CHROME.navMindelo)}</a>
+        <a href="${links.about}">${escapeHtml(CHROME.navAbout)}</a>
+      </nav>
+      <nav class="lang-switch" aria-label="Language / Idioma">
+        <a href="${links.enHref}" lang="en" hreflang="en"${locale === 'en' ? ' aria-current="true" class="lang-current"' : ''}>EN</a>
+        <a href="${links.ptHref}" lang="pt" hreflang="pt"${locale === 'pt' ? ' aria-current="true" class="lang-current"' : ''}>PT</a>
+      </nav>
+    </div>
   </div>
 </header>
 
 <main id="main">
   <div class="container record-page">
-    <nav class="breadcrumb" aria-label="Breadcrumb">
-      <a href="../../index.html#things-to-do">← Things to Do</a>
+    <nav class="breadcrumb" aria-label="${escapeHtml(CHROME.breadcrumbAria)}">
+      <a href="${links.home}#things-to-do">${escapeHtml(CHROME.backToThings)}</a>
     </nav>
     <article class="dialog-record record-article" data-event-id="${escapeHtml(record.id)}">${media}${pastStatus}
       <p class="provider">${escapeHtml(record.provider)}</p>
-      <h1>${escapeHtml(record.title)}</h1>
-      <dl class="detail-list">${renderFacts(record.detail?.facts)}</dl>
-      <h2>Details</h2>
-      <p>${escapeHtml(record.detail?.body)}</p>${goodToKnow}
-      <p class="checked">${escapeHtml(record.detail?.checked)}</p>${action}
+      <h1>${escapeHtml(loc.title)}</h1>
+      <dl class="detail-list">${renderFacts(loc.facts)}</dl>
+      <h2>${escapeHtml(CHROME.detailsHeading)}</h2>
+      <p>${escapeHtml(loc.detailBody)}</p>${goodToKnow}
+      <p class="checked">${escapeHtml(loc.detailChecked)}</p>${action}
     </article>
   </div>
 </main>
 
 <footer class="site-footer">
   <div class="container footer-inner">
-    <a class="footer-brand" href="../../index.html" aria-label="A PRASA — Home">
-      <img src="../../assets/brand/A_PRASA_Lockup_Horizontal_v2_Reversed_Cream.svg" alt="" width="4959" height="725">
+    <a class="footer-brand" href="${links.home}" aria-label="${escapeHtml(CHROME.brandAria)}">
+      <img src="${links.rootPrefix}assets/brand/A_PRASA_Lockup_Horizontal_v2_Reversed_Cream.svg" alt="" width="4959" height="725">
     </a>
-    <p>A place to find what moves you.</p>
-    <p class="footer-note">A PRASA is independent and does not act on behalf of the providers linked here.</p>
+    <p>${escapeHtml(CHROME.footerTagline)}</p>
+    <p class="footer-note">${escapeHtml(CHROME.footerIndependence)}</p>
     <div class="footer-contact">
-      <p class="footer-contact-title">Contact A PRASA</p>
-      <p>Questions, corrections, or something useful to share? <a href="https://wa.me/message/GC3C5Q4MSF37I1" target="_blank" rel="noopener noreferrer">Message A PRASA on WhatsApp</a>.</p>
+      <p class="footer-contact-title">${escapeHtml(CHROME.footerContactTitle)}</p>
+      <p>${escapeHtml(CHROME.footerContactPrompt)} <a href="https://wa.me/message/GC3C5Q4MSF37I1" target="_blank" rel="noopener noreferrer">${escapeHtml(CHROME.footerContactAction)}</a>.</p>
     </div>
-    <a class="back-top" href="#main">Back to top</a>
+    <a class="back-top" href="#main">${escapeHtml(CHROME.backToTop)}</a>
   </div>
 </footer>
 </body>
@@ -251,7 +418,7 @@ ${renderSchema(record, expired)}
 // depends solely on data/things-to-do-events.json + --as-of, never on
 // whatever Home currently contains. This keeps repeated/later runs
 // idempotent even after earlier runs have expired-and-emptied a slot.
-function replaceGeneratedEvent(homeHtml, record) {
+function replaceGeneratedEvent(homeHtml, record, loc) {
   const beginMarker = `<!-- BEGIN GENERATED EVENT: ${record.id} -->`;
   const endMarker = `<!-- END GENERATED EVENT: ${record.id} -->`;
   const beginIndex = homeHtml.indexOf(beginMarker);
@@ -261,7 +428,7 @@ function replaceGeneratedEvent(homeHtml, record) {
   }
 
   const contentStart = beginIndex + beginMarker.length;
-  const body = isExpired(record) ? '' : `\n${renderHomeArticle(record)}\n        `;
+  const body = isExpired(record) ? '' : `\n${renderHomeArticle(record, loc)}\n        `;
   return homeHtml.slice(0, contentStart) + body + homeHtml.slice(endIndex);
 }
 
@@ -271,23 +438,40 @@ if (requestedId && selected.length !== 1) {
   process.exit(1);
 }
 
-let homeHtml = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+// --home lets the Home-pass build script drive this generator against
+// pt/index.html once that shell exists (created in the Home/About pass).
+// Defaults to the locale's own conventional Home path.
+const homeArg = process.argv.find((arg) => arg.startsWith('--home='));
+const homePath = homeArg
+  ? path.join(root, homeArg.split('=')[1])
+  : path.join(root, locale === 'pt' ? 'pt' : '.', 'index.html');
+
+let homeHtml = null;
+let homeExists = fs.existsSync(homePath);
+if (homeExists) {
+  homeHtml = fs.readFileSync(homePath, 'utf8');
+} else if (locale === 'en') {
+  throw new Error(`Home file not found: ${homePath}`);
+} else {
+  console.warn(`[generate-things-to-do] ${path.relative(root, homePath)} does not exist yet — skipping Home update for locale "pt" (run again once the PT Home shell exists).`);
+}
 
 for (const record of selected) {
   const target = resolveDetailTarget(record);
-  const output = renderDetailPage(record);
-  homeHtml = replaceGeneratedEvent(homeHtml, record);
+  const loc = localizeRecord(record);
+  const output = renderDetailPage(record, loc);
+  if (homeExists) homeHtml = replaceGeneratedEvent(homeHtml, record, loc);
 
   if (write) {
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.writeFileSync(target, output);
-    console.log(`Wrote ${record.detail_page}index.html as of ${asOf}`);
+    console.log(`Wrote ${locale}/${record.detail_page}index.html as of ${asOf}`);
   } else {
-    console.log(`Prepared ${record.id}: ${isExpired(record) ? 'past detail + removed from Home' : 'current detail + Home card'}`);
+    console.log(`Prepared ${record.id} (${locale}): ${isExpired(record) ? 'past detail + removed from Home' : 'current detail + Home card'}`);
   }
 }
 
-if (write) {
-  fs.writeFileSync(path.join(root, 'index.html'), homeHtml);
-  console.log(`Wrote index.html as of ${asOf}`);
+if (write && homeExists) {
+  fs.writeFileSync(homePath, homeHtml);
+  console.log(`Wrote ${path.relative(root, homePath)} as of ${asOf}`);
 }
