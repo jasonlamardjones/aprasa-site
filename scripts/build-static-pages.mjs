@@ -246,6 +246,24 @@ const pages = [
     enHrefFromRoot: { en: './', pt: '../pt/about/' },
     ptHrefFromRoot: { en: '../../about/', pt: './' },
   },
+  {
+    name: 'street-art-mindelo',
+    enPath: 'things-to-do/street-art-mindelo/index.html',
+    ptPath: 'pt/things-to-do/street-art-mindelo/index.html',
+    canonicalEn: 'https://aprasa.org/things-to-do/street-art-mindelo/',
+    canonicalPt: 'https://aprasa.org/pt/things-to-do/street-art-mindelo/',
+    enHrefFromRoot: { en: '../../things-to-do/street-art-mindelo/', pt: '../../pt/things-to-do/street-art-mindelo/' },
+    ptHrefFromRoot: { en: '../../../things-to-do/street-art-mindelo/', pt: '../../../pt/things-to-do/street-art-mindelo/' },
+  },
+  {
+    name: 'water-adventure-activities-mindelo',
+    enPath: 'things-to-do/water-adventure-activities-mindelo/index.html',
+    ptPath: 'pt/things-to-do/water-adventure-activities-mindelo/index.html',
+    canonicalEn: 'https://aprasa.org/things-to-do/water-adventure-activities-mindelo/',
+    canonicalPt: 'https://aprasa.org/pt/things-to-do/water-adventure-activities-mindelo/',
+    enHrefFromRoot: { en: '../../things-to-do/water-adventure-activities-mindelo/', pt: '../../pt/things-to-do/water-adventure-activities-mindelo/' },
+    ptHrefFromRoot: { en: '../../../things-to-do/water-adventure-activities-mindelo/', pt: '../../../pt/things-to-do/water-adventure-activities-mindelo/' },
+  },
 ];
 
 const results = pages.map(buildPage);
