@@ -1,6 +1,6 @@
 {
   "provenance": {
-    "source_revision": "P03-PT-SOURCE-2026-08-25-r3",
+    "source_revision": "P03-PT-SOURCE-2026-08-25-r4",
     "source_package_id": "aprasa-pt-launch-source-concrete-rows",
     "semantic_authority": "Project 03 — A PRASA Business, Brand & Administration",
     "project_09_verdict": "READY FOR PROJECT 04 IMPLEMENTATION HANDOFF",
@@ -11,17 +11,20 @@
     "generated_by": "scripts/build-locale-data.mjs",
     "generated_from": [
       "data/locales/pt-overlay-r2.source.json",
-      "data/locales/pt-overlay-r3-delta.source.json"
+      "data/locales/pt-overlay-r3-delta.source.json",
+      "data/locales/pt-overlay-r4-delta.source.json"
     ],
     "base_revision": "P03-PT-SOURCE-2026-08-25-r2",
-    "delta_revision": "P03-PT-SOURCE-2026-08-25-r3"
+    "delta_revision": "P03-PT-SOURCE-2026-08-25-r3",
+    "delta4_revision": "P03-PT-SOURCE-2026-08-25-r4"
   },
   "counts": {
-    "total_rows": 753,
-    "required_for_pt_launch": 725,
+    "total_rows": 779,
+    "required_for_pt_launch": 751,
     "intentionally_unchanged": 28,
-    "approved_rows_total": 753,
-    "r3_delta_rows": 21
+    "approved_rows_total": 779,
+    "r3_delta_rows": 21,
+    "r4_delta_rows": 26
   },
   "keys": {
     "global.skip_to_content": {
@@ -9058,6 +9061,318 @@
       "translation_status": "APPROVED",
       "source_revision": "P03-PT-SOURCE-2026-08-25-r3",
       "context_notes": "Fallback marker name used only when a directory map feature lacks a display name.",
+      "linguistic_notes": ""
+    },
+    "home.training.emar.status": {
+      "key": "home.training.emar.status",
+      "en": "Applications open through 30 August · São Vicente",
+      "pt": "Candidaturas abertas até 30 de agosto · São Vicente",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r4",
+      "context_notes": "Shared status line for the two EMAR / Kre+ opportunity cards (Motorista N3, Assistente Eletrotécnico Naval N4).",
+      "linguistic_notes": ""
+    },
+    "home.training.emar.provider": {
+      "key": "home.training.emar.provider",
+      "en": "Escola do Mar — EMAR / Kre+",
+      "pt": "Escola do Mar — EMAR / Kre+",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "PRESERVE_PROVIDER_OR_PROGRAM_IDENTITY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r4",
+      "context_notes": "Shared provider identity for the two EMAR / Kre+ opportunity cards.",
+      "linguistic_notes": ""
+    },
+    "home.training.emar.fact_label.applications": {
+      "key": "home.training.emar.fact_label.applications",
+      "en": "Applications",
+      "pt": "Candidaturas",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r4",
+      "context_notes": "Fact label, EMAR / Kre+ opportunity cards.",
+      "linguistic_notes": ""
+    },
+    "home.training.emar.fact_label.education": {
+      "key": "home.training.emar.fact_label.education",
+      "en": "Education",
+      "pt": "Escolaridade",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r4",
+      "context_notes": "Fact label, EMAR / Kre+ opportunity cards.",
+      "linguistic_notes": ""
+    },
+    "home.training.emar.fact_label.places": {
+      "key": "home.training.emar.fact_label.places",
+      "en": "Places",
+      "pt": "Vagas",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r4",
+      "context_notes": "Fact label, EMAR / Kre+ opportunity cards.",
+      "linguistic_notes": ""
+    },
+    "home.training.emar.fact_label.registration_fee": {
+      "key": "home.training.emar.fact_label.registration_fee",
+      "en": "Matrícula",
+      "pt": "Matrícula",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "PRESERVE_PROVIDER_OR_PROGRAM_IDENTITY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r4",
+      "context_notes": "Fact label, EMAR / Kre+ opportunity cards; governed EN and PT copy both use the Portuguese term.",
+      "linguistic_notes": ""
+    },
+    "home.training.emar.fact_label.tuition": {
+      "key": "home.training.emar.fact_label.tuition",
+      "en": "Tuition shown",
+      "pt": "Propina indicada",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r4",
+      "context_notes": "Fact label, EMAR / Kre+ opportunity cards.",
+      "linguistic_notes": ""
+    },
+    "home.training.emar.fact_label.evaluation": {
+      "key": "home.training.emar.fact_label.evaluation",
+      "en": "Evaluation",
+      "pt": "Avaliação",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r4",
+      "context_notes": "Fact label, EMAR / Kre+ opportunity cards.",
+      "linguistic_notes": ""
+    },
+    "home.training.emar.fact_label.results": {
+      "key": "home.training.emar.fact_label.results",
+      "en": "Results",
+      "pt": "Resultados",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r4",
+      "context_notes": "Fact label, EMAR / Kre+ opportunity cards.",
+      "linguistic_notes": ""
+    },
+    "home.training.emar.fact_value.applications": {
+      "key": "home.training.emar.fact_value.applications",
+      "en": "through 30 August 2026",
+      "pt": "até 30 de agosto de 2026",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r4",
+      "context_notes": "Fact value, EMAR / Kre+ opportunity cards; governed application deadline.",
+      "linguistic_notes": ""
+    },
+    "home.training.emar.fact_value.registration_fee": {
+      "key": "home.training.emar.fact_value.registration_fee",
+      "en": "exempt",
+      "pt": "isenta",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r4",
+      "context_notes": "Fact value, EMAR / Kre+ opportunity cards.",
+      "linguistic_notes": ""
+    },
+    "home.training.emar.fact_value.tuition": {
+      "key": "home.training.emar.fact_value.tuition",
+      "en": "0 CVE/month",
+      "pt": "0 CVE/mês",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r4",
+      "context_notes": "Fact value, EMAR / Kre+ opportunity cards.",
+      "linguistic_notes": ""
+    },
+    "home.training.emar.fact_value.evaluation": {
+      "key": "home.training.emar.fact_value.evaluation",
+      "en": "4 September 2026",
+      "pt": "4 de setembro de 2026",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r4",
+      "context_notes": "Fact value, EMAR / Kre+ opportunity cards.",
+      "linguistic_notes": ""
+    },
+    "home.training.emar.fact_value.results": {
+      "key": "home.training.emar.fact_value.results",
+      "en": "6 September 2026",
+      "pt": "6 de setembro de 2026",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r4",
+      "context_notes": "Fact value, EMAR / Kre+ opportunity cards.",
+      "linguistic_notes": ""
+    },
+    "home.training.emar.documents_heading": {
+      "key": "home.training.emar.documents_heading",
+      "en": "Documents shown by Kre+",
+      "pt": "Documentos indicados pela Kre+",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r4",
+      "context_notes": "Documents list heading, EMAR / Kre+ opportunity cards.",
+      "linguistic_notes": ""
+    },
+    "home.training.emar.document.education_certificate": {
+      "key": "home.training.emar.document.education_certificate",
+      "en": "Certificado de Habilitação Literária",
+      "pt": "Certificado de Habilitação Literária",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "PRESERVE_PROVIDER_OR_PROGRAM_IDENTITY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r4",
+      "context_notes": "Official Cabo Verdean document name shown by Kre+; not translated in either EN or PT copy.",
+      "linguistic_notes": ""
+    },
+    "home.training.emar.document.cni": {
+      "key": "home.training.emar.document.cni",
+      "en": "Cartão Nacional de Identificação (CNI)",
+      "pt": "Cartão Nacional de Identificação (CNI)",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "PRESERVE_PROVIDER_OR_PROGRAM_IDENTITY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r4",
+      "context_notes": "Official Cabo Verdean document name shown by Kre+; not translated in either EN or PT copy.",
+      "linguistic_notes": ""
+    },
+    "home.training.emar.good_to_know": {
+      "key": "home.training.emar.good_to_know",
+      "en": "Kre+ currently shows applications open through 30 August 2026. Other applicant conditions were not established from the authoritative sources reviewed, so check the current course record before applying. The fee information above applies to this specific current offer.",
+      "pt": "A Kre+ indica atualmente que as candidaturas estão abertas até 30 de agosto de 2026. Não foram confirmadas, nas fontes oficiais consultadas, outras condições aplicáveis aos candidatos, por isso consulte a ficha atual do curso antes de se candidatar. A informação sobre taxas e propina acima aplica-se especificamente a esta oferta atual.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r4",
+      "context_notes": "Shared 'good to know' paragraph for the two EMAR / Kre+ opportunity cards.",
+      "linguistic_notes": ""
+    },
+    "home.training.emar.action": {
+      "key": "home.training.emar.action",
+      "en": "View course and apply on Kre+",
+      "pt": "Ver o curso e candidatar-se na Kre+",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r4",
+      "context_notes": "Shared card/dialog action label for the two EMAR / Kre+ opportunity cards.",
+      "linguistic_notes": ""
+    },
+    "home.training.emar.checked": {
+      "key": "home.training.emar.checked",
+      "en": "Checked 25 August 2026 against the Kre+ course listing.",
+      "pt": "Revisto em 25 de agosto de 2026 com base na ficha do curso na Kre+.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r4",
+      "context_notes": "Shared checked-provenance line, EMAR / Kre+ opportunity cards.",
+      "linguistic_notes": ""
+    },
+    "home.training.record.emar-motorista-n3.title": {
+      "key": "home.training.record.emar-motorista-n3.title",
+      "en": "Motorista — Nível 3",
+      "pt": "Motorista — Nível 3",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "PRESERVE_PROVIDER_OR_PROGRAM_IDENTITY",
+      "record_id": "emar-motorista-n3",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r4",
+      "context_notes": "EMAR / Kre+ course title, kept in Portuguese in both EN and PT copy.",
+      "linguistic_notes": ""
+    },
+    "home.training.record.emar-motorista-n3.body": {
+      "key": "home.training.record.emar-motorista-n3.body",
+      "en": "Apply for Motorista — Nível 3, an initial maritime professional-training course from Escola do Mar (EMAR) in São Vicente. The current Kre+ listing shows 25 places, matrícula exempt and tuition of 0 CVE/month.",
+      "pt": "Candidate-se a Motorista — Nível 3, uma formação profissional marítima inicial da Escola do Mar (EMAR), em São Vicente. A atual oferta na Kre+ indica 25 vagas, matrícula isenta e propina de 0 CVE/mês.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "emar-motorista-n3",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r4",
+      "context_notes": "Summary paragraph, Motorista N3 EMAR / Kre+ card.",
+      "linguistic_notes": ""
+    },
+    "home.training.record.emar-motorista-n3.fact_value.education": {
+      "key": "home.training.record.emar-motorista-n3.fact_value.education",
+      "en": "at least 8th grade",
+      "pt": "pelo menos o 8.º ano",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "emar-motorista-n3",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r4",
+      "context_notes": "Education fact value, Motorista N3; EMAR-governed requirement, not shown on Kre+.",
+      "linguistic_notes": ""
+    },
+    "home.training.record.emar-assistente-eletrotecnico-naval-n4.title": {
+      "key": "home.training.record.emar-assistente-eletrotecnico-naval-n4.title",
+      "en": "Assistente Eletrotécnico Naval — Nível 4",
+      "pt": "Assistente Eletrotécnico Naval — Nível 4",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "PRESERVE_PROVIDER_OR_PROGRAM_IDENTITY",
+      "record_id": "emar-assistente-eletrotecnico-naval-n4",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r4",
+      "context_notes": "EMAR / Kre+ course title, kept in Portuguese in both EN and PT copy.",
+      "linguistic_notes": ""
+    },
+    "home.training.record.emar-assistente-eletrotecnico-naval-n4.body": {
+      "key": "home.training.record.emar-assistente-eletrotecnico-naval-n4.body",
+      "en": "Apply for Assistente Eletrotécnico Naval — Nível 4, an initial maritime professional-training course from Escola do Mar (EMAR) in São Vicente. The current Kre+ listing shows 25 places, matrícula exempt and tuition of 0 CVE/month.",
+      "pt": "Candidate-se a Assistente Eletrotécnico Naval — Nível 4, uma formação profissional marítima inicial da Escola do Mar (EMAR), em São Vicente. A atual oferta na Kre+ indica 25 vagas, matrícula isenta e propina de 0 CVE/mês.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "emar-assistente-eletrotecnico-naval-n4",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r4",
+      "context_notes": "Summary paragraph, Assistente Eletrotécnico Naval N4 EMAR / Kre+ card.",
+      "linguistic_notes": ""
+    },
+    "home.training.record.emar-assistente-eletrotecnico-naval-n4.fact_value.education": {
+      "key": "home.training.record.emar-assistente-eletrotecnico-naval-n4.fact_value.education",
+      "en": "10th grade",
+      "pt": "10.º ano",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "emar-assistente-eletrotecnico-naval-n4",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r4",
+      "context_notes": "Education fact value, Assistente Eletrotécnico Naval N4; EMAR-governed requirement, not shown on Kre+.",
       "linguistic_notes": ""
     }
   }

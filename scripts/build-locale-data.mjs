@@ -4,11 +4,14 @@
 //
 // Source of truth: data/locales/pt-overlay-r2.source.json (raw governed r2
 // export, 732 rows) PLUS data/locales/pt-overlay-r3-delta.source.json (the
-// r3 additive delta, 21 rows) merged on top. r3 is strictly additive: every
-// r3 key must be new, never an existing r2 key — r3 is not authorized to
-// reopen or replace r1/r2 approved values. This script performs no
-// translation and no wording changes — it only reshapes and merges the row
-// lists into a keyed lookup table for scripts/lib/locale.mjs.
+// r3 additive delta, 21 rows) PLUS data/locales/pt-overlay-r4-delta.source.json
+// (the r4 additive delta, 26 rows, adding the two EMAR / Kre+ opportunity
+// records) merged on top, in order. Each delta is strictly additive: every
+// delta key must be new, never an existing key from an earlier revision —
+// no delta is authorized to reopen or replace an earlier approved value.
+// This script performs no translation and no wording changes — it only
+// reshapes and merges the row lists into a keyed lookup table for
+// scripts/lib/locale.mjs.
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -18,6 +21,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, "..");
 const SOURCE_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r2.source.json");
 const DELTA_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r3-delta.source.json");
+const DELTA4_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r4-delta.source.json");
 const OUT_PATH = path.join(ROOT, "data", "locales", "locale-data.generated.json");
 
 const EXPECTED = {
@@ -190,24 +194,115 @@ if (deltaUnchanged !== EXPECTED_DELTA.intentionally_unchanged) {
   fail(`r3 intentionally_unchanged mismatch: got ${deltaUnchanged}, expected ${EXPECTED_DELTA.intentionally_unchanged}`);
 }
 
+// --- r4 delta: additive merge on top of the r2+r3 base above ---
+const EXPECTED_DELTA4 = {
+  source_revision: "P03-PT-SOURCE-2026-08-25-r4",
+  previous_revision: "P03-PT-SOURCE-2026-08-25-r3",
+  row_count: 26,
+  approved: 26,
+  required_for_pt_launch: 26,
+  intentionally_unchanged: 0,
+  review_required: 0,
+};
+
+const delta4 = JSON.parse(readFileSync(DELTA4_PATH, "utf8"));
+
+if (delta4.source_revision !== EXPECTED_DELTA4.source_revision) {
+  fail(`r4 source_revision mismatch: got "${delta4.source_revision}", expected "${EXPECTED_DELTA4.source_revision}"`);
+}
+if (delta4.previous_revision !== EXPECTED_DELTA4.previous_revision) {
+  fail(`r4 previous_revision mismatch: got "${delta4.previous_revision}", expected "${EXPECTED_DELTA4.previous_revision}"`);
+}
+if (delta4.rows.length !== EXPECTED_DELTA4.row_count) {
+  fail(`r4 row count mismatch: got ${delta4.rows.length}, expected ${EXPECTED_DELTA4.row_count}`);
+}
+if (delta4.supplied_rows_approved !== EXPECTED_DELTA4.approved) {
+  fail(`r4 supplied_rows_approved mismatch: got ${delta4.supplied_rows_approved}`);
+}
+if (delta4.review_required !== EXPECTED_DELTA4.review_required) {
+  fail(`r4 review_required is non-zero: ${delta4.review_required}`);
+}
+if (delta4.missing_or_unaccounted_row_count !== 0) {
+  fail(`r4 missing_or_unaccounted_row_count is non-zero: ${delta4.missing_or_unaccounted_row_count}`);
+}
+if ((delta4.duplicate_keys || []).length !== 0) {
+  fail(`r4 duplicate_keys is non-empty: ${JSON.stringify(delta4.duplicate_keys)}`);
+}
+if ((delta4.placeholder_mismatches || []).length !== 0) {
+  fail(`r4 placeholder_mismatches is non-empty: ${JSON.stringify(delta4.placeholder_mismatches)}`);
+}
+if ((delta4.a_prasa_to_a_praca_violations || []).length !== 0) {
+  fail(`r4 a_prasa_to_a_praca_violations is non-empty: ${JSON.stringify(delta4.a_prasa_to_a_praca_violations)}`);
+}
+
+let delta4Required = 0;
+let delta4Unchanged = 0;
+for (const row of delta4.rows) {
+  if (seen.has(row.key)) {
+    fail(`r4 key "${row.key}" collides with an existing r1/r2/r3 key — r4 must be strictly additive, never reopen an existing key`);
+  }
+  seen.add(row.key);
+
+  if (row.scope_status === "REQUIRED_FOR_PT_LAUNCH") delta4Required += 1;
+  else if (row.scope_status === "INTENTIONALLY_UNCHANGED") delta4Unchanged += 1;
+
+  if (row.scope_status === "REQUIRED_FOR_PT_LAUNCH" && (row.pt == null || row.pt === "")) {
+    fail(`r4 REQUIRED_FOR_PT_LAUNCH key "${row.key}" has no PT value`);
+  }
+  if (row.translation_status !== "APPROVED") {
+    fail(`r4 key "${row.key}" is not APPROVED (status: ${row.translation_status})`);
+  }
+  const enPlaceholders = (row.source_en.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+  const ptPlaceholders = (row.pt.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+  if (JSON.stringify(enPlaceholders) !== JSON.stringify(ptPlaceholders)) {
+    fail(`r4 key "${row.key}" placeholder mismatch: en=${JSON.stringify(enPlaceholders)} pt=${JSON.stringify(ptPlaceholders)}`);
+  }
+
+  keys[row.key] = {
+    key: row.key,
+    en: row.source_en,
+    pt: row.pt,
+    scope_status: row.scope_status,
+    identity_policy: row.identity_policy,
+    record_id: row.record_id,
+    translation_status: row.translation_status,
+    source_revision: row.source_revision,
+    context_notes: row.context_notes || "",
+    linguistic_notes: row.linguistic_notes || "",
+  };
+}
+
+if (delta4Required !== EXPECTED_DELTA4.required_for_pt_launch) {
+  fail(`r4 required_for_pt_launch mismatch: got ${delta4Required}, expected ${EXPECTED_DELTA4.required_for_pt_launch}`);
+}
+if (delta4Unchanged !== EXPECTED_DELTA4.intentionally_unchanged) {
+  fail(`r4 intentionally_unchanged mismatch: got ${delta4Unchanged}, expected ${EXPECTED_DELTA4.intentionally_unchanged}`);
+}
+
 const output = {
   provenance: {
-    source_revision: delta.source_revision,
+    source_revision: delta4.source_revision,
     source_package_id: pkg.source_package_id,
     semantic_authority: pkg.semantic_authority,
     project_09_verdict: pkg.project_09_verdict,
     implementation_reference: pkg.implementation_reference,
     generated_by: "scripts/build-locale-data.mjs",
-    generated_from: ["data/locales/pt-overlay-r2.source.json", "data/locales/pt-overlay-r3-delta.source.json"],
+    generated_from: [
+      "data/locales/pt-overlay-r2.source.json",
+      "data/locales/pt-overlay-r3-delta.source.json",
+      "data/locales/pt-overlay-r4-delta.source.json",
+    ],
     base_revision: pkg.source_revision,
     delta_revision: delta.source_revision,
+    delta4_revision: delta4.source_revision,
   },
   counts: {
-    total_rows: rows.length + delta.rows.length,
-    required_for_pt_launch: qa_summary.required_for_pt_launch + deltaRequired,
-    intentionally_unchanged: qa_summary.intentionally_unchanged + deltaUnchanged,
-    approved_rows_total: qa_summary.approved_rows_total + delta.rows.length,
+    total_rows: rows.length + delta.rows.length + delta4.rows.length,
+    required_for_pt_launch: qa_summary.required_for_pt_launch + deltaRequired + delta4Required,
+    intentionally_unchanged: qa_summary.intentionally_unchanged + deltaUnchanged + delta4Unchanged,
+    approved_rows_total: qa_summary.approved_rows_total + delta.rows.length + delta4.rows.length,
     r3_delta_rows: delta.rows.length,
+    r4_delta_rows: delta4.rows.length,
   },
   keys,
 };
