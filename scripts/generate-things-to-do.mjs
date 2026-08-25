@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { t, hasKey } from './lib/locale.mjs';
+import { factKeyBase } from './lib/things-to-do-keys.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(scriptDir, '..');
@@ -41,25 +42,6 @@ if (locale !== 'en' && locale !== 'pt') {
 function evt(record, suffix, jsonValue) {
   if (locale === 'en') return jsonValue;
   return t(`event.${record.id}.${suffix}`, 'pt');
-}
-
-function slugifyFactLabel(label) {
-  return label
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/\([^)]*\)/g, ' ')
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '');
-}
-
-function factKeyBase(record, fact) {
-  const stripped = slugifyFactLabel(fact.label.replace(/\([^)]*\)/g, ''));
-  const full = slugifyFactLabel(fact.label);
-  for (const candidate of [stripped, full]) {
-    if (hasKey(`event.${record.id}.detail.fact.${candidate}.label`)) return candidate;
-  }
-  throw new Error(`${record.id}: no governed locale key found for fact label "${fact.label}"`);
 }
 
 // Reconstructs a locale-localized value_html for a fact whose English value
@@ -187,7 +169,7 @@ function localizeRecord(record) {
         ? { label: fact.label, value_html: fact.value_html }
         : { label: fact.label, value: fact.value };
     }
-    const base = factKeyBase(record, fact);
+    const base = factKeyBase(record.id, fact);
     const label = t(`event.${record.id}.detail.fact.${base}.label`, 'pt');
     if (fact.value_html) {
       const ptDisplay = t(`event.${record.id}.detail.fact.${base}.value_display`, 'pt');
@@ -262,9 +244,15 @@ function renderHomeArticle(record, loc) {
   // prefixed with "pt/" here (that would double up once pt/index.html
   // itself lives under pt/, producing pt/pt/things-to-do/...).
   const detailHref = record.detail_page;
-  const media = record.media ? `\n          <div class="card-media"><img src="${escapeHtml(record.media.asset)}" alt="${escapeHtml(loc.mediaAlt)}" loading="lazy" width="${record.media.width}" height="${record.media.height}"></div>` : '';
+  // Home's own media path (unlike detailHref above) IS locale-depth
+  // sensitive: EN Home lives at the true root (asset path unprefixed is
+  // correct), PT Home lives one directory deeper at pt/index.html and
+  // needs the same single "../" every other shared asset on that page
+  // gets (see build-static-pages.mjs's deepenSharedAssetPaths).
+  const homeMediaPrefix = locale === 'pt' ? '../' : '';
+  const media = record.media ? `\n          <div class="card-media"><img src="${homeMediaPrefix}${escapeHtml(record.media.asset)}" alt="${escapeHtml(loc.mediaAlt)}" loading="lazy" width="${record.media.width}" height="${record.media.height}"></div>` : '';
   const externalAction = record.card_action ? `\n            <a class="resource-link" href="${escapeHtml(record.card_action.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(loc.cardActionLabel)} <span aria-hidden="true">↗</span></a>` : '';
-  const dialogMedia = record.media ? `\n              <div class="dialog-media"><img src="${escapeHtml(record.media.asset)}" alt="${escapeHtml(loc.mediaAlt)}" loading="lazy" width="${record.media.width}" height="${record.media.height}"></div>` : '';
+  const dialogMedia = record.media ? `\n              <div class="dialog-media"><img src="${homeMediaPrefix}${escapeHtml(record.media.asset)}" alt="${escapeHtml(loc.mediaAlt)}" loading="lazy" width="${record.media.width}" height="${record.media.height}"></div>` : '';
   const goodToKnow = loc.goodToKnow ? `\n              <h3>${escapeHtml(CHROME.goodToKnowHeading)}</h3>\n              <p>${escapeHtml(loc.goodToKnow)}</p>` : '';
   const dialogAction = loc.actionLabel ? `\n              <a class="dialog-link" href="${escapeHtml(record.source_url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(loc.actionLabel)} <span aria-hidden="true">↗</span></a>` : '';
   const endAttribute = record.end_date ? ` data-event-end="${record.end_date}"` : '';

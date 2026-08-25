@@ -15,6 +15,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { t } from './lib/locale.mjs';
 import { localizeStaticHtml } from './lib/static-page-transform.mjs';
+import { deepenSharedAssetPaths } from './lib/asset-paths.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
@@ -214,14 +215,13 @@ ptSource = injectLangSwitch(ptSource, {
 // assets/ and prasa-launch.* live at the true repo root, one directory
 // above mindelo-essentials/ — from pt/mindelo-essentials/ (one directory
 // deeper again) they need exactly one extra "../" hop, same rule as every
-// other page. mindelo-essentials.css/.js are different: they live INSIDE
-// mindelo-essentials/ itself, referenced here as bare filenames (same
-// directory as this index.html) — from pt/mindelo-essentials/ that's not
-// "one more ../", it's a full path back down into the sibling directory:
-// ../../mindelo-essentials/mindelo-essentials.{css,js}.
-ptSource = ptSource
-  .replace(/((?:href|src)=")((?:\.\.\/)*)(assets\/|prasa-launch\.css|prasa-launch\.js)/g, (m, p1, ups, target) => `${p1}../${ups}${target}`)
-  .replace(/((?:href|src)=")(mindelo-essentials\.(?:css|js))(")/g, (m, p1, target, p3) => `${p1}../../mindelo-essentials/${target}${p3}`);
+// other page (including inside srcset, not just href/src — see
+// lib/asset-paths.mjs). mindelo-essentials.css/.js are different: they
+// live INSIDE mindelo-essentials/ itself, referenced here as bare
+// filenames (same directory as this index.html) — from
+// pt/mindelo-essentials/ that's not "one more ../", it's a full path back
+// down into the sibling directory: ../../mindelo-essentials/mindelo-essentials.{css,js}.
+ptSource = deepenSharedAssetPaths(ptSource).replace(/((?:href|src)=")(mindelo-essentials\.(?:css|js))(")/g, (m, p1, target, p3) => `${p1}../../mindelo-essentials/${target}${p3}`);
 ptSource = injectRuntimeStrings(ptSource, 'pt');
 ptSource = injectSearchIndex(ptSource);
 ptSource = applyGettingAroundLinkFixup(ptSource, 'pt');

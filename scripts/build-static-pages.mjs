@@ -18,6 +18,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { t } from './lib/locale.mjs';
 import { localizeStaticHtml } from './lib/static-page-transform.mjs';
+import { deepenSharedAssetPaths } from './lib/asset-paths.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
@@ -95,15 +96,6 @@ function fail(page, msg) {
   process.exit(1);
 }
 
-// Prepend one extra "../" to shared root-level static asset references
-// (prasa-launch.css/js, assets/**) — required because the PT page always
-// lives exactly one directory deeper than its EN counterpart, while
-// internal section links (index.html, about/, mindelo-essentials/,
-// things-to-do/...) resolve correctly unchanged (pt/ mirrors the root
-// structure one level down).
-function deepenSharedAssetPaths(html) {
-  return html.replace(/((?:href|src)=")((?:\.\.\/)*)(assets\/|prasa-launch\.css|prasa-launch\.js)/g, (m, p1, ups, target) => `${p1}../${ups}${target}`);
-}
 
 function injectHeadLinks(html, { canonicalEn, canonicalPt, selfCanonical, lang }) {
   let out = html.replace(/<html lang="[a-z]+">/, `<html lang="${lang}">`);
