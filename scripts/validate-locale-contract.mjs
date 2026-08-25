@@ -21,17 +21,56 @@ function fail(msg) {
 const data = loadLocaleData();
 const keys = Object.values(data.keys);
 
-// --- Overlay contract (counts) — combined r2 base (732) + r3 delta (21) ---
-if (keys.length !== 753) fail(`expected 753 total keys (732 r2 + 21 r3), got ${keys.length}`);
+// --- Overlay contract (counts) — combined r2 base (732) + r3 delta (21) + r4 delta (26) ---
+if (keys.length !== 779) fail(`expected 779 total keys (732 r2 + 21 r3 + 26 r4), got ${keys.length}`);
 const required = keys.filter((k) => k.scope_status === "REQUIRED_FOR_PT_LAUNCH");
 const unchanged = keys.filter((k) => k.scope_status === "INTENTIONALLY_UNCHANGED");
-if (required.length !== 725) fail(`expected 725 REQUIRED_FOR_PT_LAUNCH keys (705 + 20), got ${required.length}`);
-if (unchanged.length !== 28) fail(`expected 28 INTENTIONALLY_UNCHANGED keys (27 + 1), got ${unchanged.length}`);
+if (required.length !== 751) fail(`expected 751 REQUIRED_FOR_PT_LAUNCH keys (705 + 20 + 26), got ${required.length}`);
+if (unchanged.length !== 28) fail(`expected 28 INTENTIONALLY_UNCHANGED keys (27 + 1 + 0), got ${unchanged.length}`);
 if (data.provenance.delta_revision !== "P03-PT-SOURCE-2026-08-25-r3") {
   fail(`unexpected delta_revision: ${data.provenance.delta_revision}`);
 }
 if (data.provenance.base_revision !== "P03-PT-SOURCE-2026-08-25-r2") {
   fail(`unexpected base_revision: ${data.provenance.base_revision}`);
+}
+if (data.provenance.delta4_revision !== "P03-PT-SOURCE-2026-08-25-r4") {
+  fail(`unexpected delta4_revision: ${data.provenance.delta4_revision}`);
+}
+
+// --- r4 delta spot checks (EMAR / Kre+ opportunity records) ---
+const r4Keys = [
+  "home.training.emar.status",
+  "home.training.emar.provider",
+  "home.training.emar.fact_label.applications",
+  "home.training.emar.fact_label.education",
+  "home.training.emar.fact_label.places",
+  "home.training.emar.fact_label.registration_fee",
+  "home.training.emar.fact_label.tuition",
+  "home.training.emar.fact_label.evaluation",
+  "home.training.emar.fact_label.results",
+  "home.training.emar.fact_value.applications",
+  "home.training.emar.fact_value.registration_fee",
+  "home.training.emar.fact_value.tuition",
+  "home.training.emar.fact_value.evaluation",
+  "home.training.emar.fact_value.results",
+  "home.training.emar.documents_heading",
+  "home.training.emar.document.education_certificate",
+  "home.training.emar.document.cni",
+  "home.training.emar.good_to_know",
+  "home.training.emar.action",
+  "home.training.emar.checked",
+  "home.training.record.emar-motorista-n3.title",
+  "home.training.record.emar-motorista-n3.body",
+  "home.training.record.emar-motorista-n3.fact_value.education",
+  "home.training.record.emar-assistente-eletrotecnico-naval-n4.title",
+  "home.training.record.emar-assistente-eletrotecnico-naval-n4.body",
+  "home.training.record.emar-assistente-eletrotecnico-naval-n4.fact_value.education",
+];
+for (const k of r4Keys) {
+  if (!data.keys[k]) fail(`r4 key missing from locale data: ${k}`);
+}
+if (data.keys["home.training.emar.fact_value.applications"]?.pt !== "até 30 de agosto de 2026") {
+  fail(`home.training.emar.fact_value.applications PT does not match the approved 2026-08-30 deadline`);
 }
 
 // --- r3 delta spot checks ---
