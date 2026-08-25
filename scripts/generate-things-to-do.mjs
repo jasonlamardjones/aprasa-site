@@ -255,7 +255,13 @@ function renderSchema(record, loc, expired) {
 }
 
 function renderHomeArticle(record, loc) {
-  const detailHref = `${localeRoutePrefix()}${record.detail_page}`;
+  // Home lives at index.html (EN) or pt/index.html (PT), and detail pages at
+  // things-to-do/<slug>/ or pt/things-to-do/<slug>/ respectively — Home and
+  // its detail pages are always siblings-under-the-same-root, so the
+  // relative link is identical text in both locales; it must NOT be
+  // prefixed with "pt/" here (that would double up once pt/index.html
+  // itself lives under pt/, producing pt/pt/things-to-do/...).
+  const detailHref = record.detail_page;
   const media = record.media ? `\n          <div class="card-media"><img src="${escapeHtml(record.media.asset)}" alt="${escapeHtml(loc.mediaAlt)}" loading="lazy" width="${record.media.width}" height="${record.media.height}"></div>` : '';
   const externalAction = record.card_action ? `\n            <a class="resource-link" href="${escapeHtml(record.card_action.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(loc.cardActionLabel)} <span aria-hidden="true">↗</span></a>` : '';
   const dialogMedia = record.media ? `\n              <div class="dialog-media"><img src="${escapeHtml(record.media.asset)}" alt="${escapeHtml(loc.mediaAlt)}" loading="lazy" width="${record.media.width}" height="${record.media.height}"></div>` : '';
