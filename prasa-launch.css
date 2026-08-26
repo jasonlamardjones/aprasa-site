@@ -5,6 +5,11 @@
   --white: #FFFFFF;
   --ochre: #C0872E;
   --ochre-text: #8F5F1C;
+  /* Founder-authorized, bounded exception (26 Aug 2026): red for the
+     urgent-opportunity badge/state only — not a general brand or alert
+     palette. Do not reuse outside .urgent-badge. */
+  --urgent-red: #8C1D17;
+  --urgent-red-bg: rgba(140,29,23,.14);
   --serif: "Libre Baskerville", Georgia, "Times New Roman", serif;
   --sans: "Work Sans", "Segoe UI", Arial, sans-serif;
   --radius: 10px;
@@ -277,31 +282,37 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
 img.lang-only-pt { display: none; }
 html[lang="pt"] img.lang-only-en { display: none; }
 html[lang="pt"] img.lang-only-pt { display: block; }
-/* Urgent-opportunity treatment: a restrained badge/deadline pairing for a
-   card whose governed deadline is within 7 days while still current — reuses
-   the existing pill shape (see .action-tags span) and the site's existing
-   ochre accent (already used for kickers/emphasis elsewhere) rather than
-   introducing a new color. Lives entirely inside the card markup, so it is
-   removed automatically whenever the card itself is removed by the
-   incumbent currentness workflow — no separate expiry mechanism. */
-.urgent-badge {
+/* Urgent-opportunity treatment: a badge/deadline pairing for a card whose
+   governed deadline is within 7 days while still current. Lives entirely
+   inside the card markup, so it is removed automatically whenever the card
+   itself is removed by the incumbent currentness workflow — no separate
+   expiry mechanism. Uses --urgent-red, a founder-authorized bounded
+   exception to the ochre-only palette (see :root) scoped to this badge only
+   — it must outrank .spotlight-label and ordinary .action-tags span
+   treatment at a glance, not just on close reading. */
+/* Specificity note: this must be at least as specific as the later
+   `.action-tags span` rule below (0,1,1) or that rule silently wins on the
+   shared properties (border/color/background/etc.) and the badge renders as
+   an ordinary tag — which is exactly what happened live. `.action-tags
+   .urgent-badge` (0,2,0) guarantees this regardless of file order. */
+.action-tags .urgent-badge {
   display: inline-flex;
   align-items: center;
-  min-height: 30px;
-  padding: .25rem .6rem;
-  border: 2px solid var(--ochre);
+  gap: .5rem;
+  min-height: 38px;
+  padding: .45rem .9rem;
+  border: 2px solid var(--urgent-red);
   border-radius: 999px;
-  color: var(--ochre-text);
-  background: rgba(192,135,46,.18);
-  font-size: .75rem;
+  color: var(--urgent-red);
+  background: var(--urgent-red-bg);
+  font-size: .85rem;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: .02em;
+  letter-spacing: .04em;
   margin: 0 0 .5rem !important;
 }
 .urgent-badge-icon {
-  margin-right: .35em;
-  font-size: 1.05em;
+  font-size: 1.15em;
   line-height: 1;
 }
 /* The urgent badge's own paragraph wrapper (.action-tags) is shared with
