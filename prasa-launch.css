@@ -269,6 +269,40 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
 .dialog-media img { width: 100%; height: auto; display: block; }
 .dialog-media-poster { background: var(--white); }
 .dialog-media-poster img { object-fit: contain; }
+/* Locale-matched media: both language variants are present in the shared
+   EN source (pt/index.html is mechanically derived from it, so a single
+   markup block is the only way to keep locale-specific images without a
+   second content model); this shows only the variant matching the page's
+   own <html lang>. */
+img.lang-only-pt { display: none; }
+html[lang="pt"] img.lang-only-en { display: none; }
+html[lang="pt"] img.lang-only-pt { display: block; }
+/* Urgent-opportunity treatment: a restrained badge/deadline pairing for a
+   card whose governed deadline is within 7 days while still current — reuses
+   the existing pill shape (see .action-tags span) and the site's existing
+   ochre accent (already used for kickers/emphasis elsewhere) rather than
+   introducing a new color. Lives entirely inside the card markup, so it is
+   removed automatically whenever the card itself is removed by the
+   incumbent currentness workflow — no separate expiry mechanism. */
+.urgent-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: .25rem .55rem;
+  border: 1px solid var(--ochre);
+  border-radius: 999px;
+  color: var(--ochre-text);
+  background: rgba(192,135,46,.1);
+  font-size: .75rem;
+  font-weight: 700;
+  margin: 0 0 .5rem !important;
+}
+.card-deadline {
+  color: var(--ochre-text);
+  font-weight: 700;
+  font-size: .92rem;
+  margin: .3rem 0 0 !important;
+}
 .card-status {
   margin: 0 0 .55rem !important;
   color: var(--green);

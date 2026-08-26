@@ -66,6 +66,15 @@ const ALLOWED_UNTRANSLATED = new Set([
   'SabMais',
   'Associação SabMais',
   'São Vicente',
+  // Locale-matched temporary thumbnail alt text for the EMAR / Kre+ cards:
+  // both the EN and PT variant of each image (and its alt) is present in
+  // the shared EN source and shown/hidden per-locale by CSS (.lang-only-en
+  // / .lang-only-pt), not by the overlay/translation pipeline — so neither
+  // string has (or needs) a governed key.
+  'Screenshot of the Kre+ course page for Driver – Level 3',
+  'Captura de ecrã da página da Kre+ para Motorista — Nível 3',
+  'Screenshot of the Kre+ course page for Naval Electrotechnical Assistant – Level 4',
+  'Captura de ecrã da página da Kre+ para Assistente Eletrotécnico Naval — Nível 4',
 ]);
 
 // Two spots in Home's hero use inline markup to control visual line-breaks

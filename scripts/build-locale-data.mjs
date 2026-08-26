@@ -22,6 +22,7 @@ const ROOT = path.join(__dirname, "..");
 const SOURCE_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r2.source.json");
 const DELTA_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r3-delta.source.json");
 const DELTA4_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r4-delta.source.json");
+const DELTA5_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r5-delta.source.json");
 const OUT_PATH = path.join(ROOT, "data", "locales", "locale-data.generated.json");
 
 const EXPECTED = {
@@ -279,9 +280,94 @@ if (delta4Unchanged !== EXPECTED_DELTA4.intentionally_unchanged) {
   fail(`r4 intentionally_unchanged mismatch: got ${delta4Unchanged}, expected ${EXPECTED_DELTA4.intentionally_unchanged}`);
 }
 
+// --- r5 delta: additive merge on top of the r2+r3+r4 base above ---
+const EXPECTED_DELTA5 = {
+  source_revision: "P03-PT-SOURCE-2026-08-25-r5",
+  previous_revision: "P03-PT-SOURCE-2026-08-25-r4",
+  row_count: 2,
+  approved: 2,
+  required_for_pt_launch: 2,
+  intentionally_unchanged: 0,
+  review_required: 0,
+};
+
+const delta5 = JSON.parse(readFileSync(DELTA5_PATH, "utf8"));
+
+if (delta5.source_revision !== EXPECTED_DELTA5.source_revision) {
+  fail(`r5 source_revision mismatch: got "${delta5.source_revision}", expected "${EXPECTED_DELTA5.source_revision}"`);
+}
+if (delta5.previous_revision !== EXPECTED_DELTA5.previous_revision) {
+  fail(`r5 previous_revision mismatch: got "${delta5.previous_revision}", expected "${EXPECTED_DELTA5.previous_revision}"`);
+}
+if (delta5.rows.length !== EXPECTED_DELTA5.row_count) {
+  fail(`r5 row count mismatch: got ${delta5.rows.length}, expected ${EXPECTED_DELTA5.row_count}`);
+}
+if (delta5.supplied_rows_approved !== EXPECTED_DELTA5.approved) {
+  fail(`r5 supplied_rows_approved mismatch: got ${delta5.supplied_rows_approved}`);
+}
+if (delta5.review_required !== EXPECTED_DELTA5.review_required) {
+  fail(`r5 review_required is non-zero: ${delta5.review_required}`);
+}
+if (delta5.missing_or_unaccounted_row_count !== 0) {
+  fail(`r5 missing_or_unaccounted_row_count is non-zero: ${delta5.missing_or_unaccounted_row_count}`);
+}
+if ((delta5.duplicate_keys || []).length !== 0) {
+  fail(`r5 duplicate_keys is non-empty: ${JSON.stringify(delta5.duplicate_keys)}`);
+}
+if ((delta5.placeholder_mismatches || []).length !== 0) {
+  fail(`r5 placeholder_mismatches is non-empty: ${JSON.stringify(delta5.placeholder_mismatches)}`);
+}
+if ((delta5.a_prasa_to_a_praca_violations || []).length !== 0) {
+  fail(`r5 a_prasa_to_a_praca_violations is non-empty: ${JSON.stringify(delta5.a_prasa_to_a_praca_violations)}`);
+}
+
+let delta5Required = 0;
+let delta5Unchanged = 0;
+for (const row of delta5.rows) {
+  if (seen.has(row.key)) {
+    fail(`r5 key "${row.key}" collides with an existing r1/r2/r3/r4 key — r5 must be strictly additive, never reopen an existing key`);
+  }
+  seen.add(row.key);
+
+  if (row.scope_status === "REQUIRED_FOR_PT_LAUNCH") delta5Required += 1;
+  else if (row.scope_status === "INTENTIONALLY_UNCHANGED") delta5Unchanged += 1;
+
+  if (row.scope_status === "REQUIRED_FOR_PT_LAUNCH" && (row.pt == null || row.pt === "")) {
+    fail(`r5 REQUIRED_FOR_PT_LAUNCH key "${row.key}" has no PT value`);
+  }
+  if (row.translation_status !== "APPROVED") {
+    fail(`r5 key "${row.key}" is not APPROVED (status: ${row.translation_status})`);
+  }
+  const enPlaceholders = (row.source_en.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+  const ptPlaceholders = (row.pt.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+  if (JSON.stringify(enPlaceholders) !== JSON.stringify(ptPlaceholders)) {
+    fail(`r5 key "${row.key}" placeholder mismatch: en=${JSON.stringify(enPlaceholders)} pt=${JSON.stringify(ptPlaceholders)}`);
+  }
+
+  keys[row.key] = {
+    key: row.key,
+    en: row.source_en,
+    pt: row.pt,
+    scope_status: row.scope_status,
+    identity_policy: row.identity_policy,
+    record_id: row.record_id,
+    translation_status: row.translation_status,
+    source_revision: row.source_revision,
+    context_notes: row.context_notes || "",
+    linguistic_notes: row.linguistic_notes || "",
+  };
+}
+
+if (delta5Required !== EXPECTED_DELTA5.required_for_pt_launch) {
+  fail(`r5 required_for_pt_launch mismatch: got ${delta5Required}, expected ${EXPECTED_DELTA5.required_for_pt_launch}`);
+}
+if (delta5Unchanged !== EXPECTED_DELTA5.intentionally_unchanged) {
+  fail(`r5 intentionally_unchanged mismatch: got ${delta5Unchanged}, expected ${EXPECTED_DELTA5.intentionally_unchanged}`);
+}
+
 const output = {
   provenance: {
-    source_revision: delta4.source_revision,
+    source_revision: delta5.source_revision,
     source_package_id: pkg.source_package_id,
     semantic_authority: pkg.semantic_authority,
     project_09_verdict: pkg.project_09_verdict,
@@ -291,18 +377,21 @@ const output = {
       "data/locales/pt-overlay-r2.source.json",
       "data/locales/pt-overlay-r3-delta.source.json",
       "data/locales/pt-overlay-r4-delta.source.json",
+      "data/locales/pt-overlay-r5-delta.source.json",
     ],
     base_revision: pkg.source_revision,
     delta_revision: delta.source_revision,
     delta4_revision: delta4.source_revision,
+    delta5_revision: delta5.source_revision,
   },
   counts: {
-    total_rows: rows.length + delta.rows.length + delta4.rows.length,
-    required_for_pt_launch: qa_summary.required_for_pt_launch + deltaRequired + delta4Required,
-    intentionally_unchanged: qa_summary.intentionally_unchanged + deltaUnchanged + delta4Unchanged,
-    approved_rows_total: qa_summary.approved_rows_total + delta.rows.length + delta4.rows.length,
+    total_rows: rows.length + delta.rows.length + delta4.rows.length + delta5.rows.length,
+    required_for_pt_launch: qa_summary.required_for_pt_launch + deltaRequired + delta4Required + delta5Required,
+    intentionally_unchanged: qa_summary.intentionally_unchanged + deltaUnchanged + delta4Unchanged + delta5Unchanged,
+    approved_rows_total: qa_summary.approved_rows_total + delta.rows.length + delta4.rows.length + delta5.rows.length,
     r3_delta_rows: delta.rows.length,
     r4_delta_rows: delta4.rows.length,
+    r5_delta_rows: delta5.rows.length,
   },
   keys,
 };
