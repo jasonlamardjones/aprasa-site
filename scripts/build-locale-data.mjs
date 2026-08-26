@@ -6,9 +6,21 @@
 // export, 732 rows) PLUS data/locales/pt-overlay-r3-delta.source.json (the
 // r3 additive delta, 21 rows) PLUS data/locales/pt-overlay-r4-delta.source.json
 // (the r4 additive delta, 26 rows, adding the two EMAR / Kre+ opportunity
-// records) merged on top, in order. Each delta is strictly additive: every
-// delta key must be new, never an existing key from an earlier revision —
-// no delta is authorized to reopen or replace an earlier approved value.
+// records) merged on top, in order. The r2->r5 deltas are strictly additive:
+// every r3/r4/r5 key must be new, never an existing key from an earlier
+// revision — none of those deltas is authorized to reopen or replace an
+// earlier approved value.
+//
+// data/locales/pt-overlay-r6-delta.source.json is the one exception, and it is
+// a different class of revision: revision_class "OVERRIDE_EXISTING_KEYS". It
+// carries the governed Project 09 package P09-PT-BRAND-VOICE-2026-08-26-v1, a
+// Portuguese-only brand-voice refinement that deliberately restates the PT
+// value of 42 keys that already exist in the r1/r2 baseline. It introduces no
+// new keys and changes no English source value. Because it reopens approved PT
+// values, its guard is the strict inverse of the additive guard and is
+// tighter: every r6 key MUST already exist, and its declared old_pt MUST match
+// the currently effective PT value byte-for-byte before the new_pt is written.
+// Any drift fails the build rather than silently overwriting.
 // This script performs no translation and no wording changes — it only
 // reshapes and merges the row lists into a keyed lookup table for
 // scripts/lib/locale.mjs.
@@ -23,6 +35,7 @@ const SOURCE_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r2.source.jso
 const DELTA_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r3-delta.source.json");
 const DELTA4_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r4-delta.source.json");
 const DELTA5_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r5-delta.source.json");
+const DELTA6_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r6-delta.source.json");
 const OUT_PATH = path.join(ROOT, "data", "locales", "locale-data.generated.json");
 
 const EXPECTED = {
@@ -365,9 +378,135 @@ if (delta5Unchanged !== EXPECTED_DELTA5.intentionally_unchanged) {
   fail(`r5 intentionally_unchanged mismatch: got ${delta5Unchanged}, expected ${EXPECTED_DELTA5.intentionally_unchanged}`);
 }
 
+// --- r6 delta: PT-only brand-voice OVERRIDE on top of the r2+r3+r4+r5 base ---
+// Unlike r3/r4/r5 this delta reopens existing approved PT values by design.
+// It is bounded by an inverse guard: the key must already exist and the
+// declared old_pt must match the currently effective PT value exactly.
+const EXPECTED_DELTA6 = {
+  package_id: "P09-PT-BRAND-VOICE-2026-08-26-v1",
+  revision_class: "OVERRIDE_EXISTING_KEYS",
+  source_revision: "P03-PT-SOURCE-2026-08-26-r6",
+  previous_revision: "P03-PT-SOURCE-2026-08-25-r5",
+  row_count: 42,
+  approved: 42,
+  review_required: 0,
+  new_keys_introduced: 0,
+};
+
+const delta6 = JSON.parse(readFileSync(DELTA6_PATH, "utf8"));
+
+if (delta6.package_id !== EXPECTED_DELTA6.package_id) {
+  fail(`r6 package_id mismatch: got "${delta6.package_id}", expected "${EXPECTED_DELTA6.package_id}"`);
+}
+if (delta6.revision_class !== EXPECTED_DELTA6.revision_class) {
+  fail(`r6 revision_class mismatch: got "${delta6.revision_class}", expected "${EXPECTED_DELTA6.revision_class}"`);
+}
+if (delta6.source_revision !== EXPECTED_DELTA6.source_revision) {
+  fail(`r6 source_revision mismatch: got "${delta6.source_revision}", expected "${EXPECTED_DELTA6.source_revision}"`);
+}
+if (delta6.previous_revision !== EXPECTED_DELTA6.previous_revision) {
+  fail(`r6 previous_revision mismatch: got "${delta6.previous_revision}", expected "${EXPECTED_DELTA6.previous_revision}"`);
+}
+if (delta6.rows.length !== EXPECTED_DELTA6.row_count) {
+  fail(`r6 row count mismatch: got ${delta6.rows.length}, expected ${EXPECTED_DELTA6.row_count}`);
+}
+if (delta6.supplied_rows_approved !== EXPECTED_DELTA6.approved) {
+  fail(`r6 supplied_rows_approved mismatch: got ${delta6.supplied_rows_approved}`);
+}
+if (delta6.review_required !== EXPECTED_DELTA6.review_required) {
+  fail(`r6 review_required is non-zero: ${delta6.review_required}`);
+}
+if (delta6.missing_or_unaccounted_row_count !== 0) {
+  fail(`r6 missing_or_unaccounted_row_count is non-zero: ${delta6.missing_or_unaccounted_row_count}`);
+}
+if (delta6.semantic_escalations_required !== 0) {
+  fail(`r6 semantic_escalations_required is non-zero: ${delta6.semantic_escalations_required}`);
+}
+if (delta6.source_english_changed !== false) {
+  fail(`r6 declares source_english_changed — English source is immutable in this delta`);
+}
+if ((delta6.duplicate_keys || []).length !== 0) {
+  fail(`r6 duplicate_keys is non-empty: ${JSON.stringify(delta6.duplicate_keys)}`);
+}
+if ((delta6.placeholder_mismatches || []).length !== 0) {
+  fail(`r6 placeholder_mismatches is non-empty: ${JSON.stringify(delta6.placeholder_mismatches)}`);
+}
+if ((delta6.a_prasa_to_a_praca_violations || []).length !== 0) {
+  fail(`r6 a_prasa_to_a_praca_violations is non-empty: ${JSON.stringify(delta6.a_prasa_to_a_praca_violations)}`);
+}
+if (delta6.change_control_status?.new_keys_introduced !== EXPECTED_DELTA6.new_keys_introduced) {
+  fail(`r6 new_keys_introduced must be 0 — r6 may not add keys`);
+}
+if (delta6.change_control_status?.english_source_values_modified !== 0) {
+  fail(`r6 english_source_values_modified is non-zero`);
+}
+if (delta6.change_control_status?.additional_languages_authorized !== 0) {
+  fail(`r6 additional_languages_authorized is non-zero`);
+}
+
+const delta6Seen = new Set();
+let delta6Overridden = 0;
+for (const row of delta6.rows) {
+  if (delta6Seen.has(row.key)) {
+    fail(`r6 duplicate key in supplied rows: "${row.key}"`);
+  }
+  delta6Seen.add(row.key);
+
+  const existing = keys[row.key];
+  if (!existing) {
+    fail(`r6 key "${row.key}" does not exist in the r1/r2/r3/r4/r5 baseline — r6 may only override existing keys, never introduce new ones`);
+  }
+  if (existing.en !== row.source_en) {
+    fail(`r6 key "${row.key}" source_en drift: baseline=${JSON.stringify(existing.en)} delta=${JSON.stringify(row.source_en)}`);
+  }
+  if (existing.pt !== row.old_pt) {
+    fail(`r6 key "${row.key}" old_pt does not match the currently effective PT value: effective=${JSON.stringify(existing.pt)} declared_old_pt=${JSON.stringify(row.old_pt)}`);
+  }
+  if (row.new_pt == null || row.new_pt === "") {
+    fail(`r6 key "${row.key}" has no new_pt value`);
+  }
+  if (row.new_pt === row.old_pt) {
+    fail(`r6 key "${row.key}" is a no-op: new_pt equals old_pt`);
+  }
+  if (row.translation_status !== "APPROVED") {
+    fail(`r6 key "${row.key}" is not APPROVED (status: ${row.translation_status})`);
+  }
+  if (row.semantic_change !== false) {
+    fail(`r6 key "${row.key}" declares a semantic change — out of scope for a brand-voice delta`);
+  }
+  const enPlaceholders = (row.source_en.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+  const ptPlaceholders = (row.new_pt.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+  if (JSON.stringify(enPlaceholders) !== JSON.stringify(ptPlaceholders)) {
+    fail(`r6 key "${row.key}" placeholder mismatch: en=${JSON.stringify(enPlaceholders)} pt=${JSON.stringify(ptPlaceholders)}`);
+  }
+  const oldAPrasa = (row.old_pt.match(/A PRASA/g) || []).length;
+  const newAPrasa = (row.new_pt.match(/A PRASA/g) || []).length;
+  if (oldAPrasa !== newAPrasa) {
+    fail(`r6 key "${row.key}" changes the number of "A PRASA" occurrences (${oldAPrasa} -> ${newAPrasa})`);
+  }
+  if (/A PRA[CÇ]A/.test(row.new_pt)) {
+    fail(`r6 key "${row.key}" corrupts the A PRASA identity into "A PRACA"`);
+  }
+
+  // Override the PT value only. en, scope_status, identity_policy and
+  // record_id are carried through from the baseline untouched, so this delta
+  // structurally cannot alter English source or factual record wiring.
+  keys[row.key] = {
+    ...existing,
+    pt: row.new_pt,
+    source_revision: row.source_revision,
+    linguistic_notes: row.linguistic_notes || existing.linguistic_notes || "",
+  };
+  delta6Overridden += 1;
+}
+
+if (delta6Overridden !== EXPECTED_DELTA6.row_count) {
+  fail(`r6 overridden count mismatch: got ${delta6Overridden}, expected ${EXPECTED_DELTA6.row_count}`);
+}
+
 const output = {
   provenance: {
-    source_revision: delta5.source_revision,
+    source_revision: delta6.source_revision,
     source_package_id: pkg.source_package_id,
     semantic_authority: pkg.semantic_authority,
     project_09_verdict: pkg.project_09_verdict,
@@ -378,11 +517,15 @@ const output = {
       "data/locales/pt-overlay-r3-delta.source.json",
       "data/locales/pt-overlay-r4-delta.source.json",
       "data/locales/pt-overlay-r5-delta.source.json",
+      "data/locales/pt-overlay-r6-delta.source.json",
     ],
     base_revision: pkg.source_revision,
     delta_revision: delta.source_revision,
     delta4_revision: delta4.source_revision,
     delta5_revision: delta5.source_revision,
+    delta6_revision: delta6.source_revision,
+    delta6_package_id: delta6.package_id,
+    delta6_revision_class: delta6.revision_class,
   },
   counts: {
     total_rows: rows.length + delta.rows.length + delta4.rows.length + delta5.rows.length,
@@ -392,9 +535,10 @@ const output = {
     r3_delta_rows: delta.rows.length,
     r4_delta_rows: delta4.rows.length,
     r5_delta_rows: delta5.rows.length,
+    r6_override_rows: delta6.rows.length,
   },
   keys,
 };
 
 writeFileSync(OUT_PATH, JSON.stringify(output, null, 2) + "\n");
-console.log(`[build-locale-data] wrote ${Object.keys(keys).length} keys to ${path.relative(ROOT, OUT_PATH)}`);
+console.log(`[build-locale-data] wrote ${Object.keys(keys).length} keys to ${path.relative(ROOT, OUT_PATH)} (r6 overrode ${delta6Overridden} PT values, added 0 keys)`);
