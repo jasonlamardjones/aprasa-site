@@ -1,0 +1,42 @@
+{
+  "package_id": "aprasa-pt-emar-urgent-opportunity-r5-delta",
+  "source_revision": "P03-PT-SOURCE-2026-08-25-r5",
+  "previous_revision": "P03-PT-SOURCE-2026-08-25-r4",
+  "project_09_status": "READY_FOR_PROJECT_04_IMPLEMENTATION_HANDOFF",
+  "declared_new_row_count_in_handoff": 2,
+  "actual_row_objects_supplied": 2,
+  "missing_or_unaccounted_row_count": 0,
+  "supplied_rows_approved": 2,
+  "review_required": 0,
+  "duplicate_keys": [],
+  "placeholder_mismatches": [],
+  "a_prasa_to_a_praca_violations": [],
+  "linguistic_refinements": [],
+  "blocking_issue": null,
+  "rows": [
+    {
+      "key": "home.training.emar.urgent_badge",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r5",
+      "source_en": "Urgent Opportunity",
+      "pt": "Oportunidade urgente",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "context_notes": "Shared urgency badge for EMAR / Kre+ opportunity cards whose deadline falls within 7 calendar days while applications remain open. Project 09 note: 'Oportunidade urgente' is concise and restrained enough for a badge without sounding promotional.",
+      "record_id": null,
+      "linguistic_notes": "",
+      "translation_status": "APPROVED"
+    },
+    {
+      "key": "home.training.emar.deadline_prominent",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r5",
+      "source_en": "Apply by 30 August 2026",
+      "pt": "Candidate-se até 30 de agosto de 2026",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "context_notes": "Shared deadline-prominence line for the two urgent EMAR / Kre+ opportunity cards. Project 09 note: 'Candidate-se até...' is the natural action-oriented formulation, consistent with the already-approved 'até 30 de agosto de 2026' date phrasing.",
+      "record_id": null,
+      "linguistic_notes": "",
+      "translation_status": "APPROVED"
+    }
+  ]
+}

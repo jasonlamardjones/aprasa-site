@@ -1,6 +1,6 @@
 {
   "provenance": {
-    "source_revision": "P03-PT-SOURCE-2026-08-25-r4",
+    "source_revision": "P03-PT-SOURCE-2026-08-25-r5",
     "source_package_id": "aprasa-pt-launch-source-concrete-rows",
     "semantic_authority": "Project 03 — A PRASA Business, Brand & Administration",
     "project_09_verdict": "READY FOR PROJECT 04 IMPLEMENTATION HANDOFF",
@@ -12,19 +12,22 @@
     "generated_from": [
       "data/locales/pt-overlay-r2.source.json",
       "data/locales/pt-overlay-r3-delta.source.json",
-      "data/locales/pt-overlay-r4-delta.source.json"
+      "data/locales/pt-overlay-r4-delta.source.json",
+      "data/locales/pt-overlay-r5-delta.source.json"
     ],
     "base_revision": "P03-PT-SOURCE-2026-08-25-r2",
     "delta_revision": "P03-PT-SOURCE-2026-08-25-r3",
-    "delta4_revision": "P03-PT-SOURCE-2026-08-25-r4"
+    "delta4_revision": "P03-PT-SOURCE-2026-08-25-r4",
+    "delta5_revision": "P03-PT-SOURCE-2026-08-25-r5"
   },
   "counts": {
-    "total_rows": 779,
-    "required_for_pt_launch": 751,
+    "total_rows": 781,
+    "required_for_pt_launch": 753,
     "intentionally_unchanged": 28,
-    "approved_rows_total": 779,
+    "approved_rows_total": 781,
     "r3_delta_rows": 21,
-    "r4_delta_rows": 26
+    "r4_delta_rows": 26,
+    "r5_delta_rows": 2
   },
   "keys": {
     "global.skip_to_content": {
@@ -9373,6 +9376,30 @@
       "translation_status": "APPROVED",
       "source_revision": "P03-PT-SOURCE-2026-08-25-r4",
       "context_notes": "Education fact value, Assistente Eletrotécnico Naval N4; EMAR-governed requirement, not shown on Kre+.",
+      "linguistic_notes": ""
+    },
+    "home.training.emar.urgent_badge": {
+      "key": "home.training.emar.urgent_badge",
+      "en": "Urgent Opportunity",
+      "pt": "Oportunidade urgente",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r5",
+      "context_notes": "Shared urgency badge for EMAR / Kre+ opportunity cards whose deadline falls within 7 calendar days while applications remain open. Project 09 note: 'Oportunidade urgente' is concise and restrained enough for a badge without sounding promotional.",
+      "linguistic_notes": ""
+    },
+    "home.training.emar.deadline_prominent": {
+      "key": "home.training.emar.deadline_prominent",
+      "en": "Apply by 30 August 2026",
+      "pt": "Candidate-se até 30 de agosto de 2026",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-25-r5",
+      "context_notes": "Shared deadline-prominence line for the two urgent EMAR / Kre+ opportunity cards. Project 09 note: 'Candidate-se até...' is the natural action-oriented formulation, consistent with the already-approved 'até 30 de agosto de 2026' date phrasing.",
       "linguistic_notes": ""
     }
   }

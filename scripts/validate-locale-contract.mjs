@@ -21,12 +21,12 @@ function fail(msg) {
 const data = loadLocaleData();
 const keys = Object.values(data.keys);
 
-// --- Overlay contract (counts) — combined r2 base (732) + r3 delta (21) + r4 delta (26) ---
-if (keys.length !== 779) fail(`expected 779 total keys (732 r2 + 21 r3 + 26 r4), got ${keys.length}`);
+// --- Overlay contract (counts) — combined r2 base (732) + r3 delta (21) + r4 delta (26) + r5 delta (2) ---
+if (keys.length !== 781) fail(`expected 781 total keys (732 r2 + 21 r3 + 26 r4 + 2 r5), got ${keys.length}`);
 const required = keys.filter((k) => k.scope_status === "REQUIRED_FOR_PT_LAUNCH");
 const unchanged = keys.filter((k) => k.scope_status === "INTENTIONALLY_UNCHANGED");
-if (required.length !== 751) fail(`expected 751 REQUIRED_FOR_PT_LAUNCH keys (705 + 20 + 26), got ${required.length}`);
-if (unchanged.length !== 28) fail(`expected 28 INTENTIONALLY_UNCHANGED keys (27 + 1 + 0), got ${unchanged.length}`);
+if (required.length !== 753) fail(`expected 753 REQUIRED_FOR_PT_LAUNCH keys (705 + 20 + 26 + 2), got ${required.length}`);
+if (unchanged.length !== 28) fail(`expected 28 INTENTIONALLY_UNCHANGED keys (27 + 1 + 0 + 0), got ${unchanged.length}`);
 if (data.provenance.delta_revision !== "P03-PT-SOURCE-2026-08-25-r3") {
   fail(`unexpected delta_revision: ${data.provenance.delta_revision}`);
 }
@@ -35,6 +35,21 @@ if (data.provenance.base_revision !== "P03-PT-SOURCE-2026-08-25-r2") {
 }
 if (data.provenance.delta4_revision !== "P03-PT-SOURCE-2026-08-25-r4") {
   fail(`unexpected delta4_revision: ${data.provenance.delta4_revision}`);
+}
+if (data.provenance.delta5_revision !== "P03-PT-SOURCE-2026-08-25-r5") {
+  fail(`unexpected delta5_revision: ${data.provenance.delta5_revision}`);
+}
+
+// --- r5 delta spot checks (EMAR / Kre+ urgent-opportunity treatment) ---
+const r5Keys = ["home.training.emar.urgent_badge", "home.training.emar.deadline_prominent"];
+for (const k of r5Keys) {
+  if (!data.keys[k]) fail(`r5 key missing from locale data: ${k}`);
+}
+if (data.keys["home.training.emar.urgent_badge"]?.pt !== "Oportunidade urgente") {
+  fail(`home.training.emar.urgent_badge PT does not match the approved Project 09 string`);
+}
+if (data.keys["home.training.emar.deadline_prominent"]?.pt !== "Candidate-se até 30 de agosto de 2026") {
+  fail(`home.training.emar.deadline_prominent PT does not match the approved Project 09 string`);
 }
 
 // --- r4 delta spot checks (EMAR / Kre+ opportunity records) ---
