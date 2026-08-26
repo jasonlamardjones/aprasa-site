@@ -1,6 +1,6 @@
 {
   "provenance": {
-    "source_revision": "P03-PT-SOURCE-2026-08-25-r5",
+    "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
     "source_package_id": "aprasa-pt-launch-source-concrete-rows",
     "semantic_authority": "Project 03 — A PRASA Business, Brand & Administration",
     "project_09_verdict": "READY FOR PROJECT 04 IMPLEMENTATION HANDOFF",
@@ -13,12 +13,16 @@
       "data/locales/pt-overlay-r2.source.json",
       "data/locales/pt-overlay-r3-delta.source.json",
       "data/locales/pt-overlay-r4-delta.source.json",
-      "data/locales/pt-overlay-r5-delta.source.json"
+      "data/locales/pt-overlay-r5-delta.source.json",
+      "data/locales/pt-overlay-r6-delta.source.json"
     ],
     "base_revision": "P03-PT-SOURCE-2026-08-25-r2",
     "delta_revision": "P03-PT-SOURCE-2026-08-25-r3",
     "delta4_revision": "P03-PT-SOURCE-2026-08-25-r4",
-    "delta5_revision": "P03-PT-SOURCE-2026-08-25-r5"
+    "delta5_revision": "P03-PT-SOURCE-2026-08-25-r5",
+    "delta6_revision": "P03-PT-SOURCE-2026-08-26-r6",
+    "delta6_package_id": "P09-PT-BRAND-VOICE-2026-08-26-v1",
+    "delta6_revision_class": "OVERRIDE_EXISTING_KEYS"
   },
   "counts": {
     "total_rows": 781,
@@ -27,7 +31,8 @@
     "approved_rows_total": 781,
     "r3_delta_rows": 21,
     "r4_delta_rows": 26,
-    "r5_delta_rows": 2
+    "r5_delta_rows": 2,
+    "r6_override_rows": 42
   },
   "keys": {
     "global.skip_to_content": {
@@ -825,14 +830,14 @@
     "home.meta.og_description": {
       "key": "home.meta.og_description",
       "en": "A place to find what moves you.",
-      "pt": "Um lugar para encontrar o que o move.",
+      "pt": "Um lugar para encontrares o que te move.",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "home.meta.og_image_alt": {
       "key": "home.meta.og_image_alt",
@@ -885,14 +890,14 @@
     "home.hero.tagline": {
       "key": "home.hero.tagline",
       "en": "A place to find what moves you.",
-      "pt": "Um lugar para encontrar o que o move.",
+      "pt": "Um lugar para encontrares o que te move.",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "home.hero.sr_prefix": {
       "key": "home.hero.sr_prefix",
@@ -909,38 +914,38 @@
     "home.hero.intro_1": {
       "key": "home.hero.intro_1",
       "en": "Come looking for something you need — or discover something you didn’t know you were looking for.",
-      "pt": "Venha à procura de algo de que precisa — ou descubra algo que não sabia que procurava.",
+      "pt": "Vem à procura do que precisas — ou descobre algo que nem sabias que procuravas.",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "home.hero.intro_2": {
       "key": "home.hero.intro_2",
       "en": "Find opportunities to grow and learn. Immerse yourself in local culture and things to do. Gain practical local knowledge. Discover places worth knowing, and ways to take part or give back to the community.",
-      "pt": "Encontre oportunidades para crescer e aprender. Mergulhe na cultura local e descubra o que fazer. Adquira conhecimentos locais práticos. Descubra lugares que vale a pena conhecer e formas de participar ou contribuir para a comunidade.",
+      "pt": "Encontra oportunidades para crescer e aprender. Mergulha na cultura local e descobre o que fazer. Encontra informação prática para o dia a dia. Descobre lugares que vale a pena conhecer e formas de participar ou contribuir para a comunidade.",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "home.hero.closing": {
       "key": "home.hero.closing",
       "en": "Find what moves you.",
-      "pt": "Encontre o que o move.",
+      "pt": "Encontra o que te move.",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "home.hero.image_alt": {
       "key": "home.hero.image_alt",
@@ -1065,26 +1070,26 @@
     "submission.general.prompt": {
       "key": "submission.general.prompt",
       "en": "Want to share an event, opportunity, or community initiative?",
-      "pt": "Quer partilhar um evento, uma oportunidade ou uma iniciativa comunitária?",
+      "pt": "Queres partilhar um evento, uma oportunidade ou uma iniciativa comunitária?",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "submission.general.action": {
       "key": "submission.general.action",
       "en": "Submit it to A PRASA for consideration",
-      "pt": "Envie à A PRASA para apreciação",
+      "pt": "Envia à A PRASA para consideração",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "submission.general.channel_suffix": {
       "key": "submission.general.channel_suffix",
@@ -1125,38 +1130,38 @@
     "home.things.description": {
       "key": "home.things.description",
       "en": "Current things happening in and around Mindelo and São Vicente. This is a curated guide, not a complete events calendar.",
-      "pt": "Atividades atuais em Mindelo e nos arredores de São Vicente. Este é um guia selecionado, não um calendário completo de eventos.",
+      "pt": "Descobre o que está a acontecer em Mindelo e São Vicente. Este é um guia selecionado, não um calendário completo de eventos.",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "home.things.submit_prompt": {
       "key": "home.things.submit_prompt",
       "en": "Organizing an event or activity in Mindelo or São Vicente?",
-      "pt": "Está a organizar um evento ou atividade em Mindelo ou São Vicente?",
+      "pt": "Estás a organizar um evento ou atividade em Mindelo ou São Vicente?",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "home.things.submit_action": {
       "key": "home.things.submit_action",
       "en": "Send it to A PRASA for consideration",
-      "pt": "Envie à A PRASA para apreciação",
+      "pt": "Envia à A PRASA para consideração",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "home.training.kicker": {
       "key": "home.training.kicker",
@@ -1185,38 +1190,38 @@
     "home.training.description": {
       "key": "home.training.description",
       "en": "Training, professional-development resources, business tools and work-related opportunities you can explore directly with the provider.",
-      "pt": "Formações, recursos de desenvolvimento profissional, ferramentas para negócios e oportunidades relacionadas com o trabalho que pode explorar diretamente junto da entidade responsável.",
+      "pt": "Formações, recursos de desenvolvimento profissional, ferramentas para negócios e oportunidades relacionadas com o trabalho que podes explorar diretamente junto da entidade responsável.",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "home.training.submit_prompt": {
       "key": "home.training.submit_prompt",
       "en": "Running a workshop, training, or opportunity people should know about?",
-      "pt": "Está a organizar um workshop, uma formação ou uma oportunidade que as pessoas devam conhecer?",
+      "pt": "Estás a organizar um workshop, uma formação ou uma oportunidade que as pessoas devam conhecer?",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "home.training.submit_action": {
       "key": "home.training.submit_action",
       "en": "Send it to A PRASA for consideration",
-      "pt": "Envie à A PRASA para apreciação",
+      "pt": "Envia à A PRASA para consideração",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "home.organizations.kicker": {
       "key": "home.organizations.kicker",
@@ -1245,38 +1250,38 @@
     "home.organizations.description": {
       "key": "home.organizations.description",
       "en": "Current, concrete ways to volunteer, donate, contribute useful goods or take part directly. Check with each organization for its present needs and arrangements.",
-      "pt": "Formas atuais e concretas de fazer voluntariado, doar, contribuir com bens úteis ou participar diretamente. Consulte cada organização sobre as suas necessidades e modalidades atuais.",
+      "pt": "Formas atuais e concretas de fazer voluntariado, doar, contribuir com bens úteis ou participar diretamente. Confirma com cada organização as necessidades e formas de apoio atuais.",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "home.organizations.submit_prompt": {
       "key": "home.organizations.submit_prompt",
       "en": "Planning a volunteer drive, outreach initiative, fundraiser, or community action?",
-      "pt": "Está a planear uma ação de voluntariado, iniciativa de proximidade, angariação de fundos ou ação comunitária?",
+      "pt": "Estás a planear uma ação de voluntariado, iniciativa de proximidade, angariação de fundos ou ação comunitária?",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "home.organizations.submit_action": {
       "key": "home.organizations.submit_action",
       "en": "Send it to A PRASA for consideration",
-      "pt": "Envie à A PRASA para apreciação",
+      "pt": "Envia à A PRASA para consideração",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "home.mindelo.kicker": {
       "key": "home.mindelo.kicker",
@@ -1293,26 +1298,26 @@
     "home.mindelo.title": {
       "key": "home.mindelo.title",
       "en": "Get oriented in Mindelo.",
-      "pt": "Oriente-se em Mindelo.",
+      "pt": "Orienta-te em Mindelo.",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "home.mindelo.description": {
       "key": "home.mindelo.description",
       "en": "Explore practical places and services across Mindelo and São Vicente with a checked directory and mapped locations where coordinates have been verified.",
-      "pt": "Explore lugares e serviços úteis em Mindelo e São Vicente através de um diretório revisto e de localizações no mapa onde as coordenadas foram verificadas.",
+      "pt": "Explora lugares e serviços úteis em Mindelo e São Vicente através de um diretório revisto e de localizações no mapa cujas coordenadas foram verificadas.",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "home.mindelo.subline": {
       "key": "home.mindelo.subline",
@@ -1365,14 +1370,14 @@
     "footer.tagline": {
       "key": "footer.tagline",
       "en": "A place to find what moves you.",
-      "pt": "Um lugar para encontrar o que o move.",
+      "pt": "Um lugar para encontrares o que te move.",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "footer.independence_note": {
       "key": "footer.independence_note",
@@ -1401,26 +1406,26 @@
     "footer.contact_prompt": {
       "key": "footer.contact_prompt",
       "en": "Questions, corrections, or something useful to share?",
-      "pt": "Tem perguntas, correções ou algo útil para partilhar?",
+      "pt": "Tens perguntas, correções ou algo útil para partilhar?",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "footer.contact_action": {
       "key": "footer.contact_action",
       "en": "Message A PRASA on WhatsApp",
-      "pt": "Enviar mensagem à A PRASA no WhatsApp",
+      "pt": "Envia uma mensagem à A PRASA no WhatsApp",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "home.local_spotlight.status": {
       "key": "home.local_spotlight.status",
@@ -3021,14 +3026,14 @@
     "about.meta.og_description": {
       "key": "about.meta.og_description",
       "en": "A place to find what moves you. An independent, source-led digital public square rooted in Cabo Verde.",
-      "pt": "Um lugar para encontrar o que o move. Uma praça pública digital independente e orientada por fontes, enraizada em Cabo Verde.",
+      "pt": "Um lugar para encontrares o que te move. Uma praça pública digital independente e orientada por fontes, enraizada em Cabo Verde.",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "about.meta.og_image_alt": {
       "key": "about.meta.og_image_alt",
@@ -3069,14 +3074,14 @@
     "about.hero.lead": {
       "key": "about.hero.lead",
       "en": "A place to find what moves you.",
-      "pt": "Um lugar para encontrar o que o move.",
+      "pt": "Um lugar para encontrares o que te move.",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "about.hero.body_1": {
       "key": "about.hero.body_1",
@@ -3477,38 +3482,38 @@
     "about.find.kicker": {
       "key": "about.find.kicker",
       "en": "What you can find",
-      "pt": "O que pode encontrar",
+      "pt": "O que podes encontrar",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "about.find.title": {
       "key": "about.find.title",
       "en": "What you can find",
-      "pt": "O que pode encontrar",
+      "pt": "O que podes encontrar",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "about.find.intro": {
       "key": "about.find.intro",
       "en": "The areas on A PRASA are different, but they share the same purpose: helping people move from discovery toward something useful.",
-      "pt": "As áreas da A PRASA são diferentes, mas partilham o mesmo propósito: ajudar as pessoas a passar da descoberta para algo útil.",
+      "pt": "As áreas da A PRASA são diferentes, mas partilham o mesmo propósito: ajudar-te a passar da descoberta para algo útil.",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "about.find.things.kicker": {
       "key": "about.find.things.kicker",
@@ -3537,14 +3542,14 @@
     "about.find.things.body_1": {
       "key": "about.find.things.body_1",
       "en": "Discover cultural events, exhibitions, performances, music, community gatherings, entertainment and other useful ways to take part in local life.",
-      "pt": "Descubra eventos culturais, exposições, espetáculos, música, encontros comunitários, entretenimento e outras formas úteis de participar na vida local.",
+      "pt": "Descobre eventos culturais, exposições, espetáculos, música, encontros comunitários, entretenimento e outras formas úteis de participar na vida local.",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "about.find.things.body_2": {
       "key": "about.find.things.body_2",
@@ -3573,14 +3578,14 @@
     "about.find.training.body_1": {
       "key": "about.find.training.body_1",
       "en": "Find learning opportunities, professional-development resources, workshops, career tools and other routes for developing skills or pursuing an opportunity.",
-      "pt": "Encontre oportunidades de aprendizagem, recursos de desenvolvimento profissional, workshops, ferramentas de carreira e outros caminhos para desenvolver competências ou aproveitar uma oportunidade.",
+      "pt": "Encontra oportunidades de aprendizagem, recursos de desenvolvimento profissional, workshops, ferramentas de carreira e outros caminhos para desenvolver competências ou aproveitar uma oportunidade.",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "about.find.training.body_2": {
       "key": "about.find.training.body_2",
@@ -3621,14 +3626,14 @@
     "about.find.organizations.body_1": {
       "key": "about.find.organizations.body_1",
       "en": "Discover organizations and initiatives doing useful work and learn how to reach them.",
-      "pt": "Descubra organizações e iniciativas que realizam trabalho útil e saiba como contactá-las.",
+      "pt": "Descobre organizações e iniciativas que realizam trabalho útil e vê como as podes contactar.",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "about.find.organizations.body_2": {
       "key": "about.find.organizations.body_2",
@@ -3657,14 +3662,14 @@
     "about.find.essentials.kicker": {
       "key": "about.find.essentials.kicker",
       "en": "Practical local knowledge",
-      "pt": "Conhecimento local prático",
+      "pt": "Conhecimento prático local",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "about.find.essentials.title": {
       "key": "about.find.essentials.title",
@@ -3681,14 +3686,14 @@
     "about.find.essentials.body_1": {
       "key": "about.find.essentials.body_1",
       "en": "Find practical, place-based information that can make everyday life easier to navigate.",
-      "pt": "Encontre informações práticas ligadas ao lugar que podem tornar o dia a dia mais fácil de navegar.",
+      "pt": "Encontra informação prática ligada ao lugar que pode tornar o dia a dia mais fácil.",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "about.find.essentials.body_2": {
       "key": "about.find.essentials.body_2",
@@ -3837,26 +3842,26 @@
     "about.take_part.kicker": {
       "key": "about.take_part.kicker",
       "en": "Take part",
-      "pt": "Participe",
+      "pt": "Participa",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "about.take_part.title": {
       "key": "about.take_part.title",
       "en": "Take part",
-      "pt": "Participe",
+      "pt": "Participa",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "about.take_part.body_1": {
       "key": "about.take_part.body_1",
@@ -3873,14 +3878,14 @@
     "about.take_part.intro_list": {
       "key": "about.take_part.intro_list",
       "en": "You can:",
-      "pt": "Pode:",
+      "pt": "Podes:",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "about.take_part.item_1": {
       "key": "about.take_part.item_1",
@@ -3933,26 +3938,26 @@
     "about.take_part.body_3": {
       "key": "about.take_part.body_3",
       "en": "If you are submitting something on behalf of an organization or activity, provide the clearest available original or provider source.",
-      "pt": "Se estiver a enviar algo em nome de uma organização ou atividade, forneça a fonte original ou da entidade mais clara que estiver disponível.",
+      "pt": "Se estiveres a enviar algo em nome de uma organização ou atividade, fornece a fonte original ou da entidade mais clara que estiver disponível.",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "about.take_part.body_4": {
       "key": "about.take_part.body_4",
       "en": "If you find an error, a correction is welcome.",
-      "pt": "Se encontrar um erro, agradecemos a correção.",
+      "pt": "Se encontrares um erro, agradecemos que nos avises.",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "about.take_part.action": {
       "key": "about.take_part.action",
@@ -4413,14 +4418,14 @@
     "mindelo.hero.lede": {
       "key": "mindelo.hero.lede",
       "en": "Use the guide to understand a local system, then search or browse the directory to find a useful place. Selecting a place shows its details and, when a location has been cleared for spatial publication, centers it on the map.",
-      "pt": "Use o guia para compreender um sistema local e, depois, pesquise ou navegue pelo diretório para encontrar um lugar útil. Ao selecionar um lugar, verá os respetivos detalhes e, quando a localização estiver aprovada para publicação espacial, o mapa centra-se nesse ponto.",
+      "pt": "Usa o guia para compreender um sistema local e, depois, pesquisa ou explora o diretório para encontrar um lugar útil. Ao escolheres um lugar, vês os respetivos detalhes e, quando a localização estiver aprovada para publicação espacial, o mapa centra-se nesse ponto.",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "mindelo.hero.scope": {
       "key": "mindelo.hero.scope",
@@ -4569,14 +4574,14 @@
     "mindelo.quick_guide.intro": {
       "key": "mindelo.quick_guide.intro",
       "en": "Choose the situation closest to what you need now: arriving, getting around, living day to day, or staying longer.",
-      "pt": "Escolha a situação mais próxima do que precisa agora: chegar, deslocar-se, viver o dia a dia ou ficar mais tempo.",
+      "pt": "Escolhe a situação mais próxima do que precisas agora: chegar, deslocar-te, viver o dia a dia ou ficar mais tempo.",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "mindelo.guide.arriving.title": {
       "key": "mindelo.guide.arriving.title",
@@ -4749,26 +4754,26 @@
     "mindelo.directory.title": {
       "key": "mindelo.directory.title",
       "en": "Find a place, then see it on the map.",
-      "pt": "Encontre um lugar e veja-o depois no mapa.",
+      "pt": "Encontra um lugar e vê-o no mapa.",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "mindelo.directory.intro": {
       "key": "mindelo.directory.intro",
       "en": "Search or browse by category below. Select a place to see its details; where a location has been cleared for spatial publication, the map centers on it too. Directions always open in Google Maps separately.",
-      "pt": "Pesquise ou navegue por categoria abaixo. Selecione um lugar para ver os detalhes; quando uma localização estiver aprovada para publicação espacial, o mapa centra-se também nela. As indicações de percurso abrem sempre separadamente no Google Maps.",
+      "pt": "Pesquisa ou explora por categoria abaixo. Escolhe um lugar para ver os detalhes; quando uma localização estiver aprovada para publicação espacial, o mapa centra-se também nela. As indicações de percurso abrem sempre separadamente no Google Maps.",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "mindelo.search.label": {
       "key": "mindelo.search.label",
@@ -5217,26 +5222,26 @@
     "mindelo.sources.body_3": {
       "key": "mindelo.sources.body_3",
       "en": "Have a suggestion, correction, or local recommendation?",
-      "pt": "Tem uma sugestão, correção ou recomendação local?",
+      "pt": "Tens uma sugestão, correção ou recomendação local?",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "mindelo.sources.action": {
       "key": "mindelo.sources.action",
       "en": "Message A PRASA on WhatsApp",
-      "pt": "Enviar mensagem à A PRASA no WhatsApp",
+      "pt": "Envia uma mensagem à A PRASA no WhatsApp",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": null,
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
       "context_notes": "",
-      "linguistic_notes": ""
+      "linguistic_notes": "Portuguese-only brand-voice refinement. Source meaning preserved; shifted from formal third-person address to warmer conversational European Portuguese appropriate to Cabo Verde where context is promotional, invitational, or low-risk functional UI."
     },
     "mindelo.footer.description": {
       "key": "mindelo.footer.description",

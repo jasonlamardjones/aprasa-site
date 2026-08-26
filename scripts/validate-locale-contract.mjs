@@ -21,8 +21,10 @@ function fail(msg) {
 const data = loadLocaleData();
 const keys = Object.values(data.keys);
 
-// --- Overlay contract (counts) — combined r2 base (732) + r3 delta (21) + r4 delta (26) + r5 delta (2) ---
-if (keys.length !== 781) fail(`expected 781 total keys (732 r2 + 21 r3 + 26 r4 + 2 r5), got ${keys.length}`);
+// --- Overlay contract (counts) — combined r2 base (732) + r3 delta (21) + r4 delta (26) + r5 delta (2).
+// The r6 brand-voice delta overrides 42 existing PT values and adds no keys,
+// so every count below is unchanged by it. ---
+if (keys.length !== 781) fail(`expected 781 total keys (732 r2 + 21 r3 + 26 r4 + 2 r5, +0 from r6), got ${keys.length}`);
 const required = keys.filter((k) => k.scope_status === "REQUIRED_FOR_PT_LAUNCH");
 const unchanged = keys.filter((k) => k.scope_status === "INTENTIONALLY_UNCHANGED");
 if (required.length !== 753) fail(`expected 753 REQUIRED_FOR_PT_LAUNCH keys (705 + 20 + 26 + 2), got ${required.length}`);
@@ -38,6 +40,58 @@ if (data.provenance.delta4_revision !== "P03-PT-SOURCE-2026-08-25-r4") {
 }
 if (data.provenance.delta5_revision !== "P03-PT-SOURCE-2026-08-25-r5") {
   fail(`unexpected delta5_revision: ${data.provenance.delta5_revision}`);
+}
+if (data.provenance.delta6_revision !== "P03-PT-SOURCE-2026-08-26-r6") {
+  fail(`unexpected delta6_revision: ${data.provenance.delta6_revision}`);
+}
+if (data.provenance.delta6_package_id !== "P09-PT-BRAND-VOICE-2026-08-26-v1") {
+  fail(`unexpected delta6_package_id: ${data.provenance.delta6_package_id}`);
+}
+if (data.provenance.delta6_revision_class !== "OVERRIDE_EXISTING_KEYS") {
+  fail(`unexpected delta6_revision_class: ${data.provenance.delta6_revision_class}`);
+}
+
+// --- r6 delta spot checks (Project 09 PT brand-voice refinement) ---
+// Representative approved strings across the three affected surfaces. These
+// pin the tu-register wording so a later revision cannot silently revert it.
+const r6Spot = {
+  "home.hero.tagline": "Um lugar para encontrares o que te move.",
+  "home.meta.og_description": "Um lugar para encontrares o que te move.",
+  "home.hero.closing": "Encontra o que te move.",
+  "home.things.submit_action": "Envia à A PRASA para consideração",
+  "home.mindelo.title": "Orienta-te em Mindelo.",
+  "about.meta.og_description":
+    "Um lugar para encontrares o que te move. Uma praça pública digital independente e orientada por fontes, enraizada em Cabo Verde.",
+  "about.find.title": "O que podes encontrar",
+  "about.take_part.title": "Participa",
+  "about.take_part.intro_list": "Podes:",
+  "about.take_part.body_4": "Se encontrares um erro, agradecemos que nos avises.",
+  "mindelo.directory.title": "Encontra um lugar e vê-o no mapa.",
+  "mindelo.sources.body_3": "Tens uma sugestão, correção ou recomendação local?",
+};
+for (const [k, expected] of Object.entries(r6Spot)) {
+  if (!data.keys[k]) {
+    fail(`r6 key missing from locale data: ${k}`);
+  } else if (data.keys[k].pt !== expected) {
+    fail(`${k} PT does not match the approved Project 09 r6 brand-voice string`);
+  }
+}
+
+// --- r6 scope guard: category D copy must NOT have been converted to tu ---
+// These are factual / eligibility / source / trust rows adjacent to the r6
+// surfaces. They are deliberately outside the 42-key delta and must keep the
+// restrained third-person register.
+const r6MustNotChange = {
+  "home.training.emar.urgent_badge": "Oportunidade urgente",
+  "home.training.emar.deadline_prominent": "Candidate-se até 30 de agosto de 2026",
+  "mindelo.sources.body_2":
+    "A PRASA está disponível em inglês e português. O conteúdo em português é publicado após revisão humana.",
+  "ui.current": "Atual",
+};
+for (const [k, expected] of Object.entries(r6MustNotChange)) {
+  if (data.keys[k] && data.keys[k].pt !== expected) {
+    fail(`category-D key "${k}" was altered outside the approved r6 scope: got ${JSON.stringify(data.keys[k].pt)}`);
+  }
 }
 
 // --- r5 delta spot checks (EMAR / Kre+ urgent-opportunity treatment) ---
