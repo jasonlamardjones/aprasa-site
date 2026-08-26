@@ -288,14 +288,35 @@ html[lang="pt"] img.lang-only-pt { display: block; }
   display: inline-flex;
   align-items: center;
   min-height: 30px;
-  padding: .25rem .55rem;
-  border: 1px solid var(--ochre);
+  padding: .25rem .6rem;
+  border: 2px solid var(--ochre);
   border-radius: 999px;
   color: var(--ochre-text);
-  background: rgba(192,135,46,.1);
+  background: rgba(192,135,46,.18);
   font-size: .75rem;
-  font-weight: 700;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .02em;
   margin: 0 0 .5rem !important;
+}
+.urgent-badge-icon {
+  margin-right: .35em;
+  font-size: 1.05em;
+  line-height: 1;
+}
+/* The urgent badge's own paragraph wrapper (.action-tags) is shared with
+   ordinary tag rows elsewhere, so its spacing to the following line is
+   tightened only when it holds the urgent badge — the deadline/status line
+   that follows is subordinate to the urgent badge, not an ordinary sibling
+   tag row, so the two should read as one unit. */
+.action-tags:has(.urgent-badge) {
+  margin: 0 0 .4rem !important;
+}
+/* Spotlight badges (Local Spotlight / Learning Spotlight): comfortable
+   separation before the title/content/status line that follows, matching
+   the badge-to-content rhythm used across the site. */
+.spotlight-label {
+  margin: 0 0 .65rem !important;
 }
 .card-deadline {
   color: var(--ochre-text);
