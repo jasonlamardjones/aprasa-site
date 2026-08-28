@@ -21,14 +21,14 @@ function fail(msg) {
 const data = loadLocaleData();
 const keys = Object.values(data.keys);
 
-// --- Overlay contract (counts) — combined r2 base (732) + r3 delta (21) + r4 delta (26) + r5 delta (2).
-// The r6 brand-voice delta overrides 42 existing PT values and adds no keys,
-// so every count below is unchanged by it. ---
-if (keys.length !== 781) fail(`expected 781 total keys (732 r2 + 21 r3 + 26 r4 + 2 r5, +0 from r6), got ${keys.length}`);
+// --- Overlay contract (counts) — combined r2 base (732) + r3 delta (21) + r4 delta (26)
+// + r5 delta (2) + r7 delta (18). The r6 brand-voice delta overrides 42 existing PT
+// values and adds no keys, so every count below is unchanged by it. ---
+if (keys.length !== 799) fail(`expected 799 total keys (732 r2 + 21 r3 + 26 r4 + 2 r5 + 18 r7, +0 from r6), got ${keys.length}`);
 const required = keys.filter((k) => k.scope_status === "REQUIRED_FOR_PT_LAUNCH");
 const unchanged = keys.filter((k) => k.scope_status === "INTENTIONALLY_UNCHANGED");
-if (required.length !== 753) fail(`expected 753 REQUIRED_FOR_PT_LAUNCH keys (705 + 20 + 26 + 2), got ${required.length}`);
-if (unchanged.length !== 28) fail(`expected 28 INTENTIONALLY_UNCHANGED keys (27 + 1 + 0 + 0), got ${unchanged.length}`);
+if (required.length !== 771) fail(`expected 771 REQUIRED_FOR_PT_LAUNCH keys (705 + 20 + 26 + 2 + 18), got ${required.length}`);
+if (unchanged.length !== 28) fail(`expected 28 INTENTIONALLY_UNCHANGED keys (27 + 1 + 0 + 0 + 0), got ${unchanged.length}`);
 if (data.provenance.delta_revision !== "P03-PT-SOURCE-2026-08-25-r3") {
   fail(`unexpected delta_revision: ${data.provenance.delta_revision}`);
 }
@@ -49,6 +49,78 @@ if (data.provenance.delta6_package_id !== "P09-PT-BRAND-VOICE-2026-08-26-v1") {
 }
 if (data.provenance.delta6_revision_class !== "OVERRIDE_EXISTING_KEYS") {
   fail(`unexpected delta6_revision_class: ${data.provenance.delta6_revision_class}`);
+}
+if (data.provenance.delta7_revision !== "P03-PT-SOURCE-2026-08-28-r7") {
+  fail(`unexpected delta7_revision: ${data.provenance.delta7_revision}`);
+}
+if (data.provenance.delta7_package_id !== "aprasa-pt-simabo-ways-to-help-r7-delta") {
+  fail(`unexpected delta7_package_id: ${data.provenance.delta7_package_id}`);
+}
+
+// --- r7 delta spot checks (Simabo Organizations & Ways to Help records) ---
+// Pins the three governed record identities, the shared contact action, and
+// every approved hours value, so a later revision cannot silently drift the
+// published times or introduce a standalone veterinary opportunity.
+const r7Keys = [
+  "ui.ways_to_help",
+  "ui.current_hours",
+  "ui.contact",
+  "home.help.simabo.contact_action",
+  "home.help.simabo.checked",
+  "home.help.simabo.detail_checked",
+  "home.help.simabo.contact_for_details",
+  "home.help.simabo.leaflet_alt",
+  "home.help.record.simabo.body_1",
+  "home.help.record.simabo.body_2",
+  "home.help.record.simabo.body_3",
+  "home.help.record.simabo-walk-dogs.title",
+  "home.help.record.simabo-walk-dogs.body_1",
+  "home.help.record.simabo-walk-dogs.body_2",
+  "home.help.record.simabo-walk-dogs.hours",
+  "home.help.record.simabo-cats.title",
+  "home.help.record.simabo-cats.body_1",
+  "home.help.record.simabo-cats.hours",
+];
+for (const k of r7Keys) {
+  if (!data.keys[k]) fail(`r7 key missing from locale data: ${k}`);
+}
+const r7Spot = {
+  "ui.ways_to_help": "Formas de ajudar",
+  "ui.current_hours": "Horário atual",
+  "ui.contact": "Contacto",
+  "home.help.simabo.contact_action": "Contactar a Simabo",
+  "home.help.record.simabo-walk-dogs.title": "Passear cães com a Simabo",
+  "home.help.record.simabo-cats.title": "Ajudar a cuidar dos gatos da Simabo",
+  "home.help.record.simabo-walk-dogs.hours": "07:00–13:00 ou 13:00–18:30",
+  "home.help.record.simabo-cats.hours": "09:00–18:00",
+};
+for (const [k, expected] of Object.entries(r7Spot)) {
+  if (data.keys[k] && data.keys[k].pt !== expected) {
+    fail(`${k} PT does not match the approved Project 09 r7 string: got ${JSON.stringify(data.keys[k].pt)}`);
+  }
+}
+// Approved Simabo hours are factual and must survive verbatim in BOTH locales.
+const r7HoursEn = {
+  "home.help.record.simabo-walk-dogs.hours": "07:00–13:00 or 13:00–18:30",
+  "home.help.record.simabo-cats.hours": "09:00–18:00",
+};
+for (const [k, expected] of Object.entries(r7HoursEn)) {
+  if (data.keys[k] && data.keys[k].en !== expected) {
+    fail(`${k} EN does not match the approved Simabo hours: got ${JSON.stringify(data.keys[k].en)}`);
+  }
+}
+// Clinical/veterinary support is contextual inside the general Simabo profile
+// only. No r7 key may carry it as a standalone opportunity title or action.
+for (const k of r7Keys) {
+  const row = data.keys[k];
+  if (!row) continue;
+  const isGeneralProfileBody = k === "home.help.record.simabo.body_2";
+  if (isGeneralProfileBody) continue;
+  for (const text of [row.en, row.pt]) {
+    if (text && /veterinar|veterinár|nurse|enfermeir|clinical work|trabalho clínico/i.test(text)) {
+      fail(`r7 key "${k}" carries clinical/veterinary language outside the general Simabo profile body`);
+    }
+  }
 }
 
 // --- r6 delta spot checks (Project 09 PT brand-voice refinement) ---

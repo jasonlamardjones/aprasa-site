@@ -66,6 +66,13 @@ const ALLOWED_UNTRANSLATED = new Set([
   'SabMais',
   'Associação SabMais',
   'São Vicente',
+  // Simabo: organization identity (card title, dialog title and provider
+  // line) plus its public volunteer address. Both are locale-independent
+  // facts, deliberately absent from the governed overlay for the same reason
+  // as the other provider identities above — the address in particular must
+  // stay byte-identical in both locales.
+  'Simabo',
+  'volunteers@simabo.org',
   // Locale-matched temporary thumbnail alt text for the EMAR / Kre+ cards:
   // both the EN and PT variant of each image (and its alt) is present in
   // the shared EN source and shown/hidden per-locale by CSS (.lang-only-en
