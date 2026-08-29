@@ -19,17 +19,8 @@
     "media_manifest_title": "Automation Fixture — Ready Event",
     "detail_page": "things-to-do/automation-fixture-ready-event/",
     "free_admission": true,
-    "display": {
-      "status": "20 September 2026 · 18:30",
-      "meta": "Fixture Venue · Free admission",
-      "checked": "Checked 29 August 2026"
-    },
-    "media": {
-      "asset": "assets/events/part-ilhas-nuno-miranda-flyer.jpg",
-      "alt": "Fixture media used only for publication-automation testing.",
-      "width": 1310,
-      "height": 1638
-    },
+    "display": { "status": "20 September 2026 · 18:30", "meta": "Fixture Venue · Free admission", "checked": "Checked 29 August 2026" },
+    "media": { "asset": "assets/events/part-ilhas-nuno-miranda-flyer.jpg", "alt": "Fixture media used only for publication-automation testing.", "width": 1310, "height": 1638 },
     "card_action": { "label": "Event listing", "url": "https://example.org/automation-fixture-ready-event" },
     "detail": {
       "facts": [
@@ -41,11 +32,7 @@
       "checked": "Checked 29 August 2026 against the approved fixture packet.",
       "action_label": "Event listing"
     },
-    "seo": {
-      "description": "Non-public fixture for A PRASA Things-to-Do publication automation.",
-      "title": "Automation Fixture — Ready Event | A PRASA",
-      "schema_type": "Event"
-    }
+    "seo": { "description": "Non-public fixture for A PRASA Things-to-Do publication automation.", "title": "Automation Fixture — Ready Event | A PRASA", "schema_type": "Event" }
   },
   "localization": {
     "pt_status": "approved",
@@ -70,24 +57,7 @@
       "event.automation-fixture-ready-event.detail.fact.where.value_display": "Fixture Venue"
     }
   },
-  "media": {
-    "rights_status": "approved",
-    "alt_status": "approved",
-    "source_url": "https://example.org/automation-fixture-ready-event",
-    "local_asset": "assets/events/part-ilhas-nuno-miranda-flyer.jpg"
-  },
-  "governance": {
-    "publication_authorized": true,
-    "project03_status": "approved",
-    "project09_status": "approved",
-    "media_status": "approved"
-  },
-  "control": {
-    "dry_run": true,
-    "as_of": "2026-09-20",
-    "allow_branch": false,
-    "allow_commit": false,
-    "allow_pr": false,
-    "merge_allowed": false
-  }
+  "media": { "rights_status": "approved", "alt_status": "approved", "source_url": "https://example.org/automation-fixture-ready-event", "local_asset": "assets/events/part-ilhas-nuno-miranda-flyer.jpg" },
+  "governance": { "publication_authorized": true, "project03_status": "approved", "project09_status": "approved", "media_status": "approved" },
+  "control": { "dry_run": true, "as_of": "2026-08-29", "allow_branch": false, "allow_commit": false, "allow_pr": false, "merge_allowed": false }
 }
