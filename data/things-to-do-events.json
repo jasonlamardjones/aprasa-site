@@ -190,6 +190,37 @@
         "action_label": "Event listing"
       },
       "seo": {"description": "Exposição dos trabalhos finais do projeto Oficina Contemporânea Lata is on view at Centro Cultural do Mindelo, 30 July–29 August 2026.", "title": "Oficina Contemporânea Lata — Final Works Exhibition at Centro Cultural do Mindelo | A PRASA", "schema_type": "ExhibitionEvent"}
+    },
+    {
+      "id": "part-ilhas-artemisa-ferreira",
+      "kind": "dated-event",
+      "title": "PART_ILHAS — ciclo de conversas com Artemisa Ferreira",
+      "provider": "Centro Cultural do Mindelo",
+      "summary": "Join filmmaker and poet Artemisa Ferreira for a PART_ILHAS conversation about creative process, images, intention and what happens before a work takes shape.",
+      "category": "culture",
+      "location": {"name": "Centro Cultural do Mindelo", "street": "Avenida Marginal", "locality": "Mindelo, São Vicente"},
+      "source_url": "https://cvcultural.cv/eventos/part-ilhas-ciclo-com-a-cineasta-artemisa-ferreira",
+      "source_type": "official-event-listing",
+      "start_datetime": "2026-08-29T18:30:00-01:00",
+      "end_datetime": null,
+      "end_date": "2026-08-29",
+      "checked_at": "2026-08-29",
+      "publication_state": "published",
+      "media_policy": "required",
+      "media_manifest_title": "PART_ILHAS — ciclo de conversas com Artemisa Ferreira",
+      "detail_page": "things-to-do/part-ilhas-artemisa-ferreira/",
+      "free_admission": true,
+      "display": {"status": "Saturday, 29 August 2026 · 18:30", "meta": "Centro Cultural do Mindelo · Mindelo, São Vicente", "checked": "Checked 29 August 2026"},
+      "media": {"asset": "assets/events/part-ilhas-artemisa-ferreira-flyer.jpg", "alt": "PART_ILHAS 1ª edição 2026 poster: Ciclo Conversas with Artemisa Ferreira, cineasta/poetisa, Saturday 29 August at 18h30, entrada livre, at Centro Cultural do Mindelo, over a photograph of stony ground crossed by the shadow of a person holding a camera.", "width": 1110, "height": 1387},
+      "card_action": {"label": "Event listing", "url": "https://cvcultural.cv/eventos/part-ilhas-ciclo-com-a-cineasta-artemisa-ferreira"},
+      "detail": {
+        "facts": [{"label": "Date", "value": "Saturday, 29 August 2026 · 18:30"}, {"label": "Guest", "value": "Artemisa Ferreira · Filmmaker and poet"}, {"label": "Where", "value": "Centro Cultural do Mindelo · Avenida Marginal, Mindelo, São Vicente"}, {"label": "Admission", "value": "Free admission"}],
+        "body": "PART_ILHAS is a creative-conversation series. This edition with Artemisa Ferreira focuses on image, intention and creative process, including what images reveal or leave unsaid and the relationship between scenes, silence and creation.",
+        "good_to_know": "Confirm current access information with Centro Cultural do Mindelo before attending.",
+        "checked": "Checked 29 August 2026 against the current official event pages.",
+        "action_label": "See official event page"
+      },
+      "seo": {"description": "PART_ILHAS conversation with filmmaker and poet Artemisa Ferreira about creative process, images, intention and what happens before a work takes shape at Centro Cultural do Mindelo.", "title": "PART_ILHAS — ciclo de conversas com Artemisa Ferreira | A PRASA", "schema_type": "Event"}
     }
   ]
 }

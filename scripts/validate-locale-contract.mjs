@@ -22,13 +22,13 @@ const data = loadLocaleData();
 const keys = Object.values(data.keys);
 
 // --- Overlay contract (counts) — combined r2 base (732) + r3 delta (21) + r4 delta (26)
-// + r5 delta (2) + r7 delta (19). The r6 brand-voice delta overrides 42 existing PT
-// values and adds no keys, so every count below is unchanged by it. ---
-if (keys.length !== 800) fail(`expected 800 total keys (732 r2 + 21 r3 + 26 r4 + 2 r5 + 19 r7, +0 from r6), got ${keys.length}`);
+// + r5 delta (2) + r7 delta (19) + r8 delta (21). The r6 brand-voice delta overrides
+// 42 existing PT values and adds no keys, so every count below is unchanged by it. ---
+if (keys.length !== 821) fail(`expected 821 total keys (732 r2 + 21 r3 + 26 r4 + 2 r5 + 19 r7 + 21 r8, +0 from r6), got ${keys.length}`);
 const required = keys.filter((k) => k.scope_status === "REQUIRED_FOR_PT_LAUNCH");
 const unchanged = keys.filter((k) => k.scope_status === "INTENTIONALLY_UNCHANGED");
-if (required.length !== 772) fail(`expected 772 REQUIRED_FOR_PT_LAUNCH keys (705 + 20 + 26 + 2 + 19), got ${required.length}`);
-if (unchanged.length !== 28) fail(`expected 28 INTENTIONALLY_UNCHANGED keys (27 + 1 + 0 + 0 + 0), got ${unchanged.length}`);
+if (required.length !== 793) fail(`expected 793 REQUIRED_FOR_PT_LAUNCH keys (705 + 20 + 26 + 2 + 19 + 21), got ${required.length}`);
+if (unchanged.length !== 28) fail(`expected 28 INTENTIONALLY_UNCHANGED keys (27 + 1 + 0 + 0 + 0 + 0), got ${unchanged.length}`);
 if (data.provenance.delta_revision !== "P03-PT-SOURCE-2026-08-25-r3") {
   fail(`unexpected delta_revision: ${data.provenance.delta_revision}`);
 }
@@ -55,6 +55,74 @@ if (data.provenance.delta7_revision !== "P03-PT-SOURCE-2026-08-28-r7") {
 }
 if (data.provenance.delta7_package_id !== "aprasa-pt-simabo-ways-to-help-r7-delta") {
   fail(`unexpected delta7_package_id: ${data.provenance.delta7_package_id}`);
+}
+if (data.provenance.delta8_revision !== "P03-PT-SOURCE-2026-08-29-r8") {
+  fail(`unexpected delta8_revision: ${data.provenance.delta8_revision}`);
+}
+if (data.provenance.delta8_package_id !== "aprasa-pt-part-ilhas-artemisa-ferreira-r8-delta") {
+  fail(`unexpected delta8_package_id: ${data.provenance.delta8_package_id}`);
+}
+
+// --- r8 delta spot checks (same-day PART_ILHAS / Artemisa Ferreira event) ---
+// Pins the governed date/time, the free-admission fact established by the
+// Project 03 ruling of 29 August 2026, the official-title identity policy, and
+// the event-image alt approved by Project 09 after inspecting the flyer.
+const r8Id = "event.part-ilhas-artemisa-ferreira";
+const r8Keys = [
+  "title", "summary", "display.status", "display.meta", "display.checked",
+  "media.alt", "card_action.label", "detail.good_to_know", "detail.body",
+  "detail.checked", "detail.action_label", "seo.description", "seo.title",
+  "detail.fact.date.label", "detail.fact.date.value_display",
+  "detail.fact.guest.label", "detail.fact.guest.value_display",
+  "detail.fact.where.label", "detail.fact.where.value_display",
+  "detail.fact.admission.label", "detail.fact.admission.value_display",
+].map((k) => `${r8Id}.${k}`);
+for (const k of r8Keys) {
+  if (!data.keys[k]) fail(`r8 key missing from locale data: ${k}`);
+}
+const r8Spot = {
+  [`${r8Id}.display.status`]: "Sábado, 29 de agosto de 2026 · 18:30",
+  [`${r8Id}.detail.fact.date.value_display`]: "Sábado, 29 de agosto de 2026 · 18:30",
+  [`${r8Id}.detail.fact.guest.label`]: "Convidada",
+  [`${r8Id}.detail.fact.guest.value_display`]: "Artemisa Ferreira · Cineasta e poeta",
+  [`${r8Id}.detail.fact.admission.label`]: "Admissão",
+  [`${r8Id}.detail.fact.admission.value_display`]: "Entrada livre",
+  [`${r8Id}.card_action.label`]: "Ver evento",
+  [`${r8Id}.detail.action_label`]: "Ver página oficial do evento",
+};
+for (const [k, expected] of Object.entries(r8Spot)) {
+  if (data.keys[k] && data.keys[k].pt !== expected) {
+    fail(`${k} PT does not match the approved Project 09 r8 string: got ${JSON.stringify(data.keys[k].pt)}`);
+  }
+}
+// The official event title is identity-preserved verbatim in both locales.
+const r8Title = data.keys[`${r8Id}.title`];
+if (r8Title) {
+  if (r8Title.identity_policy !== "PRESERVE_OFFICIAL_EVENT_TITLE") {
+    fail(`${r8Id}.title must carry identity_policy PRESERVE_OFFICIAL_EVENT_TITLE`);
+  }
+  if (r8Title.en !== r8Title.pt) {
+    fail(`${r8Id}.title must be preserved verbatim across locales`);
+  }
+}
+// The 18:30 start time is factual and must survive verbatim in both locales.
+for (const k of [`${r8Id}.display.status`, `${r8Id}.detail.fact.date.value_display`]) {
+  const row = data.keys[k];
+  if (row && !(row.en.includes("18:30") && row.pt.includes("18:30"))) {
+    fail(`${k} does not carry the approved 18:30 start time in both locales`);
+  }
+}
+// Project 03 ruled admission free on 29 August 2026; the PT alt is authorized
+// to carry "Entrada Livre". No r8 string may introduce a ticket price, a
+// registration requirement, or an eligibility restriction.
+for (const k of r8Keys) {
+  const row = data.keys[k];
+  if (!row) continue;
+  for (const text of [row.en, row.pt]) {
+    if (text && /\b(ticket|bilhete|inscri[cç][aã]o obrigat|registration required|reserva obrigat|\d+\s?(CVE|EUR|€))\b/i.test(text)) {
+      fail(`r8 key "${k}" introduces ticketing, registration or eligibility language that is not in the approved packet`);
+    }
+  }
 }
 
 // --- r7 delta spot checks (single Simabo Organizations & Ways to Help record) ---
