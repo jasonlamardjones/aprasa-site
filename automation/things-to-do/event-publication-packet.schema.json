@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aprasa.org/internal/schemas/things-to-do-event-publication-packet-v1.json",
+  "title": "A PRASA Things-to-Do approved event publication packet",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "event", "localization", "media", "governance", "control"],
+  "properties": {
+    "contract_version": { "const": 1 },
+    "event": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["id", "kind", "title", "provider", "summary", "category", "location", "source_url", "source_type", "checked_at", "publication_state", "media_policy", "media_manifest_title", "detail_page", "display", "detail", "seo"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+        "kind": { "const": "dated-event" },
+        "title": { "type": "string", "minLength": 1 },
+        "provider": { "type": "string", "minLength": 1 },
+        "summary": { "type": "string", "minLength": 1 },
+        "category": { "type": "string", "minLength": 1 },
+        "location": { "type": "object" },
+        "source_url": { "type": "string", "minLength": 1 },
+        "source_type": { "type": "string", "minLength": 1 },
+        "checked_at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "publication_state": { "enum": ["draft", "published", "expired", "withdrawn"] },
+        "media_policy": { "enum": ["required", "fallback_allowed"] },
+        "media_manifest_title": { "type": "string", "minLength": 1 },
+        "detail_page": { "type": "string", "pattern": "^things-to-do/[a-z0-9]+(?:-[a-z0-9]+)*/$" },
+        "display": { "type": "object" },
+        "detail": { "type": "object" },
+        "seo": { "type": "object" }
+      }
+    },
+    "localization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pt_status", "new_strings_required", "pt_values"],
+      "properties": {
+        "pt_status": { "enum": ["approved", "approval_required", "not_required"] },
+        "new_strings_required": { "type": "boolean" },
+        "pt_values": { "type": "object" }
+      }
+    },
+    "media": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rights_status", "alt_status", "source_url", "local_asset"],
+      "properties": {
+        "rights_status": { "enum": ["approved", "review_required", "not_required"] },
+        "alt_status": { "enum": ["approved", "review_required", "not_required"] },
+        "source_url": { "type": ["string", "null"] },
+        "local_asset": { "type": ["string", "null"] }
+      }
+    },
+    "governance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["publication_authorized", "project03_status", "project09_status", "media_status"],
+      "properties": {
+        "publication_authorized": { "type": "boolean" },
+        "project03_status": { "enum": ["approved", "approval_required"] },
+        "project09_status": { "enum": ["approved", "approval_required", "not_required"] },
+        "media_status": { "enum": ["approved", "review_required", "not_required"] }
+      }
+    },
+    "control": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dry_run", "as_of", "allow_branch", "allow_commit", "allow_pr", "merge_allowed"],
+      "properties": {
+        "dry_run": { "const": true },
+        "as_of": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "allow_branch": { "type": "boolean" },
+        "allow_commit": { "type": "boolean" },
+        "allow_pr": { "type": "boolean" },
+        "merge_allowed": { "const": false }
+      }
+    }
+  }
+}
