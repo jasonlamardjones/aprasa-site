@@ -18,6 +18,7 @@ const EN_ROUTES = [
   '/about/',
   '/things-to-do/mon-pikenin/',
   '/things-to-do/part-ilhas-nuno-miranda/',
+  '/things-to-do/part-ilhas-artemisa-ferreira/',
   '/things-to-do/arquitectura-da-imperfeicao/',
   '/things-to-do/water-adventure-activities-mindelo/',
   '/things-to-do/sinergia-da-materia/',

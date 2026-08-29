@@ -1,6 +1,6 @@
 {
   "provenance": {
-    "source_revision": "P03-PT-SOURCE-2026-08-28-r7",
+    "source_revision": "P03-PT-SOURCE-2026-08-29-r8",
     "source_package_id": "aprasa-pt-launch-source-concrete-rows",
     "semantic_authority": "Project 03 — A PRASA Business, Brand & Administration",
     "project_09_verdict": "READY FOR PROJECT 04 IMPLEMENTATION HANDOFF",
@@ -15,7 +15,8 @@
       "data/locales/pt-overlay-r4-delta.source.json",
       "data/locales/pt-overlay-r5-delta.source.json",
       "data/locales/pt-overlay-r6-delta.source.json",
-      "data/locales/pt-overlay-r7-delta.source.json"
+      "data/locales/pt-overlay-r7-delta.source.json",
+      "data/locales/pt-overlay-r8-delta.source.json"
     ],
     "base_revision": "P03-PT-SOURCE-2026-08-25-r2",
     "delta_revision": "P03-PT-SOURCE-2026-08-25-r3",
@@ -25,18 +26,21 @@
     "delta6_package_id": "P09-PT-BRAND-VOICE-2026-08-26-v1",
     "delta6_revision_class": "OVERRIDE_EXISTING_KEYS",
     "delta7_revision": "P03-PT-SOURCE-2026-08-28-r7",
-    "delta7_package_id": "aprasa-pt-simabo-ways-to-help-r7-delta"
+    "delta7_package_id": "aprasa-pt-simabo-ways-to-help-r7-delta",
+    "delta8_revision": "P03-PT-SOURCE-2026-08-29-r8",
+    "delta8_package_id": "aprasa-pt-part-ilhas-artemisa-ferreira-r8-delta"
   },
   "counts": {
-    "total_rows": 800,
-    "required_for_pt_launch": 772,
+    "total_rows": 821,
+    "required_for_pt_launch": 793,
     "intentionally_unchanged": 28,
-    "approved_rows_total": 800,
+    "approved_rows_total": 821,
     "r3_delta_rows": 21,
     "r4_delta_rows": 26,
     "r5_delta_rows": 2,
     "r6_override_rows": 42,
-    "r7_delta_rows": 19
+    "r7_delta_rows": 19,
+    "r8_delta_rows": 21
   },
   "keys": {
     "global.skip_to_content": {
@@ -9637,6 +9641,258 @@
       "translation_status": "APPROVED",
       "source_revision": "P03-PT-SOURCE-2026-08-28-r7",
       "context_notes": "Home Organizations & Ways to Help — single Simabo record; closing line. Operational participation details and any donation arrangements are deliberately obtained from Simabo directly rather than published here.",
+      "linguistic_notes": ""
+    },
+    "event.part-ilhas-artemisa-ferreira.title": {
+      "key": "event.part-ilhas-artemisa-ferreira.title",
+      "en": "PART_ILHAS — ciclo de conversas com Artemisa Ferreira",
+      "pt": "PART_ILHAS — ciclo de conversas com Artemisa Ferreira",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "PRESERVE_OFFICIAL_EVENT_TITLE",
+      "record_id": "part-ilhas-artemisa-ferreira",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-29-r8",
+      "context_notes": "Home Things-to-Do card and generated EN/PT detail page for the same-day PART_ILHAS conversation with Artemisa Ferreira, 29 August 2026. Official event title, preserved verbatim in both locales per the incumbent event-title identity policy.",
+      "linguistic_notes": ""
+    },
+    "event.part-ilhas-artemisa-ferreira.summary": {
+      "key": "event.part-ilhas-artemisa-ferreira.summary",
+      "en": "Join filmmaker and poet Artemisa Ferreira for a PART_ILHAS conversation about creative process, images, intention and what happens before a work takes shape.",
+      "pt": "Junte-se à cineasta e poeta Artemisa Ferreira para uma conversa PART_ILHAS sobre processo criativo, imagens, intenção e o que acontece antes de uma obra ganhar forma.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "part-ilhas-artemisa-ferreira",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-29-r8",
+      "context_notes": "Home Things-to-Do card and generated EN/PT detail page for the same-day PART_ILHAS conversation with Artemisa Ferreira, 29 August 2026.",
+      "linguistic_notes": ""
+    },
+    "event.part-ilhas-artemisa-ferreira.display.status": {
+      "key": "event.part-ilhas-artemisa-ferreira.display.status",
+      "en": "Saturday, 29 August 2026 · 18:30",
+      "pt": "Sábado, 29 de agosto de 2026 · 18:30",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "part-ilhas-artemisa-ferreira",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-29-r8",
+      "context_notes": "Home Things-to-Do card and generated EN/PT detail page for the same-day PART_ILHAS conversation with Artemisa Ferreira, 29 August 2026.",
+      "linguistic_notes": ""
+    },
+    "event.part-ilhas-artemisa-ferreira.display.meta": {
+      "key": "event.part-ilhas-artemisa-ferreira.display.meta",
+      "en": "Centro Cultural do Mindelo · Mindelo, São Vicente",
+      "pt": "Centro Cultural do Mindelo · Mindelo, São Vicente",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "part-ilhas-artemisa-ferreira",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-29-r8",
+      "context_notes": "Home Things-to-Do card and generated EN/PT detail page for the same-day PART_ILHAS conversation with Artemisa Ferreira, 29 August 2026. Venue and place names are locale-independent, so the PT value is identical by design.",
+      "linguistic_notes": ""
+    },
+    "event.part-ilhas-artemisa-ferreira.display.checked": {
+      "key": "event.part-ilhas-artemisa-ferreira.display.checked",
+      "en": "Checked 29 August 2026",
+      "pt": "Revisto em 29 de agosto de 2026",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "part-ilhas-artemisa-ferreira",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-29-r8",
+      "context_notes": "Home Things-to-Do card and generated EN/PT detail page for the same-day PART_ILHAS conversation with Artemisa Ferreira, 29 August 2026.",
+      "linguistic_notes": ""
+    },
+    "event.part-ilhas-artemisa-ferreira.media.alt": {
+      "key": "event.part-ilhas-artemisa-ferreira.media.alt",
+      "en": "PART_ILHAS 1ª edição 2026 poster: Ciclo Conversas with Artemisa Ferreira, cineasta/poetisa, Saturday 29 August at 18h30, entrada livre, at Centro Cultural do Mindelo, over a photograph of stony ground crossed by the shadow of a person holding a camera.",
+      "pt": "Cartaz da 1.ª edição de 2026 do PART_ILHAS — ciclo de conversas com Artemisa Ferreira, cineasta/poetisa: sábado, 29 de agosto, às 18h30, Entrada Livre, no Centro Cultural do Mindelo, sobre uma fotografia de terreno pedregoso atravessado pela sombra de uma pessoa a segurar uma câmara.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "part-ilhas-artemisa-ferreira",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-29-r8",
+      "context_notes": "Home Things-to-Do card and generated EN/PT detail page for the same-day PART_ILHAS conversation with Artemisa Ferreira, 29 August 2026. Alt text for the founder-supplied official event flyer. Describes the visible artwork and transcribes the flyer's own event text; Project 03 expressly authorized \"Entrada Livre\" to appear in descriptive alt text.",
+      "linguistic_notes": ""
+    },
+    "event.part-ilhas-artemisa-ferreira.card_action.label": {
+      "key": "event.part-ilhas-artemisa-ferreira.card_action.label",
+      "en": "Event listing",
+      "pt": "Ver evento",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "part-ilhas-artemisa-ferreira",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-29-r8",
+      "context_notes": "Home Things-to-Do card and generated EN/PT detail page for the same-day PART_ILHAS conversation with Artemisa Ferreira, 29 August 2026.",
+      "linguistic_notes": ""
+    },
+    "event.part-ilhas-artemisa-ferreira.detail.good_to_know": {
+      "key": "event.part-ilhas-artemisa-ferreira.detail.good_to_know",
+      "en": "Confirm current access information with Centro Cultural do Mindelo before attending.",
+      "pt": "Confirme as informações atuais de acesso junto do Centro Cultural do Mindelo antes de ir.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "part-ilhas-artemisa-ferreira",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-29-r8",
+      "context_notes": "Home Things-to-Do card and generated EN/PT detail page for the same-day PART_ILHAS conversation with Artemisa Ferreira, 29 August 2026.",
+      "linguistic_notes": ""
+    },
+    "event.part-ilhas-artemisa-ferreira.detail.body": {
+      "key": "event.part-ilhas-artemisa-ferreira.detail.body",
+      "en": "PART_ILHAS is a creative-conversation series. This edition with Artemisa Ferreira focuses on image, intention and creative process, including what images reveal or leave unsaid and the relationship between scenes, silence and creation.",
+      "pt": "PART_ILHAS é um ciclo de conversas sobre criação. Esta edição, com Artemisa Ferreira, centra-se na imagem, na intenção e no processo criativo, explorando o que as imagens revelam ou deixam por dizer e a relação entre cenas, silêncio e criação.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "part-ilhas-artemisa-ferreira",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-29-r8",
+      "context_notes": "Home Things-to-Do card and generated EN/PT detail page for the same-day PART_ILHAS conversation with Artemisa Ferreira, 29 August 2026. The two approved sentences are carried as one paragraph: the incumbent detail-body architecture renders a single <p> and has no multi-paragraph representation.",
+      "linguistic_notes": ""
+    },
+    "event.part-ilhas-artemisa-ferreira.detail.checked": {
+      "key": "event.part-ilhas-artemisa-ferreira.detail.checked",
+      "en": "Checked 29 August 2026 against the current official event pages.",
+      "pt": "Revisto em 29 de agosto de 2026 com base nas páginas oficiais atuais do evento.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "part-ilhas-artemisa-ferreira",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-29-r8",
+      "context_notes": "Home Things-to-Do card and generated EN/PT detail page for the same-day PART_ILHAS conversation with Artemisa Ferreira, 29 August 2026.",
+      "linguistic_notes": ""
+    },
+    "event.part-ilhas-artemisa-ferreira.detail.action_label": {
+      "key": "event.part-ilhas-artemisa-ferreira.detail.action_label",
+      "en": "See official event page",
+      "pt": "Ver página oficial do evento",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "part-ilhas-artemisa-ferreira",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-29-r8",
+      "context_notes": "Home Things-to-Do card and generated EN/PT detail page for the same-day PART_ILHAS conversation with Artemisa Ferreira, 29 August 2026.",
+      "linguistic_notes": ""
+    },
+    "event.part-ilhas-artemisa-ferreira.seo.description": {
+      "key": "event.part-ilhas-artemisa-ferreira.seo.description",
+      "en": "PART_ILHAS conversation with filmmaker and poet Artemisa Ferreira about creative process, images, intention and what happens before a work takes shape at Centro Cultural do Mindelo.",
+      "pt": "Conversa PART_ILHAS com a cineasta e poeta Artemisa Ferreira sobre processo criativo, imagens, intenção e o que acontece antes de uma obra ganhar forma, no Centro Cultural do Mindelo.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "part-ilhas-artemisa-ferreira",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-29-r8",
+      "context_notes": "Home Things-to-Do card and generated EN/PT detail page for the same-day PART_ILHAS conversation with Artemisa Ferreira, 29 August 2026.",
+      "linguistic_notes": ""
+    },
+    "event.part-ilhas-artemisa-ferreira.seo.title": {
+      "key": "event.part-ilhas-artemisa-ferreira.seo.title",
+      "en": "PART_ILHAS — ciclo de conversas com Artemisa Ferreira | A PRASA",
+      "pt": "PART_ILHAS — ciclo de conversas com Artemisa Ferreira | A PRASA",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "part-ilhas-artemisa-ferreira",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-29-r8",
+      "context_notes": "Home Things-to-Do card and generated EN/PT detail page for the same-day PART_ILHAS conversation with Artemisa Ferreira, 29 August 2026. Carries the preserved official event title plus the A PRASA suffix, so the PT value is identical by design.",
+      "linguistic_notes": ""
+    },
+    "event.part-ilhas-artemisa-ferreira.detail.fact.date.label": {
+      "key": "event.part-ilhas-artemisa-ferreira.detail.fact.date.label",
+      "en": "Date",
+      "pt": "Data",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "part-ilhas-artemisa-ferreira",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-29-r8",
+      "context_notes": "Home Things-to-Do card and generated EN/PT detail page for the same-day PART_ILHAS conversation with Artemisa Ferreira, 29 August 2026.",
+      "linguistic_notes": ""
+    },
+    "event.part-ilhas-artemisa-ferreira.detail.fact.date.value_display": {
+      "key": "event.part-ilhas-artemisa-ferreira.detail.fact.date.value_display",
+      "en": "Saturday, 29 August 2026 · 18:30",
+      "pt": "Sábado, 29 de agosto de 2026 · 18:30",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "part-ilhas-artemisa-ferreira",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-29-r8",
+      "context_notes": "Home Things-to-Do card and generated EN/PT detail page for the same-day PART_ILHAS conversation with Artemisa Ferreira, 29 August 2026.",
+      "linguistic_notes": ""
+    },
+    "event.part-ilhas-artemisa-ferreira.detail.fact.guest.label": {
+      "key": "event.part-ilhas-artemisa-ferreira.detail.fact.guest.label",
+      "en": "Guest",
+      "pt": "Convidada",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "part-ilhas-artemisa-ferreira",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-29-r8",
+      "context_notes": "Home Things-to-Do card and generated EN/PT detail page for the same-day PART_ILHAS conversation with Artemisa Ferreira, 29 August 2026. Feminine form, agreeing with the guest.",
+      "linguistic_notes": ""
+    },
+    "event.part-ilhas-artemisa-ferreira.detail.fact.guest.value_display": {
+      "key": "event.part-ilhas-artemisa-ferreira.detail.fact.guest.value_display",
+      "en": "Artemisa Ferreira · Filmmaker and poet",
+      "pt": "Artemisa Ferreira · Cineasta e poeta",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "part-ilhas-artemisa-ferreira",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-29-r8",
+      "context_notes": "Home Things-to-Do card and generated EN/PT detail page for the same-day PART_ILHAS conversation with Artemisa Ferreira, 29 August 2026. Two-part value carried on one line with the incumbent · separator; the incumbent fact model has no multi-line representation.",
+      "linguistic_notes": ""
+    },
+    "event.part-ilhas-artemisa-ferreira.detail.fact.where.label": {
+      "key": "event.part-ilhas-artemisa-ferreira.detail.fact.where.label",
+      "en": "Where",
+      "pt": "Onde",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "part-ilhas-artemisa-ferreira",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-29-r8",
+      "context_notes": "Home Things-to-Do card and generated EN/PT detail page for the same-day PART_ILHAS conversation with Artemisa Ferreira, 29 August 2026.",
+      "linguistic_notes": ""
+    },
+    "event.part-ilhas-artemisa-ferreira.detail.fact.where.value_display": {
+      "key": "event.part-ilhas-artemisa-ferreira.detail.fact.where.value_display",
+      "en": "Centro Cultural do Mindelo · Avenida Marginal, Mindelo, São Vicente",
+      "pt": "Centro Cultural do Mindelo · Avenida Marginal, Mindelo, São Vicente",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "part-ilhas-artemisa-ferreira",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-29-r8",
+      "context_notes": "Home Things-to-Do card and generated EN/PT detail page for the same-day PART_ILHAS conversation with Artemisa Ferreira, 29 August 2026. Venue and address are locale-independent, so the PT value is identical by design.",
+      "linguistic_notes": ""
+    },
+    "event.part-ilhas-artemisa-ferreira.detail.fact.admission.label": {
+      "key": "event.part-ilhas-artemisa-ferreira.detail.fact.admission.label",
+      "en": "Admission",
+      "pt": "Admissão",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "part-ilhas-artemisa-ferreira",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-29-r8",
+      "context_notes": "Home Things-to-Do card and generated EN/PT detail page for the same-day PART_ILHAS conversation with Artemisa Ferreira, 29 August 2026.",
+      "linguistic_notes": ""
+    },
+    "event.part-ilhas-artemisa-ferreira.detail.fact.admission.value_display": {
+      "key": "event.part-ilhas-artemisa-ferreira.detail.fact.admission.value_display",
+      "en": "Free admission",
+      "pt": "Entrada livre",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "part-ilhas-artemisa-ferreira",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-29-r8",
+      "context_notes": "Home Things-to-Do card and generated EN/PT detail page for the same-day PART_ILHAS conversation with Artemisa Ferreira, 29 August 2026. Project 03 factual ruling of 29 August 2026 established free admission from the official flyer.",
       "linguistic_notes": ""
     }
   }

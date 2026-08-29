@@ -74,6 +74,22 @@
     },
     {
       "section": "things-to-do",
+      "title": "PART_ILHAS — ciclo de conversas com Artemisa Ferreira",
+      "provider": "Centro Cultural do Mindelo",
+      "source_url": "https://www.agendacultural.cv/eventos/part-ilhas-ciclo-com-a-cineasta-artemisa-ferreira",
+      "media_type": "provider-supplied",
+      "media_state": "authentic-present",
+      "media_source": "Founder-supplied official PART_ILHAS event flyer (1ª edição, 2026)",
+      "media_asset": "assets/events/part-ilhas-artemisa-ferreira-flyer.jpg",
+      "fallback_category": "things-visual-arts",
+      "fallback_reason": null,
+      "media_provenance": "Official event flyer supplied directly by the founder on 2026-08-29 as the exact image published on the Agenda Cultural de Cabo Verde listing for this event; ingested byte-for-byte as supplied (1110 × 1387 baseline JPEG, 345012 bytes, sha256 7be0099fdbe43429f267df2e55e5f52e713eaa99eb2d8674b845fc74eb9a0fca, not re-encoded, not cropped). Both official source hosts were unreachable from the implementation environment (egress policy denied CONNECT to www.agendacultural.cv and cvcultural.cv), so founder supply is the provenance route — the same route already used for the Nuno Miranda PART_ILHAS flyer. The flyer confirms date, time, venue, guest, 1ª edição 2026, Entrada Livre, and the Ministério da Cultura e das Indústrias Criativas / Centro Cultural do Mindelo (CCM) marks. Institutional logos are part of the flyer artwork only and are not separately authorized or extracted.",
+      "media_asset_source_url": null,
+      "media_checked_date": "2026-08-29",
+      "media_alt": "PART_ILHAS 1ª edição 2026 poster: Ciclo Conversas with Artemisa Ferreira, cineasta/poetisa, Saturday 29 August at 18h30, entrada livre, at Centro Cultural do Mindelo, over a photograph of stony ground crossed by the shadow of a person holding a camera."
+    },
+    {
+      "section": "things-to-do",
       "title": "PART_ILHAS — ciclo de conversas com Nuno Miranda",
       "provider": "Centro Cultural do Mindelo",
       "source_url": "https://www.agendacultural.cv/eventos/part-ilhas-ciclo-de-conversas-com-o-cineasta-fotografo-nuno-miranda-no-centro-cultural-do-mindelo",
