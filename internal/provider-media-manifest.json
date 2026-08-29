@@ -407,6 +407,22 @@
       "media_asset_source_url": "https://assets.zyrosite.com/YBg8Ma3RE0TVN95P/img_8677-mk35q5MBKjhB7n8n.JPG",
       "media_checked_date": "2026-08-17",
       "media_alt": "A SabMais volunteer and student study together in a Mindelo classroom."
+    },
+    {
+      "section": "organizations-help",
+      "title": "Simabo",
+      "provider": "Simabo",
+      "source_url": "Direct correspondence with Simabo (Stefany and Silvia) and the Simabo-supplied volunteer leaflet, 27 August 2026",
+      "media_type": "provider-supplied",
+      "media_state": "authentic-present",
+      "media_source": "Simabo-supplied volunteer leaflet (dog walking and cat volunteering)",
+      "media_asset": "assets/card-media/organizations-help/simabo-volunteer-leaflet.png",
+      "fallback_category": "help-volunteer",
+      "fallback_reason": null,
+      "media_provenance": "Volunteer leaflet supplied directly by Silvia (Simabo) on 27 August 2026 and explicitly authorized for A PRASA use as current Simabo volunteer supporting/promotional media. Ingested byte-for-byte as supplied (1035 \u00d7 1600 PNG, not re-encoded, not cropped). It is the main provider image for this record: shown contained on the compact card via the existing card-media-poster pattern and full-width in the Details dialog, where the leaflet text is readable. The dog/cat mark inside the leaflet is part of the leaflet artwork only \u2014 it is NOT separately authorized, and no standalone Simabo logo asset was extracted or created. No unrelated Simabo photography is authorized by this grant.",
+      "media_asset_source_url": null,
+      "media_checked_date": "2026-08-27",
+      "media_alt": "Simabo volunteer leaflet: volunteer at our shelters — walk our dogs or hang out with the cats. Visit the dog shelter every day from 7 am to 1 pm or 1 pm to 6:30 pm; hang out with the cats from 9 am to 6 pm in the office building."
     }
   ]
 }

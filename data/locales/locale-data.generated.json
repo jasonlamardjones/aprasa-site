@@ -1,6 +1,6 @@
 {
   "provenance": {
-    "source_revision": "P03-PT-SOURCE-2026-08-26-r6",
+    "source_revision": "P03-PT-SOURCE-2026-08-28-r7",
     "source_package_id": "aprasa-pt-launch-source-concrete-rows",
     "semantic_authority": "Project 03 — A PRASA Business, Brand & Administration",
     "project_09_verdict": "READY FOR PROJECT 04 IMPLEMENTATION HANDOFF",
@@ -14,7 +14,8 @@
       "data/locales/pt-overlay-r3-delta.source.json",
       "data/locales/pt-overlay-r4-delta.source.json",
       "data/locales/pt-overlay-r5-delta.source.json",
-      "data/locales/pt-overlay-r6-delta.source.json"
+      "data/locales/pt-overlay-r6-delta.source.json",
+      "data/locales/pt-overlay-r7-delta.source.json"
     ],
     "base_revision": "P03-PT-SOURCE-2026-08-25-r2",
     "delta_revision": "P03-PT-SOURCE-2026-08-25-r3",
@@ -22,17 +23,20 @@
     "delta5_revision": "P03-PT-SOURCE-2026-08-25-r5",
     "delta6_revision": "P03-PT-SOURCE-2026-08-26-r6",
     "delta6_package_id": "P09-PT-BRAND-VOICE-2026-08-26-v1",
-    "delta6_revision_class": "OVERRIDE_EXISTING_KEYS"
+    "delta6_revision_class": "OVERRIDE_EXISTING_KEYS",
+    "delta7_revision": "P03-PT-SOURCE-2026-08-28-r7",
+    "delta7_package_id": "aprasa-pt-simabo-ways-to-help-r7-delta"
   },
   "counts": {
-    "total_rows": 781,
-    "required_for_pt_launch": 753,
+    "total_rows": 800,
+    "required_for_pt_launch": 772,
     "intentionally_unchanged": 28,
-    "approved_rows_total": 781,
+    "approved_rows_total": 800,
     "r3_delta_rows": 21,
     "r4_delta_rows": 26,
     "r5_delta_rows": 2,
-    "r6_override_rows": 42
+    "r6_override_rows": 42,
+    "r7_delta_rows": 19
   },
   "keys": {
     "global.skip_to_content": {
@@ -9405,6 +9409,234 @@
       "translation_status": "APPROVED",
       "source_revision": "P03-PT-SOURCE-2026-08-25-r5",
       "context_notes": "Shared deadline-prominence line for the two urgent EMAR / Kre+ opportunity cards. Project 09 note: 'Candidate-se até...' is the natural action-oriented formulation, consistent with the already-approved 'até 30 de agosto de 2026' date phrasing.",
+      "linguistic_notes": ""
+    },
+    "ui.ways_to_help": {
+      "key": "ui.ways_to_help",
+      "en": "Ways to help",
+      "pt": "Formas de ajudar",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-28-r7",
+      "context_notes": "Detail-dialog section label for an organization record that presents ways to help rather than a single dated opportunity. Distinct from the section heading \"Organizations & Ways to Help\" and from the record action \"See ways to help\".",
+      "linguistic_notes": ""
+    },
+    "ui.current_volunteer_hours": {
+      "key": "ui.current_volunteer_hours",
+      "en": "Current volunteer hours",
+      "pt": "Horário atual de voluntariado",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-28-r7",
+      "context_notes": "Detail-dialog heading above the provider-stated volunteering hours, which are current rather than permanent.",
+      "linguistic_notes": ""
+    },
+    "ui.contact": {
+      "key": "ui.contact",
+      "en": "Contact",
+      "pt": "Contacto",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-28-r7",
+      "context_notes": "Detail-list fact label preceding a provider contact address.",
+      "linguistic_notes": "European Portuguese spelling \"Contacto\" (not Brazilian \"Contato\")."
+    },
+    "home.help.simabo.contact_action": {
+      "key": "home.help.simabo.contact_action",
+      "en": "Contact Simabo",
+      "pt": "Contactar a Simabo",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "simabo",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-28-r7",
+      "context_notes": "Card and dialog action label for the single Simabo record; the link destination is the volunteers@simabo.org address, which is identity-preserved and not localized. This is a contact action, never a donation-payment action.",
+      "linguistic_notes": ""
+    },
+    "home.help.simabo.checked": {
+      "key": "home.help.simabo.checked",
+      "en": "Checked 27 August 2026",
+      "pt": "Revisto em 27 de agosto de 2026",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "simabo",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-28-r7",
+      "context_notes": "Card-level currentness line for the Simabo record.",
+      "linguistic_notes": "Follows the established governed pattern \"Revisto em {day} de {month} de {year}\"."
+    },
+    "home.help.simabo.detail_checked": {
+      "key": "home.help.simabo.detail_checked",
+      "en": "Checked 27 August 2026 against information provided directly by Simabo.",
+      "pt": "Revisto em 27 de agosto de 2026 com base em informações fornecidas diretamente pela Simabo.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "simabo",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-28-r7",
+      "context_notes": "Detail-level currentness line for the Simabo record. The source is direct correspondence with Simabo plus the volunteer leaflet supplied on 27 August 2026, not provider-published web content, so the wording differs from the \"information published by the provider\" variant used elsewhere.",
+      "linguistic_notes": "Follows the established governed pattern \"Revisto em ... com base em ...\"."
+    },
+    "home.help.simabo.leaflet_alt": {
+      "key": "home.help.simabo.leaflet_alt",
+      "en": "Simabo volunteer leaflet: volunteer at our shelters — walk our dogs or hang out with the cats. Visit the dog shelter every day from 7 am to 1 pm or 1 pm to 6:30 pm; hang out with the cats from 9 am to 6 pm in the office building.",
+      "pt": "Folheto de voluntariado da Simabo: seja voluntário nos nossos abrigos — passeie os nossos cães ou passe tempo com os gatos. Visite o abrigo de cães todos os dias, das 7h00 às 13h00 ou das 13h00 às 18h30; passe tempo com os gatos das 9h00 às 18h00, no edifício do escritório.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "simabo",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-28-r7",
+      "context_notes": "Alt text describing the Simabo-supplied volunteer leaflet used as the record's main image on the card and in the Details dialog. It transcribes what the leaflet itself states; it is not additional A PRASA participation guidance.",
+      "linguistic_notes": ""
+    },
+    "home.help.record.simabo.intro": {
+      "key": "home.help.record.simabo.intro",
+      "en": "Simabo supports dogs and cats in São Vicente and welcomes people who want to help.",
+      "pt": "A Simabo apoia cães e gatos em São Vicente e recebe pessoas que queiram ajudar.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "simabo",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-28-r7",
+      "context_notes": "Home Organizations & Ways to Help — single all-in-one Simabo record; opening line, shown on the card and in the Details dialog.",
+      "linguistic_notes": ""
+    },
+    "home.help.record.simabo.ways_intro": {
+      "key": "home.help.record.simabo.ways_intro",
+      "en": "You can support Simabo by:",
+      "pt": "Pode apoiar a Simabo de várias formas:",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "simabo",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-28-r7",
+      "context_notes": "Home Organizations & Ways to Help — single Simabo record; lead-in to the ways-to-help list in the Details dialog.",
+      "linguistic_notes": ""
+    },
+    "home.help.record.simabo.way_dogs": {
+      "key": "home.help.record.simabo.way_dogs",
+      "en": "walking dogs from its shelter;",
+      "pt": "passeando cães do seu abrigo;",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "simabo",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-28-r7",
+      "context_notes": "Home Organizations & Ways to Help — single Simabo record; ways-to-help list item. Dog walking is a list item inside the one record, not a separate card.",
+      "linguistic_notes": ""
+    },
+    "home.help.record.simabo.way_cats": {
+      "key": "home.help.record.simabo.way_cats",
+      "en": "spending time with and helping care for cats;",
+      "pt": "passando tempo com os gatos e ajudando nos seus cuidados;",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "simabo",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-28-r7",
+      "context_notes": "Home Organizations & Ways to Help — single Simabo record; ways-to-help list item. Cat volunteering is a list item inside the one record, not a separate card.",
+      "linguistic_notes": ""
+    },
+    "home.help.record.simabo.way_skills": {
+      "key": "home.help.record.simabo.way_skills",
+      "en": "contributing skills in areas such as administration, IT or communications;",
+      "pt": "contribuindo com competências em áreas como administração, informática ou comunicação;",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "simabo",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-28-r7",
+      "context_notes": "Home Organizations & Ways to Help — single Simabo record; ways-to-help list item.",
+      "linguistic_notes": ""
+    },
+    "home.help.record.simabo.way_clinical": {
+      "key": "home.help.record.simabo.way_clinical",
+      "en": "supporting clinical work if you are a qualified veterinarian or nurse;",
+      "pt": "apoiando o trabalho clínico, se for veterinário ou enfermeiro qualificado;",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "simabo",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-28-r7",
+      "context_notes": "Home Organizations & Ways to Help — single Simabo record; ways-to-help list item. Clinical/veterinary support appears ONLY here, as one contextual item inside the general Simabo record. There is deliberately no standalone veterinary or clinic record, and this wording must not be expanded.",
+      "linguistic_notes": ""
+    },
+    "home.help.record.simabo.way_donation": {
+      "key": "home.help.record.simabo.way_donation",
+      "en": "contacting Simabo if you would like to support its work through a donation.",
+      "pt": "contactando a Simabo se quiser apoiar o seu trabalho através de um donativo.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "simabo",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-28-r7",
+      "context_notes": "Home Organizations & Ways to Help — single Simabo record; ways-to-help list item. Donation support is INFORMATIONAL ONLY: it routes to the same public contact address and must never become a payment link, an external donation page, or published payment details.",
+      "linguistic_notes": ""
+    },
+    "home.help.simabo.hours.dog_walking_label": {
+      "key": "home.help.simabo.hours.dog_walking_label",
+      "en": "Dog walking",
+      "pt": "Passear cães",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "simabo",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-28-r7",
+      "context_notes": "Home Organizations & Ways to Help — single Simabo record; hours fact label.",
+      "linguistic_notes": ""
+    },
+    "home.help.simabo.hours.dog_walking_value": {
+      "key": "home.help.simabo.hours.dog_walking_value",
+      "en": "07:00–13:00 or 13:00–18:30",
+      "pt": "07:00–13:00 ou 13:00–18:30",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "simabo",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-28-r7",
+      "context_notes": "Home Organizations & Ways to Help — single Simabo record; dog-walking hours fact value. Only the connecting word is localized; both time ranges are factual and identical in both locales.",
+      "linguistic_notes": ""
+    },
+    "home.help.simabo.hours.cats_label": {
+      "key": "home.help.simabo.hours.cats_label",
+      "en": "Helping with cats",
+      "pt": "Ajudar com os gatos",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "simabo",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-28-r7",
+      "context_notes": "Home Organizations & Ways to Help — single Simabo record; hours fact label.",
+      "linguistic_notes": ""
+    },
+    "home.help.simabo.hours.cats_value": {
+      "key": "home.help.simabo.hours.cats_value",
+      "en": "09:00–18:00",
+      "pt": "09:00–18:00",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "simabo",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-28-r7",
+      "context_notes": "Home Organizations & Ways to Help — single Simabo record; cat-volunteering hours fact value. Governed explicitly so the value is auditable even though it is identical in both locales.",
+      "linguistic_notes": ""
+    },
+    "home.help.record.simabo.closing": {
+      "key": "home.help.record.simabo.closing",
+      "en": "For volunteer opportunities, ways to support Simabo, and practical arrangements, contact Simabo directly.",
+      "pt": "Para conhecer as oportunidades de voluntariado, outras formas de apoiar a Simabo e combinar os detalhes, contacte diretamente a Simabo.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "simabo",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-08-28-r7",
+      "context_notes": "Home Organizations & Ways to Help — single Simabo record; closing line. Operational participation details and any donation arrangements are deliberately obtained from Simabo directly rather than published here.",
       "linguistic_notes": ""
     }
   }

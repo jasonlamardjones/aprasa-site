@@ -11,6 +11,11 @@
 // revision — none of those deltas is authorized to reopen or replace an
 // earlier approved value.
 //
+// data/locales/pt-overlay-r7-delta.source.json continues the additive chain on
+// top of r6, adding the 19 rows for the single governed Simabo Organizations &
+// Ways to Help record. Like r3/r4/r5 it is strictly additive and is applied
+// after r6 so it cannot be silently reverted by the brand-voice override.
+//
 // data/locales/pt-overlay-r6-delta.source.json is the one exception, and it is
 // a different class of revision: revision_class "OVERRIDE_EXISTING_KEYS". It
 // carries the governed Project 09 package P09-PT-BRAND-VOICE-2026-08-26-v1, a
@@ -36,6 +41,7 @@ const DELTA_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r3-delta.sourc
 const DELTA4_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r4-delta.source.json");
 const DELTA5_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r5-delta.source.json");
 const DELTA6_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r6-delta.source.json");
+const DELTA7_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r7-delta.source.json");
 const OUT_PATH = path.join(ROOT, "data", "locales", "locale-data.generated.json");
 
 const EXPECTED = {
@@ -504,9 +510,101 @@ if (delta6Overridden !== EXPECTED_DELTA6.row_count) {
   fail(`r6 overridden count mismatch: got ${delta6Overridden}, expected ${EXPECTED_DELTA6.row_count}`);
 }
 
+// --- r7 delta: additive merge on top of the r2+r3+r4+r5 base, applied after
+// the r6 PT-only override. r7 introduces the single governed Simabo
+// Organizations & Ways to Help record; like r3/r4/r5 it is strictly additive
+// and may never reopen an existing key (including any key r6 restated).
+const EXPECTED_DELTA7 = {
+  package_id: "aprasa-pt-simabo-ways-to-help-r7-delta",
+  source_revision: "P03-PT-SOURCE-2026-08-28-r7",
+  previous_revision: "P03-PT-SOURCE-2026-08-26-r6",
+  row_count: 19,
+  approved: 19,
+  required_for_pt_launch: 19,
+  intentionally_unchanged: 0,
+  review_required: 0,
+};
+
+const delta7 = JSON.parse(readFileSync(DELTA7_PATH, "utf8"));
+
+if (delta7.package_id !== EXPECTED_DELTA7.package_id) {
+  fail(`r7 package_id mismatch: got "${delta7.package_id}", expected "${EXPECTED_DELTA7.package_id}"`);
+}
+if (delta7.source_revision !== EXPECTED_DELTA7.source_revision) {
+  fail(`r7 source_revision mismatch: got "${delta7.source_revision}", expected "${EXPECTED_DELTA7.source_revision}"`);
+}
+if (delta7.previous_revision !== EXPECTED_DELTA7.previous_revision) {
+  fail(`r7 previous_revision mismatch: got "${delta7.previous_revision}", expected "${EXPECTED_DELTA7.previous_revision}"`);
+}
+if (delta7.rows.length !== EXPECTED_DELTA7.row_count) {
+  fail(`r7 row count mismatch: got ${delta7.rows.length}, expected ${EXPECTED_DELTA7.row_count}`);
+}
+if (delta7.supplied_rows_approved !== EXPECTED_DELTA7.approved) {
+  fail(`r7 supplied_rows_approved mismatch: got ${delta7.supplied_rows_approved}`);
+}
+if (delta7.review_required !== EXPECTED_DELTA7.review_required) {
+  fail(`r7 review_required is non-zero: ${delta7.review_required}`);
+}
+if (delta7.missing_or_unaccounted_row_count !== 0) {
+  fail(`r7 missing_or_unaccounted_row_count is non-zero: ${delta7.missing_or_unaccounted_row_count}`);
+}
+if ((delta7.duplicate_keys || []).length !== 0) {
+  fail(`r7 duplicate_keys is non-empty: ${JSON.stringify(delta7.duplicate_keys)}`);
+}
+if ((delta7.placeholder_mismatches || []).length !== 0) {
+  fail(`r7 placeholder_mismatches is non-empty: ${JSON.stringify(delta7.placeholder_mismatches)}`);
+}
+if ((delta7.a_prasa_to_a_praca_violations || []).length !== 0) {
+  fail(`r7 a_prasa_to_a_praca_violations is non-empty: ${JSON.stringify(delta7.a_prasa_to_a_praca_violations)}`);
+}
+
+let delta7Required = 0;
+let delta7Unchanged = 0;
+for (const row of delta7.rows) {
+  if (seen.has(row.key)) {
+    fail(`r7 key "${row.key}" collides with an existing r1/r2/r3/r4/r5 key — r7 must be strictly additive, never reopen an existing key`);
+  }
+  seen.add(row.key);
+
+  if (row.scope_status === "REQUIRED_FOR_PT_LAUNCH") delta7Required += 1;
+  else if (row.scope_status === "INTENTIONALLY_UNCHANGED") delta7Unchanged += 1;
+
+  if (row.scope_status === "REQUIRED_FOR_PT_LAUNCH" && (row.pt == null || row.pt === "")) {
+    fail(`r7 REQUIRED_FOR_PT_LAUNCH key "${row.key}" has no PT value`);
+  }
+  if (row.translation_status !== "APPROVED") {
+    fail(`r7 key "${row.key}" is not APPROVED (status: ${row.translation_status})`);
+  }
+  const enPlaceholders = (row.source_en.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+  const ptPlaceholders = (row.pt.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+  if (JSON.stringify(enPlaceholders) !== JSON.stringify(ptPlaceholders)) {
+    fail(`r7 key "${row.key}" placeholder mismatch: en=${JSON.stringify(enPlaceholders)} pt=${JSON.stringify(ptPlaceholders)}`);
+  }
+
+  keys[row.key] = {
+    key: row.key,
+    en: row.source_en,
+    pt: row.pt,
+    scope_status: row.scope_status,
+    identity_policy: row.identity_policy,
+    record_id: row.record_id,
+    translation_status: row.translation_status,
+    source_revision: row.source_revision,
+    context_notes: row.context_notes || "",
+    linguistic_notes: row.linguistic_notes || "",
+  };
+}
+
+if (delta7Required !== EXPECTED_DELTA7.required_for_pt_launch) {
+  fail(`r7 required_for_pt_launch mismatch: got ${delta7Required}, expected ${EXPECTED_DELTA7.required_for_pt_launch}`);
+}
+if (delta7Unchanged !== EXPECTED_DELTA7.intentionally_unchanged) {
+  fail(`r7 intentionally_unchanged mismatch: got ${delta7Unchanged}, expected ${EXPECTED_DELTA7.intentionally_unchanged}`);
+}
+
 const output = {
   provenance: {
-    source_revision: delta6.source_revision,
+    source_revision: delta7.source_revision,
     source_package_id: pkg.source_package_id,
     semantic_authority: pkg.semantic_authority,
     project_09_verdict: pkg.project_09_verdict,
@@ -518,6 +616,7 @@ const output = {
       "data/locales/pt-overlay-r4-delta.source.json",
       "data/locales/pt-overlay-r5-delta.source.json",
       "data/locales/pt-overlay-r6-delta.source.json",
+      "data/locales/pt-overlay-r7-delta.source.json",
     ],
     base_revision: pkg.source_revision,
     delta_revision: delta.source_revision,
@@ -526,19 +625,22 @@ const output = {
     delta6_revision: delta6.source_revision,
     delta6_package_id: delta6.package_id,
     delta6_revision_class: delta6.revision_class,
+    delta7_revision: delta7.source_revision,
+    delta7_package_id: delta7.package_id,
   },
   counts: {
-    total_rows: rows.length + delta.rows.length + delta4.rows.length + delta5.rows.length,
-    required_for_pt_launch: qa_summary.required_for_pt_launch + deltaRequired + delta4Required + delta5Required,
-    intentionally_unchanged: qa_summary.intentionally_unchanged + deltaUnchanged + delta4Unchanged + delta5Unchanged,
-    approved_rows_total: qa_summary.approved_rows_total + delta.rows.length + delta4.rows.length + delta5.rows.length,
+    total_rows: rows.length + delta.rows.length + delta4.rows.length + delta5.rows.length + delta7.rows.length,
+    required_for_pt_launch: qa_summary.required_for_pt_launch + deltaRequired + delta4Required + delta5Required + delta7Required,
+    intentionally_unchanged: qa_summary.intentionally_unchanged + deltaUnchanged + delta4Unchanged + delta5Unchanged + delta7Unchanged,
+    approved_rows_total: qa_summary.approved_rows_total + delta.rows.length + delta4.rows.length + delta5.rows.length + delta7.rows.length,
     r3_delta_rows: delta.rows.length,
     r4_delta_rows: delta4.rows.length,
     r5_delta_rows: delta5.rows.length,
     r6_override_rows: delta6.rows.length,
+    r7_delta_rows: delta7.rows.length,
   },
   keys,
 };
 
 writeFileSync(OUT_PATH, JSON.stringify(output, null, 2) + "\n");
-console.log(`[build-locale-data] wrote ${Object.keys(keys).length} keys to ${path.relative(ROOT, OUT_PATH)} (r6 overrode ${delta6Overridden} PT values, added 0 keys)`);
+console.log(`[build-locale-data] wrote ${Object.keys(keys).length} keys to ${path.relative(ROOT, OUT_PATH)} (r6 overrode ${delta6Overridden} PT values, added 0 keys; r7 added ${delta7.rows.length} keys)`);

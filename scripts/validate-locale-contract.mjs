@@ -21,14 +21,14 @@ function fail(msg) {
 const data = loadLocaleData();
 const keys = Object.values(data.keys);
 
-// --- Overlay contract (counts) — combined r2 base (732) + r3 delta (21) + r4 delta (26) + r5 delta (2).
-// The r6 brand-voice delta overrides 42 existing PT values and adds no keys,
-// so every count below is unchanged by it. ---
-if (keys.length !== 781) fail(`expected 781 total keys (732 r2 + 21 r3 + 26 r4 + 2 r5, +0 from r6), got ${keys.length}`);
+// --- Overlay contract (counts) — combined r2 base (732) + r3 delta (21) + r4 delta (26)
+// + r5 delta (2) + r7 delta (19). The r6 brand-voice delta overrides 42 existing PT
+// values and adds no keys, so every count below is unchanged by it. ---
+if (keys.length !== 800) fail(`expected 800 total keys (732 r2 + 21 r3 + 26 r4 + 2 r5 + 19 r7, +0 from r6), got ${keys.length}`);
 const required = keys.filter((k) => k.scope_status === "REQUIRED_FOR_PT_LAUNCH");
 const unchanged = keys.filter((k) => k.scope_status === "INTENTIONALLY_UNCHANGED");
-if (required.length !== 753) fail(`expected 753 REQUIRED_FOR_PT_LAUNCH keys (705 + 20 + 26 + 2), got ${required.length}`);
-if (unchanged.length !== 28) fail(`expected 28 INTENTIONALLY_UNCHANGED keys (27 + 1 + 0 + 0), got ${unchanged.length}`);
+if (required.length !== 772) fail(`expected 772 REQUIRED_FOR_PT_LAUNCH keys (705 + 20 + 26 + 2 + 19), got ${required.length}`);
+if (unchanged.length !== 28) fail(`expected 28 INTENTIONALLY_UNCHANGED keys (27 + 1 + 0 + 0 + 0), got ${unchanged.length}`);
 if (data.provenance.delta_revision !== "P03-PT-SOURCE-2026-08-25-r3") {
   fail(`unexpected delta_revision: ${data.provenance.delta_revision}`);
 }
@@ -50,30 +50,87 @@ if (data.provenance.delta6_package_id !== "P09-PT-BRAND-VOICE-2026-08-26-v1") {
 if (data.provenance.delta6_revision_class !== "OVERRIDE_EXISTING_KEYS") {
   fail(`unexpected delta6_revision_class: ${data.provenance.delta6_revision_class}`);
 }
+if (data.provenance.delta7_revision !== "P03-PT-SOURCE-2026-08-28-r7") {
+  fail(`unexpected delta7_revision: ${data.provenance.delta7_revision}`);
+}
+if (data.provenance.delta7_package_id !== "aprasa-pt-simabo-ways-to-help-r7-delta") {
+  fail(`unexpected delta7_package_id: ${data.provenance.delta7_package_id}`);
+}
 
-// --- r6 delta spot checks (Project 09 PT brand-voice refinement) ---
-// Representative approved strings across the three affected surfaces. These
-// pin the tu-register wording so a later revision cannot silently revert it.
-const r6Spot = {
-  "home.hero.tagline": "Um lugar para encontrares o que te move.",
-  "home.meta.og_description": "Um lugar para encontrares o que te move.",
-  "home.hero.closing": "Encontra o que te move.",
-  "home.things.submit_action": "Envia à A PRASA para consideração",
-  "home.mindelo.title": "Orienta-te em Mindelo.",
-  "about.meta.og_description":
-    "Um lugar para encontrares o que te move. Uma praça pública digital independente e orientada por fontes, enraizada em Cabo Verde.",
-  "about.find.title": "O que podes encontrar",
-  "about.take_part.title": "Participa",
-  "about.take_part.intro_list": "Podes:",
-  "about.take_part.body_4": "Se encontrares um erro, agradecemos que nos avises.",
-  "mindelo.directory.title": "Encontra um lugar e vê-o no mapa.",
-  "mindelo.sources.body_3": "Tens uma sugestão, correção ou recomendação local?",
+// --- r7 delta spot checks (single Simabo Organizations & Ways to Help record) ---
+// Pins the record's governed strings, both hours values in both locales, and two
+// structural guards: clinical support stays a single contextual list item, and
+// donation support stays informational (contact only, never a payment flow).
+const r7Keys = [
+  "ui.ways_to_help",
+  "ui.current_volunteer_hours",
+  "ui.contact",
+  "home.help.simabo.contact_action",
+  "home.help.simabo.checked",
+  "home.help.simabo.detail_checked",
+  "home.help.simabo.leaflet_alt",
+  "home.help.simabo.hours.dog_walking_label",
+  "home.help.simabo.hours.dog_walking_value",
+  "home.help.simabo.hours.cats_label",
+  "home.help.simabo.hours.cats_value",
+  "home.help.record.simabo.intro",
+  "home.help.record.simabo.ways_intro",
+  "home.help.record.simabo.way_dogs",
+  "home.help.record.simabo.way_cats",
+  "home.help.record.simabo.way_skills",
+  "home.help.record.simabo.way_clinical",
+  "home.help.record.simabo.way_donation",
+  "home.help.record.simabo.closing",
+];
+for (const k of r7Keys) {
+  if (!data.keys[k]) fail(`r7 key missing from locale data: ${k}`);
+}
+const r7Spot = {
+  "ui.ways_to_help": "Formas de ajudar",
+  "ui.current_volunteer_hours": "Horário atual de voluntariado",
+  "ui.contact": "Contacto",
+  "home.help.simabo.contact_action": "Contactar a Simabo",
+  "home.help.simabo.hours.dog_walking_label": "Passear cães",
+  "home.help.simabo.hours.dog_walking_value": "07:00–13:00 ou 13:00–18:30",
+  "home.help.simabo.hours.cats_label": "Ajudar com os gatos",
+  "home.help.simabo.hours.cats_value": "09:00–18:00",
 };
-for (const [k, expected] of Object.entries(r6Spot)) {
-  if (!data.keys[k]) {
-    fail(`r6 key missing from locale data: ${k}`);
-  } else if (data.keys[k].pt !== expected) {
-    fail(`${k} PT does not match the approved Project 09 r6 brand-voice string`);
+for (const [k, expected] of Object.entries(r7Spot)) {
+  if (data.keys[k] && data.keys[k].pt !== expected) {
+    fail(`${k} PT does not match the approved Project 09 r7 string: got ${JSON.stringify(data.keys[k].pt)}`);
+  }
+}
+// Approved Simabo hours are factual and must survive verbatim in BOTH locales.
+const r7HoursEn = {
+  "home.help.simabo.hours.dog_walking_value": "07:00–13:00 or 13:00–18:30",
+  "home.help.simabo.hours.cats_value": "09:00–18:00",
+};
+for (const [k, expected] of Object.entries(r7HoursEn)) {
+  if (data.keys[k] && data.keys[k].en !== expected) {
+    fail(`${k} EN does not match the approved Simabo hours: got ${JSON.stringify(data.keys[k].en)}`);
+  }
+}
+// Clinical/veterinary support is one contextual item inside the single Simabo
+// record. No other r7 key may carry it — that is what keeps a standalone
+// veterinary/clinic record from reappearing through the overlay.
+for (const k of r7Keys) {
+  const row = data.keys[k];
+  if (!row || k === "home.help.record.simabo.way_clinical") continue;
+  for (const text of [row.en, row.pt]) {
+    if (text && /veterinar|veterinár|nurse|enfermeir|clinical work|trabalho clínico/i.test(text)) {
+      fail(`r7 key "${k}" carries clinical/veterinary language outside the single approved list item`);
+    }
+  }
+}
+// Donation support is informational only: it routes to the public contact
+// address. No r7 string may introduce payment/donation-flow language.
+for (const k of r7Keys) {
+  const row = data.keys[k];
+  if (!row) continue;
+  for (const text of [row.en, row.pt]) {
+    if (text && /\b(donate now|give now|pay|payment|iban|paypal|mbway|nib|bank transfer|transferência bancária|pagamento)\b/i.test(text)) {
+      fail(`r7 key "${k}" introduces donation-payment language; donation support must stay informational`);
+    }
   }
 }
 
