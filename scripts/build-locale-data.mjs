@@ -12,8 +12,8 @@
 // earlier approved value.
 //
 // data/locales/pt-overlay-r7-delta.source.json continues the additive chain on
-// top of r6, adding the 18 rows for the three governed Simabo Organizations &
-// Ways to Help records. Like r3/r4/r5 it is strictly additive and is applied
+// top of r6, adding the 19 rows for the single governed Simabo Organizations &
+// Ways to Help record. Like r3/r4/r5 it is strictly additive and is applied
 // after r6 so it cannot be silently reverted by the brand-voice override.
 //
 // data/locales/pt-overlay-r6-delta.source.json is the one exception, and it is
@@ -511,16 +511,16 @@ if (delta6Overridden !== EXPECTED_DELTA6.row_count) {
 }
 
 // --- r7 delta: additive merge on top of the r2+r3+r4+r5 base, applied after
-// the r6 PT-only override. r7 introduces the three governed Simabo
-// Organizations & Ways to Help records; like r3/r4/r5 it is strictly additive
+// the r6 PT-only override. r7 introduces the single governed Simabo
+// Organizations & Ways to Help record; like r3/r4/r5 it is strictly additive
 // and may never reopen an existing key (including any key r6 restated).
 const EXPECTED_DELTA7 = {
   package_id: "aprasa-pt-simabo-ways-to-help-r7-delta",
   source_revision: "P03-PT-SOURCE-2026-08-28-r7",
   previous_revision: "P03-PT-SOURCE-2026-08-26-r6",
-  row_count: 18,
-  approved: 18,
-  required_for_pt_launch: 18,
+  row_count: 19,
+  approved: 19,
+  required_for_pt_launch: 19,
   intentionally_unchanged: 0,
   review_required: 0,
 };
