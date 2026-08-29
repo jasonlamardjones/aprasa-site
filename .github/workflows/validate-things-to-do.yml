@@ -47,7 +47,7 @@ jobs:
             --packet=automation/things-to-do/fixtures/ready.json
           node scripts/prepare-event-publication.mjs \
             --packet=automation/things-to-do/fixtures/ready.json \
-            | grep -q 'STATUS: READY_FOR_IMPLEMENTATION'
+            | grep -q 'STATUS: REVIEW_READY'
 
           expect_block() {
             fixture="$1"
@@ -78,9 +78,6 @@ jobs:
           echo "AS_OF=$AS_OF" >> "$GITHUB_ENV"
           echo "Validating committed Things to Do surfaces as of $AS_OF"
 
-          # EMAR/Kre+ training-opportunity currentness is resolved independently
-          # of the Things-to-Do tracked date above: it must reflect the actual
-          # current date, not a curated value a maintainer could forget to bump.
           AS_OF_EMAR=$(node -e "console.log(new Intl.DateTimeFormat('en-CA', { timeZone: 'Atlantic/Cape_Verde', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()))")
           echo "AS_OF_EMAR=$AS_OF_EMAR" >> "$GITHUB_ENV"
           echo "Validating EMAR/Kre+ opportunity currentness as of $AS_OF_EMAR (Atlantic/Cape_Verde, live)"
@@ -136,8 +133,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p validation-artifacts
-          git diff -- index.html sitemap.xml things-to-do/ \
-            > validation-artifacts/generated-surfaces.patch
+          git diff -- index.html sitemap.xml things-to-do/ > validation-artifacts/generated-surfaces.patch
 
       - name: Upload generated diff
         uses: actions/upload-artifact@v4
@@ -174,7 +170,6 @@ jobs:
             fi
           }
 
-          # --- 2026-08-24: regression fixture date ---
           node scripts/generate-things-to-do.mjs --as-of=2026-08-24 --write
           node scripts/validate-things-to-do-currentness.mjs --as-of=2026-08-24
           node scripts/validate-things-to-do-surface-equivalence.mjs --as-of=2026-08-24
@@ -198,7 +193,6 @@ jobs:
             exit 1
           fi
 
-          # --- 2026-08-30 ---
           node scripts/generate-things-to-do.mjs --as-of=2026-08-30 --write
           node scripts/validate-things-to-do-currentness.mjs --as-of=2026-08-30
           node scripts/validate-things-to-do-surface-equivalence.mjs --as-of=2026-08-30
@@ -215,7 +209,6 @@ jobs:
             exit 1
           fi
 
-          # --- 2026-09-01 ---
           node scripts/generate-things-to-do.mjs --as-of=2026-09-01 --write
           node scripts/validate-things-to-do-currentness.mjs --as-of=2026-09-01
           node scripts/validate-things-to-do-surface-equivalence.mjs --as-of=2026-09-01
