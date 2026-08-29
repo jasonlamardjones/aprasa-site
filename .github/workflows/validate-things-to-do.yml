@@ -3,11 +3,16 @@ name: Validate Things to Do currentness
 on:
   pull_request:
     paths:
+      - 'automation/things-to-do/**'
       - 'data/things-to-do-events.json'
       - 'data/things-to-do-currentness.json'
       - 'internal/provider-media-manifest.json'
+      - 'scripts/build-sitemap.mjs'
       - 'scripts/generate-things-to-do.mjs'
       - 'scripts/render-things-to-do-adapter.mjs'
+      - 'scripts/prepare-event-publication.mjs'
+      - 'scripts/validate-event-publication-packet.mjs'
+      - 'scripts/lib/event-publication-contract.mjs'
       - 'scripts/validate-things-to-do-*.mjs'
       - 'scripts/validate-card-media.mjs'
       - 'scripts/validate-training-opportunities-currentness.mjs'
@@ -15,6 +20,7 @@ on:
       - 'pt/index.html'
       - 'sitemap.xml'
       - 'things-to-do/**'
+      - 'pt/things-to-do/**'
       - '.github/workflows/validate-things-to-do.yml'
 
 permissions:
@@ -31,6 +37,39 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '24'
+
+      - name: Validate Phase 1 publication packet fixtures
+        shell: bash
+        run: |
+          set -e
+
+          node scripts/validate-event-publication-packet.mjs \
+            --packet=automation/things-to-do/fixtures/ready.json
+          node scripts/prepare-event-publication.mjs \
+            --packet=automation/things-to-do/fixtures/ready.json \
+            | grep -q 'STATUS: READY_FOR_IMPLEMENTATION'
+
+          expect_block() {
+            fixture="$1"
+            expected="$2"
+            set +e
+            output=$(node scripts/validate-event-publication-packet.mjs --packet="$fixture" 2>&1)
+            code=$?
+            set -e
+            if [ "$code" -eq 0 ]; then
+              echo "$fixture unexpectedly passed preflight"
+              exit 1
+            fi
+            echo "$output" | grep -q "\"state\": \"$expected\"" || {
+              echo "$fixture did not resolve to expected state $expected"
+              echo "$output"
+              exit 1
+            }
+          }
+
+          expect_block automation/things-to-do/fixtures/blocked-localization.json BLOCKED_LOCALIZATION
+          expect_block automation/things-to-do/fixtures/blocked-media.json BLOCKED_MEDIA
+          expect_block automation/things-to-do/fixtures/invalid-input.json INVALID_INPUT
 
       - name: Load explicit currentness date
         shell: bash
@@ -85,25 +124,19 @@ jobs:
       - name: Verify generated diff scope
         shell: bash
         run: |
-          unexpected=$(git diff --name-only | grep -Ev '^(index\.html|things-to-do/(part-ilhas-nuno-miranda|mon-pikenin|arquitectura-da-imperfeicao|sinergia-da-materia|eclipse-yuran-henrique|oficina-contemporanea-lata)/index\.html)$' || true)
+          unexpected=$(git diff --name-only | grep -Ev '^(index\.html|sitemap\.xml|things-to-do/[a-z0-9]+(-[a-z0-9]+)*/index\.html)$' || true)
           if [ -n "$unexpected" ]; then
             echo "Generator changed unexpected files:"
             echo "$unexpected"
             exit 1
           fi
-          echo "Generated diff is limited to Home and the six canonical dated-event detail pages."
+          echo "Generated diff is limited to Home, sitemap, and canonical dated-event detail pages."
 
       - name: Save generated diff
         shell: bash
         run: |
           mkdir -p validation-artifacts
-          git diff -- index.html \
-            things-to-do/part-ilhas-nuno-miranda/index.html \
-            things-to-do/mon-pikenin/index.html \
-            things-to-do/arquitectura-da-imperfeicao/index.html \
-            things-to-do/sinergia-da-materia/index.html \
-            things-to-do/eclipse-yuran-henrique/index.html \
-            things-to-do/oficina-contemporanea-lata/index.html \
+          git diff -- index.html sitemap.xml things-to-do/ \
             > validation-artifacts/generated-surfaces.patch
 
       - name: Upload generated diff
@@ -114,14 +147,7 @@ jobs:
           if-no-files-found: error
 
       - name: Verify committed surfaces match canonical generation
-        run: |
-          git diff --exit-code -- index.html \
-            things-to-do/part-ilhas-nuno-miranda/index.html \
-            things-to-do/mon-pikenin/index.html \
-            things-to-do/arquitectura-da-imperfeicao/index.html \
-            things-to-do/sinergia-da-materia/index.html \
-            things-to-do/eclipse-yuran-henrique/index.html \
-            things-to-do/oficina-contemporanea-lata/index.html
+        run: git diff --exit-code -- index.html sitemap.xml things-to-do/
 
       - name: Verify currentness behavior is deterministic and idempotent across tracked dates
         shell: bash
@@ -148,7 +174,7 @@ jobs:
             fi
           }
 
-          # --- 2026-08-24: tracked currentness date ---
+          # --- 2026-08-24: regression fixture date ---
           node scripts/generate-things-to-do.mjs --as-of=2026-08-24 --write
           node scripts/validate-things-to-do-currentness.mjs --as-of=2026-08-24
           node scripts/validate-things-to-do-surface-equivalence.mjs --as-of=2026-08-24
@@ -177,11 +203,13 @@ jobs:
           node scripts/validate-things-to-do-currentness.mjs --as-of=2026-08-30
           node scripts/validate-things-to-do-surface-equivalence.mjs --as-of=2026-08-30
           check_home_absent part-ilhas "PART_ILHAS — ciclo de conversas com Nuno Miranda" 2026-08-30
+          check_home_absent artemisa "PART_ILHAS — ciclo de conversas com Artemisa Ferreira" 2026-08-30
           check_home_absent arquitectura "Arquitectura da Imperfeição" 2026-08-30
           check_home_absent mon-pikenin "Mon Pikenin" 2026-08-30
           check_home_absent oficina "Exposição dos trabalhos finais do projeto Oficina Contemporânea Lata" 2026-08-30
           check_home_present sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-08-30
           check_home_present eclipse "Exposição “Eclipse”" 2026-08-30
+          require_past_event part-ilhas-artemisa-ferreira 2026-08-30
           if grep -rq 'https://schema.org/EventCompleted' things-to-do/*/index.html; then
             echo 'A generated detail page emits invalid Schema.org EventCompleted status.'
             exit 1
