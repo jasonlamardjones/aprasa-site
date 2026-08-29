@@ -13,6 +13,42 @@ function issue(code, owner, reason, requiredInput, resumeFrom) {
   return { code, owner, reason, required_input: requiredInput, resume_from: resumeFrom };
 }
 
+function slugifyFactLabel(label = '') {
+  return label
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
+export function requiredPtKeys(event) {
+  if (!event?.id) return [];
+  const prefix = `event.${event.id}`;
+  const keys = [
+    `${prefix}.title`,
+    `${prefix}.summary`,
+    `${prefix}.display.status`,
+    `${prefix}.display.meta`,
+    `${prefix}.display.checked`,
+    `${prefix}.detail.body`,
+    `${prefix}.detail.checked`,
+    `${prefix}.seo.description`,
+    `${prefix}.seo.title`
+  ];
+  if (event.media) keys.push(`${prefix}.media.alt`);
+  if (event.card_action) keys.push(`${prefix}.card_action.label`);
+  if (event.detail?.good_to_know) keys.push(`${prefix}.detail.good_to_know`);
+  if (event.detail?.action_label) keys.push(`${prefix}.detail.action_label`);
+  for (const fact of event.detail?.facts ?? []) {
+    const base = slugifyFactLabel(fact.label);
+    keys.push(`${prefix}.detail.fact.${base}.label`);
+    keys.push(`${prefix}.detail.fact.${base}.value_display`);
+  }
+  return keys;
+}
+
 export function loadPacket(packetPath) {
   return JSON.parse(fs.readFileSync(packetPath, 'utf8'));
 }
@@ -84,8 +120,12 @@ export function validatePacket(packet, { root = ROOT, checkRepository = true } =
   if (localization.new_strings_required === true || localization.pt_status === 'approval_required' || governance.project09_status === 'approval_required') {
     issues.push(issue('BLOCKED_LOCALIZATION', 'Project 09', 'Approved Portuguese presentation is incomplete', 'Approved PT values for all required new event keys', 'GOVERNANCE_CHECKED'));
   }
-  if (localization.pt_status === 'approved' && Object.keys(localization.pt_values ?? {}).length === 0) {
-    issues.push(issue('INVALID_INPUT', 'Project 04', 'pt_status=approved requires supplied approved PT values', 'localization.pt_values', 'RECEIVED'));
+  if (localization.pt_status === 'approved') {
+    const ptValues = localization.pt_values ?? {};
+    const missingKeys = requiredPtKeys(event).filter((key) => typeof ptValues[key] !== 'string' || ptValues[key].length === 0);
+    if (missingKeys.length) {
+      issues.push(issue('BLOCKED_LOCALIZATION', 'Project 09', `Approved Portuguese packet is missing ${missingKeys.length} required key(s)`, missingKeys.join(', '), 'GOVERNANCE_CHECKED'));
+    }
   }
 
   const media = packet?.media ?? {};
@@ -94,8 +134,11 @@ export function validatePacket(packet, { root = ROOT, checkRepository = true } =
     issues.push(issue('BLOCKED_MEDIA', 'Owning Project / Project 09 as applicable', 'Media rights or alt-text approval remains unresolved', 'Approved media disposition and alt text', 'GOVERNANCE_CHECKED'));
   }
 
-  if (event.media_policy === 'required' && !media.local_asset) {
-    issues.push(issue('INVALID_INPUT', 'Project 04', 'Required media needs a local asset path', 'media.local_asset', 'RECEIVED'));
+  if (event.media_policy === 'required' && (!event.media || !media.local_asset)) {
+    issues.push(issue('INVALID_INPUT', 'Project 04', 'Required media needs canonical event.media and a local asset path', 'event.media + media.local_asset', 'RECEIVED'));
+  }
+  if (event.media?.asset && media.local_asset && event.media.asset !== media.local_asset) {
+    issues.push(issue('INVALID_INPUT', 'Project 04', 'event.media.asset and media.local_asset must identify the same canonical asset', 'Matching media paths', 'RECEIVED'));
   }
   if (checkRepository && media.local_asset) {
     const assetPath = path.resolve(root, media.local_asset);
