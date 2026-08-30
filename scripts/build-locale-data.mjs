@@ -35,7 +35,7 @@
 // reshapes and merges the row lists into a keyed lookup table for
 // scripts/lib/locale.mjs.
 
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
@@ -48,6 +48,7 @@ const DELTA5_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r5-delta.sour
 const DELTA6_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r6-delta.source.json");
 const DELTA7_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r7-delta.source.json");
 const DELTA8_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r8-delta.source.json");
+const LOCALE_DIR = path.join(ROOT, "data", "locales");
 const OUT_PATH = path.join(ROOT, "data", "locales", "locale-data.generated.json");
 
 const EXPECTED = {
@@ -700,9 +701,72 @@ if (delta8Unchanged !== EXPECTED_DELTA8.intentionally_unchanged) {
   fail(`r8 intentionally_unchanged mismatch: got ${delta8Unchanged}, expected ${EXPECTED_DELTA8.intentionally_unchanged}`);
 }
 
+// Phase 1B event deltas are complete Project 09-approved, strictly additive
+// packages. Discovery removes the need to edit this build script for each
+// ordinary event while retaining the same fail-closed row checks as r3-r8.
+const eventDeltaFiles = readdirSync(LOCALE_DIR)
+  .filter((name) => /^pt-overlay-event-[a-z0-9]+(?:-[a-z0-9]+)*\.source\.json$/.test(name))
+  .sort();
+const eventDeltaPackages = [];
+let eventDeltaRequired = 0;
+let eventDeltaUnchanged = 0;
+
+for (const fileName of eventDeltaFiles) {
+  const packagePath = path.join(LOCALE_DIR, fileName);
+  const eventDelta = JSON.parse(readFileSync(packagePath, "utf8"));
+  const expectedId = fileName.replace(/^pt-overlay-event-/, "").replace(/\.source\.json$/, "");
+  if (eventDelta.event_id !== expectedId) fail(`${fileName}: event_id must equal ${expectedId}`);
+  if (eventDelta.project_09_status !== "approved") fail(`${fileName}: Project 09 status is not approved`);
+  if (!eventDelta.package_id || !eventDelta.source_revision) fail(`${fileName}: missing package_id/source_revision`);
+  if (!Array.isArray(eventDelta.rows) || eventDelta.rows.length === 0) fail(`${fileName}: rows must be non-empty`);
+  if (eventDelta.supplied_rows_approved !== eventDelta.rows.length) fail(`${fileName}: approved row count mismatch`);
+  if (eventDelta.review_required !== 0 || eventDelta.blocking_issue != null) fail(`${fileName}: unresolved localization review state`);
+
+  for (const row of eventDelta.rows) {
+    if (seen.has(row.key)) fail(`${fileName}: key "${row.key}" is not strictly additive`);
+    seen.add(row.key);
+    if (!row.key.startsWith(`event.${eventDelta.event_id}.`) || row.record_id !== eventDelta.event_id) {
+      fail(`${fileName}: row ${row.key} is outside event ${eventDelta.event_id}`);
+    }
+    if (row.source_revision !== eventDelta.source_revision) fail(`${fileName}: ${row.key} source_revision mismatch`);
+    if (row.translation_status !== "APPROVED") fail(`${fileName}: ${row.key} is not APPROVED`);
+    if (!row.source_en || !row.pt) fail(`${fileName}: ${row.key} is missing EN/PT approved text`);
+    if (row.scope_status === "REQUIRED_FOR_PT_LAUNCH") eventDeltaRequired += 1;
+    else if (row.scope_status === "INTENTIONALLY_UNCHANGED") eventDeltaUnchanged += 1;
+    else fail(`${fileName}: ${row.key} has invalid scope_status`);
+    const enPlaceholders = (row.source_en.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+    const ptPlaceholders = (row.pt.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+    if (JSON.stringify(enPlaceholders) !== JSON.stringify(ptPlaceholders)) {
+      fail(`${fileName}: ${row.key} placeholder mismatch`);
+    }
+    if ([row.source_en, row.pt].some((value) => value.includes("A PRAÇA"))) {
+      fail(`${fileName}: ${row.key} violates protected A PRASA brand spelling`);
+    }
+    keys[row.key] = {
+      key: row.key,
+      en: row.source_en,
+      pt: row.pt,
+      scope_status: row.scope_status,
+      identity_policy: row.identity_policy,
+      record_id: row.record_id,
+      translation_status: row.translation_status,
+      source_revision: row.source_revision,
+      context_notes: row.context_notes || "",
+      linguistic_notes: row.linguistic_notes || "",
+    };
+  }
+  eventDeltaPackages.push({
+    file: `data/locales/${fileName}`,
+    event_id: eventDelta.event_id,
+    package_id: eventDelta.package_id,
+    source_revision: eventDelta.source_revision,
+    row_count: eventDelta.rows.length,
+  });
+}
+
 const output = {
   provenance: {
-    source_revision: delta8.source_revision,
+    source_revision: eventDeltaPackages.at(-1)?.source_revision ?? delta8.source_revision,
     source_package_id: pkg.source_package_id,
     semantic_authority: pkg.semantic_authority,
     project_09_verdict: pkg.project_09_verdict,
@@ -716,6 +780,7 @@ const output = {
       "data/locales/pt-overlay-r6-delta.source.json",
       "data/locales/pt-overlay-r7-delta.source.json",
       "data/locales/pt-overlay-r8-delta.source.json",
+      ...eventDeltaPackages.map((item) => item.file),
     ],
     base_revision: pkg.source_revision,
     delta_revision: delta.source_revision,
@@ -728,21 +793,23 @@ const output = {
     delta7_package_id: delta7.package_id,
     delta8_revision: delta8.source_revision,
     delta8_package_id: delta8.package_id,
+    event_delta_packages: eventDeltaPackages,
   },
   counts: {
-    total_rows: rows.length + delta.rows.length + delta4.rows.length + delta5.rows.length + delta7.rows.length + delta8.rows.length,
-    required_for_pt_launch: qa_summary.required_for_pt_launch + deltaRequired + delta4Required + delta5Required + delta7Required + delta8Required,
-    intentionally_unchanged: qa_summary.intentionally_unchanged + deltaUnchanged + delta4Unchanged + delta5Unchanged + delta7Unchanged + delta8Unchanged,
-    approved_rows_total: qa_summary.approved_rows_total + delta.rows.length + delta4.rows.length + delta5.rows.length + delta7.rows.length + delta8.rows.length,
+    total_rows: rows.length + delta.rows.length + delta4.rows.length + delta5.rows.length + delta7.rows.length + delta8.rows.length + eventDeltaRequired + eventDeltaUnchanged,
+    required_for_pt_launch: qa_summary.required_for_pt_launch + deltaRequired + delta4Required + delta5Required + delta7Required + delta8Required + eventDeltaRequired,
+    intentionally_unchanged: qa_summary.intentionally_unchanged + deltaUnchanged + delta4Unchanged + delta5Unchanged + delta7Unchanged + delta8Unchanged + eventDeltaUnchanged,
+    approved_rows_total: qa_summary.approved_rows_total + delta.rows.length + delta4.rows.length + delta5.rows.length + delta7.rows.length + delta8.rows.length + eventDeltaRequired + eventDeltaUnchanged,
     r3_delta_rows: delta.rows.length,
     r4_delta_rows: delta4.rows.length,
     r5_delta_rows: delta5.rows.length,
     r6_override_rows: delta6.rows.length,
     r7_delta_rows: delta7.rows.length,
     r8_delta_rows: delta8.rows.length,
+    event_delta_rows: eventDeltaRequired + eventDeltaUnchanged,
   },
   keys,
 };
 
 writeFileSync(OUT_PATH, JSON.stringify(output, null, 2) + "\n");
-console.log(`[build-locale-data] wrote ${Object.keys(keys).length} keys to ${path.relative(ROOT, OUT_PATH)} (r6 overrode ${delta6Overridden} PT values, added 0 keys; r7 added ${delta7.rows.length} keys; r8 added ${delta8.rows.length} keys)`);
+console.log(`[build-locale-data] wrote ${Object.keys(keys).length} keys to ${path.relative(ROOT, OUT_PATH)} (r6 overrode ${delta6Overridden} PT values; event deltas added ${eventDeltaRequired + eventDeltaUnchanged} keys)`);

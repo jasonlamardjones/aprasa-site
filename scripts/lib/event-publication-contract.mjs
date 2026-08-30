@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -13,6 +14,9 @@ const APPROVAL_STATUSES = new Set(['approved', 'approval_required']);
 const PROJECT09_STATUSES = new Set(['approved', 'approval_required', 'not_required']);
 const MEDIA_STATUSES = new Set(['approved', 'review_required', 'not_required']);
 const DATETIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})$/;
+const COMMIT_SHA = /^[a-f0-9]{40}$/;
+const SHA256 = /^[a-f0-9]{64}$/;
+const EVENT_MEDIA_ASSET = /^assets\/events\/[a-z0-9]+(?:-[a-z0-9]+)*\.(?:avif|jpe?g|png|webp)$/;
 
 function issue(code, owner, reason, requiredInput, resumeFrom) {
   return { code, owner, reason, required_input: requiredInput, resume_from: resumeFrom };
@@ -79,8 +83,70 @@ export function requiredPtKeys(event) {
   return keys;
 }
 
+export function requiredLocaleRows(event) {
+  if (!event?.id) return new Map();
+  const prefix = `event.${event.id}`;
+  const rows = new Map([
+    [`${prefix}.title`, event.title],
+    [`${prefix}.summary`, event.summary],
+    [`${prefix}.display.status`, event.display?.status],
+    [`${prefix}.display.meta`, event.display?.meta],
+    [`${prefix}.display.checked`, event.display?.checked],
+    [`${prefix}.detail.body`, event.detail?.body],
+    [`${prefix}.detail.checked`, event.detail?.checked],
+    [`${prefix}.seo.description`, event.seo?.description],
+    [`${prefix}.seo.title`, event.seo?.title]
+  ]);
+  if (event.media) rows.set(`${prefix}.media.alt`, event.media.alt);
+  if (event.card_action) rows.set(`${prefix}.card_action.label`, event.card_action.label);
+  if (event.detail?.good_to_know) rows.set(`${prefix}.detail.good_to_know`, event.detail.good_to_know);
+  if (event.detail?.action_label) rows.set(`${prefix}.detail.action_label`, event.detail.action_label);
+  for (const fact of event.detail?.facts ?? []) {
+    const base = slugifyFactLabel(fact.label);
+    rows.set(`${prefix}.detail.fact.${base}.label`, fact.label);
+    rows.set(`${prefix}.detail.fact.${base}.value_display`, fact.value);
+  }
+  return rows;
+}
+
 export function loadPacket(packetPath) {
   return JSON.parse(fs.readFileSync(packetPath, 'utf8'));
+}
+
+export function mediaIntakeRoot(root = ROOT) {
+  return path.join(root, '.git', 'aprasa-media-intake');
+}
+
+export function dryRunValidationCommands(packet) {
+  return [
+    ['scripts/validate-things-to-do-events.mjs'],
+    ['scripts/generate-things-to-do.mjs', `--as-of=${packet.control.as_of}`, '--write'],
+    ['scripts/generate-things-to-do.mjs', `--as-of=${packet.control.as_of}`, '--locale=pt', '--write'],
+    ['scripts/build-sitemap.mjs', '--write'],
+    ['scripts/validate-things-to-do-currentness.mjs', `--as-of=${packet.control.as_of}`],
+    ['scripts/validate-things-to-do-surface-equivalence.mjs', `--as-of=${packet.control.as_of}`],
+    ['scripts/validate-things-to-do-sitemap.mjs'],
+    ['scripts/validate-card-media.mjs'],
+    ['scripts/validate-pt-home-events.mjs']
+  ];
+}
+
+export function expectedDryRunChangedFiles(packet, { root = ROOT } = {}) {
+  const id = packet.event.id;
+  const files = [
+    'data/things-to-do-events.json',
+    'internal/provider-media-manifest.json',
+    'data/locales/locale-data.generated.json',
+    'index.html',
+    'pt/index.html',
+    'sitemap.xml',
+    `things-to-do/${id}/index.html`,
+    `pt/things-to-do/${id}/index.html`
+  ];
+  const currentness = JSON.parse(fs.readFileSync(path.join(root, 'data', 'things-to-do-currentness.json'), 'utf8'));
+  if (currentness.as_of !== packet.control.as_of) files.push('data/things-to-do-currentness.json');
+  if (packet.media.supplied_asset) files.push(packet.media.local_asset);
+  return files.sort();
 }
 
 export function validatePacket(packet, { root = ROOT, checkRepository = true } = {}) {
@@ -173,8 +239,21 @@ export function validatePacket(packet, { root = ROOT, checkRepository = true } =
   }
 
   const control = packet?.control ?? {};
-  if (control.dry_run !== true) {
-    issues.push(issue('INVALID_INPUT', 'Project 04', 'Phase 1 accepts dry_run=true only', 'control.dry_run: true', 'RECEIVED'));
+  const realWrite = control.real_write === true;
+  if (realWrite) {
+    if (control.dry_run !== false || control.allow_branch !== true || control.allow_commit !== true || control.allow_pr !== true) {
+      issues.push(issue('INVALID_INPUT', 'Project 04', 'Real-write authorization requires dry_run=false and explicit branch/commit/PR permission', 'Authorized real-write control block', 'RECEIVED'));
+    }
+    if (!COMMIT_SHA.test(control.expected_main_sha ?? '')) {
+      issues.push(issue('INVALID_INPUT', 'Project 04', 'Real-write authorization requires an exact expected_main_sha', '40-character main commit SHA', 'RECEIVED'));
+    }
+  } else {
+    if (control.dry_run !== true || control.real_write === true) {
+      issues.push(issue('INVALID_INPUT', 'Project 04', 'Dry-run packets require dry_run=true and no real-write authorization', 'Dry-run control block', 'RECEIVED'));
+    }
+    if (control.allow_commit === true || control.allow_pr === true) {
+      issues.push(issue('INVALID_INPUT', 'Project 04', 'Dry-run packets cannot authorize commits or PR creation', 'allow_commit=false and allow_pr=false', 'RECEIVED'));
+    }
   }
   if (!validDate(control.as_of)) {
     issues.push(issue('INVALID_INPUT', 'Project 04', 'control.as_of must be a real YYYY-MM-DD date', 'control.as_of', 'RECEIVED'));
@@ -226,11 +305,64 @@ export function validatePacket(packet, { root = ROOT, checkRepository = true } =
       issues.push(issue('INVALID_INPUT', 'Project 04', `media.${field} is invalid`, `media.${field}`, 'RECEIVED'));
     }
   }
+  if (realWrite) {
+    const approvedPackage = localization.approved_package;
+    if (!isObject(approvedPackage)
+      || typeof approvedPackage.package_id !== 'string'
+      || typeof approvedPackage.source_revision !== 'string'
+      || approvedPackage.project_09_status !== 'approved'
+      || !Array.isArray(approvedPackage.rows)) {
+      issues.push(issue('BLOCKED_LOCALIZATION', 'Project 09', 'Real-write mode requires the complete approved additive locale package', 'Project 09 approved_package with governed rows', 'GOVERNANCE_CHECKED'));
+    } else {
+      const expectedRows = requiredLocaleRows(event);
+      const seenRows = new Set();
+      for (const row of approvedPackage.rows) {
+        const requiredFields = ['key', 'source_revision', 'source_en', 'pt', 'scope_status', 'identity_policy', 'context_notes', 'record_id', 'linguistic_notes', 'translation_status'];
+        if (!isObject(row) || requiredFields.some((field) => typeof row[field] !== 'string')) {
+          issues.push(issue('INVALID_INPUT', 'Project 04', 'Approved locale package contains a malformed row', 'Complete governed locale row metadata', 'RECEIVED'));
+          continue;
+        }
+        if (seenRows.has(row.key)) {
+          issues.push(issue('INVALID_INPUT', 'Project 04', `Approved locale package duplicates ${row.key}`, 'Unique additive locale keys', 'RECEIVED'));
+        }
+        seenRows.add(row.key);
+        if (!expectedRows.has(row.key) || row.source_en !== expectedRows.get(row.key)) {
+          issues.push(issue('INVALID_INPUT', 'Project 04', `Approved locale row does not match canonical EN presentation: ${row.key}`, 'Matching approved event and locale package', 'RECEIVED'));
+        }
+        if (row.pt !== localization.pt_values?.[row.key] || row.pt.length === 0) {
+          issues.push(issue('BLOCKED_LOCALIZATION', 'Project 09', `Approved PT value mismatch for ${row.key}`, 'Matching approved PT value and locale row', 'GOVERNANCE_CHECKED'));
+        }
+        if (row.source_revision !== approvedPackage.source_revision || row.record_id !== event.id || row.translation_status !== 'APPROVED') {
+          issues.push(issue('BLOCKED_LOCALIZATION', 'Project 09', `Locale governance metadata is not approved for ${row.key}`, 'Approved source revision, record id, and translation status', 'GOVERNANCE_CHECKED'));
+        }
+        if (!['REQUIRED_FOR_PT_LAUNCH', 'INTENTIONALLY_UNCHANGED'].includes(row.scope_status)) {
+          issues.push(issue('INVALID_INPUT', 'Project 04', `Invalid locale scope for ${row.key}`, 'Governed scope_status', 'RECEIVED'));
+        }
+      }
+      const missingRows = [...expectedRows.keys()].filter((key) => !seenRows.has(key));
+      const extraRows = [...seenRows].filter((key) => !expectedRows.has(key));
+      if (missingRows.length || extraRows.length) {
+        issues.push(issue('BLOCKED_LOCALIZATION', 'Project 09', 'Approved locale package does not exactly cover the event presentation contract', [...missingRows, ...extraRows].join(', '), 'GOVERNANCE_CHECKED'));
+      }
+    }
+  }
   if (media.source_url != null && !validHttpUrl(media.source_url)) {
     issues.push(issue('INVALID_INPUT', 'Project 04', 'media.source_url must be null or an HTTP(S) URL', 'media.source_url', 'RECEIVED'));
   }
   if (media.local_asset != null && (typeof media.local_asset !== 'string' || media.local_asset.length === 0)) {
     issues.push(issue('INVALID_INPUT', 'Project 04', 'media.local_asset must be null or a non-empty path', 'media.local_asset', 'RECEIVED'));
+  }
+  if (media.local_asset && !EVENT_MEDIA_ASSET.test(media.local_asset)) {
+    issues.push(issue('INVALID_INPUT', 'Project 04', 'media.local_asset must use the canonical assets/events image path policy', 'assets/events/<safe-name>.<avif|jpg|jpeg|png|webp>', 'RECEIVED'));
+  }
+  if (media.supplied_asset != null && (typeof media.supplied_asset !== 'string' || !path.isAbsolute(media.supplied_asset) || !SHA256.test(media.asset_sha256 ?? ''))) {
+    issues.push(issue('INVALID_INPUT', 'Project 04', 'A supplied media asset requires an absolute path and approved SHA-256', 'media.supplied_asset + media.asset_sha256', 'RECEIVED'));
+  }
+  if (media.supplied_asset && media.local_asset) {
+    const destinationStem = path.basename(media.local_asset, path.extname(media.local_asset));
+    if (destinationStem !== event.id) {
+      issues.push(issue('INVALID_INPUT', 'Project 04', 'New supplied media must use an event-derived destination filename', `assets/events/${event.id}.<approved-image-extension>`, 'RECEIVED'));
+    }
   }
   const mediaBlocked = governance.media_status === 'review_required' || media.rights_status === 'review_required' || media.alt_status === 'review_required';
   if (mediaBlocked) {
@@ -243,10 +375,61 @@ export function validatePacket(packet, { root = ROOT, checkRepository = true } =
   if (event.media?.asset && media.local_asset && event.media.asset !== media.local_asset) {
     issues.push(issue('INVALID_INPUT', 'Project 04', 'event.media.asset and media.local_asset must identify the same canonical asset', 'Matching media paths', 'RECEIVED'));
   }
+  if (realWrite) {
+    if (media.local_asset && !SHA256.test(media.asset_sha256 ?? '')) {
+      issues.push(issue('BLOCKED_MEDIA', 'Owning Project', 'Real-write mode requires the approved media asset SHA-256', 'media.asset_sha256', 'GOVERNANCE_CHECKED'));
+    }
+    const approvedManifest = media.approved_manifest;
+    const manifestFields = [
+      'section', 'title', 'provider', 'source_url', 'media_type', 'media_state',
+      'media_source', 'media_asset', 'fallback_category', 'fallback_reason',
+      'media_provenance', 'media_asset_source_url', 'media_checked_date', 'media_alt'
+    ];
+    const manifestMatches = isObject(approvedManifest)
+      && manifestFields.every((field) => Object.hasOwn(approvedManifest, field))
+      && approvedManifest.section === 'things-to-do'
+      && approvedManifest.title === event.media_manifest_title
+      && approvedManifest.provider === event.provider
+      && approvedManifest.source_url === event.source_url
+      && approvedManifest.media_asset === (event.media?.asset ?? null)
+      && approvedManifest.media_alt === (event.media?.alt ?? '')
+      && (!event.media || (approvedManifest.media_width === event.media.width && approvedManifest.media_height === event.media.height));
+    if (!manifestMatches) {
+      issues.push(issue('BLOCKED_MEDIA', 'Owning Project / Project 09 as applicable', 'Real-write mode requires a complete approved media-manifest record matching the event', 'media.approved_manifest', 'GOVERNANCE_CHECKED'));
+    }
+  }
   if (checkRepository && media.local_asset) {
     const assetPath = path.resolve(root, media.local_asset);
-    if (!assetPath.startsWith(`${root}${path.sep}`) || !fs.existsSync(assetPath) || !fs.statSync(assetPath).isFile()) {
+    const suppliedPath = media.supplied_asset ?? null;
+    const eventAssetsRoot = fs.realpathSync(path.join(root, 'assets', 'events'));
+    const assetParent = fs.realpathSync(path.dirname(assetPath));
+    const destinationContained = assetParent === eventAssetsRoot
+      && assetPath.startsWith(`${eventAssetsRoot}${path.sep}`)
+      && (!fs.existsSync(assetPath) || !fs.lstatSync(assetPath).isSymbolicLink());
+    const localExists = destinationContained && fs.existsSync(assetPath) && fs.statSync(assetPath).isFile();
+    let suppliedExists = false;
+    if (suppliedPath) {
+      const intake = mediaIntakeRoot(root);
+      if (fs.existsSync(intake) && fs.existsSync(suppliedPath)) {
+        const realIntake = fs.realpathSync(intake);
+        const realSupplied = fs.realpathSync(suppliedPath);
+        suppliedExists = realSupplied.startsWith(`${realIntake}${path.sep}`)
+          && fs.statSync(realSupplied).isFile()
+          && !fs.lstatSync(suppliedPath).isSymbolicLink();
+      }
+    }
+    if (!destinationContained || (!localExists && !suppliedExists)) {
       issues.push(issue('BLOCKED_MEDIA', 'Project 04', `Local media asset does not exist: ${media.local_asset}`, 'Valid existing local asset', 'READY_FOR_IMPLEMENTATION'));
+    }
+    if (suppliedPath && localExists) {
+      issues.push(issue('BLOCKED_MEDIA', 'Project 04', `Supplied media target already exists: ${media.local_asset}`, 'A new collision-free canonical asset destination', 'READY_FOR_IMPLEMENTATION'));
+    }
+    const verifiedPath = localExists ? assetPath : (suppliedExists ? fs.realpathSync(suppliedPath) : null);
+    if (realWrite && verifiedPath && SHA256.test(media.asset_sha256 ?? '')) {
+      const actualHash = crypto.createHash('sha256').update(fs.readFileSync(verifiedPath)).digest('hex');
+      if (actualHash !== media.asset_sha256) {
+        issues.push(issue('BLOCKED_MEDIA', 'Project 04', 'Approved media SHA-256 does not match supplied bytes', 'Correct approved media asset', 'READY_FOR_IMPLEMENTATION'));
+      }
     }
   }
 
@@ -280,7 +463,12 @@ export function expectedChangedFiles(packet) {
     `pt/things-to-do/${id}/index.html`,
     'sitemap.xml'
   ];
-  if (packet.media.local_asset) files.push(packet.media.local_asset);
-  if (packet.localization.pt_status === 'approved') files.push('data/locales/<approved-additive-delta>.source.json');
+  if (packet.media.supplied_asset) files.push(packet.media.local_asset);
+  if (packet.localization.pt_status === 'approved') files.push(`data/locales/pt-overlay-event-${id}.source.json`);
+  if (packet.control.real_write === true) {
+    files.push('data/locales/locale-data.generated.json');
+    files.push(`automation/things-to-do/runs/${id}.json`);
+    files.push(`automation/things-to-do/runs/${id}.md`);
+  }
   return files;
 }

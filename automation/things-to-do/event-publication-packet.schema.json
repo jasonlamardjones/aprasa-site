@@ -38,7 +38,18 @@
       "properties": {
         "pt_status": { "enum": ["approved", "approval_required", "not_required"] },
         "new_strings_required": { "type": "boolean" },
-        "pt_values": { "type": "object" }
+        "pt_values": { "type": "object" },
+        "approved_package": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["package_id", "source_revision", "project_09_status", "rows"],
+          "properties": {
+            "package_id": { "type": "string", "minLength": 1 },
+            "source_revision": { "type": "string", "minLength": 1 },
+            "project_09_status": { "const": "approved" },
+            "rows": { "type": "array", "minItems": 1 }
+          }
+        }
       }
     },
     "media": {
@@ -49,7 +60,13 @@
         "rights_status": { "enum": ["approved", "review_required", "not_required"] },
         "alt_status": { "enum": ["approved", "review_required", "not_required"] },
         "source_url": { "type": ["string", "null"] },
-        "local_asset": { "type": ["string", "null"] }
+        "local_asset": {
+          "type": ["string", "null"],
+          "pattern": "^assets/events/[a-z0-9]+(?:-[a-z0-9]+)*\\.(?:avif|jpe?g|png|webp)$"
+        },
+        "supplied_asset": { "type": ["string", "null"] },
+        "asset_sha256": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+        "approved_manifest": { "type": "object" }
       }
     },
     "governance": {
@@ -68,13 +85,33 @@
       "additionalProperties": false,
       "required": ["dry_run", "as_of", "allow_branch", "allow_commit", "allow_pr", "merge_allowed"],
       "properties": {
-        "dry_run": { "const": true },
+        "dry_run": { "type": "boolean" },
+        "real_write": { "type": "boolean", "default": false },
+        "expected_main_sha": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
         "as_of": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
         "allow_branch": { "type": "boolean" },
         "allow_commit": { "type": "boolean" },
         "allow_pr": { "type": "boolean" },
         "merge_allowed": { "const": false }
-      }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "dry_run": { "const": true },
+            "real_write": { "enum": [false] }
+          }
+        },
+        {
+          "required": ["real_write", "expected_main_sha"],
+          "properties": {
+            "dry_run": { "const": false },
+            "real_write": { "const": true },
+            "allow_branch": { "const": true },
+            "allow_commit": { "const": true },
+            "allow_pr": { "const": true }
+          }
+        }
+      ]
     }
   }
 }
