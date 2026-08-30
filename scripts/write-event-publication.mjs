@@ -33,6 +33,7 @@ try {
   const branch = run('git', ['branch', '--show-current']);
   const existing = run('gh', ['pr', 'list', '--repo', 'jasonlamardjones/aprasa-site', '--head', branch, '--state', 'open', '--json', 'url']);
   if (JSON.parse(existing).length) throw new Error('DRAFT_PR_REFUSED: an open PR already exists for this branch');
+  run('git', ['push', '--dry-run', 'origin', `HEAD:refs/heads/${branch}`]);
   const result = prepareRealWriteCandidate({ root: ROOT, packet, packetPath, proof });
 
   run('git', ['add', '--', ...result.changed_files]);
