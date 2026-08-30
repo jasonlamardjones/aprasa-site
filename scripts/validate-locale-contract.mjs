@@ -20,15 +20,42 @@ function fail(msg) {
 
 const data = loadLocaleData();
 const keys = Object.values(data.keys);
+const eventDeltaFiles = readdirSync(path.join(ROOT, "data", "locales"))
+  .filter((name) => /^pt-overlay-event-[a-z0-9]+(?:-[a-z0-9]+)*\.source\.json$/.test(name))
+  .sort();
+let eventDeltaRequired = 0;
+let eventDeltaUnchanged = 0;
+
+for (const fileName of eventDeltaFiles) {
+  const source = JSON.parse(readFileSync(path.join(ROOT, "data", "locales", fileName), "utf8"));
+  if (source.project_09_status !== "approved" || source.review_required !== 0 || source.blocking_issue != null) {
+    fail(`${fileName}: unresolved Project 09 governance state`);
+  }
+  if (!Array.isArray(source.rows) || source.supplied_rows_approved !== source.rows.length) {
+    fail(`${fileName}: approved row count does not match supplied rows`);
+    continue;
+  }
+  for (const row of source.rows) {
+    if (row.scope_status === "REQUIRED_FOR_PT_LAUNCH") eventDeltaRequired += 1;
+    else if (row.scope_status === "INTENTIONALLY_UNCHANGED") eventDeltaUnchanged += 1;
+    else fail(`${fileName}: ${row.key} has invalid scope_status`);
+    if (row.translation_status !== "APPROVED" || !row.pt) fail(`${fileName}: ${row.key} is not fully approved`);
+    const generated = data.keys[row.key];
+    if (!generated) fail(`${fileName}: ${row.key} missing from generated locale data`);
+    else if (generated.en !== row.source_en || generated.pt !== row.pt || generated.source_revision !== row.source_revision) {
+      fail(`${fileName}: ${row.key} generated value/provenance differs from approved source`);
+    }
+  }
+}
 
 // --- Overlay contract (counts) — combined r2 base (732) + r3 delta (21) + r4 delta (26)
 // + r5 delta (2) + r7 delta (19) + r8 delta (21). The r6 brand-voice delta overrides
 // 42 existing PT values and adds no keys, so every count below is unchanged by it. ---
-if (keys.length !== 821) fail(`expected 821 total keys (732 r2 + 21 r3 + 26 r4 + 2 r5 + 19 r7 + 21 r8, +0 from r6), got ${keys.length}`);
+if (keys.length !== 821 + eventDeltaRequired + eventDeltaUnchanged) fail(`expected ${821 + eventDeltaRequired + eventDeltaUnchanged} total keys including approved event deltas, got ${keys.length}`);
 const required = keys.filter((k) => k.scope_status === "REQUIRED_FOR_PT_LAUNCH");
 const unchanged = keys.filter((k) => k.scope_status === "INTENTIONALLY_UNCHANGED");
-if (required.length !== 793) fail(`expected 793 REQUIRED_FOR_PT_LAUNCH keys (705 + 20 + 26 + 2 + 19 + 21), got ${required.length}`);
-if (unchanged.length !== 28) fail(`expected 28 INTENTIONALLY_UNCHANGED keys (27 + 1 + 0 + 0 + 0 + 0), got ${unchanged.length}`);
+if (required.length !== 793 + eventDeltaRequired) fail(`expected ${793 + eventDeltaRequired} REQUIRED_FOR_PT_LAUNCH keys, got ${required.length}`);
+if (unchanged.length !== 28 + eventDeltaUnchanged) fail(`expected ${28 + eventDeltaUnchanged} INTENTIONALLY_UNCHANGED keys, got ${unchanged.length}`);
 if (data.provenance.delta_revision !== "P03-PT-SOURCE-2026-08-25-r3") {
   fail(`unexpected delta_revision: ${data.provenance.delta_revision}`);
 }

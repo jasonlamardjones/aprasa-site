@@ -9,13 +9,14 @@ import { loadPacket, validatePacket } from './lib/event-publication-contract.mjs
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const packetArg = process.argv.find((arg) => arg.startsWith('--packet='));
+const proofArg = process.argv.find((arg) => arg.startsWith('--proof='));
 const TEXT_EXTENSIONS = new Set([
   '.css', '.html', '.js', '.json', '.md', '.mjs', '.svg', '.txt', '.xml',
   '.yaml', '.yml'
 ]);
 
 if (!packetArg) {
-  console.error('Usage: node scripts/prepare-event-publication.mjs --packet=<path>');
+  console.error('Usage: node scripts/prepare-event-publication.mjs --packet=<path> [--proof=<path>]');
   process.exit(2);
 }
 
@@ -118,6 +119,7 @@ function run(tempRoot, script, args = []) {
 
 const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aprasa-event-publication-'));
 const validations = [];
+const validationSteps = [];
 
 try {
   fs.cpSync(ROOT, tempRoot, {
@@ -184,15 +186,19 @@ try {
   insertHomeMarkers(path.join(tempRoot, 'index.html'), packet.event.id);
   insertHomeMarkers(path.join(tempRoot, 'pt', 'index.html'), packet.event.id);
 
-  validations.push(run(tempRoot, 'scripts/validate-things-to-do-events.mjs'));
-  validations.push(run(tempRoot, 'scripts/generate-things-to-do.mjs', [`--as-of=${packet.control.as_of}`, '--write']));
-  validations.push(run(tempRoot, 'scripts/generate-things-to-do.mjs', [`--as-of=${packet.control.as_of}`, '--locale=pt', '--write']));
-  validations.push(run(tempRoot, 'scripts/build-sitemap.mjs', ['--write']));
-  validations.push(run(tempRoot, 'scripts/validate-things-to-do-currentness.mjs', [`--as-of=${packet.control.as_of}`]));
-  validations.push(run(tempRoot, 'scripts/validate-things-to-do-surface-equivalence.mjs', [`--as-of=${packet.control.as_of}`]));
-  validations.push(run(tempRoot, 'scripts/validate-things-to-do-sitemap.mjs'));
-  validations.push(run(tempRoot, 'scripts/validate-card-media.mjs'));
-  validations.push(run(tempRoot, 'scripts/validate-pt-home-events.mjs'));
+  const runStep = (script, args = []) => {
+    validations.push(run(tempRoot, script, args));
+    validationSteps.push([script, ...args].join(' '));
+  };
+  runStep('scripts/validate-things-to-do-events.mjs');
+  runStep('scripts/generate-things-to-do.mjs', [`--as-of=${packet.control.as_of}`, '--write']);
+  runStep('scripts/generate-things-to-do.mjs', [`--as-of=${packet.control.as_of}`, '--locale=pt', '--write']);
+  runStep('scripts/build-sitemap.mjs', ['--write']);
+  runStep('scripts/validate-things-to-do-currentness.mjs', [`--as-of=${packet.control.as_of}`]);
+  runStep('scripts/validate-things-to-do-surface-equivalence.mjs', [`--as-of=${packet.control.as_of}`]);
+  runStep('scripts/validate-things-to-do-sitemap.mjs');
+  runStep('scripts/validate-card-media.mjs');
+  runStep('scripts/validate-pt-home-events.mjs');
 
   const after = inventory(tempRoot);
   const changed = changedFiles(before, after);
@@ -210,6 +216,27 @@ try {
   const unexpected = changed.filter((file) => !allowed.has(file));
   if (unexpected.length) {
     throw new Error(`Unexpected dry-run diff scope: ${unexpected.join(', ')}`);
+  }
+
+  if (proofArg) {
+    const proofPath = path.resolve(ROOT, proofArg.slice('--proof='.length));
+    const git = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: ROOT, encoding: 'utf8' });
+    if (git.status !== 0) throw new Error('Cannot create dry-run proof outside a Git working tree');
+    const proof = {
+      artifact_version: 1,
+      artifact_type: 'things-to-do-publication-dry-run-proof',
+      status: 'REVIEW_READY',
+      event_id: packet.event.id,
+      packet_sha256: crypto.createHash('sha256').update(fs.readFileSync(packetPath)).digest('hex'),
+      base_head_sha: git.stdout.trim(),
+      expected_main_sha: packet.control.expected_main_sha ?? git.stdout.trim(),
+      as_of: packet.control.as_of,
+      changed_files: changed,
+      validation_steps: validationSteps,
+      created_at: new Date().toISOString()
+    };
+    fs.mkdirSync(path.dirname(proofPath), { recursive: true });
+    writeJson(proofPath, proof);
   }
 
   console.log([

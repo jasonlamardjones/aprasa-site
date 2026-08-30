@@ -28,7 +28,8 @@
     "delta7_revision": "P03-PT-SOURCE-2026-08-28-r7",
     "delta7_package_id": "aprasa-pt-simabo-ways-to-help-r7-delta",
     "delta8_revision": "P03-PT-SOURCE-2026-08-29-r8",
-    "delta8_package_id": "aprasa-pt-part-ilhas-artemisa-ferreira-r8-delta"
+    "delta8_package_id": "aprasa-pt-part-ilhas-artemisa-ferreira-r8-delta",
+    "event_delta_packages": []
   },
   "counts": {
     "total_rows": 821,
@@ -40,7 +41,8 @@
     "r5_delta_rows": 2,
     "r6_override_rows": 42,
     "r7_delta_rows": 19,
-    "r8_delta_rows": 21
+    "r8_delta_rows": 21,
+    "event_delta_rows": 0
   },
   "keys": {
     "global.skip_to_content": {

@@ -1,0 +1,120 @@
+{
+  "contract_version": 1,
+  "event": {
+    "id": "automation-fixture-guarded-write",
+    "kind": "dated-event",
+    "title": "Automation Fixture — Guarded Write",
+    "provider": "Fixture Provider",
+    "summary": "A non-public fixture used to verify guarded event publication writes.",
+    "category": "culture",
+    "location": { "name": "Fixture Venue", "locality": "Mindelo" },
+    "source_url": "https://example.org/automation-fixture-guarded-write",
+    "source_type": "approved-fixture",
+    "start_datetime": "2026-09-20T18:30:00-01:00",
+    "end_datetime": null,
+    "end_date": "2026-09-20",
+    "checked_at": "2026-08-29",
+    "publication_state": "published",
+    "media_policy": "required",
+    "media_manifest_title": "Automation Fixture — Guarded Write",
+    "detail_page": "things-to-do/automation-fixture-guarded-write/",
+    "free_admission": true,
+    "display": { "status": "20 September 2026 · 18:30", "meta": "Fixture Venue · Free admission", "checked": "Checked 29 August 2026" },
+    "media": { "asset": "assets/events/part-ilhas-nuno-miranda-flyer.jpg", "alt": "Fixture media used only for guarded-write automation testing.", "width": 1310, "height": 1638 },
+    "card_action": { "label": "Event listing", "url": "https://example.org/automation-fixture-guarded-write" },
+    "detail": {
+      "facts": [
+        { "label": "Date", "value": "20 September 2026 · 18:30" },
+        { "label": "Where", "value": "Fixture Venue" }
+      ],
+      "body": "Fixture body approved for deterministic guarded-write testing only.",
+      "good_to_know": "This record is never intended for publication.",
+      "checked": "Checked 29 August 2026 against the approved fixture packet.",
+      "action_label": "Event listing"
+    },
+    "seo": { "description": "Non-public guarded-write fixture for A PRASA publication automation.", "title": "Automation Fixture — Guarded Write | A PRASA", "schema_type": "Event" }
+  },
+  "localization": {
+    "pt_status": "approved",
+    "new_strings_required": false,
+    "pt_values": {
+      "event.automation-fixture-guarded-write.title": "Automation Fixture — Guarded Write",
+      "event.automation-fixture-guarded-write.summary": "Registo de teste não público para validar escritas de publicação protegidas.",
+      "event.automation-fixture-guarded-write.display.status": "20 de setembro de 2026 · 18:30",
+      "event.automation-fixture-guarded-write.display.meta": "Fixture Venue · Entrada livre",
+      "event.automation-fixture-guarded-write.display.checked": "Revisto em 29 de agosto de 2026",
+      "event.automation-fixture-guarded-write.media.alt": "Imagem de teste usada apenas para validar a automação de escrita protegida.",
+      "event.automation-fixture-guarded-write.card_action.label": "Ver evento",
+      "event.automation-fixture-guarded-write.detail.body": "Texto de teste aprovado apenas para validação determinística da escrita protegida.",
+      "event.automation-fixture-guarded-write.detail.good_to_know": "Este registo nunca se destina a publicação.",
+      "event.automation-fixture-guarded-write.detail.checked": "Revisto em 29 de agosto de 2026 contra o pacote de teste aprovado.",
+      "event.automation-fixture-guarded-write.detail.action_label": "Ver evento",
+      "event.automation-fixture-guarded-write.seo.description": "Registo não público para automação protegida de publicação Things-to-Do.",
+      "event.automation-fixture-guarded-write.seo.title": "Automation Fixture — Guarded Write | A PRASA",
+      "event.automation-fixture-guarded-write.detail.fact.date.label": "Data",
+      "event.automation-fixture-guarded-write.detail.fact.date.value_display": "20 de setembro de 2026 · 18:30",
+      "event.automation-fixture-guarded-write.detail.fact.where.label": "Onde",
+      "event.automation-fixture-guarded-write.detail.fact.where.value_display": "Fixture Venue"
+    },
+    "approved_package": {
+      "package_id": "aprasa-pt-automation-fixture-guarded-write",
+      "source_revision": "P09-APPROVED-PHASE1B-FIXTURE-2026-08-30",
+      "project_09_status": "approved",
+      "rows": [
+        { "key": "event.automation-fixture-guarded-write.title", "source_revision": "P09-APPROVED-PHASE1B-FIXTURE-2026-08-30", "source_en": "Automation Fixture — Guarded Write", "pt": "Automation Fixture — Guarded Write", "scope_status": "INTENTIONALLY_UNCHANGED", "identity_policy": "PRESERVE_OFFICIAL_EVENT_TITLE", "context_notes": "Approved non-public Phase 1B test fixture.", "record_id": "automation-fixture-guarded-write", "linguistic_notes": "", "translation_status": "APPROVED" },
+        { "key": "event.automation-fixture-guarded-write.summary", "source_revision": "P09-APPROVED-PHASE1B-FIXTURE-2026-08-30", "source_en": "A non-public fixture used to verify guarded event publication writes.", "pt": "Registo de teste não público para validar escritas de publicação protegidas.", "scope_status": "REQUIRED_FOR_PT_LAUNCH", "identity_policy": "TRANSLATE_NORMALLY", "context_notes": "Approved non-public Phase 1B test fixture.", "record_id": "automation-fixture-guarded-write", "linguistic_notes": "", "translation_status": "APPROVED" },
+        { "key": "event.automation-fixture-guarded-write.display.status", "source_revision": "P09-APPROVED-PHASE1B-FIXTURE-2026-08-30", "source_en": "20 September 2026 · 18:30", "pt": "20 de setembro de 2026 · 18:30", "scope_status": "REQUIRED_FOR_PT_LAUNCH", "identity_policy": "TRANSLATE_NORMALLY", "context_notes": "Approved non-public Phase 1B test fixture.", "record_id": "automation-fixture-guarded-write", "linguistic_notes": "", "translation_status": "APPROVED" },
+        { "key": "event.automation-fixture-guarded-write.display.meta", "source_revision": "P09-APPROVED-PHASE1B-FIXTURE-2026-08-30", "source_en": "Fixture Venue · Free admission", "pt": "Fixture Venue · Entrada livre", "scope_status": "REQUIRED_FOR_PT_LAUNCH", "identity_policy": "TRANSLATE_NORMALLY", "context_notes": "Approved non-public Phase 1B test fixture.", "record_id": "automation-fixture-guarded-write", "linguistic_notes": "", "translation_status": "APPROVED" },
+        { "key": "event.automation-fixture-guarded-write.display.checked", "source_revision": "P09-APPROVED-PHASE1B-FIXTURE-2026-08-30", "source_en": "Checked 29 August 2026", "pt": "Revisto em 29 de agosto de 2026", "scope_status": "REQUIRED_FOR_PT_LAUNCH", "identity_policy": "TRANSLATE_NORMALLY", "context_notes": "Approved non-public Phase 1B test fixture.", "record_id": "automation-fixture-guarded-write", "linguistic_notes": "", "translation_status": "APPROVED" },
+        { "key": "event.automation-fixture-guarded-write.media.alt", "source_revision": "P09-APPROVED-PHASE1B-FIXTURE-2026-08-30", "source_en": "Fixture media used only for guarded-write automation testing.", "pt": "Imagem de teste usada apenas para validar a automação de escrita protegida.", "scope_status": "REQUIRED_FOR_PT_LAUNCH", "identity_policy": "TRANSLATE_NORMALLY", "context_notes": "Approved non-public Phase 1B test fixture.", "record_id": "automation-fixture-guarded-write", "linguistic_notes": "", "translation_status": "APPROVED" },
+        { "key": "event.automation-fixture-guarded-write.card_action.label", "source_revision": "P09-APPROVED-PHASE1B-FIXTURE-2026-08-30", "source_en": "Event listing", "pt": "Ver evento", "scope_status": "REQUIRED_FOR_PT_LAUNCH", "identity_policy": "TRANSLATE_NORMALLY", "context_notes": "Approved non-public Phase 1B test fixture.", "record_id": "automation-fixture-guarded-write", "linguistic_notes": "", "translation_status": "APPROVED" },
+        { "key": "event.automation-fixture-guarded-write.detail.body", "source_revision": "P09-APPROVED-PHASE1B-FIXTURE-2026-08-30", "source_en": "Fixture body approved for deterministic guarded-write testing only.", "pt": "Texto de teste aprovado apenas para validação determinística da escrita protegida.", "scope_status": "REQUIRED_FOR_PT_LAUNCH", "identity_policy": "TRANSLATE_NORMALLY", "context_notes": "Approved non-public Phase 1B test fixture.", "record_id": "automation-fixture-guarded-write", "linguistic_notes": "", "translation_status": "APPROVED" },
+        { "key": "event.automation-fixture-guarded-write.detail.good_to_know", "source_revision": "P09-APPROVED-PHASE1B-FIXTURE-2026-08-30", "source_en": "This record is never intended for publication.", "pt": "Este registo nunca se destina a publicação.", "scope_status": "REQUIRED_FOR_PT_LAUNCH", "identity_policy": "TRANSLATE_NORMALLY", "context_notes": "Approved non-public Phase 1B test fixture.", "record_id": "automation-fixture-guarded-write", "linguistic_notes": "", "translation_status": "APPROVED" },
+        { "key": "event.automation-fixture-guarded-write.detail.checked", "source_revision": "P09-APPROVED-PHASE1B-FIXTURE-2026-08-30", "source_en": "Checked 29 August 2026 against the approved fixture packet.", "pt": "Revisto em 29 de agosto de 2026 contra o pacote de teste aprovado.", "scope_status": "REQUIRED_FOR_PT_LAUNCH", "identity_policy": "TRANSLATE_NORMALLY", "context_notes": "Approved non-public Phase 1B test fixture.", "record_id": "automation-fixture-guarded-write", "linguistic_notes": "", "translation_status": "APPROVED" },
+        { "key": "event.automation-fixture-guarded-write.detail.action_label", "source_revision": "P09-APPROVED-PHASE1B-FIXTURE-2026-08-30", "source_en": "Event listing", "pt": "Ver evento", "scope_status": "REQUIRED_FOR_PT_LAUNCH", "identity_policy": "TRANSLATE_NORMALLY", "context_notes": "Approved non-public Phase 1B test fixture.", "record_id": "automation-fixture-guarded-write", "linguistic_notes": "", "translation_status": "APPROVED" },
+        { "key": "event.automation-fixture-guarded-write.seo.description", "source_revision": "P09-APPROVED-PHASE1B-FIXTURE-2026-08-30", "source_en": "Non-public guarded-write fixture for A PRASA publication automation.", "pt": "Registo não público para automação protegida de publicação Things-to-Do.", "scope_status": "REQUIRED_FOR_PT_LAUNCH", "identity_policy": "TRANSLATE_NORMALLY", "context_notes": "Approved non-public Phase 1B test fixture.", "record_id": "automation-fixture-guarded-write", "linguistic_notes": "", "translation_status": "APPROVED" },
+        { "key": "event.automation-fixture-guarded-write.seo.title", "source_revision": "P09-APPROVED-PHASE1B-FIXTURE-2026-08-30", "source_en": "Automation Fixture — Guarded Write | A PRASA", "pt": "Automation Fixture — Guarded Write | A PRASA", "scope_status": "INTENTIONALLY_UNCHANGED", "identity_policy": "PRESERVE_BRAND_AND_OFFICIAL_TITLE", "context_notes": "Approved non-public Phase 1B test fixture.", "record_id": "automation-fixture-guarded-write", "linguistic_notes": "", "translation_status": "APPROVED" },
+        { "key": "event.automation-fixture-guarded-write.detail.fact.date.label", "source_revision": "P09-APPROVED-PHASE1B-FIXTURE-2026-08-30", "source_en": "Date", "pt": "Data", "scope_status": "REQUIRED_FOR_PT_LAUNCH", "identity_policy": "TRANSLATE_NORMALLY", "context_notes": "Approved non-public Phase 1B test fixture.", "record_id": "automation-fixture-guarded-write", "linguistic_notes": "", "translation_status": "APPROVED" },
+        { "key": "event.automation-fixture-guarded-write.detail.fact.date.value_display", "source_revision": "P09-APPROVED-PHASE1B-FIXTURE-2026-08-30", "source_en": "20 September 2026 · 18:30", "pt": "20 de setembro de 2026 · 18:30", "scope_status": "REQUIRED_FOR_PT_LAUNCH", "identity_policy": "TRANSLATE_NORMALLY", "context_notes": "Approved non-public Phase 1B test fixture.", "record_id": "automation-fixture-guarded-write", "linguistic_notes": "", "translation_status": "APPROVED" },
+        { "key": "event.automation-fixture-guarded-write.detail.fact.where.label", "source_revision": "P09-APPROVED-PHASE1B-FIXTURE-2026-08-30", "source_en": "Where", "pt": "Onde", "scope_status": "REQUIRED_FOR_PT_LAUNCH", "identity_policy": "TRANSLATE_NORMALLY", "context_notes": "Approved non-public Phase 1B test fixture.", "record_id": "automation-fixture-guarded-write", "linguistic_notes": "", "translation_status": "APPROVED" },
+        { "key": "event.automation-fixture-guarded-write.detail.fact.where.value_display", "source_revision": "P09-APPROVED-PHASE1B-FIXTURE-2026-08-30", "source_en": "Fixture Venue", "pt": "Fixture Venue", "scope_status": "INTENTIONALLY_UNCHANGED", "identity_policy": "PRESERVE_PLACE_NAME", "context_notes": "Approved non-public Phase 1B test fixture.", "record_id": "automation-fixture-guarded-write", "linguistic_notes": "", "translation_status": "APPROVED" }
+      ]
+    }
+  },
+  "media": {
+    "rights_status": "approved",
+    "alt_status": "approved",
+    "source_url": "https://example.org/automation-fixture-guarded-write",
+    "local_asset": "assets/events/part-ilhas-nuno-miranda-flyer.jpg",
+    "asset_sha256": "05dfb048722b559db7f7ae0a638eec8afca86551634fff0bed196cd292b0be93",
+    "approved_manifest": {
+      "section": "things-to-do",
+      "title": "Automation Fixture — Guarded Write",
+      "provider": "Fixture Provider",
+      "source_url": "https://example.org/automation-fixture-guarded-write",
+      "media_type": "provider-supplied",
+      "media_state": "authentic-present",
+      "media_source": "Approved non-public Phase 1B fixture.",
+      "media_asset": "assets/events/part-ilhas-nuno-miranda-flyer.jpg",
+      "fallback_category": "things-culture",
+      "fallback_reason": null,
+      "media_provenance": "Approved non-public fixture media reused only inside an isolated test repository.",
+      "media_asset_source_url": "https://example.org/automation-fixture-guarded-write",
+      "media_checked_date": "2026-08-29",
+      "media_alt": "Fixture media used only for guarded-write automation testing.",
+      "media_width": 1310,
+      "media_height": 1638
+    }
+  },
+  "governance": { "publication_authorized": true, "project03_status": "approved", "project09_status": "approved", "media_status": "approved" },
+  "control": {
+    "dry_run": false,
+    "real_write": true,
+    "expected_main_sha": "b62ad38ab996cbc30def813e10949e0033362f5a",
+    "as_of": "2026-08-29",
+    "allow_branch": true,
+    "allow_commit": true,
+    "allow_pr": true,
+    "merge_allowed": false
+  }
+}

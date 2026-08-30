@@ -4,15 +4,21 @@ on:
   pull_request:
     paths:
       - 'automation/things-to-do/**'
+      - 'data/locales/**'
       - 'data/things-to-do-events.json'
       - 'data/things-to-do-currentness.json'
       - 'internal/provider-media-manifest.json'
       - 'scripts/build-sitemap.mjs'
+      - 'scripts/build-locale-data.mjs'
       - 'scripts/generate-things-to-do.mjs'
       - 'scripts/render-things-to-do-adapter.mjs'
       - 'scripts/prepare-event-publication.mjs'
+      - 'scripts/write-event-publication.mjs'
+      - 'scripts/test-event-publication-write.mjs'
       - 'scripts/validate-event-publication-packet.mjs'
       - 'scripts/lib/event-publication-contract.mjs'
+      - 'scripts/lib/event-publication-write.mjs'
+      - 'scripts/validate-locale-contract.mjs'
       - 'scripts/validate-things-to-do-*.mjs'
       - 'scripts/validate-card-media.mjs'
       - 'scripts/validate-training-opportunities-currentness.mjs'
@@ -70,6 +76,9 @@ jobs:
           expect_block automation/things-to-do/fixtures/blocked-localization.json BLOCKED_LOCALIZATION
           expect_block automation/things-to-do/fixtures/blocked-media.json BLOCKED_MEDIA
           expect_block automation/things-to-do/fixtures/invalid-input.json INVALID_INPUT
+
+      - name: Validate Phase 1B guarded real-write workflow
+        run: node scripts/test-event-publication-write.mjs
 
       - name: Load explicit currentness date
         shell: bash
