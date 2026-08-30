@@ -9,6 +9,10 @@ import { loadPacket, validatePacket } from './lib/event-publication-contract.mjs
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const packetArg = process.argv.find((arg) => arg.startsWith('--packet='));
+const TEXT_EXTENSIONS = new Set([
+  '.css', '.html', '.js', '.json', '.md', '.mjs', '.svg', '.txt', '.xml',
+  '.yaml', '.yml'
+]);
 
 if (!packetArg) {
   console.error('Usage: node scripts/prepare-event-publication.mjs --packet=<path>');
@@ -66,13 +70,32 @@ function inventory(root) {
       if (entry.isDirectory()) visit(full);
       else if (entry.isFile()) {
         const rel = path.relative(root, full).split(path.sep).join('/');
-        const hash = crypto.createHash('sha256').update(fs.readFileSync(full)).digest('hex');
+        const bytes = fs.readFileSync(full);
+        const content = TEXT_EXTENSIONS.has(path.extname(entry.name).toLowerCase())
+          ? bytes.toString('utf8').replace(/\r\n/g, '\n')
+          : bytes;
+        const hash = crypto.createHash('sha256').update(content).digest('hex');
         result.set(rel, hash);
       }
     }
   }
   visit(root);
   return result;
+}
+
+function normalizeTextEol(root) {
+  function visit(dir) {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) visit(full);
+      else if (entry.isFile() && TEXT_EXTENSIONS.has(path.extname(entry.name).toLowerCase())) {
+        const text = fs.readFileSync(full, 'utf8');
+        const normalized = text.replace(/\r\n/g, '\n');
+        if (normalized !== text) fs.writeFileSync(full, normalized);
+      }
+    }
+  }
+  visit(root);
 }
 
 function changedFiles(before, after) {
@@ -101,6 +124,10 @@ try {
     recursive: true,
     filter: (src) => path.basename(src) !== '.git'
   });
+  // Git may materialize CRLF on Windows, while incumbent generators emit LF.
+  // Normalize only the isolated copy so changed-file checks stay semantic and
+  // validators with repository-canonical LF assumptions behave consistently.
+  normalizeTextEol(tempRoot);
   const before = inventory(tempRoot);
 
   const eventsPath = path.join(tempRoot, 'data', 'things-to-do-events.json');
@@ -164,6 +191,8 @@ try {
   validations.push(run(tempRoot, 'scripts/validate-things-to-do-currentness.mjs', [`--as-of=${packet.control.as_of}`]));
   validations.push(run(tempRoot, 'scripts/validate-things-to-do-surface-equivalence.mjs', [`--as-of=${packet.control.as_of}`]));
   validations.push(run(tempRoot, 'scripts/validate-things-to-do-sitemap.mjs'));
+  validations.push(run(tempRoot, 'scripts/validate-card-media.mjs'));
+  validations.push(run(tempRoot, 'scripts/validate-pt-home-events.mjs'));
 
   const after = inventory(tempRoot);
   const changed = changedFiles(before, after);
