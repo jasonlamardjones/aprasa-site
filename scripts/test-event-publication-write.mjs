@@ -259,7 +259,7 @@ proofContext.cleanup();
 record('authoritative remote main defeats stale cached origin/main', () => withRepository((ctx) => {
   const updater = fs.mkdtempSync(path.join(os.tmpdir(), 'aprasa-remote-main-update-'));
   try {
-    run(updater, 'git', ['clone', '-q', ctx.remote, '.']);
+    run(updater, 'git', ['clone', '-q', '--branch', 'main', ctx.remote, '.']);
     run(updater, 'git', ['config', 'user.name', 'Remote Main Test']);
     run(updater, 'git', ['config', 'user.email', 'remote-main-test@aprasa.org']);
     fs.writeFileSync(path.join(updater, 'remote-main-change.txt'), 'remote main advanced\n');
