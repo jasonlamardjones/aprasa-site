@@ -5,7 +5,12 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { loadPacket, validatePacket } from './lib/event-publication-contract.mjs';
+import {
+  dryRunValidationCommands,
+  expectedDryRunChangedFiles,
+  loadPacket,
+  validatePacket
+} from './lib/event-publication-contract.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const packetArg = process.argv.find((arg) => arg.startsWith('--packet='));
@@ -160,6 +165,12 @@ try {
   });
   writeJson(manifestPath, manifest);
 
+  if (packet.media.supplied_asset) {
+    const mediaTarget = path.join(tempRoot, packet.media.local_asset);
+    fs.mkdirSync(path.dirname(mediaTarget), { recursive: true });
+    fs.copyFileSync(fs.realpathSync(packet.media.supplied_asset), mediaTarget);
+  }
+
   const localePath = path.join(tempRoot, 'data', 'locales', 'locale-data.generated.json');
   const locale = JSON.parse(fs.readFileSync(localePath, 'utf8'));
   for (const [key, pt] of Object.entries(packet.localization.pt_values)) {
@@ -190,36 +201,21 @@ try {
     validations.push(run(tempRoot, script, args));
     validationSteps.push([script, ...args].join(' '));
   };
-  runStep('scripts/validate-things-to-do-events.mjs');
-  runStep('scripts/generate-things-to-do.mjs', [`--as-of=${packet.control.as_of}`, '--write']);
-  runStep('scripts/generate-things-to-do.mjs', [`--as-of=${packet.control.as_of}`, '--locale=pt', '--write']);
-  runStep('scripts/build-sitemap.mjs', ['--write']);
-  runStep('scripts/validate-things-to-do-currentness.mjs', [`--as-of=${packet.control.as_of}`]);
-  runStep('scripts/validate-things-to-do-surface-equivalence.mjs', [`--as-of=${packet.control.as_of}`]);
-  runStep('scripts/validate-things-to-do-sitemap.mjs');
-  runStep('scripts/validate-card-media.mjs');
-  runStep('scripts/validate-pt-home-events.mjs');
+  for (const [script, ...args] of dryRunValidationCommands(packet)) runStep(script, args);
 
   const after = inventory(tempRoot);
   const changed = changedFiles(before, after);
-  const allowed = new Set([
-    'data/things-to-do-events.json',
-    'data/things-to-do-currentness.json',
-    'internal/provider-media-manifest.json',
-    'data/locales/locale-data.generated.json',
-    'index.html',
-    'pt/index.html',
-    'sitemap.xml',
-    `things-to-do/${packet.event.id}/index.html`,
-    `pt/things-to-do/${packet.event.id}/index.html`
-  ]);
-  const unexpected = changed.filter((file) => !allowed.has(file));
-  if (unexpected.length) {
-    throw new Error(`Unexpected dry-run diff scope: ${unexpected.join(', ')}`);
+  const expectedChanged = expectedDryRunChangedFiles(packet, { root: ROOT });
+  if (JSON.stringify(changed) !== JSON.stringify(expectedChanged)) {
+    throw new Error(`Unexpected dry-run diff scope: actual=[${changed.join(', ')}] expected=[${expectedChanged.join(', ')}]`);
   }
 
   if (proofArg) {
     const proofPath = path.resolve(ROOT, proofArg.slice('--proof='.length));
+    const controlledRoots = [path.join(ROOT, '.git'), os.tmpdir()].map((item) => path.resolve(item));
+    if (!controlledRoots.some((base) => proofPath.startsWith(`${base}${path.sep}`))) {
+      throw new Error('Dry-run proof output must be inside .git or the operating-system temporary directory');
+    }
     const git = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: ROOT, encoding: 'utf8' });
     if (git.status !== 0) throw new Error('Cannot create dry-run proof outside a Git working tree');
     const proof = {

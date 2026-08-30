@@ -60,7 +60,10 @@
         "rights_status": { "enum": ["approved", "review_required", "not_required"] },
         "alt_status": { "enum": ["approved", "review_required", "not_required"] },
         "source_url": { "type": ["string", "null"] },
-        "local_asset": { "type": ["string", "null"] },
+        "local_asset": {
+          "type": ["string", "null"],
+          "pattern": "^assets/events/[a-z0-9]+(?:-[a-z0-9]+)*\\.(?:avif|jpe?g|png|webp)$"
+        },
         "supplied_asset": { "type": ["string", "null"] },
         "asset_sha256": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
         "approved_manifest": { "type": "object" }

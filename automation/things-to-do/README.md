@@ -20,25 +20,27 @@ They must also contain the complete Project 09-approved additive locale
 package and the complete approved media-manifest record. The workflow copies
 those values; it does not synthesize governed wording or provenance.
 
-## Required two-stage run
+## Required trusted two-stage run
 
 From a clean fresh `feature/*` branch whose HEAD and `origin/main` both match
 `expected_main_sha`:
 
 ```sh
-node scripts/prepare-event-publication.mjs \
-  --packet=path/to/approved-packet.json \
-  --proof=.git/aprasa-publication-dry-run.json
-
 node scripts/write-event-publication.mjs \
-  --packet=path/to/approved-packet.json \
-  --proof=.git/aprasa-publication-dry-run.json
+  --packet=path/to/approved-packet.json
 ```
 
-The proof is bound to the packet SHA-256, event id, branch HEAD, approved main
-SHA, currentness date, changed-file inventory, and successful deterministic
-steps. A missing, mismatched, stale, or incomplete proof is refused before any
-authoritative write.
+The real-write command queries the authoritative remote `refs/heads/main`, then
+executes the Phase 1 dry run itself. Its proof is created in a controlled
+temporary directory and consumed in the same process; a caller-supplied proof
+cannot authorize a production write. The proof is checked against the exact
+packet SHA-256, event id, branch HEAD, authoritative main SHA, currentness date,
+changed-file inventory, and required deterministic stage list.
+
+New media bytes must first be placed beneath
+`.git/aprasa-media-intake/`. Destinations are restricted to canonical
+`assets/events/<event-id>.<avif|jpg|jpeg|png|webp>` paths. Existing approved
+assets may be reused only as regular files with the exact approved SHA-256.
 
 ## Transaction and stop gate
 
@@ -51,3 +53,8 @@ idempotence; and creates JSON plus Markdown run artifacts.
 Only a passing candidate is copied to the clean feature branch. The CLI stages
 the exact reported files, rechecks the staged scope and diff, commits, pushes,
 and opens a draft PR. It never merges, deploys, or deletes the branch.
+
+Promotion keeps a private backup journal until commit succeeds. Copy, staging,
+or commit failure restores the exact clean baseline. A later push or PR failure
+preserves the commit and reports its SHA, verified remote/PR state, and the
+deterministic resume action rather than silently rewriting history.

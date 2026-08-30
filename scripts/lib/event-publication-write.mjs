@@ -3,12 +3,18 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { expectedChangedFiles, validatePacket } from './event-publication-contract.mjs';
+import {
+  dryRunValidationCommands,
+  expectedChangedFiles,
+  expectedDryRunChangedFiles,
+  validatePacket
+} from './event-publication-contract.mjs';
 
 const TEXT_EXTENSIONS = new Set([
   '.css', '.html', '.js', '.json', '.md', '.mjs', '.svg', '.txt', '.xml',
   '.yaml', '.yml'
 ]);
+const promotionStates = new WeakMap();
 
 function command(cwd, executable, args, { allowFailure = false } = {}) {
   const result = spawnSync(executable, args, { cwd, encoding: 'utf8', env: process.env });
@@ -122,22 +128,39 @@ function initializeStagingGit(root) {
   git(root, ['commit', '-q', '-m', 'staging baseline']);
 }
 
-function assertDryRunProof(packet, packetPath, proof, head) {
+export function assertDryRunProof(root, packet, packetPath, proof, head, authoritativeMain) {
   if (proof?.artifact_version !== 1 || proof.artifact_type !== 'things-to-do-publication-dry-run-proof' || proof.status !== 'REVIEW_READY') {
     throw new Error('DRY_RUN_PROOF_REQUIRED: proof is missing or unsuccessful');
   }
   if (proof.event_id !== packet.event.id || proof.packet_sha256 !== sha256File(packetPath)) {
     throw new Error('DRY_RUN_PROOF_MISMATCH: proof does not match this packet');
   }
-  if (proof.base_head_sha !== head || proof.expected_main_sha !== packet.control.expected_main_sha) {
+  if (proof.base_head_sha !== head
+    || proof.expected_main_sha !== packet.control.expected_main_sha
+    || proof.expected_main_sha !== authoritativeMain
+    || proof.as_of !== packet.control.as_of) {
     throw new Error('DRY_RUN_PROOF_STALE: proof was created from a different baseline');
   }
-  if (!Array.isArray(proof.validation_steps) || proof.validation_steps.length < 9) {
+  const requiredSteps = dryRunValidationCommands(packet).map((items) => items.join(' '));
+  if (JSON.stringify(proof.validation_steps) !== JSON.stringify(requiredSteps)) {
     throw new Error('DRY_RUN_PROOF_INCOMPLETE: deterministic validation evidence is incomplete');
+  }
+  const expectedFiles = expectedDryRunChangedFiles(packet, { root });
+  if (JSON.stringify(proof.changed_files) !== JSON.stringify(expectedFiles)) {
+    throw new Error('DRY_RUN_PROOF_SCOPE_MISMATCH: dry-run changed-file evidence is not exact');
   }
 }
 
-export function assertRealWriteSafety(root, packet, proof, packetPath, { requireOrigin = true, allowTestBaseline = false } = {}) {
+function remoteMainSha(root) {
+  const output = git(root, ['ls-remote', '--exit-code', 'origin', 'refs/heads/main']).stdout.trim();
+  const [sha, ref, ...extra] = output.split(/\s+/);
+  if (!/^[a-f0-9]{40}$/.test(sha ?? '') || ref !== 'refs/heads/main' || extra.length) {
+    throw new Error('REMOTE_MAIN_UNAVAILABLE: could not resolve exactly one authoritative refs/heads/main');
+  }
+  return sha;
+}
+
+export function assertRealWriteSafety(root, packet) {
   const branch = git(root, ['branch', '--show-current']).stdout.trim();
   const head = git(root, ['rev-parse', 'HEAD']).stdout.trim();
   const status = git(root, ['status', '--porcelain']).stdout.trim();
@@ -145,13 +168,25 @@ export function assertRealWriteSafety(root, packet, proof, packetPath, { require
     throw new Error(`DIRECT_MAIN_WRITE_REFUSED: ${branch || 'detached HEAD'}`);
   }
   if (status) throw new Error('DIRTY_WORKTREE_REFUSED: real-write mode requires a clean feature branch');
-  if (!allowTestBaseline && head !== packet.control.expected_main_sha) throw new Error('STALE_BRANCH_REFUSED: feature branch is not at expected main');
-  if (requireOrigin) {
-    const originMain = git(root, ['rev-parse', 'origin/main']).stdout.trim();
-    if (originMain !== packet.control.expected_main_sha) throw new Error('STALE_MAIN_REFUSED: origin/main differs from packet authorization');
+  if (head !== packet.control.expected_main_sha) throw new Error('STALE_BRANCH_REFUSED: feature branch is not at expected main');
+  const authoritativeMain = remoteMainSha(root);
+  if (authoritativeMain !== packet.control.expected_main_sha) {
+    throw new Error('STALE_MAIN_REFUSED: authoritative remote main differs from packet authorization');
   }
-  assertDryRunProof(packet, packetPath, proof, head);
-  return { branch, head };
+  return { branch, head, authoritativeMain };
+}
+
+export function runTrustedDryRun(root, packet, packetPath, safety) {
+  const proofRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aprasa-trusted-proof-'));
+  const proofPath = path.join(proofRoot, 'proof.json');
+  try {
+    runNode(root, 'scripts/prepare-event-publication.mjs', [`--packet=${packetPath}`, `--proof=${proofPath}`]);
+    const proof = JSON.parse(fs.readFileSync(proofPath, 'utf8'));
+    assertDryRunProof(root, packet, packetPath, proof, safety.head, safety.authoritativeMain);
+    return Object.freeze(proof);
+  } finally {
+    fs.rmSync(proofRoot, { recursive: true, force: true });
+  }
 }
 
 function applyApprovedInputs(root, packet) {
@@ -182,9 +217,11 @@ function applyApprovedInputs(root, packet) {
   if (packet.media.supplied_asset) {
     const target = path.join(root, packet.media.local_asset);
     if (fs.existsSync(target)) throw new Error(`MEDIA_TARGET_EXISTS: ${packet.media.local_asset}`);
-    if (sha256File(packet.media.supplied_asset) !== packet.media.asset_sha256) throw new Error('MEDIA_HASH_MISMATCH');
+    const source = fs.realpathSync(packet.media.supplied_asset);
+    if (sha256File(source) !== packet.media.asset_sha256) throw new Error('MEDIA_HASH_MISMATCH');
     fs.mkdirSync(path.dirname(target), { recursive: true });
-    fs.copyFileSync(packet.media.supplied_asset, target);
+    fs.copyFileSync(source, target);
+    if (sha256File(target) !== packet.media.asset_sha256) throw new Error('MEDIA_WRITTEN_HASH_MISMATCH');
   }
 
   insertHomeMarkers(root, 'index.html', packet.event.id);
@@ -218,11 +255,75 @@ function reportFor(packet, result) {
   ].join('\n');
 }
 
-export function prepareRealWriteCandidate({ root, packet, packetPath, proof, testHooks = {}, requireOrigin = true, allowTestBaseline = false }) {
+function restorePromotion(root, state) {
+  if (state.closed) return;
+  git(root, ['reset', '--quiet', 'HEAD', '--', ...state.files], { allowFailure: true });
+  for (const entry of [...state.entries].reverse()) {
+    if (entry.existed) {
+      fs.mkdirSync(path.dirname(entry.target), { recursive: true });
+      fs.copyFileSync(entry.backup, entry.target);
+    } else if (fs.existsSync(entry.target)) {
+      fs.rmSync(entry.target, { force: true });
+    }
+  }
+  for (const dir of [...state.createdDirs].sort((a, b) => b.length - a.length)) {
+    if (fs.existsSync(dir) && fs.readdirSync(dir).length === 0) fs.rmdirSync(dir);
+  }
+  state.closed = true;
+  fs.rmSync(state.backupRoot, { recursive: true, force: true });
+  const remaining = git(root, ['status', '--porcelain']).stdout.trim();
+  if (remaining) throw new Error(`PROMOTION_ROLLBACK_INCOMPLETE: ${remaining}`);
+}
+
+function promoteWithRecovery(root, stagingRoot, files, testHooks) {
+  const backupRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aprasa-promotion-backup-'));
+  const state = { backupRoot, entries: [], createdDirs: new Set(), files, closed: false };
+  try {
+    for (const [index, relative] of files.entries()) {
+      const source = path.join(stagingRoot, relative);
+      const target = path.join(root, relative);
+      const existed = fs.existsSync(target);
+      const backup = path.join(backupRoot, relative);
+      if (existed) {
+        fs.mkdirSync(path.dirname(backup), { recursive: true });
+        fs.copyFileSync(target, backup);
+      }
+      state.entries.push({ relative, target, backup, existed });
+      for (let dir = path.dirname(target); dir.startsWith(`${root}${path.sep}`) && !fs.existsSync(dir); dir = path.dirname(dir)) {
+        state.createdDirs.add(dir);
+      }
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+      fs.copyFileSync(source, target);
+      if (testHooks.interruptPromotionAfter === index + 1) {
+        throw new Error(`INDUCED_PROMOTION_INTERRUPTION: after ${index + 1} file(s)`);
+      }
+    }
+    return state;
+  } catch (error) {
+    restorePromotion(root, state);
+    throw error;
+  }
+}
+
+export function rollbackRealWriteCandidate(root, result) {
+  const state = promotionStates.get(result);
+  if (state) restorePromotion(root, state);
+}
+
+export function acceptRealWriteCommit(result) {
+  const state = promotionStates.get(result);
+  if (!state || state.closed) return;
+  state.closed = true;
+  fs.rmSync(state.backupRoot, { recursive: true, force: true });
+}
+
+export function prepareRealWriteCandidate({ root, packet, packetPath, testHooks = {} }) {
   const preflight = validatePacket(packet, { root, checkRepository: true });
   if (!preflight.ok) throw new Error(`${preflight.state}: ${preflight.issues.map((item) => item.reason).join('; ')}`);
   if (packet.control.real_write !== true || packet.control.merge_allowed !== false) throw new Error('REAL_WRITE_AUTHORIZATION_REQUIRED');
-  const safety = assertRealWriteSafety(root, packet, proof, packetPath, { requireOrigin, allowTestBaseline });
+  const safety = assertRealWriteSafety(root, packet);
+  if (testHooks.failDryRun) throw new Error('DRY_RUN_FAILED: induced before authoritative write');
+  const proof = runTrustedDryRun(root, packet, packetPath, safety);
 
   const stagingRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aprasa-real-write-'));
   try {
@@ -289,15 +390,106 @@ export function prepareRealWriteCandidate({ root, packet, packetPath, proof, tes
     git(stagingRoot, ['diff', '--check']);
 
     // Re-check the authoritative worktree immediately before the only write.
-    assertRealWriteSafety(root, packet, proof, packetPath, { requireOrigin, allowTestBaseline });
-    for (const relative of finalChanged) {
-      const source = path.join(stagingRoot, relative);
-      const target = path.join(root, relative);
-      fs.mkdirSync(path.dirname(target), { recursive: true });
-      fs.copyFileSync(source, target);
-    }
+    const finalSafety = assertRealWriteSafety(root, packet);
+    assertDryRunProof(root, packet, packetPath, proof, finalSafety.head, finalSafety.authoritativeMain);
+    const promotion = promoteWithRecovery(root, stagingRoot, finalChanged, testHooks);
+    promotionStates.set(result, promotion);
     return result;
   } finally {
     fs.rmSync(stagingRoot, { recursive: true, force: true });
+  }
+}
+
+function inspectRemoteBranch(root, branch) {
+  const probe = git(root, ['ls-remote', 'origin', `refs/heads/${branch}`], { allowFailure: true });
+  if (probe.status !== 0 || !probe.stdout.trim()) return null;
+  return probe.stdout.trim().split(/\s+/)[0] ?? null;
+}
+
+function inspectDraftPr(root, repository, branch) {
+  if (!repository) return null;
+  const probe = command(root, 'gh', [
+    'pr', 'list', '--repo', repository, '--head', branch, '--state', 'open',
+    '--json', 'url,isDraft,headRefOid'
+  ], { allowFailure: true });
+  if (probe.status !== 0) return null;
+  try {
+    return JSON.parse(probe.stdout)[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function finalizeRealWriteCandidate({
+  root,
+  packet,
+  result,
+  repository = 'jasonlamardjones/aprasa-site',
+  testHooks = {}
+}) {
+  let committed = false;
+  let candidateSha = null;
+  try {
+    git(root, ['add', '--', ...result.changed_files]);
+    if (testHooks.induceStagingFailure) throw new Error('INDUCED_STAGING_FAILURE');
+    git(root, ['diff', '--cached', '--check']);
+    const staged = git(root, ['diff', '--cached', '--name-only']).stdout.trim().split(/\r?\n/).filter(Boolean).sort();
+    if (JSON.stringify(staged) !== JSON.stringify([...result.changed_files].sort())) {
+      throw new Error(`STAGED_SCOPE_MISMATCH: ${staged.join(', ')}`);
+    }
+    if (testHooks.induceCommitFailure) throw new Error('INDUCED_COMMIT_FAILURE');
+    git(root, ['commit', '-m', `Prepare approved event publication: ${packet.event.title}`]);
+    committed = true;
+    candidateSha = git(root, ['rev-parse', 'HEAD']).stdout.trim();
+    acceptRealWriteCommit(result);
+
+    if (testHooks.inducePushFailure) throw new Error('INDUCED_PUSH_FAILURE');
+    git(root, ['push', '--set-upstream', 'origin', result.branch]);
+    if (testHooks.inducePrFailure) throw new Error('INDUCED_PR_CREATION_FAILURE');
+    const prUrl = command(root, 'gh', [
+      'pr', 'create', '--repo', repository, '--draft', '--base', 'main', '--head', result.branch,
+      '--title', `Publish approved event: ${packet.event.title}`,
+      '--body-file', `automation/things-to-do/runs/${packet.event.id}.md`
+    ]).stdout.trim();
+    return { candidateSha, prUrl, pushed: true, prExists: true };
+  } catch (error) {
+    if (!committed) {
+      rollbackRealWriteCandidate(root, result);
+      const failure = new Error(error.message);
+      failure.recovery = {
+        phase: 'PRE_COMMIT',
+        worktree_restored: true,
+        branch: result.branch,
+        head_sha: git(root, ['rev-parse', 'HEAD']).stdout.trim(),
+        pushed: false,
+        pr_exists: false,
+        resume_action: 'Correct the reported failure and rerun the full guarded real-write command from the clean authorized baseline.'
+      };
+      throw failure;
+    }
+
+    acceptRealWriteCommit(result);
+    const remoteSha = inspectRemoteBranch(root, result.branch);
+    const pr = inspectDraftPr(root, repository, result.branch);
+    const pushed = remoteSha === candidateSha;
+    const prExists = Boolean(pr?.isDraft && pr?.headRefOid === candidateSha);
+    const resumeAction = pushed
+      ? (prExists
+          ? `Inspect the existing draft PR at ${pr.url}; no new commit or PR is required.`
+          : `Create the draft PR for ${result.branch} at commit ${candidateSha}; do not rerun candidate construction.`)
+      : `Push ${result.branch} at commit ${candidateSha}, then create its draft PR; do not rebuild or amend the commit.`;
+    const failure = new Error(error.message);
+    failure.recovery = {
+      phase: 'POST_COMMIT',
+      worktree_restored: false,
+      branch: result.branch,
+      head_sha: candidateSha,
+      pushed,
+      remote_sha: remoteSha,
+      pr_exists: prExists,
+      pr_url: pr?.url ?? null,
+      resume_action: resumeAction
+    };
+    throw failure;
   }
 }

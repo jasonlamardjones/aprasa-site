@@ -16,6 +16,7 @@ const MEDIA_STATUSES = new Set(['approved', 'review_required', 'not_required']);
 const DATETIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})$/;
 const COMMIT_SHA = /^[a-f0-9]{40}$/;
 const SHA256 = /^[a-f0-9]{64}$/;
+const EVENT_MEDIA_ASSET = /^assets\/events\/[a-z0-9]+(?:-[a-z0-9]+)*\.(?:avif|jpe?g|png|webp)$/;
 
 function issue(code, owner, reason, requiredInput, resumeFrom) {
   return { code, owner, reason, required_input: requiredInput, resume_from: resumeFrom };
@@ -110,6 +111,42 @@ export function requiredLocaleRows(event) {
 
 export function loadPacket(packetPath) {
   return JSON.parse(fs.readFileSync(packetPath, 'utf8'));
+}
+
+export function mediaIntakeRoot(root = ROOT) {
+  return path.join(root, '.git', 'aprasa-media-intake');
+}
+
+export function dryRunValidationCommands(packet) {
+  return [
+    ['scripts/validate-things-to-do-events.mjs'],
+    ['scripts/generate-things-to-do.mjs', `--as-of=${packet.control.as_of}`, '--write'],
+    ['scripts/generate-things-to-do.mjs', `--as-of=${packet.control.as_of}`, '--locale=pt', '--write'],
+    ['scripts/build-sitemap.mjs', '--write'],
+    ['scripts/validate-things-to-do-currentness.mjs', `--as-of=${packet.control.as_of}`],
+    ['scripts/validate-things-to-do-surface-equivalence.mjs', `--as-of=${packet.control.as_of}`],
+    ['scripts/validate-things-to-do-sitemap.mjs'],
+    ['scripts/validate-card-media.mjs'],
+    ['scripts/validate-pt-home-events.mjs']
+  ];
+}
+
+export function expectedDryRunChangedFiles(packet, { root = ROOT } = {}) {
+  const id = packet.event.id;
+  const files = [
+    'data/things-to-do-events.json',
+    'internal/provider-media-manifest.json',
+    'data/locales/locale-data.generated.json',
+    'index.html',
+    'pt/index.html',
+    'sitemap.xml',
+    `things-to-do/${id}/index.html`,
+    `pt/things-to-do/${id}/index.html`
+  ];
+  const currentness = JSON.parse(fs.readFileSync(path.join(root, 'data', 'things-to-do-currentness.json'), 'utf8'));
+  if (currentness.as_of !== packet.control.as_of) files.push('data/things-to-do-currentness.json');
+  if (packet.media.supplied_asset) files.push(packet.media.local_asset);
+  return files.sort();
 }
 
 export function validatePacket(packet, { root = ROOT, checkRepository = true } = {}) {
@@ -315,8 +352,17 @@ export function validatePacket(packet, { root = ROOT, checkRepository = true } =
   if (media.local_asset != null && (typeof media.local_asset !== 'string' || media.local_asset.length === 0)) {
     issues.push(issue('INVALID_INPUT', 'Project 04', 'media.local_asset must be null or a non-empty path', 'media.local_asset', 'RECEIVED'));
   }
+  if (media.local_asset && !EVENT_MEDIA_ASSET.test(media.local_asset)) {
+    issues.push(issue('INVALID_INPUT', 'Project 04', 'media.local_asset must use the canonical assets/events image path policy', 'assets/events/<safe-name>.<avif|jpg|jpeg|png|webp>', 'RECEIVED'));
+  }
   if (media.supplied_asset != null && (typeof media.supplied_asset !== 'string' || !path.isAbsolute(media.supplied_asset) || !SHA256.test(media.asset_sha256 ?? ''))) {
     issues.push(issue('INVALID_INPUT', 'Project 04', 'A supplied media asset requires an absolute path and approved SHA-256', 'media.supplied_asset + media.asset_sha256', 'RECEIVED'));
+  }
+  if (media.supplied_asset && media.local_asset) {
+    const destinationStem = path.basename(media.local_asset, path.extname(media.local_asset));
+    if (destinationStem !== event.id) {
+      issues.push(issue('INVALID_INPUT', 'Project 04', 'New supplied media must use an event-derived destination filename', `assets/events/${event.id}.<approved-image-extension>`, 'RECEIVED'));
+    }
   }
   const mediaBlocked = governance.media_status === 'review_required' || media.rights_status === 'review_required' || media.alt_status === 'review_required';
   if (mediaBlocked) {
@@ -355,12 +401,30 @@ export function validatePacket(packet, { root = ROOT, checkRepository = true } =
   if (checkRepository && media.local_asset) {
     const assetPath = path.resolve(root, media.local_asset);
     const suppliedPath = media.supplied_asset ?? null;
-    const localExists = assetPath.startsWith(`${root}${path.sep}`) && fs.existsSync(assetPath) && fs.statSync(assetPath).isFile();
-    const suppliedExists = suppliedPath && fs.existsSync(suppliedPath) && fs.statSync(suppliedPath).isFile();
-    if (!assetPath.startsWith(`${root}${path.sep}`) || (!localExists && !suppliedExists)) {
+    const eventAssetsRoot = fs.realpathSync(path.join(root, 'assets', 'events'));
+    const assetParent = fs.realpathSync(path.dirname(assetPath));
+    const destinationContained = assetParent === eventAssetsRoot
+      && assetPath.startsWith(`${eventAssetsRoot}${path.sep}`)
+      && (!fs.existsSync(assetPath) || !fs.lstatSync(assetPath).isSymbolicLink());
+    const localExists = destinationContained && fs.existsSync(assetPath) && fs.statSync(assetPath).isFile();
+    let suppliedExists = false;
+    if (suppliedPath) {
+      const intake = mediaIntakeRoot(root);
+      if (fs.existsSync(intake) && fs.existsSync(suppliedPath)) {
+        const realIntake = fs.realpathSync(intake);
+        const realSupplied = fs.realpathSync(suppliedPath);
+        suppliedExists = realSupplied.startsWith(`${realIntake}${path.sep}`)
+          && fs.statSync(realSupplied).isFile()
+          && !fs.lstatSync(suppliedPath).isSymbolicLink();
+      }
+    }
+    if (!destinationContained || (!localExists && !suppliedExists)) {
       issues.push(issue('BLOCKED_MEDIA', 'Project 04', `Local media asset does not exist: ${media.local_asset}`, 'Valid existing local asset', 'READY_FOR_IMPLEMENTATION'));
     }
-    const verifiedPath = localExists ? assetPath : suppliedPath;
+    if (suppliedPath && localExists) {
+      issues.push(issue('BLOCKED_MEDIA', 'Project 04', `Supplied media target already exists: ${media.local_asset}`, 'A new collision-free canonical asset destination', 'READY_FOR_IMPLEMENTATION'));
+    }
+    const verifiedPath = localExists ? assetPath : (suppliedExists ? fs.realpathSync(suppliedPath) : null);
     if (realWrite && verifiedPath && SHA256.test(media.asset_sha256 ?? '')) {
       const actualHash = crypto.createHash('sha256').update(fs.readFileSync(verifiedPath)).digest('hex');
       if (actualHash !== media.asset_sha256) {
