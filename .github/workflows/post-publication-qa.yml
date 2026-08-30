@@ -1,0 +1,145 @@
+# Phase 2A post-publication QA — read-only detection and observability.
+#
+# This workflow observes the deployed production site and records structured
+# findings. It has no write path of any kind: it does not commit, push, open or
+# merge a pull request, deploy, file an issue, or notify an external service.
+# Warnings are recorded and do not fail the job; high-confidence ERROR/CRITICAL
+# findings do.
+#
+# Cadence (all cron times UTC; production is Atlantic/Cape_Verde, UTC-1):
+#   IMMEDIATE_POST_DEPLOY  push to main, after a bounded Pages readiness wait
+#   DAILY_LIGHTWEIGHT      07:10 UTC (06:10 local) Sun and Tue-Sat
+#   WEEKLY_DEEP            07:40 UTC (06:40 local) Monday
+#   MANUAL                 workflow_dispatch, any mode
+# Daily deliberately skips Monday so the weekly deep pass is that day's single
+# run. DELAYED_RECHECK lives in post-publication-qa-reconcile.yml.
+
+name: Post-publication QA
+
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: '10 7 * * 0,2,3,4,5,6'
+    - cron: '40 7 * * 1'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'QA mode to run'
+        required: true
+        default: MANUAL
+        type: choice
+        options:
+          - MANUAL
+          - IMMEDIATE_POST_DEPLOY
+          - DELAYED_RECHECK
+          - DAILY_LIGHTWEIGHT
+          - WEEKLY_DEEP
+
+permissions:
+  contents: read
+  deployments: read
+
+concurrency:
+  group: post-publication-qa-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out the commit under test
+        uses: actions/checkout@v4
+        with:
+          # Two commits so the immediate mode can derive the routes the merge
+          # actually touched.
+          fetch-depth: 2
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Resolve QA mode
+        id: mode
+        shell: bash
+        run: |
+          case "${{ github.event_name }}" in
+            push)
+              mode=IMMEDIATE_POST_DEPLOY
+              ;;
+            schedule)
+              if [ "${{ github.event.schedule }}" = "40 7 * * 1" ]; then
+                mode=WEEKLY_DEEP
+              else
+                mode=DAILY_LIGHTWEIGHT
+              fi
+              ;;
+            *)
+              mode="${{ inputs.mode }}"
+              ;;
+          esac
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+          echo "Running post-publication QA in $mode mode."
+
+      - name: Derive routes affected by this push
+        id: affected
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          before="${{ github.event.before }}"
+          out=affected-files.txt
+          : > "$out"
+          if [ -n "$before" ] && [ "$before" != "0000000000000000000000000000000000000000" ] \
+             && git cat-file -e "$before^{commit}" 2>/dev/null; then
+            git diff --name-only "$before" "${{ github.sha }}" > "$out"
+          else
+            echo "No usable base commit; the immediate run falls back to its core route set."
+          fi
+          echo "path=$out" >> "$GITHUB_OUTPUT"
+          echo "Affected files:"; cat "$out"
+
+      - name: Run post-publication QA
+        id: qa
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set +e
+          node scripts/qa/run-post-publication-qa.mjs \
+            --mode='${{ steps.mode.outputs.mode }}' \
+            --expected-sha='${{ github.sha }}' \
+            --commit-timestamp='${{ github.event.head_commit.timestamp }}' \
+            --out=qa-artifacts \
+            --deployment-wait-ms=300000 \
+            --deployment-poll-ms=30000 \
+            ${{ steps.affected.outputs.path && format('--affected-from={0}', steps.affected.outputs.path) || '' }}
+          code=$?
+          set -e
+          echo "qa_exit=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Upload QA report and evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: post-publication-qa-${{ steps.mode.outputs.mode }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: qa-artifacts/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Fail on high-confidence defects
+        shell: bash
+        run: |
+          # Exit code 1 means the report rolled up to FAILED (an ERROR or
+          # CRITICAL finding). Exit code 2 means the runner itself could not
+          # complete. Warnings return 0 by design.
+          code='${{ steps.qa.outputs.qa_exit }}'
+          if [ "$code" = "0" ]; then
+            echo "No high-confidence defects detected."
+            exit 0
+          fi
+          echo "Post-publication QA reported defects (runner exit $code). See the Step Summary and the uploaded JSON report."
+          exit 1

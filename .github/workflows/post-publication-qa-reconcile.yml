@@ -1,0 +1,104 @@
+# Delayed post-deployment recheck — reconciliation, not a sleeping runner.
+#
+# A delayed verification needs to land roughly 30-90 minutes after a
+# deployment. Holding a runner in `sleep` for that hour would bill an hour of
+# idle time per publication, so this cheap job runs on a short schedule and
+# asks one question: is there a successful github-pages deployment inside the
+# delayed window that has not been rechecked yet? Almost every firing answers
+# "no" in a few seconds and stops.
+#
+# Dedupe marker is the delayed run's own evidence artifact, so no QA state is
+# ever committed to the repository. Read-only, like every Phase 2A job.
+
+name: Post-publication QA (delayed recheck)
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: read
+  actions: read
+
+concurrency:
+  group: post-publication-qa-delayed
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.decide.outputs.run }}
+      sha: ${{ steps.decide.outputs.sha }}
+      artifact: ${{ steps.decide.outputs.artifact }}
+    steps:
+      - name: Check out reconciler
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Decide whether a delayed recheck is due
+        id: decide
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/qa/reconcile-delayed-recheck.mjs
+
+  delayed-recheck:
+    needs: reconcile
+    if: needs.reconcile.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out the deployed commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.reconcile.outputs.sha }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Run delayed recheck
+        id: qa
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set +e
+          node scripts/qa/run-post-publication-qa.mjs \
+            --mode=DELAYED_RECHECK \
+            --expected-sha='${{ needs.reconcile.outputs.sha }}' \
+            --out=qa-artifacts
+          code=$?
+          set -e
+          echo "qa_exit=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      # The artifact name is also the dedupe marker the reconciler looks for,
+      # so it must be uploaded whatever the QA outcome.
+      - name: Upload delayed QA report and evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ needs.reconcile.outputs.artifact }}
+          path: qa-artifacts/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Fail on high-confidence defects
+        shell: bash
+        run: |
+          code='${{ steps.qa.outputs.qa_exit }}'
+          if [ "$code" = "0" ]; then
+            echo "No high-confidence defects detected."
+            exit 0
+          fi
+          echo "Delayed recheck reported defects (runner exit $code). See the Step Summary and the uploaded JSON report."
+          exit 1
