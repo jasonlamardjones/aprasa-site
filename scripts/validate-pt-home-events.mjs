@@ -121,8 +121,8 @@ if (checkedRecords === 0) {
 // localizer or a loose substring grep.
 {
   const enHome = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-  const jsonLdMatch = homeHtml.match(/<script type="application\/ld\+json">\n([\s\S]*?)\n<\/script>/);
-  const enJsonLdMatch = enHome.match(/<script type="application\/ld\+json">\n([\s\S]*?)\n<\/script>/);
+  const jsonLdMatch = homeHtml.match(/<script type="application\/ld\+json">\r?\n([\s\S]*?)\r?\n<\/script>/);
+  const enJsonLdMatch = enHome.match(/<script type="application\/ld\+json">\r?\n([\s\S]*?)\r?\n<\/script>/);
   if (!jsonLdMatch) {
     errors.push('pt/index.html: Organization JSON-LD block not found');
   } else {

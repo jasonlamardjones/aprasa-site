@@ -1,0 +1,30 @@
+{
+  "contract_version": 1,
+  "event": {
+    "id": "automation-fixture-localization-blocked",
+    "kind": "dated-event",
+    "title": "Automation Fixture — Localization Blocked",
+    "provider": "Fixture Provider",
+    "summary": "A non-public fixture for the localization approval gate.",
+    "category": "culture",
+    "location": { "name": "Fixture Venue", "locality": "Mindelo" },
+    "source_url": "https://example.org/localization-blocked",
+    "source_type": "approved-fixture",
+    "start_datetime": "2026-09-21T18:30:00-01:00",
+    "end_date": "2026-09-21",
+    "checked_at": "2026-08-29",
+    "publication_state": "published",
+    "media_policy": "required",
+    "media_manifest_title": "Automation Fixture — Localization Blocked",
+    "detail_page": "things-to-do/automation-fixture-localization-blocked/",
+    "display": { "status": "21 September 2026 · 18:30", "meta": "Fixture Venue", "checked": "Checked 29 August 2026" },
+    "media": { "asset": "assets/events/part-ilhas-nuno-miranda-flyer.jpg", "alt": "Fixture media.", "width": 1310, "height": 1638 },
+    "card_action": { "label": "Event listing", "url": "https://example.org/localization-blocked" },
+    "detail": { "facts": [{ "label": "Date", "value": "21 September 2026 · 18:30" }], "body": "Approved English fixture body.", "good_to_know": null, "checked": "Checked 29 August 2026.", "action_label": "Event listing" },
+    "seo": { "description": "Localization-blocked automation fixture.", "title": "Automation Fixture — Localization Blocked | A PRASA", "schema_type": "Event" }
+  },
+  "localization": { "pt_status": "approval_required", "new_strings_required": true, "pt_values": {} },
+  "media": { "rights_status": "approved", "alt_status": "approved", "source_url": "https://example.org/localization-blocked", "local_asset": "assets/events/part-ilhas-nuno-miranda-flyer.jpg" },
+  "governance": { "publication_authorized": true, "project03_status": "approved", "project09_status": "approval_required", "media_status": "approved" },
+  "control": { "dry_run": true, "as_of": "2026-09-21", "allow_branch": false, "allow_commit": false, "allow_pr": false, "merge_allowed": false }
+}

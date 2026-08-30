@@ -1,0 +1,26 @@
+{
+  "contract_version": 1,
+  "event": {
+    "id": "Automation Fixture Invalid",
+    "kind": "dated-event",
+    "title": "",
+    "provider": "Fixture Provider",
+    "summary": "A deliberately invalid non-public fixture.",
+    "category": "culture",
+    "location": { "name": "Fixture Venue", "locality": "Mindelo" },
+    "source_url": "https://example.org/invalid",
+    "source_type": "approved-fixture",
+    "checked_at": "29-08-2026",
+    "publication_state": "published",
+    "media_policy": "required",
+    "media_manifest_title": "Automation Fixture — Invalid",
+    "detail_page": "things-to-do/INVALID/",
+    "display": {},
+    "detail": {},
+    "seo": {}
+  },
+  "localization": { "pt_status": "approved", "new_strings_required": false, "pt_values": { "invalid": "invalid" } },
+  "media": { "rights_status": "approved", "alt_status": "approved", "source_url": null, "local_asset": null },
+  "governance": { "publication_authorized": true, "project03_status": "approved", "project09_status": "approved", "media_status": "approved" },
+  "control": { "dry_run": true, "as_of": "2026-08-29", "allow_branch": false, "allow_commit": false, "allow_pr": false, "merge_allowed": false }
+}

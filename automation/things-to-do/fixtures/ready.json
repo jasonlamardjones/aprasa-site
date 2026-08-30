@@ -1,0 +1,63 @@
+{
+  "contract_version": 1,
+  "event": {
+    "id": "automation-fixture-ready-event",
+    "kind": "dated-event",
+    "title": "Automation Fixture — Ready Event",
+    "provider": "Fixture Provider",
+    "summary": "A non-public fixture used to verify the approved-event publication preflight.",
+    "category": "culture",
+    "location": { "name": "Fixture Venue", "locality": "Mindelo" },
+    "source_url": "https://example.org/automation-fixture-ready-event",
+    "source_type": "approved-fixture",
+    "start_datetime": "2026-09-20T18:30:00-01:00",
+    "end_datetime": null,
+    "end_date": "2026-09-20",
+    "checked_at": "2026-08-29",
+    "publication_state": "published",
+    "media_policy": "required",
+    "media_manifest_title": "Automation Fixture — Ready Event",
+    "detail_page": "things-to-do/automation-fixture-ready-event/",
+    "free_admission": true,
+    "display": { "status": "20 September 2026 · 18:30", "meta": "Fixture Venue · Free admission", "checked": "Checked 29 August 2026" },
+    "media": { "asset": "assets/events/part-ilhas-nuno-miranda-flyer.jpg", "alt": "Fixture media used only for publication-automation testing.", "width": 1310, "height": 1638 },
+    "card_action": { "label": "Event listing", "url": "https://example.org/automation-fixture-ready-event" },
+    "detail": {
+      "facts": [
+        { "label": "Date", "value": "20 September 2026 · 18:30" },
+        { "label": "Where", "value": "Fixture Venue" }
+      ],
+      "body": "Fixture body approved for deterministic automation testing only.",
+      "good_to_know": "This record is never intended for publication.",
+      "checked": "Checked 29 August 2026 against the approved fixture packet.",
+      "action_label": "Event listing"
+    },
+    "seo": { "description": "Non-public fixture for A PRASA Things-to-Do publication automation.", "title": "Automation Fixture — Ready Event | A PRASA", "schema_type": "Event" }
+  },
+  "localization": {
+    "pt_status": "approved",
+    "new_strings_required": false,
+    "pt_values": {
+      "event.automation-fixture-ready-event.title": "Automation Fixture — Ready Event",
+      "event.automation-fixture-ready-event.summary": "Registo de teste não público para validar a automação de publicação.",
+      "event.automation-fixture-ready-event.display.status": "20 de setembro de 2026 · 18:30",
+      "event.automation-fixture-ready-event.display.meta": "Fixture Venue · Entrada livre",
+      "event.automation-fixture-ready-event.display.checked": "Revisto em 29 de agosto de 2026",
+      "event.automation-fixture-ready-event.media.alt": "Imagem de teste usada apenas para validar a automação de publicação.",
+      "event.automation-fixture-ready-event.card_action.label": "Ver evento",
+      "event.automation-fixture-ready-event.detail.body": "Texto de teste aprovado apenas para validação determinística da automação.",
+      "event.automation-fixture-ready-event.detail.good_to_know": "Este registo nunca se destina a publicação.",
+      "event.automation-fixture-ready-event.detail.checked": "Revisto em 29 de agosto de 2026 contra o pacote de teste aprovado.",
+      "event.automation-fixture-ready-event.detail.action_label": "Ver evento",
+      "event.automation-fixture-ready-event.seo.description": "Registo não público para automação de publicação Things-to-Do.",
+      "event.automation-fixture-ready-event.seo.title": "Automation Fixture — Ready Event | A PRASA",
+      "event.automation-fixture-ready-event.detail.fact.date.label": "Data",
+      "event.automation-fixture-ready-event.detail.fact.date.value_display": "20 de setembro de 2026 · 18:30",
+      "event.automation-fixture-ready-event.detail.fact.where.label": "Onde",
+      "event.automation-fixture-ready-event.detail.fact.where.value_display": "Fixture Venue"
+    }
+  },
+  "media": { "rights_status": "approved", "alt_status": "approved", "source_url": "https://example.org/automation-fixture-ready-event", "local_asset": "assets/events/part-ilhas-nuno-miranda-flyer.jpg" },
+  "governance": { "publication_authorized": true, "project03_status": "approved", "project09_status": "approved", "media_status": "approved" },
+  "control": { "dry_run": true, "as_of": "2026-08-29", "allow_branch": false, "allow_commit": false, "allow_pr": false, "merge_allowed": false }
+}

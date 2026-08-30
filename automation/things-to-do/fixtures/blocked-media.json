@@ -1,0 +1,49 @@
+{
+  "contract_version": 1,
+  "event": {
+    "id": "automation-fixture-media-blocked",
+    "kind": "dated-event",
+    "title": "Automation Fixture — Media Blocked",
+    "provider": "Fixture Provider",
+    "summary": "A non-public fixture for the media review gate.",
+    "category": "culture",
+    "location": { "name": "Fixture Venue", "locality": "Mindelo" },
+    "source_url": "https://example.org/media-blocked",
+    "source_type": "approved-fixture",
+    "start_datetime": "2026-09-22T18:30:00-01:00",
+    "end_date": "2026-09-22",
+    "checked_at": "2026-08-29",
+    "publication_state": "published",
+    "media_policy": "required",
+    "media_manifest_title": "Automation Fixture — Media Blocked",
+    "detail_page": "things-to-do/automation-fixture-media-blocked/",
+    "display": { "status": "22 September 2026 · 18:30", "meta": "Fixture Venue", "checked": "Checked 29 August 2026" },
+    "media": { "asset": "assets/events/part-ilhas-nuno-miranda-flyer.jpg", "alt": "Fixture media awaiting approval.", "width": 1310, "height": 1638 },
+    "card_action": { "label": "Event listing", "url": "https://example.org/media-blocked" },
+    "detail": { "facts": [{ "label": "Date", "value": "22 September 2026 · 18:30" }], "body": "Approved fixture body.", "good_to_know": null, "checked": "Checked 29 August 2026.", "action_label": "Event listing" },
+    "seo": { "description": "Media-blocked automation fixture.", "title": "Automation Fixture — Media Blocked | A PRASA", "schema_type": "Event" }
+  },
+  "localization": {
+    "pt_status": "approved",
+    "new_strings_required": false,
+    "pt_values": {
+      "event.automation-fixture-media-blocked.title": "Automation Fixture — Media Blocked",
+      "event.automation-fixture-media-blocked.summary": "Registo de teste não público para a barreira de revisão de media.",
+      "event.automation-fixture-media-blocked.display.status": "22 de setembro de 2026 · 18:30",
+      "event.automation-fixture-media-blocked.display.meta": "Fixture Venue",
+      "event.automation-fixture-media-blocked.display.checked": "Revisto em 29 de agosto de 2026",
+      "event.automation-fixture-media-blocked.media.alt": "Imagem de teste a aguardar aprovação.",
+      "event.automation-fixture-media-blocked.card_action.label": "Ver evento",
+      "event.automation-fixture-media-blocked.detail.body": "Texto de teste aprovado.",
+      "event.automation-fixture-media-blocked.detail.checked": "Revisto em 29 de agosto de 2026.",
+      "event.automation-fixture-media-blocked.detail.action_label": "Ver evento",
+      "event.automation-fixture-media-blocked.seo.description": "Registo de teste de automação bloqueado por media.",
+      "event.automation-fixture-media-blocked.seo.title": "Automation Fixture — Media Blocked | A PRASA",
+      "event.automation-fixture-media-blocked.detail.fact.date.label": "Data",
+      "event.automation-fixture-media-blocked.detail.fact.date.value_display": "22 de setembro de 2026 · 18:30"
+    }
+  },
+  "media": { "rights_status": "review_required", "alt_status": "review_required", "source_url": "https://example.org/media-blocked", "local_asset": "assets/events/part-ilhas-nuno-miranda-flyer.jpg" },
+  "governance": { "publication_authorized": true, "project03_status": "approved", "project09_status": "approved", "media_status": "review_required" },
+  "control": { "dry_run": true, "as_of": "2026-08-29", "allow_branch": false, "allow_commit": false, "allow_pr": false, "merge_allowed": false }
+}
