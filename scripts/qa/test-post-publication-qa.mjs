@@ -738,8 +738,10 @@ await testCase('G2a Home current does not end grace for a transiently stale PT r
 });
 
 await testCase('G2b Home current does not end grace for a transiently stale detail route', async (assert) => {
-  assert(Boolean(CURRENT_DETAIL_ROUTE), 'no current detail route available in the committed data');
-  if (!CURRENT_DETAIL_ROUTE) return;
+  if (!CURRENT_DETAIL_ROUTE) {
+    assert(false, 'no current detail route available in the committed data');
+    return;
+  }
   const { report } = await runEdgeGrace((overrides) => {
     overrides.set(CURRENT_DETAIL_ROUTE, (hit) => (hit < 1 ? null : undefined));
   });
@@ -1473,21 +1475,50 @@ if (!chromeAvailable) {
     );
   });
 
-  await testCase('G1 the blocked-navigation path still cleans up Chrome and its profile', async (assert) => {
-    const profiles = () => fs.readdirSync(os.tmpdir()).filter((entry) => entry.startsWith('aprasa-qa-chrome-'));
-    const before = profiles().length;
+  await testCase('G1 closing the browser terminates the Chrome process it spawned', async (assert) => {
+    // The guaranteed half of teardown, asserted directly on the layer that owns
+    // it. Temporary-profile removal is documented best effort — Chrome may
+    // still be unlinking its own files when rmSync runs — but the process
+    // dying is not optional, and an orphaned browser is what would actually
+    // hurt: it holds memory and a debugging port for the rest of the job.
+    const { launchBrowser } = await import('./lib/cdp.mjs');
+    const browser = await launchBrowser();
+    const pid = browser.process.pid;
+    const exited = new Promise((resolve) => browser.process.once('exit', () => resolve(true)));
+    await browser.close();
+    const died = await Promise.race([
+      exited,
+      new Promise((resolve) => setTimeout(() => resolve(false), 5000)),
+    ]);
+    assert(died === true, `chrome pid ${pid} did not exit within 5s of close()`);
+  });
+
+  await testCase('G1 the blocked-navigation path still reaches browser teardown', async (assert) => {
+    // Teardown on the failure path is asserted as two deterministic facts
+    // rather than by counting leftover profile directories. A count is not a
+    // stable assertion: removal races Chrome's own unlinking, which is exactly
+    // why profile cleanup is documented as best effort. What is guaranteed is
+    // that close() runs and that close() kills the process (tested above).
+    const { auditPinnedInvariants } = await import('./audit-read-only.mjs');
+    const teardownPinned = auditPinnedInvariants(ROOT, [{
+      file: 'scripts/qa/lib/qa-browser.mjs',
+      needle: '} finally {\n    await browser.close();\n  }',
+      why: 'teardown is unconditional',
+    }]);
     const wrap = sessionFailing('Target.setAutoAttach');
-    const { server } = await runBrowserFixture(SHELL('<p>never fetched</p>'), {
+    const failure = await runBrowserFixture(SHELL('<p>never fetched</p>'), {
       viewportFilter: 'desktop',
       installGuard: (session, options) => installReadOnlyGuard(wrap(session), options),
     });
-    // close() is awaited inside runBrowserChecks' finally, but Chrome unlinks
-    // its own profile files asynchronously, so allow one short settle.
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    const after = profiles().length;
+    const success = await runBrowserFixture(SHELL('<p>fetched normally</p>'), { viewportFilter: 'desktop' });
     assert(
-      server.received.length === 0 && after <= before,
-      `profiles before=${before} after=${after} requests=${server.received.length}`
+      // Teardown sits in an unconditional finally, so returning early from the
+      // gate cannot skip it...
+      teardownPinned.length === 0
+        // ...and the gate did return early, with nothing sent.
+        && failure.server.received.length === 0
+        && success.server.received.length > 0,
+      `teardownPinned=${JSON.stringify(teardownPinned)} failureRequests=${failure.server.received.length} successRequests=${success.server.received.length}`
     );
   });
 

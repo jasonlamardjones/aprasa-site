@@ -75,6 +75,11 @@ const PINNED_INVARIANTS = [
     needle: 'if (!guard.installed) {',
     why: 'an incomplete guard blocks navigation instead of degrading to a note',
   },
+  {
+    file: 'scripts/qa/lib/qa-browser.mjs',
+    needle: '} finally {\n    await browser.close();\n  }',
+    why: 'Chrome is torn down unconditionally, including on the blocked-navigation path',
+  },
   // Negative invariants: things whose *return* would reopen a closed finding.
   {
     file: 'scripts/qa/run-post-publication-qa.mjs',
