@@ -12,7 +12,34 @@
 // future Phase 2B orchestrator; it grants no authority in this phase.
 
 export const REPORT_SCHEMA = 'aprasa-post-publication-qa-report';
-export const REPORT_VERSION = '1.0.0';
+// 1.1.0 adds `validator_id` to checks and issues. The bump is deliberate and
+// not cosmetic: the field is *required* on issues, so a consumer must be able to
+// tell a report that guarantees it from one that does not. Both say
+// "aprasa-post-publication-qa-report"; only the version distinguishes them, and
+// 30-day artifact retention means pre-1.1.0 reports are still in circulation.
+export const REPORT_VERSION = '1.1.0';
+
+/**
+ * Stable machine-readable identity for a source validator.
+ *
+ * Phase 2B may not decide write authority by parsing `evidence.command`: a
+ * command string is a shell invocation, not a semantic identity, and it changes
+ * whenever a path or a flag is refactored. `validator_id` names the validator
+ * itself and is expected to outlive both.
+ *
+ * Null everywhere it does not apply — the live HTTP, browser and deployment
+ * domains have no source validator behind them. That mirrors how `route` and
+ * `locale` already behave in this contract: required, frequently null.
+ */
+export const VALIDATOR_ID_PATTERN = /^[a-z][a-z0-9_]*$/;
+
+function assertValidatorId(value) {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== 'string' || !VALIDATOR_ID_PATTERN.test(value)) {
+    throw new Error(`qa-contract: validator_id must be snake_case or null, got ${JSON.stringify(value)}`);
+  }
+  return value;
+}
 
 export const MODES = Object.freeze([
   'IMMEDIATE_POST_DEPLOY',
@@ -177,6 +204,7 @@ export function makeIssue({
   resolver_class = 'UNKNOWN',
   retryable = false,
   auto_remediation_candidate = false,
+  validator_id = null,
 }) {
   if (typeof code !== 'string' || !/^[A-Z][A-Z0-9_]*$/.test(code)) {
     throw new Error(`qa-contract: issue code must be SCREAMING_SNAKE_CASE, got "${code}"`);
@@ -201,6 +229,7 @@ export function makeIssue({
     resolver_class,
     retryable: Boolean(retryable),
     auto_remediation_candidate: Boolean(auto_remediation_candidate),
+    validator_id: assertValidatorId(validator_id),
   };
 }
 
@@ -215,10 +244,23 @@ export function makeCheck({
   expected = null,
   duration_ms = null,
   evidence = {},
+  validator_id = null,
 }) {
   assertEnum(domain, DOMAINS, 'domain');
   assertEnum(status, CHECK_STATUSES, 'check status');
-  return { id, domain, name, status, route, locale, observed, expected, duration_ms, evidence };
+  return {
+    id,
+    domain,
+    name,
+    status,
+    route,
+    locale,
+    observed,
+    expected,
+    duration_ms,
+    evidence,
+    validator_id: assertValidatorId(validator_id),
+  };
 }
 
 /**

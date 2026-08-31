@@ -152,42 +152,84 @@ function htmlContains(html, fragmentBuilder, value) {
 // SOURCE_VALIDATION — re-uses the incumbent deterministic validators as-is.
 // --------------------------------------------------------------------------
 
-function sourceValidatorPlan(asOf, today) {
+/**
+ * The incumbent source validators, keyed by their stable machine-readable
+ * identity. The identity is primary and the script path is derived from it —
+ * not the other way round — so moving or renaming a script changes exactly one
+ * line here and leaves every emitted `validator_id` untouched.
+ *
+ * This exists because two structurally different validators legitimately emit
+ * the same issue code. `validate-things-to-do-currentness.mjs` reports drift a
+ * generator can repair by rerunning against authoritative data;
+ * `validate-training-opportunities-currentness.mjs` reports drift in
+ * hand-authored Home cards that no generator owns. Both surface as
+ * SOURCE_CURRENTNESS_DRIFT, and before this field the only thing telling them
+ * apart in the report was `evidence.command` — a shell string. Any consumer
+ * deciding what it may repair has to key on identity, never on that string.
+ */
+export const SOURCE_VALIDATORS = Object.freeze({
+  things_to_do_events: 'scripts/validate-things-to-do-events.mjs',
+  things_to_do_currentness: 'scripts/validate-things-to-do-currentness.mjs',
+  things_to_do_surface_equivalence: 'scripts/validate-things-to-do-surface-equivalence.mjs',
+  things_to_do_sitemap: 'scripts/validate-things-to-do-sitemap.mjs',
+  locale_contract: 'scripts/validate-locale-contract.mjs',
+  pt_home_events: 'scripts/validate-pt-home-events.mjs',
+  card_media: 'scripts/validate-card-media.mjs',
+  training_opportunities_currentness: 'scripts/validate-training-opportunities-currentness.mjs',
+});
+
+/**
+ * One entry per *invocation*. `id` names the step (it is the check id suffix);
+ * `validator_id` names the semantic validator behind it. The two are
+ * deliberately not the same thing: the Things-to-Do currentness validator is
+ * run twice per pass — once against the committed `as_of` and once against
+ * today — so two steps share one identity. Code plus identity is what
+ * distinguishes them, and that pair is stable.
+ */
+export function sourceValidatorPlan(asOf, today) {
   return [
     // Structural: the committed repository must be internally consistent.
-    { id: 'events', name: 'canonical event records', args: ['scripts/validate-things-to-do-events.mjs'], severity: 'ERROR', resolver_class: 'CONTENT_GOVERNANCE' },
-    { id: 'currentness-committed', name: `committed currentness as of ${asOf}`, args: ['scripts/validate-things-to-do-currentness.mjs', `--as-of=${asOf}`], severity: 'ERROR', resolver_class: 'CONTENT_GOVERNANCE' },
-    { id: 'surface-equivalence', name: `EN/PT surface equivalence as of ${asOf}`, args: ['scripts/validate-things-to-do-surface-equivalence.mjs', `--as-of=${asOf}`], severity: 'ERROR', resolver_class: 'LOCALIZATION' },
-    { id: 'sitemap', name: 'sitemap covers canonical routes', args: ['scripts/validate-things-to-do-sitemap.mjs'], severity: 'ERROR', resolver_class: 'TECHNICAL' },
-    { id: 'locale-contract', name: 'EN/PT locale contract', args: ['scripts/validate-locale-contract.mjs'], severity: 'ERROR', resolver_class: 'LOCALIZATION' },
-    { id: 'pt-home-events', name: 'PT Home generated event regions', args: ['scripts/validate-pt-home-events.mjs'], severity: 'ERROR', resolver_class: 'LOCALIZATION' },
+    { id: 'events', validator_id: 'things_to_do_events', name: 'canonical event records', args: [SOURCE_VALIDATORS.things_to_do_events], severity: 'ERROR', resolver_class: 'CONTENT_GOVERNANCE' },
+    { id: 'currentness-committed', validator_id: 'things_to_do_currentness', name: `committed currentness as of ${asOf}`, args: [SOURCE_VALIDATORS.things_to_do_currentness, `--as-of=${asOf}`], severity: 'ERROR', resolver_class: 'CONTENT_GOVERNANCE' },
+    { id: 'surface-equivalence', validator_id: 'things_to_do_surface_equivalence', name: `EN/PT surface equivalence as of ${asOf}`, args: [SOURCE_VALIDATORS.things_to_do_surface_equivalence, `--as-of=${asOf}`], severity: 'ERROR', resolver_class: 'LOCALIZATION' },
+    { id: 'sitemap', validator_id: 'things_to_do_sitemap', name: 'sitemap covers canonical routes', args: [SOURCE_VALIDATORS.things_to_do_sitemap], severity: 'ERROR', resolver_class: 'TECHNICAL' },
+    { id: 'locale-contract', validator_id: 'locale_contract', name: 'EN/PT locale contract', args: [SOURCE_VALIDATORS.locale_contract], severity: 'ERROR', resolver_class: 'LOCALIZATION' },
+    { id: 'pt-home-events', validator_id: 'pt_home_events', name: 'PT Home generated event regions', args: [SOURCE_VALIDATORS.pt_home_events], severity: 'ERROR', resolver_class: 'LOCALIZATION' },
     // Media validator uses exit code 2 for warnings-only.
-    { id: 'card-media', name: 'card media manifest', args: ['scripts/validate-card-media.mjs'], severity: 'ERROR', resolver_class: 'MEDIA', warnExitCode: 2 },
+    { id: 'card-media', validator_id: 'card_media', name: 'card media manifest', args: [SOURCE_VALIDATORS.card_media], severity: 'ERROR', resolver_class: 'MEDIA', warnExitCode: 2 },
     // Live-date drift: content that has aged past its publication date since the
     // last publication run. Real and deterministic, but a publication-cadence
     // matter rather than a site defect, so it warns instead of failing.
-    { id: 'currentness-today', name: `currentness drift as of ${today}`, args: ['scripts/validate-things-to-do-currentness.mjs', `--as-of=${today}`], severity: 'WARNING', resolver_class: 'CONTENT_GOVERNANCE', drift: true },
-    { id: 'training-currentness-today', name: `training opportunity currentness as of ${today}`, args: ['scripts/validate-training-opportunities-currentness.mjs', `--as-of=${today}`, '--home=index.html', '--home=pt/index.html'], severity: 'WARNING', resolver_class: 'CONTENT_GOVERNANCE', drift: true },
+    { id: 'currentness-today', validator_id: 'things_to_do_currentness', name: `currentness drift as of ${today}`, args: [SOURCE_VALIDATORS.things_to_do_currentness, `--as-of=${today}`], severity: 'WARNING', resolver_class: 'CONTENT_GOVERNANCE', drift: true },
+    { id: 'training-currentness-today', validator_id: 'training_opportunities_currentness', name: `training opportunity currentness as of ${today}`, args: [SOURCE_VALIDATORS.training_opportunities_currentness, `--as-of=${today}`, '--home=index.html', '--home=pt/index.html'], severity: 'WARNING', resolver_class: 'CONTENT_GOVERNANCE', drift: true },
   ];
 }
 
-async function runSourceValidation(emit, { asOf, today }) {
+/** Run one validator as a child process. Extracted so the identity contract can
+ *  be tested against chosen outcomes without depending on what the real
+ *  validators happen to report on the day the suite runs. */
+async function runValidatorStep(validator) {
+  try {
+    const { stdout, stderr } = await execFileAsync(process.execPath, validator.args, { cwd: ROOT, maxBuffer: 8 * 1024 * 1024 });
+    return { code: 0, output: `${stdout}${stderr}` };
+  } catch (error) {
+    return {
+      code: typeof error.code === 'number' ? error.code : 1,
+      output: `${error.stdout ?? ''}${error.stderr ?? ''}` || String(error.message),
+    };
+  }
+}
+
+export async function runSourceValidation(emit, { asOf, today, runStep = runValidatorStep }) {
   for (const validator of sourceValidatorPlan(asOf, today)) {
     const startedAt = Date.now();
-    let code = 0;
-    let output = '';
-    try {
-      const { stdout, stderr } = await execFileAsync(process.execPath, validator.args, { cwd: ROOT, maxBuffer: 8 * 1024 * 1024 });
-      output = `${stdout}${stderr}`;
-    } catch (error) {
-      code = typeof error.code === 'number' ? error.code : 1;
-      output = `${error.stdout ?? ''}${error.stderr ?? ''}` || String(error.message);
-    }
+    const { code, output } = await runStep(validator);
     const warnOnly = validator.warnExitCode !== undefined && code === validator.warnExitCode;
     const passed = code === 0;
     emit.check({
       id: `source:${validator.id}`,
       name: validator.name,
+      validator_id: validator.validator_id,
       status: passed ? 'PASS' : warnOnly ? 'WARN' : validator.severity === 'WARNING' ? 'WARN' : 'FAIL',
       observed: { exit_code: code },
       expected: { exit_code: 0 },
@@ -200,9 +242,12 @@ async function runSourceValidation(emit, { asOf, today }) {
       severity: warnOnly ? 'WARNING' : validator.severity,
       category: 'SOURCE',
       check: validator.name,
+      // The semantic identity of the validator that produced this finding.
+      // `evidence.command` stays as evidence and must never be parsed for it.
+      validator_id: validator.validator_id,
       observed: output.trim().split('\n').slice(0, 25).join('\n'),
       expected: 'validator exits 0',
-      evidence: { command: `node ${validator.args.join(' ')}`, exit_code: code },
+      evidence: { command: `node ${validator.args.join(' ')}`, exit_code: code, step_id: validator.id },
       resolver_class: validator.resolver_class,
       auto_remediation_candidate: Boolean(validator.drift),
     });

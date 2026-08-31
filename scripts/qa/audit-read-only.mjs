@@ -80,6 +80,21 @@ const PINNED_INVARIANTS = [
     needle: '} finally {\n    await browser.close();\n  }',
     why: 'Chrome is torn down unconditionally, including on the blocked-navigation path',
   },
+  {
+    file: 'scripts/qa/run-post-publication-qa.mjs',
+    needle: 'export const SOURCE_VALIDATORS = Object.freeze({',
+    why: 'source validators carry a stable machine-readable identity, not just a script path',
+  },
+  {
+    file: 'scripts/qa/run-post-publication-qa.mjs',
+    needle: 'validator_id: validator.validator_id,',
+    why: 'the validator identity reaches the emitted check and issue',
+  },
+  {
+    file: 'scripts/qa/lib/qa-contract.mjs',
+    needle: 'validator_id: assertValidatorId(validator_id),',
+    why: 'validator_id is validated by the contract rather than passed through unchecked',
+  },
   // Negative invariants: things whose *return* would reopen a closed finding.
   {
     file: 'scripts/qa/run-post-publication-qa.mjs',

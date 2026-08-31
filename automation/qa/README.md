@@ -338,9 +338,9 @@ reviewable act.
 
 ## Report contract
 
-`scripts/qa/qa-report.schema.json` (`1.0.0`) is the published envelope, and
+`scripts/qa/qa-report.schema.json` (`1.1.0`) is the published envelope, and
 every run validates its own report against it. `version` is pinned to the exact
-string `1.0.0` rather than a version-shaped pattern, and `started_at` /
+string `1.1.0` rather than a version-shaped pattern, and `started_at` /
 `completed_at` must be RFC 3339 timestamps, so a consumer can rely on both. Results stay in four distinct
 domains: `SOURCE_VALIDATION`, `LIVE_HTTP_VALIDATION`, `LIVE_BROWSER_VALIDATION`,
 `DEPLOYMENT_PROVENANCE`.
@@ -354,6 +354,52 @@ Severity is `INFO | WARNING | ERROR | CRITICAL`; overall status is
 4. otherwise `HEALTHY`
 
 Only `FAILED` fails the workflow. Warnings never do.
+
+### Source-validator identity (`validator_id`)
+
+Every check and issue carries `validator_id`: the stable, machine-readable
+identity of the source validator behind it, or `null` outside the
+`SOURCE_VALIDATION` domain. It behaves like `route` and `locale` already do in
+this contract — required on issues, frequently null.
+
+It exists because **two structurally different validators legitimately emit the
+same issue code**. `SOURCE_CURRENTNESS_DRIFT` is produced both by
+`validate-things-to-do-currentness.mjs`, whose drift a generator can repair by
+rerunning against authoritative repository data, and by
+`validate-training-opportunities-currentness.mjs`, whose drift lives in
+hand-authored Home cards that no generator owns. Before this field the only
+thing separating them in the report was `evidence.command` — a shell string.
+**A consumer deciding what it may repair must key on `validator_id`, never on
+that string:** a command is an invocation, not an identity, and it changes
+whenever a path or a flag is refactored.
+
+The registry in `run-post-publication-qa.mjs` makes the identity primary and the
+script path derived from it, so moving a validator changes one line and leaves
+every emitted identity untouched.
+
+| `validator_id` | Script | Plan step(s) |
+| --- | --- | --- |
+| `things_to_do_events` | `validate-things-to-do-events.mjs` | `events` |
+| `things_to_do_currentness` | `validate-things-to-do-currentness.mjs` | `currentness-committed`, `currentness-today` |
+| `things_to_do_surface_equivalence` | `validate-things-to-do-surface-equivalence.mjs` | `surface-equivalence` |
+| `things_to_do_sitemap` | `validate-things-to-do-sitemap.mjs` | `sitemap` |
+| `locale_contract` | `validate-locale-contract.mjs` | `locale-contract` |
+| `pt_home_events` | `validate-pt-home-events.mjs` | `pt-home-events` |
+| `card_media` | `validate-card-media.mjs` | `card-media` |
+| `training_opportunities_currentness` | `validate-training-opportunities-currentness.mjs` | `training-currentness-today` |
+
+Nine plan steps, eight identities. That is deliberate, not a collision: the
+Things-to-Do currentness validator runs twice per pass — once against the
+committed `as_of` and once against today — so two steps share one identity and
+are separated by their issue code (`SOURCE_VALIDATOR_FAILED` vs
+`SOURCE_CURRENTNESS_DRIFT`) and by `evidence.step_id`. The pair
+`(code, validator_id)` is the stable discriminator.
+
+The version moved to `1.1.0` because `validator_id` is *required* on issues, so
+a consumer has to be able to tell a report that guarantees it from one that does
+not. Both carry the same `schema` string, and 30-day artifact retention means
+pre-`1.1.0` reports are still in circulation. The change is additive: no issue
+code, severity, rollup, or domain behaviour changed.
 
 ## Evidence
 
