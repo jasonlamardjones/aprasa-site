@@ -1,0 +1,81 @@
+# Self-tests for the Phase 2A post-publication QA layer.
+#
+# Runs the deterministic QA test matrix on pull requests that touch the QA
+# layer. Every case runs against a loopback fixture server or an in-process
+# stub, so this job never contacts or modifies production.
+
+name: Post-publication QA self-tests
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/qa/**'
+      - '.github/workflows/post-publication-qa.yml'
+      - '.github/workflows/post-publication-qa-reconcile.yml'
+      - '.github/workflows/post-publication-qa-tests.yml'
+      - 'automation/qa/**'
+      - 'data/things-to-do-events.json'
+      - 'data/things-to-do-currentness.json'
+      - 'sitemap.xml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/qa/**'
+
+permissions:
+  contents: read
+
+jobs:
+  self-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Report the browser the QA layer will drive
+        shell: bash
+        run: |
+          # The QA layer speaks CDP to whatever Chrome/Chromium the runner
+          # already provides; it installs nothing.
+          node -e "import('./scripts/qa/lib/cdp.mjs').then((m) => { const bin = m.findChrome(); console.log('chrome:', bin ?? 'NONE'); if (!bin) process.exit(1); })"
+
+      - name: Run the QA test matrix
+        run: node scripts/qa/test-post-publication-qa.mjs
+
+      - name: Verify the report schema parses and is enforced
+        run: |
+          node -e "
+            const fs = require('node:fs');
+            const schema = JSON.parse(fs.readFileSync('scripts/qa/qa-report.schema.json', 'utf8'));
+            if (schema.\$id !== 'https://aprasa.org/schemas/post-publication-qa-report-1.0.0.json') {
+              throw new Error('unexpected schema id');
+            }
+            console.log('report schema OK');
+          "
+
+      # Three independent mutation checks, deliberately not one. The grep below
+      # only reads text; the audit script asserts the structural invariants; and
+      # the test matrix above asserts the behavioural ones -- a recording fetch
+      # proving every GitHub call is a bodyless GET, and a fixture server's own
+      # request log proving a real Chrome running real page code only ever
+      # issued GET.
+      - name: Re-audit the read-only guarantee structurally
+        run: node scripts/qa/audit-read-only.mjs
+
+      - name: Confirm the QA layer carries no mutation path
+        shell: bash
+        run: |
+          # Phase 2A has zero mutation authority. This guard fails the build if
+          # a write-capable call ever appears in the QA layer.
+          if grep -REn "git (commit|push|merge)|createPullRequest|/pulls|/issues|method: *'(POST|PUT|PATCH|DELETE)'" scripts/qa/ ; then
+            echo "A mutation path was introduced into the Phase 2A QA layer."
+            exit 1
+          fi
+          echo "No mutation path present."

@@ -1,0 +1,164 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://aprasa.org/schemas/post-publication-qa-report-1.0.0.json",
+  "title": "A PRASA post-publication QA report",
+  "description": "Phase 2A read-only detection report. Consumers must treat auto_remediation_candidate as classification metadata only; Phase 2A has no mutation authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "mode",
+    "run",
+    "target",
+    "started_at",
+    "completed_at",
+    "duration_ms",
+    "overall_status",
+    "domains",
+    "counts",
+    "checks",
+    "issues",
+    "evidence_artifacts",
+    "notes"
+  ],
+  "properties": {
+    "schema": { "const": "aprasa-post-publication-qa-report" },
+    "version": { "const": "1.0.0" },
+    "mode": {
+      "enum": ["IMMEDIATE_POST_DEPLOY", "DELAYED_RECHECK", "DAILY_LIGHTWEIGHT", "WEEKLY_DEEP", "MANUAL"]
+    },
+    "run": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "workflow": { "type": ["string", "null"] },
+        "run_id": { "type": ["string", "null"] },
+        "run_attempt": { "type": ["string", "null"] },
+        "trigger_event": { "type": ["string", "null"] }
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["environment", "base_url", "expected_main_sha", "observed_deployment_sha", "deployment_state"],
+      "properties": {
+        "environment": { "enum": ["production", "test-fixture"] },
+        "base_url": { "type": "string" },
+        "expected_main_sha": { "type": ["string", "null"] },
+        "observed_deployment_sha": { "type": ["string", "null"] },
+        "deployment_state": {
+          "enum": ["DEPLOYMENT_VERIFIED", "DEPLOYMENT_PENDING", "DEPLOYMENT_FAILED", "DEPLOYMENT_UNKNOWN"]
+        },
+        "deployment_evidence": { "type": "object" },
+        "currentness_as_of": { "type": ["string", "null"] },
+        "affected_routes": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "started_at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})$" },
+    "completed_at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})$" },
+    "duration_ms": { "type": "integer", "minimum": 0 },
+    "overall_status": { "enum": ["HEALTHY", "DEGRADED", "FAILED", "UNKNOWN"] },
+    "domains": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["SOURCE_VALIDATION", "LIVE_HTTP_VALIDATION", "LIVE_BROWSER_VALIDATION", "DEPLOYMENT_PROVENANCE"],
+      "properties": {
+        "SOURCE_VALIDATION": { "enum": ["HEALTHY", "DEGRADED", "FAILED", "SKIPPED"] },
+        "LIVE_HTTP_VALIDATION": { "enum": ["HEALTHY", "DEGRADED", "FAILED", "SKIPPED"] },
+        "LIVE_BROWSER_VALIDATION": { "enum": ["HEALTHY", "DEGRADED", "FAILED", "SKIPPED"] },
+        "DEPLOYMENT_PROVENANCE": { "enum": ["HEALTHY", "DEGRADED", "FAILED", "SKIPPED"] }
+      }
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["checks", "checks_failed", "issues", "issues_by_severity"],
+      "properties": {
+        "checks": { "type": "integer", "minimum": 0 },
+        "checks_failed": { "type": "integer", "minimum": 0 },
+        "issues": { "type": "integer", "minimum": 0 },
+        "issues_by_severity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["INFO", "WARNING", "ERROR", "CRITICAL"],
+          "properties": {
+            "INFO": { "type": "integer", "minimum": 0 },
+            "WARNING": { "type": "integer", "minimum": 0 },
+            "ERROR": { "type": "integer", "minimum": 0 },
+            "CRITICAL": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "domain", "name", "status"],
+        "properties": {
+          "id": { "type": "string" },
+          "domain": {
+            "enum": ["SOURCE_VALIDATION", "LIVE_HTTP_VALIDATION", "LIVE_BROWSER_VALIDATION", "DEPLOYMENT_PROVENANCE"]
+          },
+          "name": { "type": "string" },
+          "status": { "enum": ["PASS", "WARN", "FAIL", "SKIP", "UNKNOWN"] },
+          "route": { "type": ["string", "null"] },
+          "locale": { "enum": ["en", "pt", null] },
+          "observed": {},
+          "expected": {},
+          "duration_ms": { "type": ["integer", "null"] },
+          "evidence": { "type": "object" }
+        }
+      }
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "severity",
+          "category",
+          "domain",
+          "route",
+          "locale",
+          "check",
+          "observed",
+          "expected",
+          "evidence",
+          "deterministic",
+          "resolver_class",
+          "retryable",
+          "auto_remediation_candidate"
+        ],
+        "properties": {
+          "code": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" },
+          "severity": { "enum": ["INFO", "WARNING", "ERROR", "CRITICAL"] },
+          "category": {
+            "enum": ["QA_INFRASTRUCTURE", "ROUTE", "ASSET", "MEDIA", "LOCALIZATION", "CONTENT", "RENDER", "CONSOLE", "NETWORK", "DEPLOYMENT", "SOURCE", "SCHEMA"]
+          },
+          "domain": {
+            "enum": ["SOURCE_VALIDATION", "LIVE_HTTP_VALIDATION", "LIVE_BROWSER_VALIDATION", "DEPLOYMENT_PROVENANCE"]
+          },
+          "route": { "type": ["string", "null"] },
+          "locale": { "enum": ["en", "pt", null] },
+          "check": { "type": "string" },
+          "observed": {},
+          "expected": {},
+          "evidence": { "type": "object" },
+          "deterministic": { "type": "boolean" },
+          "resolver_class": {
+            "enum": ["TECHNICAL", "LOCALIZATION", "CONTENT_GOVERNANCE", "MEDIA", "EXTERNAL_DEPENDENCY", "DEPLOYMENT", "UNKNOWN"]
+          },
+          "retryable": { "type": "boolean" },
+          "auto_remediation_candidate": { "type": "boolean" }
+        }
+      }
+    },
+    "evidence_artifacts": { "type": "array", "items": { "type": "string" } },
+    "notes": { "type": "array", "items": { "type": "string" } }
+  }
+}
