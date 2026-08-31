@@ -54,7 +54,7 @@ jobs:
           node -e "
             const fs = require('node:fs');
             const schema = JSON.parse(fs.readFileSync('scripts/qa/qa-report.schema.json', 'utf8'));
-            if (schema.\$id !== 'https://aprasa.org/schemas/post-publication-qa-report-1.0.0.json') {
+            if (schema.\$id !== 'https://aprasa.org/schemas/post-publication-qa-report-1.1.0.json') {
               throw new Error('unexpected schema id');
             }
             console.log('report schema OK');

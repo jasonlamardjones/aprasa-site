@@ -12,7 +12,70 @@
 // future Phase 2B orchestrator; it grants no authority in this phase.
 
 export const REPORT_SCHEMA = 'aprasa-post-publication-qa-report';
-export const REPORT_VERSION = '1.0.0';
+// 1.1.0 adds `validator_id` to checks and issues. The bump is deliberate and
+// not cosmetic: the field is *required* on issues, so a consumer must be able to
+// tell a report that guarantees it from one that does not. Both say
+// "aprasa-post-publication-qa-report"; only the version distinguishes them, and
+// 30-day artifact retention means pre-1.1.0 reports are still in circulation.
+export const REPORT_VERSION = '1.1.0';
+
+/**
+ * Stable machine-readable identity for a source validator.
+ *
+ * Phase 2B may not decide write authority by parsing `evidence.command`: a
+ * command string is a shell invocation, not a semantic identity, and it changes
+ * whenever a path or a flag is refactored. `validator_id` names the validator
+ * itself and is expected to outlive both.
+ *
+ * Null everywhere it does not apply — the live HTTP, browser and deployment
+ * domains have no source validator behind them. That mirrors how `route` and
+ * `locale` already behave in this contract: required, frequently null.
+ */
+export const VALIDATOR_ID_PATTERN = /^[a-z][a-z0-9_]*$/;
+
+function assertValidatorId(value) {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== 'string' || !VALIDATOR_ID_PATTERN.test(value)) {
+    throw new Error(`qa-contract: validator_id must be snake_case or null, got ${JSON.stringify(value)}`);
+  }
+  return value;
+}
+
+/**
+ * The domain/identity invariant on issues, enforced fail-closed at construction.
+ *
+ * `validator_id` being merely *well-formed or null* is not enough for a finding.
+ * Phase 2B decides repository write authority from the pair
+ * `(code, validator_id)`, so a SOURCE_VALIDATION issue that carries a null
+ * identity silently pushes that decision back onto `evidence.command` — the
+ * shell string this field exists to replace. The two directions are therefore
+ * both errors, not defaults:
+ *
+ *   SOURCE_VALIDATION  -> a present, non-null, pattern-valid identity
+ *   every other domain -> exactly null; there is no validator behind a live
+ *                         HTTP, browser or deployment finding, so a
+ *                         plausible-looking id there would be a fabricated
+ *                         provenance claim
+ *
+ * Rejecting at the constructor means an under-specified detector fails where it
+ * is written rather than emitting a schema-valid but unroutable finding.
+ */
+function assertIssueValidatorId(domain, value) {
+  if (domain === 'SOURCE_VALIDATION') {
+    if (typeof value !== 'string' || !VALIDATOR_ID_PATTERN.test(value)) {
+      throw new Error(
+        `qa-contract: a SOURCE_VALIDATION issue requires a non-null snake_case validator_id, got ${JSON.stringify(value ?? null)}`
+      );
+    }
+    return value;
+  }
+  if (value !== null && value !== undefined) {
+    throw new Error(
+      `qa-contract: validator_id must be null outside SOURCE_VALIDATION (domain "${domain}"), got ${JSON.stringify(value)}`
+    );
+  }
+  return null;
+}
 
 export const MODES = Object.freeze([
   'IMMEDIATE_POST_DEPLOY',
@@ -177,6 +240,7 @@ export function makeIssue({
   resolver_class = 'UNKNOWN',
   retryable = false,
   auto_remediation_candidate = false,
+  validator_id = null,
 }) {
   if (typeof code !== 'string' || !/^[A-Z][A-Z0-9_]*$/.test(code)) {
     throw new Error(`qa-contract: issue code must be SCREAMING_SNAKE_CASE, got "${code}"`);
@@ -201,6 +265,7 @@ export function makeIssue({
     resolver_class,
     retryable: Boolean(retryable),
     auto_remediation_candidate: Boolean(auto_remediation_candidate),
+    validator_id: assertIssueValidatorId(domain, validator_id),
   };
 }
 
@@ -215,10 +280,23 @@ export function makeCheck({
   expected = null,
   duration_ms = null,
   evidence = {},
+  validator_id = null,
 }) {
   assertEnum(domain, DOMAINS, 'domain');
   assertEnum(status, CHECK_STATUSES, 'check status');
-  return { id, domain, name, status, route, locale, observed, expected, duration_ms, evidence };
+  return {
+    id,
+    domain,
+    name,
+    status,
+    route,
+    locale,
+    observed,
+    expected,
+    duration_ms,
+    evidence,
+    validator_id: assertValidatorId(validator_id),
+  };
 }
 
 /**

@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://aprasa.org/schemas/post-publication-qa-report-1.0.0.json",
+  "$id": "https://aprasa.org/schemas/post-publication-qa-report-1.1.0.json",
   "title": "A PRASA post-publication QA report",
-  "description": "Phase 2A read-only detection report. Consumers must treat auto_remediation_candidate as classification metadata only; Phase 2A has no mutation authority.",
+  "description": "Phase 2A read-only detection report. Consumers must treat auto_remediation_candidate as classification metadata only; Phase 2A has no mutation authority. validator_id is the stable identity of the source validator behind a finding; consumers must key on it rather than parsing evidence.command. On issues the schema enforces the invariant in both directions: a SOURCE_VALIDATION issue must carry a non-null, pattern-valid validator_id, and an issue in any other domain must carry null. A consumer may therefore rely on every 1.1.0 source finding being attributable without inspecting evidence.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -24,7 +24,7 @@
   ],
   "properties": {
     "schema": { "const": "aprasa-post-publication-qa-report" },
-    "version": { "const": "1.0.0" },
+    "version": { "const": "1.1.0" },
     "mode": {
       "enum": ["IMMEDIATE_POST_DEPLOY", "DELAYED_RECHECK", "DAILY_LIGHTWEIGHT", "WEEKLY_DEEP", "MANUAL"]
     },
@@ -109,7 +109,8 @@
           "observed": {},
           "expected": {},
           "duration_ms": { "type": ["integer", "null"] },
-          "evidence": { "type": "object" }
+          "evidence": { "type": "object" },
+          "validator_id": { "type": ["string", "null"], "pattern": "^[a-z][a-z0-9_]*$" }
         }
       }
     },
@@ -132,7 +133,8 @@
           "deterministic",
           "resolver_class",
           "retryable",
-          "auto_remediation_candidate"
+          "auto_remediation_candidate",
+          "validator_id"
         ],
         "properties": {
           "code": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" },
@@ -154,7 +156,20 @@
             "enum": ["TECHNICAL", "LOCALIZATION", "CONTENT_GOVERNANCE", "MEDIA", "EXTERNAL_DEPENDENCY", "DEPLOYMENT", "UNKNOWN"]
           },
           "retryable": { "type": "boolean" },
-          "auto_remediation_candidate": { "type": "boolean" }
+          "auto_remediation_candidate": { "type": "boolean" },
+          "validator_id": { "type": ["string", "null"], "pattern": "^[a-z][a-z0-9_]*$" }
+        },
+        "if": {
+          "required": ["domain"],
+          "properties": { "domain": { "const": "SOURCE_VALIDATION" } }
+        },
+        "then": {
+          "required": ["validator_id"],
+          "properties": { "validator_id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" } }
+        },
+        "else": {
+          "required": ["validator_id"],
+          "properties": { "validator_id": { "type": "null" } }
         }
       }
     },

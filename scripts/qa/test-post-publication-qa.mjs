@@ -14,7 +14,7 @@ process.env.APRASA_QA_ALLOW_TEST_TARGET = '1';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 
-const { makeIssue, makeReport, rollupOverallStatus, applyPropagationGrace, isPropagationEligible } = await import('./lib/qa-contract.mjs');
+const { makeIssue, makeCheck, makeReport, rollupOverallStatus, applyPropagationGrace, isPropagationEligible, REPORT_VERSION } = await import('./lib/qa-contract.mjs');
 const { loadSchema, validateAgainstSchema } = await import('./lib/qa-schema.mjs');
 const { loadTargets } = await import('./lib/qa-targets.mjs');
 const { classifyConsoleMessage, classifyNetworkFailure } = await import('./lib/qa-classify.mjs');
@@ -436,7 +436,7 @@ await testCase('base URL is pinned to production unless a loopback test target i
 });
 
 await testCase('propagation grace never downgrades source or deployment findings', async (assert) => {
-  const sourceIssue = makeIssue({ code: 'SOURCE_VALIDATOR_FAILED', severity: 'ERROR', category: 'SOURCE', domain: 'SOURCE_VALIDATION', check: 'x', resolver_class: 'CONTENT_GOVERNANCE' });
+  const sourceIssue = makeIssue({ code: 'SOURCE_VALIDATOR_FAILED', severity: 'ERROR', category: 'SOURCE', domain: 'SOURCE_VALIDATION', check: 'x', resolver_class: 'CONTENT_GOVERNANCE', validator_id: 'things_to_do_currentness' });
   const liveIssue = makeIssue({ code: 'ROUTE_NOT_FOUND', severity: 'ERROR', category: 'ROUTE', domain: 'LIVE_HTTP_VALIDATION', check: 'y', resolver_class: 'TECHNICAL' });
   const graced = applyPropagationGrace([sourceIssue, liveIssue], 'DEPLOYMENT_PENDING');
   assert(
@@ -652,7 +652,7 @@ await testCase('H3b verified deployment with a persistently stale edge still fai
 });
 
 await testCase('H3c edge grace never downgrades a source-validator failure', async (assert) => {
-  const sourceIssue = makeIssue({ code: 'SOURCE_VALIDATOR_FAILED', severity: 'ERROR', category: 'SOURCE', domain: 'SOURCE_VALIDATION', check: 'x', resolver_class: 'CONTENT_GOVERNANCE' });
+  const sourceIssue = makeIssue({ code: 'SOURCE_VALIDATOR_FAILED', severity: 'ERROR', category: 'SOURCE', domain: 'SOURCE_VALIDATION', check: 'x', resolver_class: 'CONTENT_GOVERNANCE', validator_id: 'things_to_do_currentness' });
   const deploymentIssue = makeIssue({ code: 'DEPLOYMENT_FAILED', severity: 'CRITICAL', category: 'DEPLOYMENT', domain: 'DEPLOYMENT_PROVENANCE', check: 'y', resolver_class: 'DEPLOYMENT' });
   const liveIssue = makeIssue({ code: 'ROUTE_NOT_FOUND', severity: 'ERROR', category: 'ROUTE', domain: 'LIVE_HTTP_VALIDATION', check: 'z', resolver_class: 'TECHNICAL' });
   assert(
@@ -688,6 +688,461 @@ await testCase('H3d a deterministic live defect a stale edge cannot cause is nev
   );
 });
 
+
+
+// ---------------------------------------------------------------------------
+// V. Source-validator identity contract
+//
+// Phase 2B must never decide write authority by parsing `evidence.command`.
+// These cases pin the alternative: a stable `validator_id` that names the
+// semantic validator rather than a shell invocation.
+//
+// The identity cases are driven through an injected step runner rather than the
+// real validators, so they assert the contract itself and cannot flip when the
+// calendar moves past a record's end date or when the EMAR/Kre+ Home cards are
+// eventually resolved. The one case that does run the real validators pins them
+// to the committed currentness date, which is the suite's established reference.
+// ---------------------------------------------------------------------------
+const { SOURCE_VALIDATORS, sourceValidatorPlan, runSourceValidation } = await import('./run-post-publication-qa.mjs');
+const { VALIDATOR_ID_PATTERN } = await import('./lib/qa-contract.mjs');
+
+function sourceEmitter() {
+  const checks = [];
+  const issues = [];
+  return {
+    checks,
+    issues,
+    emit: {
+      check: (spec) => checks.push(makeCheck({ domain: 'SOURCE_VALIDATION', ...spec })),
+      issue: (spec) => issues.push(makeIssue({ domain: 'SOURCE_VALIDATION', ...spec })),
+    },
+  };
+}
+
+/** Fail exactly the named plan steps; everything else passes. */
+const stepRunnerFailing = (...failIds) => async (validator) => (failIds.includes(validator.id)
+  ? { code: 1, output: `simulated failure of ${validator.id}` }
+  : { code: 0, output: `ok ${validator.id}` });
+
+await testCase('V1 every registered source validator has a stable, well-formed id', async (assert) => {
+  const entries = Object.entries(SOURCE_VALIDATORS);
+  const bad = entries.filter(([id, script]) => (
+    typeof id !== 'string'
+    || id.length === 0
+    || !VALIDATOR_ID_PATTERN.test(id)
+    || typeof script !== 'string'
+    || !fs.existsSync(path.join(ROOT, script))
+  ));
+  assert(
+    entries.length >= 8 && bad.length === 0 && Object.isFrozen(SOURCE_VALIDATORS),
+    `count=${entries.length} frozen=${Object.isFrozen(SOURCE_VALIDATORS)} bad=${JSON.stringify(bad)}`
+  );
+});
+
+await testCase('V2 ids and scripts are a bijection, and the plan covers the whole registry', async (assert) => {
+  const ids = Object.keys(SOURCE_VALIDATORS);
+  const scripts = Object.values(SOURCE_VALIDATORS);
+  const plan = sourceValidatorPlan('2026-08-29', '2026-08-31');
+
+  // Every plan step names a registered id, and every registered id is used.
+  const planIds = plan.map((step) => step.validator_id);
+  const unregistered = planIds.filter((id) => !ids.includes(id));
+  const unused = ids.filter((id) => !planIds.includes(id));
+
+  // Step ids stay unique; validator ids are deliberately many-to-one, because
+  // the Things-to-Do currentness validator is invoked twice per pass.
+  const stepIds = plan.map((step) => step.id);
+  const shared = planIds.filter((id, i) => planIds.indexOf(id) !== i);
+
+  // The script a step actually executes must be the one its id maps to.
+  const mismatched = plan.filter((step) => step.args[0] !== SOURCE_VALIDATORS[step.validator_id]);
+
+  assert(
+    new Set(ids).size === ids.length
+      && new Set(scripts).size === scripts.length
+      && unregistered.length === 0
+      && unused.length === 0
+      && new Set(stepIds).size === stepIds.length
+      && mismatched.length === 0
+      && shared.length === 1 && shared[0] === 'things_to_do_currentness',
+    `unregistered=${JSON.stringify(unregistered)} unused=${JSON.stringify(unused)} shared=${JSON.stringify(shared)} mismatched=${JSON.stringify(mismatched.map((s) => s.id))}`
+  );
+});
+
+await testCase('V3 a failing source validator emits an issue carrying its validator_id', async (assert) => {
+  const collector = sourceEmitter();
+  await runSourceValidation(collector.emit, {
+    asOf: COMMITTED_AS_OF,
+    today: COMMITTED_AS_OF,
+    runStep: stepRunnerFailing('events'),
+  });
+  const issue = collector.issues.find((candidate) => candidate.code === 'SOURCE_VALIDATOR_FAILED');
+  assert(
+    collector.issues.length === 1
+      && Boolean(issue)
+      && issue.validator_id === 'things_to_do_events'
+      && issue.evidence.step_id === 'events',
+    JSON.stringify(collector.issues.map((i) => [i.code, i.validator_id]))
+  );
+});
+
+await testCase('V4 every source check carries the identity of the validator behind it', async (assert) => {
+  const collector = sourceEmitter();
+  await runSourceValidation(collector.emit, {
+    asOf: COMMITTED_AS_OF,
+    today: COMMITTED_AS_OF,
+    runStep: stepRunnerFailing(),
+  });
+  const plan = sourceValidatorPlan(COMMITTED_AS_OF, COMMITTED_AS_OF);
+  const wrong = collector.checks.filter((check, index) => check.validator_id !== plan[index].validator_id);
+  assert(
+    collector.checks.length === plan.length
+      && wrong.length === 0
+      && collector.checks.every((check) => typeof check.validator_id === 'string' && VALIDATOR_ID_PATTERN.test(check.validator_id)),
+    `checks=${collector.checks.length} plan=${plan.length} wrong=${JSON.stringify(wrong.map((c) => [c.id, c.validator_id]))}`
+  );
+});
+
+await testCase('V5 the two SOURCE_CURRENTNESS_DRIFT producers stay distinguishable', async (assert) => {
+  // The exact case Phase 2B's authorization gate turns on: one code, two
+  // structurally different validators, only one of which a generator can repair.
+  const collector = sourceEmitter();
+  await runSourceValidation(collector.emit, {
+    asOf: COMMITTED_AS_OF,
+    today: COMMITTED_AS_OF,
+    runStep: stepRunnerFailing('currentness-today', 'training-currentness-today'),
+  });
+  const drift = collector.issues.filter((issue) => issue.code === 'SOURCE_CURRENTNESS_DRIFT');
+  const ids = drift.map((issue) => issue.validator_id).sort();
+
+  // Distinguishable using only fields a machine may key on — never the command.
+  const keys = drift.map((issue) => `${issue.code}|${issue.validator_id}`);
+
+  assert(
+    drift.length === 2
+      && ids.join(',') === 'things_to_do_currentness,training_opportunities_currentness'
+      && new Set(keys).size === 2
+      && drift.every((issue) => issue.severity === 'WARNING' && issue.auto_remediation_candidate === true),
+    `ids=${JSON.stringify(ids)} keys=${JSON.stringify(keys)}`
+  );
+});
+
+await testCase('V5b the same validator run at two dates keeps one identity and two step ids', async (assert) => {
+  // committed-as-of and today-drift are the same semantic validator. They must
+  // share an identity and be separated by code and step, not by a new id.
+  const collector = sourceEmitter();
+  await runSourceValidation(collector.emit, {
+    asOf: COMMITTED_AS_OF,
+    today: COMMITTED_AS_OF,
+    runStep: stepRunnerFailing('currentness-committed', 'currentness-today'),
+  });
+  const ttd = collector.issues.filter((issue) => issue.validator_id === 'things_to_do_currentness');
+  const codes = ttd.map((issue) => issue.code).sort();
+  const steps = ttd.map((issue) => issue.evidence.step_id).sort();
+  assert(
+    ttd.length === 2
+      && codes.join(',') === 'SOURCE_CURRENTNESS_DRIFT,SOURCE_VALIDATOR_FAILED'
+      && steps.join(',') === 'currentness-committed,currentness-today',
+    `codes=${JSON.stringify(codes)} steps=${JSON.stringify(steps)}`
+  );
+});
+
+await testCase('V6 the schema rejects a missing or malformed validator_id on an issue', async (assert) => {
+  const base = makeIssue({
+    code: 'SOURCE_CURRENTNESS_DRIFT',
+    severity: 'WARNING',
+    category: 'SOURCE',
+    domain: 'SOURCE_VALIDATION',
+    check: 'c',
+    resolver_class: 'CONTENT_GOVERNANCE',
+    validator_id: 'things_to_do_currentness',
+  });
+  const issueSchema = SCHEMA.properties.issues.items;
+
+  const valid = validateAgainstSchema(base, issueSchema);
+  const { validator_id: _dropped, ...missing } = base;
+  const absent = validateAgainstSchema(missing, issueSchema);
+  const malformed = validateAgainstSchema({ ...base, validator_id: 'Things-To-Do' }, issueSchema);
+  const wrongType = validateAgainstSchema({ ...base, validator_id: 42 }, issueSchema);
+
+  // And the constructor refuses it before a report can ever be built.
+  let constructorRefused = null;
+  try {
+    makeIssue({ code: 'A_B', severity: 'INFO', category: 'SOURCE', domain: 'SOURCE_VALIDATION', check: 'c', validator_id: 'Bad Id' });
+  } catch (error) {
+    constructorRefused = error.message;
+  }
+
+  assert(
+    valid.length === 0
+      && absent.some((error) => error.includes('validator_id') && error.includes('required'))
+      && malformed.some((error) => error.includes('validator_id'))
+      && wrongType.some((error) => error.includes('validator_id'))
+      && typeof constructorRefused === 'string',
+    JSON.stringify({ valid, absent, malformed, wrongType, constructorRefused })
+  );
+});
+
+await testCase('V7 non-source domains are unaffected and carry a null validator_id', async (assert) => {
+  const { report, schemaErrors } = await runAgainstFixture({
+    mutate: (overrides) => overrides.set('/about/', null),
+  });
+  const nonSource = report.issues.filter((issue) => issue.domain !== 'SOURCE_VALIDATION');
+  const nonSourceChecks = report.checks.filter((check) => check.domain !== 'SOURCE_VALIDATION');
+  assert(
+    schemaErrors.length === 0
+      && report.version === REPORT_VERSION
+      && nonSource.length > 0
+      && nonSource.every((issue) => issue.validator_id === null)
+      && nonSourceChecks.every((check) => check.validator_id === null)
+      // The unrelated finding still behaves exactly as before.
+      && report.issues.some((issue) => issue.code === 'ROUTE_NOT_FOUND' && issue.severity === 'ERROR')
+      && report.overall_status === 'FAILED',
+    `schema=${schemaErrors.join('; ')} nonSource=${nonSource.length} stray=${JSON.stringify(nonSource.filter((i) => i.validator_id !== null).map((i) => [i.code, i.validator_id]))}`
+  );
+});
+
+await testCase('V8 a real source pass at the committed date carries identity end to end', async (assert) => {
+  // The integration proof, pinned to the suite's established reference date so
+  // it does not depend on what is expired in the real world today.
+  const { report, schemaErrors } = await runAgainstFixture({ skipSource: false });
+  const sourceChecks = report.checks.filter((check) => check.domain === 'SOURCE_VALIDATION');
+  const registered = new Set(Object.keys(SOURCE_VALIDATORS));
+  assert(
+    schemaErrors.length === 0
+      && sourceChecks.length === sourceValidatorPlan(COMMITTED_AS_OF, COMMITTED_AS_OF).length
+      && sourceChecks.every((check) => registered.has(check.validator_id))
+      && new Set(sourceChecks.map((check) => check.validator_id)).size === registered.size,
+    `checks=${sourceChecks.length} ids=${JSON.stringify([...new Set(sourceChecks.map((c) => c.validator_id))])} schema=${schemaErrors.join('; ')}`
+  );
+});
+
+// ---------------------------------------------------------------------------
+// V9-V18. The domain/identity invariant, in both layers
+//
+// V1-V8 established that a source finding *can* carry an identity. These pin
+// that it MUST, and that a non-source finding must not — because "well-formed
+// or null" left a schema-valid 1.1.0 source finding free to arrive with
+// validator_id: null, which is exactly the state a Phase 2B authority gate
+// cannot act on. Both layers are asserted independently: the constructor is
+// what a detector hits first, the schema is what an external consumer of a
+// published artifact has to rely on, and neither is allowed to be the only
+// thing standing between a null identity and a report.
+// ---------------------------------------------------------------------------
+const ISSUE_SCHEMA = SCHEMA.properties.issues.items;
+
+/** A complete, valid issue in the given domain, built without the constructor
+ *  so the schema layer can be exercised on states the constructor now refuses. */
+function rawIssue(domain, validator_id, overrides = {}) {
+  return {
+    code: 'SOURCE_VALIDATOR_FAILED',
+    severity: 'ERROR',
+    category: 'SOURCE',
+    domain,
+    route: null,
+    locale: null,
+    check: 'c',
+    observed: null,
+    expected: null,
+    evidence: {},
+    deterministic: true,
+    resolver_class: 'CONTENT_GOVERNANCE',
+    retryable: false,
+    auto_remediation_candidate: false,
+    validator_id,
+    ...overrides,
+  };
+}
+
+function refusal(build) {
+  try {
+    build();
+    return null;
+  } catch (error) {
+    return error.message;
+  }
+}
+
+await testCase('V9 constructor rejects a SOURCE_VALIDATION issue with a null validator_id', async (assert) => {
+  const message = refusal(() => makeIssue({
+    code: 'SOURCE_CURRENTNESS_DRIFT',
+    severity: 'WARNING',
+    category: 'SOURCE',
+    domain: 'SOURCE_VALIDATION',
+    check: 'c',
+    resolver_class: 'CONTENT_GOVERNANCE',
+    validator_id: null,
+  }));
+  assert(
+    typeof message === 'string' && message.includes('SOURCE_VALIDATION') && message.includes('validator_id'),
+    `message=${JSON.stringify(message)}`
+  );
+});
+
+await testCase('V10 constructor rejects a SOURCE_VALIDATION issue with validator_id omitted', async (assert) => {
+  // The omitted case is the one a new detector actually produces: the parameter
+  // defaults to null, so without this it would have been accepted silently.
+  const message = refusal(() => makeIssue({
+    code: 'SOURCE_VALIDATOR_FAILED',
+    severity: 'ERROR',
+    category: 'SOURCE',
+    domain: 'SOURCE_VALIDATION',
+    check: 'c',
+    resolver_class: 'CONTENT_GOVERNANCE',
+  }));
+  assert(
+    typeof message === 'string' && message.includes('validator_id'),
+    `message=${JSON.stringify(message)}`
+  );
+});
+
+await testCase('V11 constructor rejects a SOURCE_VALIDATION issue with a malformed validator_id', async (assert) => {
+  const malformed = ['Things-To-Do', '9leading_digit', '', 'has space', 'UPPER', 42, {}, []];
+  const accepted = malformed.filter((validator_id) => refusal(() => makeIssue({
+    code: 'SOURCE_VALIDATOR_FAILED',
+    severity: 'ERROR',
+    category: 'SOURCE',
+    domain: 'SOURCE_VALIDATION',
+    check: 'c',
+    resolver_class: 'CONTENT_GOVERNANCE',
+    validator_id,
+  })) === null);
+  assert(accepted.length === 0, `accepted=${JSON.stringify(accepted)}`);
+});
+
+await testCase('V12 a source issue with a valid validator_id is accepted by both layers', async (assert) => {
+  const issue = makeIssue({
+    code: 'SOURCE_CURRENTNESS_DRIFT',
+    severity: 'WARNING',
+    category: 'SOURCE',
+    domain: 'SOURCE_VALIDATION',
+    check: 'c',
+    resolver_class: 'CONTENT_GOVERNANCE',
+    validator_id: 'training_opportunities_currentness',
+  });
+  const schemaErrors = validateAgainstSchema(issue, ISSUE_SCHEMA);
+  assert(
+    issue.validator_id === 'training_opportunities_currentness' && schemaErrors.length === 0,
+    `id=${issue.validator_id} schema=${JSON.stringify(schemaErrors)}`
+  );
+});
+
+await testCase('V13 schema rejects SOURCE_VALIDATION with a null validator_id', async (assert) => {
+  // The precise state the previous contract accepted, and the reason the
+  // schema needed a conditional rather than a nullable type.
+  const errors = validateAgainstSchema(rawIssue('SOURCE_VALIDATION', null), ISSUE_SCHEMA);
+  assert(
+    errors.some((error) => error.includes('validator_id')),
+    `errors=${JSON.stringify(errors)}`
+  );
+});
+
+await testCase('V14 schema rejects SOURCE_VALIDATION with validator_id missing entirely', async (assert) => {
+  const { validator_id: _dropped, ...missing } = rawIssue('SOURCE_VALIDATION', 'card_media');
+  const errors = validateAgainstSchema(missing, ISSUE_SCHEMA);
+  assert(
+    errors.some((error) => error.includes('validator_id') && error.includes('required')),
+    `errors=${JSON.stringify(errors)}`
+  );
+});
+
+await testCase('V15 non-source with a null validator_id passes both layers', async (assert) => {
+  const issue = makeIssue({
+    code: 'ROUTE_NOT_FOUND',
+    severity: 'ERROR',
+    category: 'ROUTE',
+    domain: 'LIVE_HTTP_VALIDATION',
+    check: 'c',
+    resolver_class: 'TECHNICAL',
+  });
+  const explicitNull = makeIssue({
+    code: 'DEPLOYMENT_FAILED',
+    severity: 'CRITICAL',
+    category: 'DEPLOYMENT',
+    domain: 'DEPLOYMENT_PROVENANCE',
+    check: 'c',
+    resolver_class: 'DEPLOYMENT',
+    validator_id: null,
+  });
+  const schemaErrors = [
+    ...validateAgainstSchema(issue, ISSUE_SCHEMA),
+    ...validateAgainstSchema(explicitNull, ISSUE_SCHEMA),
+  ];
+  assert(
+    issue.validator_id === null && explicitNull.validator_id === null && schemaErrors.length === 0,
+    `schema=${JSON.stringify(schemaErrors)}`
+  );
+});
+
+await testCase('V16 non-source with a non-null validator_id is rejected by both layers', async (assert) => {
+  // A live finding has no producing validator, so an identity there would be a
+  // fabricated provenance claim rather than a harmless extra field.
+  const message = refusal(() => makeIssue({
+    code: 'ROUTE_NOT_FOUND',
+    severity: 'ERROR',
+    category: 'ROUTE',
+    domain: 'LIVE_HTTP_VALIDATION',
+    check: 'c',
+    resolver_class: 'TECHNICAL',
+    validator_id: 'things_to_do_sitemap',
+  }));
+  const schemaErrors = validateAgainstSchema(
+    rawIssue('LIVE_HTTP_VALIDATION', 'things_to_do_sitemap', { code: 'ROUTE_NOT_FOUND', category: 'ROUTE', resolver_class: 'TECHNICAL' }),
+    ISSUE_SCHEMA
+  );
+  assert(
+    typeof message === 'string'
+      && message.includes('SOURCE_VALIDATION')
+      && schemaErrors.some((error) => error.includes('validator_id')),
+    `message=${JSON.stringify(message)} schema=${JSON.stringify(schemaErrors)}`
+  );
+});
+
+await testCase('V17 a real source-validator pass still carries identity end to end under the invariant', async (assert) => {
+  // The tightened contract must not break the real path. Pinned to the
+  // committed reference date for the same reason V8 is.
+  const { report, schemaErrors } = await runAgainstFixture({ skipSource: false });
+  const sourceChecks = report.checks.filter((check) => check.domain === 'SOURCE_VALIDATION');
+  const sourceIssues = report.issues.filter((issue) => issue.domain === 'SOURCE_VALIDATION');
+  const registered = new Set(Object.keys(SOURCE_VALIDATORS));
+  const unattributed = sourceIssues.filter((issue) => !registered.has(issue.validator_id));
+  const strayIdentity = report.issues.filter((issue) => issue.domain !== 'SOURCE_VALIDATION' && issue.validator_id !== null);
+  assert(
+    schemaErrors.length === 0
+      && sourceChecks.length > 0
+      && unattributed.length === 0
+      && strayIdentity.length === 0,
+    `schema=${schemaErrors.join('; ')} checks=${sourceChecks.length} unattributed=${JSON.stringify(unattributed.map((i) => [i.code, i.validator_id]))} stray=${JSON.stringify(strayIdentity.map((i) => [i.code, i.validator_id]))}`
+  );
+});
+
+await testCase('V18 both SOURCE_CURRENTNESS_DRIFT producers stay attributable under the invariant', async (assert) => {
+  // The original blocker, re-asserted against the tightened contract: the two
+  // producers of one code must remain separable by (code, validator_id) alone,
+  // and each must now be schema-valid only because it carries its identity.
+  const collector = sourceEmitter();
+  await runSourceValidation(collector.emit, {
+    asOf: COMMITTED_AS_OF,
+    today: '2026-08-31',
+    runStep: stepRunnerFailing('currentness-today', 'training-currentness-today'),
+  });
+
+  const drift = collector.issues.filter((issue) => issue.code === 'SOURCE_CURRENTNESS_DRIFT');
+  const identities = drift.map((issue) => issue.validator_id).sort();
+  const schemaErrors = drift.flatMap((issue) => validateAgainstSchema(issue, ISSUE_SCHEMA));
+  // Blanking either identity must make that finding schema-invalid — proof the
+  // separation is enforced, not merely present.
+  const blanked = drift.flatMap((issue) => validateAgainstSchema({ ...issue, validator_id: null }, ISSUE_SCHEMA));
+
+  assert(
+    drift.length === 2
+      && identities.join(',') === 'things_to_do_currentness,training_opportunities_currentness'
+      && new Set(identities).size === 2
+      && schemaErrors.length === 0
+      && blanked.length >= 2,
+    `identities=${JSON.stringify(identities)} schema=${JSON.stringify(schemaErrors)} blanked=${JSON.stringify(blanked)}`
+  );
+});
 
 // ---------------------------------------------------------------------------
 // G2. Edge grace is owned by the individual finding, not by the run
@@ -818,10 +1273,10 @@ await testCase('G2e a stale-but-valid Home with healthy routes neither fails nor
 });
 
 await testCase('G2f source and deployment failures never enter edge grace', async (assert) => {
-  const sourceIssue = makeIssue({ code: 'SOURCE_VALIDATOR_FAILED', severity: 'ERROR', category: 'SOURCE', domain: 'SOURCE_VALIDATION', check: 'x', resolver_class: 'CONTENT_GOVERNANCE' });
+  const sourceIssue = makeIssue({ code: 'SOURCE_VALIDATOR_FAILED', severity: 'ERROR', category: 'SOURCE', domain: 'SOURCE_VALIDATION', check: 'x', resolver_class: 'CONTENT_GOVERNANCE', validator_id: 'things_to_do_currentness' });
   const deploymentIssue = makeIssue({ code: 'DEPLOYMENT_FAILED', severity: 'CRITICAL', category: 'DEPLOYMENT', domain: 'DEPLOYMENT_PROVENANCE', check: 'y', resolver_class: 'DEPLOYMENT' });
   // Even a code that IS eligible is excluded when it comes from a non-live domain.
-  const misdomained = makeIssue({ code: 'ROUTE_NOT_FOUND', severity: 'ERROR', category: 'ROUTE', domain: 'SOURCE_VALIDATION', check: 'z', resolver_class: 'TECHNICAL' });
+  const misdomained = makeIssue({ code: 'ROUTE_NOT_FOUND', severity: 'ERROR', category: 'ROUTE', domain: 'SOURCE_VALIDATION', check: 'z', resolver_class: 'TECHNICAL', validator_id: 'things_to_do_sitemap' });
   assert(
     isPropagationEligible(sourceIssue) === false
       && isPropagationEligible(deploymentIssue) === false
@@ -1011,7 +1466,7 @@ function delayedReport(overrides = {}) {
   const now = new Date().toISOString();
   return {
     schema: 'aprasa-post-publication-qa-report',
-    version: '1.0.0',
+    version: REPORT_VERSION,
     mode: 'DELAYED_RECHECK',
     run: {},
     target: {
