@@ -211,6 +211,61 @@ export function assertSchemaValidation(errors) {
   if (errors.length) throw new Error(`PHASE2B_MALFORMED_REPORT: ${errors.join('; ')}`);
 }
 
+const SHA_PATTERN = /^[a-f0-9]{40}$/;
+
+function probeDetail(probe) {
+  const detail = [probe?.stderr, probe?.stdout].filter((part) => typeof part === 'string' && part.trim()).join(' ').trim();
+  return detail ? `: ${detail.slice(0, 200)}` : '';
+}
+
+// Duplicate-state probes are dedupe authority, so a probe that did not
+// demonstrably succeed must never be read as "nothing exists remotely".
+export function parseRemoteBranchProbe(probe, branch) {
+  const ref = `refs/heads/${requireString(branch, 'branch')}`;
+  if (!probe || probe.status !== 0) {
+    throw new Error(`PHASE2B_BRANCH_PROBE_FAILED: git ls-remote ${ref} exit ${probe?.status ?? 'unknown'}${probeDetail(probe)}`);
+  }
+  if (typeof probe.stdout !== 'string') throw new Error('PHASE2B_BRANCH_PROBE_UNREADABLE: no probe output');
+  const lines = probe.stdout.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  if (!lines.length) return null;
+  if (lines.length > 1) throw new Error(`PHASE2B_BRANCH_PROBE_AMBIGUOUS: ${lines.length} records for ${ref}`);
+  const fields = lines[0].split(/\s+/);
+  if (fields.length !== 2) throw new Error(`PHASE2B_BRANCH_PROBE_UNREADABLE: ${lines[0]}`);
+  const [sha, observedRef] = fields;
+  if (!SHA_PATTERN.test(sha)) throw new Error(`PHASE2B_BRANCH_PROBE_UNREADABLE: ${lines[0]}`);
+  if (observedRef !== ref) throw new Error(`PHASE2B_BRANCH_PROBE_REF_MISMATCH: expected ${ref}, observed ${observedRef}`);
+  return sha;
+}
+
+// Same contract for the pull-request probe: only a successful command with a
+// well-formed result may report "no open pull request".
+export function parseOpenPrProbe(probe, { repository = null, branch = null } = {}) {
+  const scope = `${repository ?? 'origin'}#${branch ?? 'unknown'}`;
+  if (!probe || probe.status !== 0) {
+    throw new Error(`PHASE2B_PR_PROBE_FAILED: gh pr list ${scope} exit ${probe?.status ?? 'unknown'}${probeDetail(probe)}`);
+  }
+  if (typeof probe.stdout !== 'string') throw new Error('PHASE2B_PR_PROBE_UNREADABLE: no probe output');
+  let parsed;
+  try {
+    parsed = JSON.parse(probe.stdout);
+  } catch {
+    throw new Error(`PHASE2B_PR_PROBE_UNREADABLE: gh pr list ${scope} did not return JSON`);
+  }
+  if (!Array.isArray(parsed)) throw new Error(`PHASE2B_PR_PROBE_UNREADABLE: expected a JSON array for ${scope}`);
+  if (!parsed.length) return null;
+  if (parsed.length > 1) throw new Error(`PHASE2B_PR_PROBE_AMBIGUOUS: ${parsed.length} open pull requests for ${scope}`);
+  const record = parsed[0];
+  if (!record || typeof record !== 'object' || Array.isArray(record)) {
+    throw new Error(`PHASE2B_PR_PROBE_UNREADABLE: malformed pull-request record for ${scope}`);
+  }
+  if (typeof record.url !== 'string' || !record.url) throw new Error(`PHASE2B_PR_PROBE_UNREADABLE: missing url for ${scope}`);
+  if (typeof record.isDraft !== 'boolean') throw new Error(`PHASE2B_PR_PROBE_UNREADABLE: missing isDraft for ${scope}`);
+  if (typeof record.headRefOid !== 'string' || !SHA_PATTERN.test(record.headRefOid)) {
+    throw new Error(`PHASE2B_PR_PROBE_UNREADABLE: missing headRefOid for ${scope}`);
+  }
+  return record;
+}
+
 export function assessDuplicateState({ remoteBranchSha = null, draftPr = null } = {}) {
   if (!remoteBranchSha && !draftPr) return 'CLEAR';
   if (remoteBranchSha && draftPr?.isDraft === true && draftPr?.headRefOid === remoteBranchSha) return 'EQUIVALENT_DRAFT_PR_EXISTS';

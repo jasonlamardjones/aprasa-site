@@ -11,6 +11,8 @@ import {
   capeVerdeDate,
   expectedWriteSetForIds,
   parseObservedDriftIds,
+  parseOpenPrProbe,
+  parseRemoteBranchProbe,
   parseValidatorDriftIds,
 } from './lib/things-to-do-currentness-remediation.mjs';
 
@@ -109,5 +111,59 @@ assert.equal(assessDuplicateState({}), 'CLEAR');
 assert.equal(assessDuplicateState({ remoteBranchSha: SHA, draftPr: { isDraft: true, headRefOid: SHA } }), 'EQUIVALENT_DRAFT_PR_EXISTS');
 assert.equal(assessDuplicateState({ remoteBranchSha: SHA }), 'ORPHAN_REMOTE_REPAIR_BRANCH');
 assert.equal(assessDuplicateState({ draftPr: { isDraft: true, headRefOid: SHA } }), 'AMBIGUOUS_DUPLICATE_STATE');
+
+const BRANCH = 'feature/phase2b-currentness-2026-08-31-0123456789';
+const branchProbe = (overrides) => ({ status: 0, stdout: '', stderr: '', ...overrides });
+const prProbe = (overrides) => ({ status: 0, stdout: '[]', stderr: '', ...overrides });
+
+// A branch probe must prove the remote state; a failed probe is never "absent".
+assert.equal(parseRemoteBranchProbe(branchProbe({}), BRANCH), null);
+assert.equal(parseRemoteBranchProbe(branchProbe({ stdout: `${SHA}\trefs/heads/${BRANCH}\n` }), BRANCH), SHA);
+assert.throws(() => parseRemoteBranchProbe(branchProbe({ status: 128, stderr: 'fatal: could not read Username' }), BRANCH), /PHASE2B_BRANCH_PROBE_FAILED/);
+assert.throws(() => parseRemoteBranchProbe(branchProbe({ status: null, stderr: 'spawn ENOENT' }), BRANCH), /PHASE2B_BRANCH_PROBE_FAILED/);
+assert.throws(() => parseRemoteBranchProbe(undefined, BRANCH), /PHASE2B_BRANCH_PROBE_FAILED/);
+assert.throws(() => parseRemoteBranchProbe(branchProbe({ stdout: 'not-a-sha\trefs/heads/' + BRANCH }), BRANCH), /PHASE2B_BRANCH_PROBE_UNREADABLE/);
+assert.throws(() => parseRemoteBranchProbe(branchProbe({ stdout: SHA }), BRANCH), /PHASE2B_BRANCH_PROBE_UNREADABLE/);
+assert.throws(() => parseRemoteBranchProbe(branchProbe({ stdout: `${SHA}\trefs/heads/${BRANCH}\textra` }), BRANCH), /PHASE2B_BRANCH_PROBE_UNREADABLE/);
+assert.throws(() => parseRemoteBranchProbe(branchProbe({ stdout: `${SHA}\trefs/heads/${BRANCH}\n${OTHER_SHA}\trefs/heads/${BRANCH}\n` }), BRANCH), /PHASE2B_BRANCH_PROBE_AMBIGUOUS/);
+assert.throws(() => parseRemoteBranchProbe(branchProbe({ stdout: `${SHA}\trefs/heads/other-branch` }), BRANCH), /PHASE2B_BRANCH_PROBE_REF_MISMATCH/);
+
+// The same contract applies to the pull-request probe.
+const openPr = { url: 'https://github.com/o/r/pull/1', isDraft: true, headRefOid: SHA };
+assert.equal(parseOpenPrProbe(prProbe({}), { repository: 'o/r', branch: BRANCH }), null);
+assert.deepEqual(parseOpenPrProbe(prProbe({ stdout: JSON.stringify([openPr]) }), { repository: 'o/r', branch: BRANCH }), openPr);
+assert.deepEqual(
+  parseOpenPrProbe(prProbe({ stdout: JSON.stringify([{ ...openPr, isDraft: false }]) }), { repository: 'o/r', branch: BRANCH }),
+  { ...openPr, isDraft: false },
+);
+assert.throws(() => parseOpenPrProbe(prProbe({ status: 1, stderr: 'gh: HTTP 502' }), { repository: 'o/r', branch: BRANCH }), /PHASE2B_PR_PROBE_FAILED/);
+assert.throws(() => parseOpenPrProbe(prProbe({ status: null, stderr: 'spawn ENOENT' }), { repository: 'o/r', branch: BRANCH }), /PHASE2B_PR_PROBE_FAILED/);
+assert.throws(() => parseOpenPrProbe(undefined, { repository: 'o/r', branch: BRANCH }), /PHASE2B_PR_PROBE_FAILED/);
+assert.throws(() => parseOpenPrProbe(prProbe({ stdout: 'not json' }), { repository: 'o/r', branch: BRANCH }), /PHASE2B_PR_PROBE_UNREADABLE/);
+assert.throws(() => parseOpenPrProbe(prProbe({ stdout: '' }), { repository: 'o/r', branch: BRANCH }), /PHASE2B_PR_PROBE_UNREADABLE/);
+assert.throws(() => parseOpenPrProbe(prProbe({ stdout: '{"url":"x"}' }), { repository: 'o/r', branch: BRANCH }), /PHASE2B_PR_PROBE_UNREADABLE/);
+assert.throws(() => parseOpenPrProbe(prProbe({ stdout: '[null]' }), { repository: 'o/r', branch: BRANCH }), /PHASE2B_PR_PROBE_UNREADABLE/);
+assert.throws(() => parseOpenPrProbe(prProbe({ stdout: JSON.stringify([{ isDraft: true, headRefOid: SHA }]) }), { repository: 'o/r', branch: BRANCH }), /PHASE2B_PR_PROBE_UNREADABLE/);
+assert.throws(() => parseOpenPrProbe(prProbe({ stdout: JSON.stringify([{ ...openPr, isDraft: 'true' }]) }), { repository: 'o/r', branch: BRANCH }), /PHASE2B_PR_PROBE_UNREADABLE/);
+assert.throws(() => parseOpenPrProbe(prProbe({ stdout: JSON.stringify([{ ...openPr, headRefOid: 'short' }]) }), { repository: 'o/r', branch: BRANCH }), /PHASE2B_PR_PROBE_UNREADABLE/);
+assert.throws(() => parseOpenPrProbe(prProbe({ stdout: JSON.stringify([openPr, { ...openPr, url: 'https://github.com/o/r/pull/2' }]) }), { repository: 'o/r', branch: BRANCH }), /PHASE2B_PR_PROBE_AMBIGUOUS/);
+
+// Validated probe results still drive the unchanged duplicate-state semantics.
+assert.equal(assessDuplicateState({
+  remoteBranchSha: parseRemoteBranchProbe(branchProbe({}), BRANCH),
+  draftPr: parseOpenPrProbe(prProbe({}), { repository: 'o/r', branch: BRANCH }),
+}), 'CLEAR');
+assert.equal(assessDuplicateState({
+  remoteBranchSha: parseRemoteBranchProbe(branchProbe({ stdout: `${SHA}\trefs/heads/${BRANCH}` }), BRANCH),
+  draftPr: parseOpenPrProbe(prProbe({ stdout: JSON.stringify([openPr]) }), { repository: 'o/r', branch: BRANCH }),
+}), 'EQUIVALENT_DRAFT_PR_EXISTS');
+assert.equal(assessDuplicateState({
+  remoteBranchSha: parseRemoteBranchProbe(branchProbe({ stdout: `${SHA}\trefs/heads/${BRANCH}` }), BRANCH),
+  draftPr: parseOpenPrProbe(prProbe({}), { repository: 'o/r', branch: BRANCH }),
+}), 'ORPHAN_REMOTE_REPAIR_BRANCH');
+assert.equal(assessDuplicateState({
+  remoteBranchSha: parseRemoteBranchProbe(branchProbe({ stdout: `${OTHER_SHA}\trefs/heads/${BRANCH}` }), BRANCH),
+  draftPr: parseOpenPrProbe(prProbe({ stdout: JSON.stringify([openPr]) }), { repository: 'o/r', branch: BRANCH }),
+}), 'AMBIGUOUS_DUPLICATE_STATE');
 
 console.log('Phase 2B currentness remediation unit tests passed.');

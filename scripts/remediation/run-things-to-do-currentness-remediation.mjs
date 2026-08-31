@@ -15,6 +15,8 @@ import {
   assertDriftShapeUnchanged,
   authorizeReport,
   expectedWriteSetForIds,
+  parseOpenPrProbe,
+  parseRemoteBranchProbe,
   parseValidatorDriftIds,
 } from './lib/things-to-do-currentness-remediation.mjs';
 
@@ -121,18 +123,16 @@ function assertGeneratorOwnsIds(ids) {
 }
 
 function inspectDuplicate(repository, branch) {
+  // Both probes are captured with allowFailure so the parsers can raise a
+  // fail-closed Phase 2B error instead of a generic command failure; neither
+  // may degrade into an unproven "no branch"/"no pull request" reading.
   const branchProbe = git(root, ['ls-remote', 'origin', `refs/heads/${branch}`], { allowFailure: true });
-  const remoteBranchSha = branchProbe.status === 0 && branchProbe.stdout.trim()
-    ? branchProbe.stdout.trim().split(/\s+/)[0]
-    : null;
+  const remoteBranchSha = parseRemoteBranchProbe(branchProbe, branch);
   const prProbe = command(root, 'gh', [
     'pr', 'list', '--repo', repository, '--head', branch, '--state', 'open',
     '--json', 'url,isDraft,headRefOid',
   ], { allowFailure: true });
-  let draftPr = null;
-  if (prProbe.status === 0) {
-    try { draftPr = JSON.parse(prProbe.stdout)[0] ?? null; } catch { draftPr = null; }
-  }
+  const draftPr = parseOpenPrProbe(prProbe, { repository, branch });
   return { remoteBranchSha, draftPr, state: assessDuplicateState({ remoteBranchSha, draftPr }) };
 }
 
