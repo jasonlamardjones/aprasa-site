@@ -6,8 +6,17 @@
 # Warnings are recorded and do not fail the job; high-confidence ERROR/CRITICAL
 # findings do.
 #
+# Two bounded waits, for two different questions. --deployment-wait-ms waits for
+# GitHub to finish publishing the commit at all. --edge-grace-ms then allows the
+# CDN edges a bounded window to catch up with a deployment GitHub has already
+# reported VERIFIED, retrying the live pass at --edge-retry-ms cadence while the
+# only findings a stale edge could explain are still present. Neither can be
+# waited out indefinitely, and once the grace window closes a surviving mismatch
+# classifies as the defect it is.
+#
 # Cadence (all cron times UTC; production is Atlantic/Cape_Verde, UTC-1):
 #   IMMEDIATE_POST_DEPLOY  push to main, after a bounded Pages readiness wait
+#                          and, if needed, a bounded edge-readiness grace window
 #   DAILY_LIGHTWEIGHT      07:10 UTC (06:10 local) Sun and Tue-Sat
 #   WEEKLY_DEEP            07:40 UTC (06:40 local) Monday
 #   MANUAL                 workflow_dispatch, any mode
@@ -115,6 +124,8 @@ jobs:
             --out=qa-artifacts \
             --deployment-wait-ms=300000 \
             --deployment-poll-ms=30000 \
+            --edge-grace-ms=180000 \
+            --edge-retry-ms=30000 \
             ${{ steps.affected.outputs.path && format('--affected-from={0}', steps.affected.outputs.path) || '' }}
           code=$?
           set -e

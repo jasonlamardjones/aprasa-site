@@ -5,11 +5,17 @@
 // subjective design scoring and no screenshot pixel-diff baselines — those are
 // brittle and would generate exactly the noise this layer must avoid.
 // Screenshots are collected as evidence, never compared.
+//
+// Read-only is enforced here, not merely asserted: every request the page
+// makes is gated through qa-browser-guard.mjs, which blocks anything that is
+// not GET/HEAD and any top-level navigation off the pinned origin before the
+// request is transmitted.
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { launchBrowser } from './cdp.mjs';
-import { classifyConsoleMessage, classifyNetworkFailure, isBrowserImplicitRequest, isSameOrigin } from './qa-classify.mjs';
+import { classifyBlockedBrowserRequest, classifyConsoleMessage, classifyNetworkFailure, isBrowserImplicitRequest, isSameOrigin } from './qa-classify.mjs';
+import { installReadOnlyGuard } from './qa-browser-guard.mjs';
 
 export const VIEWPORTS = Object.freeze([
   { name: 'mobile', width: 375, height: 812, deviceScaleFactor: 2, mobile: true },
@@ -158,12 +164,13 @@ async function settleLazyImages(session, { settleMs, budgetMs }) {
   return waitForImages(session, { settleMs, budgetMs });
 }
 
-async function collectPage(session, url, viewport, { navigationTimeoutMs, settleMs, imageSettleBudgetMs, baseUrl }) {
+async function collectPage(session, url, viewport, { navigationTimeoutMs, settleMs, imageSettleBudgetMs, baseUrl, notes = [] }) {
   const consoleErrors = [];
   const pageErrors = [];
   const failedRequests = [];
   const responses = [];
   const requestUrls = new Map();
+  const blockedRequests = [];
 
   const off = session.ws.on((message) => {
     if (message.sessionId !== session.sessionId) return;
@@ -187,6 +194,7 @@ async function collectPage(session, url, viewport, { navigationTimeoutMs, settle
       responses.push({ url: params.response.url, status: params.response.status, type: params.type });
     } else if (method === 'Network.loadingFailed') {
       failedRequests.push({
+        requestId: params.requestId,
         url: requestUrls.get(params.requestId) ?? null,
         errorText: params.errorText,
         type: params.type,
@@ -199,6 +207,15 @@ async function collectPage(session, url, viewport, { navigationTimeoutMs, settle
   await session.send('Runtime.enable');
   await session.send('Log.enable');
   await session.send('Network.enable');
+
+  // Read-only enforcement goes live before anything navigates, so the very
+  // first request of the page is already gated.
+  const guard = await installReadOnlyGuard(session, {
+    baseUrl,
+    notes,
+    record: (blocked) => blockedRequests.push(blocked),
+  });
+
   await session.send('Emulation.setDeviceMetricsOverride', {
     width: viewport.width,
     height: viewport.height,
@@ -241,6 +258,18 @@ async function collectPage(session, url, viewport, { navigationTimeoutMs, settle
   }
 
   off();
+  // The guard listener is deliberately NOT disposed here. Fetch interception
+  // stays live until the target is closed, because tearing it down while the
+  // renderer can still issue requests would leave a paused request unanswered
+  // — or, if the domain were disabled, continued, transmitting the very thing
+  // that was blocked. Closing the tab destroys the renderer and everything
+  // in flight with it; the caller disposes afterwards.
+
+  // A request we blocked also surfaces as Network.loadingFailed with
+  // ERR_BLOCKED_BY_CLIENT. Attributing that to the site would invent a defect
+  // out of our own enforcement, so blocked requests are removed here and
+  // reported through their own classification instead.
+  const guardBlocked = failedRequests.filter((request) => isGuardBlocked(request, guard));
 
   return {
     navigation,
@@ -250,11 +279,21 @@ async function collectPage(session, url, viewport, { navigationTimeoutMs, settle
     imagesSettled,
     consoleErrors,
     pageErrors,
-    failedRequests,
+    failedRequests: failedRequests.filter((request) => !isGuardBlocked(request, guard)),
+    guardBlockedNetworkFailures: guardBlocked,
+    blockedRequests,
     responses,
     screenshot,
     baseUrl,
+    guard,
   };
+}
+
+/** True when this Network.loadingFailed is the echo of our own interception. */
+function isGuardBlocked(request, guard) {
+  if (request.requestId && guard.blockedNetworkIds.has(request.requestId)) return true;
+  if (!request.url || !guard.blockedUrls.has(request.url)) return false;
+  return /BLOCKED_BY_CLIENT/i.test(request.errorText ?? '');
 }
 
 function overflowOf(probe) {
@@ -516,6 +555,52 @@ function evaluatePage({ page, route, locale, viewport, baseUrl, requiredMedia, e
     expected: 'each message classified as first-party or external',
   });
 
+  // --- read-only enforcement ---------------------------------------------
+  // Every attempt the guard refused is recorded with the method and URL it
+  // would have used, so "the browser is GET/HEAD only" is an observation in the
+  // report rather than a claim in the documentation.
+  for (const blocked of page.blockedRequests ?? []) {
+    const classification = classifyBlockedBrowserRequest({
+      url: blocked.url,
+      method: blocked.method,
+      baseUrl,
+      reason: blocked.reason,
+    });
+    emit.issue({
+      code: classification.code,
+      severity: classification.severity,
+      category: classification.category,
+      check: 'browser issues only GET/HEAD, same-origin navigation',
+      route,
+      locale,
+      observed: { method: blocked.method, url: blocked.url, reason: blocked.reason },
+      expected: 'GET or HEAD, and top-level navigation confined to the pinned origin',
+      evidence: {
+        ...evidenceBase,
+        party: classification.party,
+        purpose: classification.purpose ?? null,
+        blocked_by: blocked.source,
+        guard_kind: blocked.guard_kind ?? null,
+        resource_type: blocked.resourceType,
+        top_level: Boolean(blocked.topLevel),
+        transmitted: false,
+      },
+      resolver_class: classification.resolver_class,
+    });
+  }
+  emit.check({
+    id: `browser:read-only:${id}`,
+    name: 'browser issues only GET/HEAD, same-origin navigation',
+    status: 'PASS',
+    route,
+    locale,
+    observed: {
+      blocked_requests: (page.blockedRequests ?? []).length,
+      methods_blocked: [...new Set((page.blockedRequests ?? []).map((blocked) => blocked.method))],
+    },
+    expected: 'every non-GET/HEAD request and every off-origin top-level navigation blocked before transmission',
+  });
+
   // --- network ------------------------------------------------------------
   const networkFailures = [
     ...page.failedRequests.filter((request) => request.url && !request.canceled).map((request) => ({ url: request.url, detail: request.errorText })),
@@ -584,7 +669,7 @@ export async function runBrowserChecks({ baseUrl, routes, viewports = VIEWPORTS,
       for (const viewport of viewports) {
         const session = await browser.newPage();
         const url = new URL(page.route, baseUrl).toString();
-        const collected = await collectPage(session, url, viewport, { navigationTimeoutMs, settleMs, imageSettleBudgetMs, baseUrl });
+        const collected = await collectPage(session, url, viewport, { navigationTimeoutMs, settleMs, imageSettleBudgetMs, baseUrl, notes });
         let screenshotPath = null;
         if (collected.screenshot && screenshotDir) {
           const safe = page.route.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'home';
@@ -603,6 +688,7 @@ export async function runBrowserChecks({ baseUrl, routes, viewports = VIEWPORTS,
           screenshotPath,
         });
         await session.close().catch(() => {});
+        collected.guard.dispose();
       }
     }
   } finally {

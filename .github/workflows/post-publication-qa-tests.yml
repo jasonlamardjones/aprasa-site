@@ -60,6 +60,15 @@ jobs:
             console.log('report schema OK');
           "
 
+      # Three independent mutation checks, deliberately not one. The grep below
+      # only reads text; the audit script asserts the structural invariants; and
+      # the test matrix above asserts the behavioural ones -- a recording fetch
+      # proving every GitHub call is a bodyless GET, and a fixture server's own
+      # request log proving a real Chrome running real page code only ever
+      # issued GET.
+      - name: Re-audit the read-only guarantee structurally
+        run: node scripts/qa/audit-read-only.mjs
+
       - name: Confirm the QA layer carries no mutation path
         shell: bash
         run: |

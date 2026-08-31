@@ -19,7 +19,9 @@ import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 
 import {
+  annotateEdgeGraceExhausted,
   DOMAINS,
+  isPropagationEligible,
   makeCheck,
   makeIssue,
   makeReport,
@@ -40,6 +42,24 @@ const SCHEMA_PATH = path.join(ROOT, 'scripts', 'qa', 'qa-report.schema.json');
 // only over plain HTTP, and only against loopback.
 const PRODUCTION_BASE_URL = 'https://aprasa.org';
 const TEST_TARGET_ENV = 'APRASA_QA_ALLOW_TEST_TARGET';
+
+// Post-deployment edge readiness.
+//
+// A VERIFIED github-pages deployment means GitHub finished publishing the
+// commit. It does not mean every CDN edge already serves it, and treating the
+// first stale 200 as a defect is a false failure during ordinary propagation.
+// So immediately after a verified deployment the live HTTP pass is repeated,
+// for a strictly bounded window, while the only findings a stale edge could
+// explain are still present.
+//
+// Bounded on purpose: three minutes at thirty-second cadence is six live
+// passes. Once the window closes, whatever is still wrong classifies normally.
+// The window applies to IMMEDIATE_POST_DEPLOY alone — every other mode runs
+// long after any deployment, where staleness is not a credible explanation.
+const DEFAULT_EDGE_GRACE_MS = 3 * 60 * 1000;
+const DEFAULT_EDGE_RETRY_MS = 30 * 1000;
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function resolveBaseUrl(requested) {
   if (!requested || requested === PRODUCTION_BASE_URL) {
@@ -83,6 +103,8 @@ function parseArgs(argv) {
       case '--deployment-fixture': args.deploymentFixture = value; break;
       case '--deployment-wait-ms': args.deploymentWaitMs = Number(value); break;
       case '--deployment-poll-ms': args.deploymentPollMs = Number(value); break;
+      case '--edge-grace-ms': args.edgeGraceMs = Number(value); break;
+      case '--edge-retry-ms': args.edgeRetryMs = Number(value); break;
       default:
         if (key.startsWith('--')) throw new Error(`unknown argument ${key}`);
     }
@@ -204,9 +226,50 @@ function expectedContentType(route) {
 
 async function fetchAndCheckRoute(emit, { baseUrl, route, locale = null, kind = 'page', required = true }) {
   const url = new URL(route, baseUrl).toString();
-  const response = await fetchFollowing(url);
+  // The allowed origin is the pinned target, not merely the origin of this
+  // route, so no derived route can widen where the QA layer is permitted to go.
+  const response = await fetchFollowing(url, { allowedOrigin: new URL(baseUrl).origin });
   const finalUrl = response.url;
   const evidence = { url, final_url: finalUrl, status: response.status, attempts: response.attempts, redirect_chain: response.chain };
+
+  // An off-origin redirect is reported from the hop that was refused, never
+  // from a comparison of endpoints — the refused request was never sent.
+  if (response.redirectBlocked) {
+    const blocked = response.redirectBlocked;
+    emit.check({
+      id: `http:redirect-origin:${route}`,
+      name: `${kind} redirect stays on the pinned origin`,
+      status: 'FAIL',
+      route,
+      locale,
+      observed: blocked,
+      expected: `every redirect hop resolves to ${blocked.allowed_origin}`,
+    });
+    emit.issue({
+      code: 'ROUTE_REDIRECT_OFF_ORIGIN_BLOCKED',
+      severity: required ? 'ERROR' : 'WARNING',
+      category: kind === 'asset' ? 'ASSET' : 'ROUTE',
+      check: `${kind} redirect stays on the pinned origin`,
+      route,
+      locale,
+      observed: `hop ${blocked.hop}: ${blocked.from} -> ${blocked.status ?? 'n/a'} ${blocked.location ?? blocked.to}`,
+      expected: `every redirect hop resolves to ${blocked.allowed_origin}`,
+      evidence: {
+        ...evidence,
+        source_url: blocked.from,
+        redirect_status: blocked.status,
+        location: blocked.location,
+        resolved_target: blocked.to,
+        blocked_origin: blocked.blocked_origin,
+        allowed_origin: blocked.allowed_origin,
+        redirect_hop: blocked.hop,
+        reason: blocked.reason,
+        transmitted: false,
+      },
+      resolver_class: 'TECHNICAL',
+    });
+    return null;
+  }
 
   if (!response.ok) {
     emit.check({ id: `http:${route}`, name: `${kind} reachable`, status: 'FAIL', route, locale, observed: response.networkError, expected: 'HTTP 200' });
@@ -228,6 +291,15 @@ async function fetchAndCheckRoute(emit, { baseUrl, route, locale = null, kind = 
 
   // Redirects: benign normalisation is informational, anything else is a defect.
   if (response.chain.length > 0) {
+    emit.check({
+      id: `http:redirect-origin:${route}`,
+      name: `${kind} redirect stays on the pinned origin`,
+      status: 'PASS',
+      route,
+      locale,
+      observed: { hops: response.chain.length, chain: response.chain },
+      expected: `every redirect hop resolves to ${response.allowedOrigin}`,
+    });
     const benign = isNormalizingRedirect(url, finalUrl, response.chain);
     emit.check({
       id: `http:redirect:${route}`,
@@ -813,36 +885,135 @@ export async function run(argv) {
   }
 
   // --- LIVE_HTTP_VALIDATION ----------------------------------------------
-  const httpEmit = emitter('LIVE_HTTP_VALIDATION');
-  const httpRoutes = selectHttpRoutes(targets, args.mode);
-  const bodies = new Map();
+  // The pass is repeatable and collects into its own arrays, so an edge-grace
+  // retry *replaces* the previous attempt rather than accumulating a second
+  // copy of every finding.
+  const runLiveHttpPass = async () => {
+    const checks = [];
+    const issues = [];
+    const httpEmit = {
+      check: (spec) => checks.push(makeCheck({ domain: 'LIVE_HTTP_VALIDATION', ...spec })),
+      issue: (spec) => issues.push(makeIssue({ domain: 'LIVE_HTTP_VALIDATION', ...spec })),
+    };
+    const bodies = new Map();
 
-  for (const document of targets.documents) {
-    const response = await fetchAndCheckRoute(httpEmit, { baseUrl, route: document, kind: 'document' });
-    if (response) bodies.set(document, response.body);
-  }
-  for (const page of httpRoutes) {
-    const response = await fetchAndCheckRoute(httpEmit, { baseUrl, route: page.route, locale: page.locale, kind: 'page' });
-    if (response) bodies.set(page.route, response.body);
-  }
-  // EN Home is required for the Home currentness contract even when the mode's
-  // route selection would not otherwise have fetched it.
-  if (!bodies.has('/')) {
-    const response = await fetchAndCheckRoute(httpEmit, { baseUrl, route: '/', locale: 'en', kind: 'page' });
-    if (response) bodies.set('/', response.body);
-  }
-  for (const asset of targets.assets) {
-    await fetchAndCheckRoute(httpEmit, { baseUrl, route: asset, kind: 'asset' });
+    for (const document of targets.documents) {
+      const response = await fetchAndCheckRoute(httpEmit, { baseUrl, route: document, kind: 'document' });
+      if (response) bodies.set(document, response.body);
+    }
+    for (const page of selectHttpRoutes(targets, args.mode)) {
+      const response = await fetchAndCheckRoute(httpEmit, { baseUrl, route: page.route, locale: page.locale, kind: 'page' });
+      if (response) bodies.set(page.route, response.body);
+    }
+    // EN Home is required for the Home currentness contract even when the mode's
+    // route selection would not otherwise have fetched it.
+    if (!bodies.has('/')) {
+      const response = await fetchAndCheckRoute(httpEmit, { baseUrl, route: '/', locale: 'en', kind: 'page' });
+      if (response) bodies.set('/', response.body);
+    }
+    for (const asset of targets.assets) {
+      await fetchAndCheckRoute(httpEmit, { baseUrl, route: asset, kind: 'asset' });
+    }
+
+    checkThingsToDoLiveContract(httpEmit, { targets, bodies, baseUrl });
+    checkLocalizationHealth(httpEmit, { bodies, localeData });
+    return { checks, issues, bodies };
+  };
+
+  const homeRepoBody = fs.existsSync(path.join(ROOT, 'index.html')) ? fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8') : null;
+  const edgeGraceMs = Number.isFinite(args.edgeGraceMs) ? args.edgeGraceMs : DEFAULT_EDGE_GRACE_MS;
+  const edgeRetryMs = Number.isFinite(args.edgeRetryMs) ? args.edgeRetryMs : DEFAULT_EDGE_RETRY_MS;
+  // Grace is scoped to the one situation it exists for: the run that fires
+  // immediately after GitHub confirmed the expected commit was published.
+  const edgeGraceApplies = args.mode === 'IMMEDIATE_POST_DEPLOY'
+    && provenance.state === 'DEPLOYMENT_VERIFIED'
+    && edgeGraceMs > 0;
+
+  let pass = await runLiveHttpPass();
+  let edgeAttempts = 1;
+  let corroborated = corroborateByContent(pass.bodies.get('/') ?? null, homeRepoBody);
+  const edgeGraceTrace = [];
+
+  if (edgeGraceApplies) {
+    const deadline = Date.now() + edgeGraceMs;
+    while (pass.issues.some(isPropagationEligible)) {
+      // Lightweight corroboration from bytes the site already serves: if the
+      // edge is handing back exactly the commit under test, propagation is
+      // finished and anything still mismatched is a real defect, so the window
+      // is abandoned early rather than spent waiting for nothing.
+      if (corroborated === true) {
+        notes.push('edge grace ended early: live Home bytes match the checked-out commit, so propagation is complete');
+        break;
+      }
+      if (Date.now() + edgeRetryMs > deadline) break;
+
+      const graced = pass.issues.filter(isPropagationEligible);
+      edgeGraceTrace.push({
+        attempt: edgeAttempts,
+        codes: [...new Set(graced.map((issue) => issue.code))],
+        routes: [...new Set(graced.map((issue) => issue.route).filter(Boolean))].slice(0, 20),
+      });
+
+      await sleep(edgeRetryMs);
+      edgeAttempts += 1;
+      pass = await runLiveHttpPass();
+      corroborated = corroborateByContent(pass.bodies.get('/') ?? null, homeRepoBody);
+    }
   }
 
-  checkThingsToDoLiveContract(httpEmit, { targets, bodies, baseUrl });
-  checkLocalizationHealth(httpEmit, { bodies, localeData });
+  const bodies = pass.bodies;
+  state.checks.push(...pass.checks);
+  // Findings that outlived the window keep their severity and gain the record
+  // that propagation was considered and ruled out.
+  state.issues.push(...(edgeGraceApplies && edgeAttempts > 1
+    ? annotateEdgeGraceExhausted(pass.issues, { attempts: edgeAttempts, windowMs: edgeGraceMs, corroborated })
+    : pass.issues));
+
+  // Each retried attempt is recorded as its own INFO finding, tagged as
+  // propagation-related, so a run that recovered still shows what it saw first.
+  const edgeEmit = emitter('LIVE_HTTP_VALIDATION');
+  for (const entry of edgeGraceTrace) {
+    edgeEmit.issue({
+      code: 'EDGE_PROPAGATION_RETRY',
+      severity: 'INFO',
+      category: 'ROUTE',
+      check: 'post-deployment edge serves the verified commit',
+      observed: `attempt ${entry.attempt} of the live pass found ${entry.codes.join(', ')} on ${entry.routes.length} route(s)`,
+      expected: 'every edge serves the commit GitHub reported as published',
+      evidence: {
+        propagation_related: true,
+        attempt: entry.attempt,
+        codes: entry.codes,
+        routes: entry.routes,
+        edge_grace_window_ms: edgeGraceMs,
+        edge_retry_ms: edgeRetryMs,
+        deployment_state: provenance.state,
+      },
+      resolver_class: 'DEPLOYMENT',
+      deterministic: false,
+      retryable: true,
+    });
+  }
+  if (edgeGraceApplies && edgeAttempts > 1) {
+    notes.push(`edge readiness: ${edgeAttempts} live pass(es) within a ${edgeGraceMs}ms grace window at ${edgeRetryMs}ms cadence`);
+  }
+  emitter('DEPLOYMENT_PROVENANCE').check({
+    id: 'deployment:edge-readiness',
+    name: 'post-deployment edge serves the verified commit',
+    status: !edgeGraceApplies ? 'SKIP'
+      : pass.issues.some(isPropagationEligible) ? 'FAIL' : 'PASS',
+    observed: {
+      grace_applies: edgeGraceApplies,
+      attempts: edgeAttempts,
+      live_home_matches_checked_out_bytes: corroborated,
+    },
+    expected: 'no propagation-eligible mismatch remains once the grace window closes',
+    evidence: { window_ms: edgeGraceMs, retry_ms: edgeRetryMs, mode: args.mode, deployment_state: provenance.state },
+  });
 
   // Content corroboration for deployment identity — supporting evidence only.
-  const homeRepoBody = fs.existsSync(path.join(ROOT, 'index.html')) ? fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8') : null;
-  const contentMatch = corroborateByContent(bodies.get('/') ?? null, homeRepoBody);
-  if (contentMatch !== null) {
-    provenance.evidence = { ...provenance.evidence, live_home_matches_checked_out_bytes: contentMatch };
+  if (corroborated !== null) {
+    provenance.evidence = { ...provenance.evidence, live_home_matches_checked_out_bytes: corroborated };
   }
 
   // --- LIVE_BROWSER_VALIDATION -------------------------------------------

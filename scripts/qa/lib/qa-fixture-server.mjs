@@ -8,6 +8,15 @@
 //   overrides.set('/about/', null)                 -> force a 404
 //   overrides.set('/about/', { status: 301, ... }) -> force a redirect
 //   overrides.set('/sitemap.xml', { body })        -> serve mutated bytes
+//   overrides.set('/x/', (hit) => hit < 2 ? null : undefined)
+//                                                  -> stale for two hits, then
+//                                                     the committed bytes, which
+//                                                     is how a CDN edge catching
+//                                                     up is simulated
+//
+// It also records every request method it actually receives. That turns "the
+// browser is GET/HEAD only" into something a test can prove from the server
+// side — if interception ever regressed, a POST would show up here.
 //
 // Bound to loopback only, and it never writes to the working tree.
 
@@ -49,6 +58,8 @@ function resolveOnDisk(root, route) {
 
 export function startFixtureServer(overrides = new Map(), { root } = {}) {
   if (!root) throw new Error('qa-fixture-server: a root directory is required');
+  const received = [];
+  const hits = new Map();
   const server = http.createServer((request, response) => {
     let route;
     try {
@@ -63,17 +74,27 @@ export function startFixtureServer(overrides = new Map(), { root } = {}) {
       response.end('<!doctype html><title>404</title><h1>Not found</h1>');
     };
 
+    received.push({ method: request.method, url: request.url });
+
     if (overrides.has(route)) {
-      const entry = overrides.get(route);
+      const raw = overrides.get(route);
+      const hit = hits.get(route) ?? 0;
+      hits.set(route, hit + 1);
+      // A function override is evaluated per request, so a case can model an
+      // edge that is stale now and correct a moment later. Returning undefined
+      // hands the route back to the on-disk (correct) bytes.
+      const entry = typeof raw === 'function' ? raw(hit) : raw;
       if (entry === null) {
         notFound();
         return;
       }
-      const headers = { 'content-type': entry.contentType ?? 'text/html; charset=utf-8', ...(entry.headers ?? {}) };
-      if (entry.location) headers.location = entry.location;
-      response.writeHead(entry.status ?? 200, headers);
-      response.end(entry.status >= 300 && entry.status < 400 ? '' : entry.body ?? '');
-      return;
+      if (entry !== undefined) {
+        const headers = { 'content-type': entry.contentType ?? 'text/html; charset=utf-8', ...(entry.headers ?? {}) };
+        if (entry.location) headers.location = entry.location;
+        response.writeHead(entry.status ?? 200, headers);
+        response.end(entry.status >= 300 && entry.status < 400 ? '' : entry.body ?? '');
+        return;
+      }
     }
 
     const file = resolveOnDisk(root, route);
@@ -98,6 +119,8 @@ export function startFixtureServer(overrides = new Map(), { root } = {}) {
       resolve({
         origin: `http://127.0.0.1:${port}`,
         overrides,
+        received,
+        methodsReceived: () => [...new Set(received.map((entry) => entry.method))],
         close: () => new Promise((done) => server.close(done)),
       });
     });

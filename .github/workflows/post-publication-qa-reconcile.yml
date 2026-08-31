@@ -3,12 +3,19 @@
 # A delayed verification needs to land roughly 30-90 minutes after a
 # deployment. Holding a runner in `sleep` for that hour would bill an hour of
 # idle time per publication, so this cheap job runs on a short schedule and
-# asks one question: is there a successful github-pages deployment inside the
-# delayed window that has not been rechecked yet? Almost every firing answers
-# "no" in a few seconds and stops.
+# asks one question: is the commit that is *currently* the head of main
+# successfully deployed, inside the delayed window, and not yet validly
+# rechecked? Almost every firing answers "no" in a few seconds and stops.
 #
-# Dedupe marker is the delayed run's own evidence artifact, so no QA state is
-# ever committed to the repository. Read-only, like every Phase 2A job.
+# Two rules the reconciler enforces, both of which used to be missing:
+#   - the deployment must be for current main exactly. An older successful
+#     deployment is never a fallback, however recent it is.
+#   - dedupe is by completion marker, not by evidence artifact. The evidence
+#     upload runs with always(), so a crashed runner produces an artifact; using
+#     that as the marker would cancel the recheck the crash made necessary.
+#
+# All state lives in GitHub's artifact store: nothing is committed to the
+# repository. Read-only, like every Phase 2A job.
 
 name: Post-publication QA (delayed recheck)
 
@@ -34,6 +41,7 @@ jobs:
       run: ${{ steps.decide.outputs.run }}
       sha: ${{ steps.decide.outputs.sha }}
       artifact: ${{ steps.decide.outputs.artifact }}
+      marker: ${{ steps.decide.outputs.marker }}
     steps:
       - name: Check out reconciler
         uses: actions/checkout@v4
@@ -54,6 +62,12 @@ jobs:
     if: needs.reconcile.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # Serialised per SHA on top of the workflow-level group, so two firings
+    # that both observed "due" before either published a marker still cannot
+    # produce two concurrent rechecks of the same commit.
+    concurrency:
+      group: post-publication-qa-delayed-run-${{ needs.reconcile.outputs.sha }}
+      cancel-in-progress: false
     steps:
       - name: Check out the deployed commit
         uses: actions/checkout@v4
@@ -81,14 +95,39 @@ jobs:
           echo "qa_exit=$code" >> "$GITHUB_OUTPUT"
           exit 0
 
-      # The artifact name is also the dedupe marker the reconciler looks for,
-      # so it must be uploaded whatever the QA outcome.
+      # Evidence is uploaded whatever happened, including a crash: a partial
+      # artifact is exactly what someone needs in order to understand the
+      # crash. It is explicitly NOT the dedupe signal.
       - name: Upload delayed QA report and evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ${{ needs.reconcile.outputs.artifact }}
           path: qa-artifacts/
+          if-no-files-found: warn
+          retention-days: 30
+
+      # The dedupe signal. Written only if a final report exists, validates
+      # against the published schema, carries this exact SHA and the
+      # DELAYED_RECHECK mode, and reached a terminal verdict. If this step
+      # fails, no marker is uploaded and the SHA stays eligible for retry.
+      - name: Verify the delayed recheck actually completed
+        id: completion
+        # Not completing validly is a reason to withhold the marker, not a
+        # reason to abort the job before the QA verdict is reported.
+        continue-on-error: true
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ needs.reconcile.outputs.sha }}
+        run: |
+          node scripts/qa/verify-delayed-completion.mjs             --report=qa-artifacts/post-publication-qa.json             --sha="$EXPECTED_SHA"             --mode=DELAYED_RECHECK             --out=qa-marker/completion.json
+
+      - name: Publish the completion marker
+        if: steps.completion.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ needs.reconcile.outputs.marker }}
+          path: qa-marker/
           if-no-files-found: error
           retention-days: 30
 

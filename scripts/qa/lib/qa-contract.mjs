@@ -66,6 +66,73 @@ export const CATEGORIES = Object.freeze([
   'SCHEMA',
 ]);
 
+/**
+ * Live findings a stale CDN edge can plausibly explain, and only those.
+ *
+ * The distinction this list encodes is the one the review demanded:
+ * "GitHub Pages reports the deployment VERIFIED" is a statement about
+ * GitHub finishing a publish, not about every edge already serving the new
+ * bytes. An edge still holding the previous version answers 200 with the *old*
+ * page, so what it produces is a presence/absence mismatch — a route that does
+ * not exist yet, a sitemap entry not yet listed, an event not yet on Home.
+ *
+ * Everything outside this list is excluded on purpose, because a stale edge
+ * cannot produce it:
+ *   ROUTE_BODY_INVALID      a stale edge serves a valid *older* page shell
+ *   CONTENT_TYPE_UNEXPECTED server configuration, not content version
+ *   LOCALE_LANG_MISMATCH    an older page still carries a correct lang
+ *   LOCALE_BRAND_CORRUPTION protected-brand rule, never softened
+ *   ROUTE_REDIRECT_*        routing configuration, not content version
+ * Source-domain and deployment-domain findings are excluded structurally, by
+ * domain, further down.
+ */
+export const PROPAGATION_ELIGIBLE_CODES = Object.freeze([
+  'ROUTE_NOT_FOUND',
+  'ROUTE_UNEXPECTED_STATUS',
+  'ROUTE_SERVER_ERROR',
+  'ROUTE_UNREACHABLE',
+  'RESPONSE_BODY_EMPTY',
+  'SITEMAP_ROUTE_MISSING',
+  'SITEMAP_PUBLIC_ROUTE_MISMATCH',
+  'TTD_IDENTITY_MISSING',
+  'TTD_CURRENT_RECORD_MISSING_FROM_HOME',
+  'TTD_EXPIRED_SURFACED',
+  'LOCALE_PT_ROUTE_MISSING',
+  'LOCALE_REQUIRED_VALUE_MISSING',
+]);
+
+/**
+ * Edge-readiness grace applies to the live HTTP domain only. The browser
+ * domain runs after the HTTP pass has already settled (or exhausted its
+ * window), so by the time a page is rendered the edge question is answered.
+ */
+export function isPropagationEligible(issue) {
+  if (issue.domain !== 'LIVE_HTTP_VALIDATION') return false;
+  if (issue.severity !== 'ERROR' && issue.severity !== 'CRITICAL') return false;
+  return PROPAGATION_ELIGIBLE_CODES.includes(issue.code);
+}
+
+/**
+ * Record, on the findings that outlived the grace window, that propagation was
+ * considered and ruled out. Severity is deliberately untouched: once the window
+ * closes, a surviving mismatch is a defect and classifies normally. This only
+ * writes down *why* it is now trusted.
+ */
+export function annotateEdgeGraceExhausted(issues, { attempts, windowMs, corroborated = null }) {
+  return issues.map((issue) => (isPropagationEligible(issue)
+    ? {
+      ...issue,
+      evidence: {
+        ...issue.evidence,
+        edge_grace_attempts: attempts,
+        edge_grace_window_ms: windowMs,
+        edge_grace_outcome: 'EXHAUSTED_STILL_MISMATCHED',
+        live_content_corroborated: corroborated,
+      },
+    }
+    : issue));
+}
+
 export function severityRank(severity) {
   return SEVERITY_RANK[severity] ?? -1;
 }
