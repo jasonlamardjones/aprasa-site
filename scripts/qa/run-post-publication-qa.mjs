@@ -931,35 +931,80 @@ export async function run(argv) {
 
   let pass = await runLiveHttpPass();
   let edgeAttempts = 1;
+  // Home-byte corroboration is INFORMATIONAL ONLY. It says one cache key is
+  // current; it says nothing about whether /pt/ or an event detail route has
+  // converged, because those are different cache keys on different edges. It
+  // used to end the whole grace window, which produced exactly the false
+  // failure this mechanism exists to prevent: Home current, /pt/ transiently
+  // 404, one request made, run marked FAILED. It is now recorded and never
+  // consulted by the retry loop.
   let corroborated = corroborateByContent(pass.bodies.get('/') ?? null, homeRepoBody);
   const edgeGraceTrace = [];
 
+  /**
+   * Per-finding identity. Grace is owned by the individual finding, not by the
+   * run: each unresolved finding is re-evaluated every attempt and stops being
+   * retried only when it personally clears or the global deadline expires.
+   */
+  const findingKey = (issue) => `${issue.code}|${issue.route ?? '-'}|${issue.locale ?? '-'}`;
+  const tracked = new Map();
+
+  const observeAttempt = (issues, attempt) => {
+    const eligible = issues.filter(isPropagationEligible);
+    const present = new Set(eligible.map(findingKey));
+    for (const issue of eligible) {
+      const key = findingKey(issue);
+      if (!tracked.has(key)) {
+        tracked.set(key, {
+          key,
+          code: issue.code,
+          route: issue.route ?? null,
+          locale: issue.locale ?? null,
+          first_seen_attempt: attempt,
+          resolved_at_attempt: null,
+        });
+      } else {
+        // Seen again: if it had cleared and came back, it is unresolved again.
+        tracked.get(key).resolved_at_attempt = null;
+      }
+    }
+    const resolvedNow = [];
+    for (const entry of tracked.values()) {
+      if (!present.has(entry.key) && entry.resolved_at_attempt === null) {
+        entry.resolved_at_attempt = attempt;
+        resolvedNow.push(entry.key);
+      }
+    }
+    return { unresolved: eligible, resolvedNow };
+  };
+
   if (edgeGraceApplies) {
     const deadline = Date.now() + edgeGraceMs;
-    while (pass.issues.some(isPropagationEligible)) {
-      // Lightweight corroboration from bytes the site already serves: if the
-      // edge is handing back exactly the commit under test, propagation is
-      // finished and anything still mismatched is a real defect, so the window
-      // is abandoned early rather than spent waiting for nothing.
-      if (corroborated === true) {
-        notes.push('edge grace ended early: live Home bytes match the checked-out commit, so propagation is complete');
-        break;
-      }
+    let observation = observeAttempt(pass.issues, edgeAttempts);
+
+    // Keep going while ANY tracked finding is still unresolved. There is no
+    // global early exit: the only two ways a finding stops being retried are
+    // recovering, or the deadline running out for everyone.
+    while (observation.unresolved.length > 0) {
       if (Date.now() + edgeRetryMs > deadline) break;
 
-      const graced = pass.issues.filter(isPropagationEligible);
       edgeGraceTrace.push({
         attempt: edgeAttempts,
-        codes: [...new Set(graced.map((issue) => issue.code))],
-        routes: [...new Set(graced.map((issue) => issue.route).filter(Boolean))].slice(0, 20),
+        codes: [...new Set(observation.unresolved.map((issue) => issue.code))],
+        routes: [...new Set(observation.unresolved.map((issue) => issue.route).filter(Boolean))].slice(0, 20),
+        unresolved_keys: observation.unresolved.map(findingKey).slice(0, 20),
+        resolved_since_previous_attempt: observation.resolvedNow.slice(0, 20),
       });
 
       await sleep(edgeRetryMs);
       edgeAttempts += 1;
       pass = await runLiveHttpPass();
       corroborated = corroborateByContent(pass.bodies.get('/') ?? null, homeRepoBody);
+      observation = observeAttempt(pass.issues, edgeAttempts);
     }
   }
+
+  const edgeFindingTrace = [...tracked.values()];
 
   const bodies = pass.bodies;
   state.checks.push(...pass.checks);
@@ -985,6 +1030,10 @@ export async function run(argv) {
         attempt: entry.attempt,
         codes: entry.codes,
         routes: entry.routes,
+        // Which individual findings were still unresolved at this attempt, and
+        // which had cleared since the previous one. Retry is per finding.
+        unresolved_keys: entry.unresolved_keys,
+        resolved_since_previous_attempt: entry.resolved_since_previous_attempt,
         edge_grace_window_ms: edgeGraceMs,
         edge_retry_ms: edgeRetryMs,
         deployment_state: provenance.state,
@@ -1005,10 +1054,23 @@ export async function run(argv) {
     observed: {
       grace_applies: edgeGraceApplies,
       attempts: edgeAttempts,
-      live_home_matches_checked_out_bytes: corroborated,
+      findings_tracked: edgeFindingTrace.length,
+      findings_recovered: edgeFindingTrace.filter((entry) => entry.resolved_at_attempt !== null).length,
+      findings_unresolved: edgeFindingTrace.filter((entry) => entry.resolved_at_attempt === null).length,
     },
     expected: 'no propagation-eligible mismatch remains once the grace window closes',
-    evidence: { window_ms: edgeGraceMs, retry_ms: edgeRetryMs, mode: args.mode, deployment_state: provenance.state },
+    evidence: {
+      window_ms: edgeGraceMs,
+      retry_ms: edgeRetryMs,
+      mode: args.mode,
+      deployment_state: provenance.state,
+      // Per finding: when it first appeared and when it cleared. This is the
+      // record that each one was retried on its own terms.
+      findings: edgeFindingTrace,
+      // Informational only. Never used to stop retrying anything.
+      live_home_matches_checked_out_bytes: corroborated,
+      home_corroboration_is_advisory: true,
+    },
   });
 
   // Content corroboration for deployment identity — supporting evidence only.

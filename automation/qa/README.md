@@ -41,12 +41,57 @@ monkey-patch `serviceWorker.register`, because rejecting that promise inside the
 page would surface as a first-party page error — exactly the false defect this
 layer exists to avoid.
 
+### Installing the guard is a pre-navigation gate, and it fails closed
+
+Guard installation is not best effort. **If any required component cannot be
+installed, the browser does not navigate at all** — no page is visited, no
+request reaches production, and the run records one deterministic
+`BROWSER_READ_ONLY_GUARD_SETUP_FAILED` finding. A note in the report is not a
+substitute for not sending the request: a half-installed envelope is precisely
+the situation in which worker-originated mutation traffic could get out.
+
+Components are split by whether their absence could let traffic escape:
+
+| Component | Required? | Why |
+| --- | --- | --- |
+| `page-fetch-interception` | **Required** | without it nothing at all is gated |
+| `service-worker-bypass` | **Required** | without it page traffic can be served or re-issued by a service worker outside interception |
+| `worker-auto-attach` | **Required** | without it a worker the page spawns is never attached, so its requests are never paused |
+| `in-page-guard-binding` | **Required** | the channel the in-page guard reports through |
+| `in-page-guard-script` | **Required** | cancels form submission and `sendBeacon` on the unload path |
+| `worker-resume` | Optional | resuming an already-gated worker. Failure leaves it paused, which is *more* restrictive |
+
+Every component is attempted even after one fails, so the finding names the
+whole picture rather than the first symptom. The first failure abandons the
+entire browser pass — a guard that will not install for one route will not
+install for the next, and each further attempt would be another chance to
+navigate unguarded. Chrome and its temporary profile are still cleaned up on
+that path.
+
+The same rule applies per worker. `waitForDebuggerOnStart` means an
+auto-attached worker starts paused, so a worker whose Fetch interception cannot
+be installed is simply never resumed: it issues nothing, which is the
+fail-closed outcome without killing anything. That is recorded as
+`BROWSER_WORKER_GATE_UNAVAILABLE` (WARNING).
+
+`BROWSER_READ_ONLY_GUARD_SETUP_FAILED` is an ERROR, and carries category
+`QA_INFRASTRUCTURE` rather than a content category, so a consumer can tell
+"the QA layer could not establish its safety envelope" from "the site is
+wrong" without parsing a code. ERROR rather than WARNING is deliberate:
+Phase 2A's premise is that it is *provably* read-only, and a run that quietly
+degrades to DEGRADED leaves CI green while that proof is missing.
+
 Three independent checks in CI keep this honest, and none substitutes for the
 others:
 
 1. `scripts/qa/audit-read-only.mjs` — structural. Asserts every QA workflow
-   holds only `read`/`none` permissions and that the pinned origin, both
-   `READ_ONLY_METHODS` sets and the guard installation are still in the source.
+   holds only `read`/`none` permissions; that the pinned origin, both
+   `READ_ONLY_METHODS` sets, the enumerated required guard components and the
+   fail-closed gate are still in the source; that the Home-corroboration early
+   exit has *not* returned (a negative invariant — a closed finding that can
+   silently reappear is not closed); and that the guard gate is evaluated
+   **before** the single navigation call (an ordering invariant — a gate placed
+   after the request it prevents is not a gate).
 2. A grep guard in `post-publication-qa-tests.yml` — textual. Fails the build if
    a write-capable call appears in `scripts/qa/`.
 3. The test matrix — behavioural. A recording `fetch` proves every GitHub API
@@ -158,14 +203,39 @@ findings a stale edge could explain are still present.
 | Grace window | 180 000 ms (3 minutes) | `--edge-grace-ms` |
 | Retry cadence | 30 000 ms (30 seconds) | `--edge-retry-ms` |
 
-Each retried attempt is recorded as its own INFO `EDGE_PROPAGATION_RETRY`
-finding tagged `propagation_related: true`, so a run that recovered still shows
-what it saw first. The window can also end early: if the live Home bytes match
-the checked-out commit, propagation is demonstrably finished and anything still
-mismatched is real. Once the window closes, surviving findings keep their normal
-ERROR/CRITICAL severity and gain
+**Grace is owned by the individual finding, not by the run.** Each unresolved
+propagation-eligible finding is re-evaluated on every attempt and stops being
+retried only when it personally clears, or when the global deadline expires.
+There is no early exit of any kind.
+
+That distinction is load-bearing. An earlier version ended the whole window as
+soon as the live Home bytes matched the checked-out commit, on the theory that
+matching Home proved propagation was complete. It does not: Home and `/pt/` are
+different cache keys, potentially on different edges. The observable failure was
+Home serving exact current bytes while `/pt/` returned a transient 404 — the run
+made exactly one `/pt/` request, ended grace because Home matched, and reported
+FAILED for a route that would have recovered on the next request.
+
+Home-byte corroboration is therefore **advisory evidence only**. It is recorded
+on the `deployment:edge-readiness` check as
+`live_home_matches_checked_out_bytes` alongside
+`home_corroboration_is_advisory: true`, and it is never consulted by the retry
+loop in either direction — it neither ends retries nor starts them.
+
+Each attempt records an INFO `EDGE_PROPAGATION_RETRY` tagged
+`propagation_related: true`, carrying the individual findings still unresolved
+at that attempt (`unresolved_keys`) and those that cleared since the previous
+one (`resolved_since_previous_attempt`). The `deployment:edge-readiness` check
+carries the full per-finding table — `code`, `route`, `locale`,
+`first_seen_attempt`, `resolved_at_attempt` — which is the record that each
+finding was retried on its own terms. Once the window closes, survivors keep
+their normal ERROR/CRITICAL severity and gain
 `edge_grace_outcome: EXHAUSTED_STILL_MISMATCHED` — the record that propagation
 was considered and ruled out, not a downgrade.
+
+The retry loop re-runs the whole bounded live pass rather than crawling, so the
+route set never grows: it is the same set derived from repository data, capped
+by the same deadline.
 
 Eligibility is a closed list, because a stale edge produces one shape of
 symptom: presence/absence of content it has not received yet.
@@ -222,6 +292,8 @@ up with no edit here.
 | Known third party (`plausible.io`, Google Fonts) | WARNING | `EXTERNAL_DEPENDENCY_WARNING` |
 | Unrecognised third party | WARNING | `EXTERNAL_UNCLASSIFIED_FAILURE` |
 | Browser-implicit (`/favicon.ico`) | INFO | `BROWSER_IMPLICIT_REQUEST_FAILED` |
+| Required guard component not installable | ERROR | `BROWSER_READ_ONLY_GUARD_SETUP_FAILED` (category `QA_INFRASTRUCTURE`; no navigation happened) |
+| A worker could not be gated, left paused | WARNING | `BROWSER_WORKER_GATE_UNAVAILABLE` (category `QA_INFRASTRUCTURE`) |
 | First-party mutating request, refused | WARNING | `BROWSER_FIRST_PARTY_MUTATION_BLOCKED` |
 | Third-party beacon or mutating request, refused | INFO | `BROWSER_THIRD_PARTY_MUTATION_BLOCKED` |
 | Off-origin top-level navigation, refused | WARNING | `BROWSER_OFFSITE_NAVIGATION_BLOCKED` |
@@ -362,6 +434,16 @@ Public repositories bill no Actions minutes.
   than a strict 30–90.
 - The reconciler fires ~48 times a day; see the cost dial above.
 - Rendered-image inspection is capped at the first 200 images per page.
+- The browser domain is not edge-graced. It does not need to be: it runs after
+  the HTTP pass has settled or exhausted its window.
+- A failure to install the browser read-only guard costs the whole browser
+  domain for that run, by design. There is no partial browser pass — the
+  alternative is navigating without the safety envelope, which is not on offer.
+- Home-byte corroboration stays a weak signal even as advisory evidence:
+  identical bytes do not prove which commit produced them. It is recorded, and
+  nothing is decided by it.
+- Temporary-profile removal after Chrome exits remains best effort, and the
+  report schema's timestamp validation is syntactic.
 
 ## Phase 2B compatibility
 

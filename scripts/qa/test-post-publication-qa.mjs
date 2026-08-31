@@ -19,7 +19,7 @@ const { loadSchema, validateAgainstSchema } = await import('./lib/qa-schema.mjs'
 const { loadTargets } = await import('./lib/qa-targets.mjs');
 const { classifyConsoleMessage, classifyNetworkFailure } = await import('./lib/qa-classify.mjs');
 const { isNormalizingRedirect, fetchFollowing, assertReadOnlyMethod } = await import('./lib/qa-http.mjs');
-const { decideBrowserRequest, READ_ONLY_METHODS } = await import('./lib/qa-browser-guard.mjs');
+const { decideBrowserRequest, READ_ONLY_METHODS, REQUIRED_GUARD_COMPONENTS, installReadOnlyGuard } = await import('./lib/qa-browser-guard.mjs');
 const { verifyDelayedCompletion } = await import('./verify-delayed-completion.mjs');
 
 // The CI mutation guard greps scripts/qa/ for a request-options key naming a
@@ -688,6 +688,146 @@ await testCase('H3d a deterministic live defect a stale edge cannot cause is nev
   );
 });
 
+
+// ---------------------------------------------------------------------------
+// G2. Edge grace is owned by the individual finding, not by the run
+//
+// The second review reproduced a false failure: Home served exact current
+// bytes, /pt/ was transiently 404, the run made a single /pt/ request, and the
+// grace window terminated because Home matched. These cases pin the fix — one
+// route being current says nothing about another route's cache key.
+// ---------------------------------------------------------------------------
+const CURRENT_DETAIL_ROUTE = (() => {
+  const current = targets.recordTargets.filter((record) => !record.expiredAtAsOf);
+  return current.length ? current[0].enRoute : null;
+})();
+
+const edgeReadinessCheck = (report) => report.checks.find((check) => check.id === 'deployment:edge-readiness');
+const retriesIn = (report) => report.issues.filter((issue) => issue.code === 'EDGE_PROPAGATION_RETRY');
+
+async function runEdgeGrace(mutate, extraArgs = EDGE_ARGS) {
+  return runAgainstFixture({
+    mode: 'IMMEDIATE_POST_DEPLOY',
+    deploymentState: 'DEPLOYMENT_VERIFIED',
+    extraArgs,
+    mutate,
+  });
+}
+
+await testCase('G2a Home current does not end grace for a transiently stale PT route', async (assert) => {
+  // Home is served from disk throughout, so corroboration is true from the very
+  // first pass. Under the old logic that ended the window immediately and the
+  // run failed. It must now keep retrying /pt/ on its own account.
+  const { report } = await runEdgeGrace((overrides) => {
+    overrides.set('/pt/', (hit) => (hit < 1 ? null : undefined));
+  });
+  const check = edgeReadinessCheck(report);
+  const errors = errorsIn(report);
+  assert(
+    errors.length === 0
+      && report.overall_status !== 'FAILED'
+      // The decisive assertion: Home matched, and the run retried anyway.
+      && check.evidence.live_home_matches_checked_out_bytes === true
+      && check.evidence.home_corroboration_is_advisory === true
+      && check.observed.attempts > 1
+      && check.observed.findings_recovered >= 1
+      && check.observed.findings_unresolved === 0
+      && retriesIn(report).length >= 1,
+    `overall=${report.overall_status} errors=${JSON.stringify(errors.map((i) => [i.code, i.route]))} check=${JSON.stringify(check?.observed)} corroborated=${check?.evidence?.live_home_matches_checked_out_bytes}`
+  );
+});
+
+await testCase('G2b Home current does not end grace for a transiently stale detail route', async (assert) => {
+  assert(Boolean(CURRENT_DETAIL_ROUTE), 'no current detail route available in the committed data');
+  if (!CURRENT_DETAIL_ROUTE) return;
+  const { report } = await runEdgeGrace((overrides) => {
+    overrides.set(CURRENT_DETAIL_ROUTE, (hit) => (hit < 1 ? null : undefined));
+  });
+  const check = edgeReadinessCheck(report);
+  const tracked = check.evidence.findings.filter((entry) => entry.route === CURRENT_DETAIL_ROUTE);
+  assert(
+    errorsIn(report).length === 0
+      && check.evidence.live_home_matches_checked_out_bytes === true
+      && tracked.length >= 1
+      && tracked.every((entry) => entry.resolved_at_attempt !== null),
+    `errors=${JSON.stringify(errorsIn(report).map((i) => [i.code, i.route]))} tracked=${JSON.stringify(tracked)}`
+  );
+});
+
+await testCase('G2c each of several stale routes is tracked and cleared independently', async (assert) => {
+  // /pt/ recovers on the second pass; the detail route never does. The
+  // recovered one must stop failing while the other runs to the deadline.
+  const { report } = await runEdgeGrace((overrides) => {
+    overrides.set('/pt/', (hit) => (hit < 1 ? null : undefined));
+    overrides.set(CURRENT_DETAIL_ROUTE, () => null);
+  }, ['--edge-grace-ms=3000', '--edge-retry-ms=200']);
+  const check = edgeReadinessCheck(report);
+  const findings = check.evidence.findings;
+  const ptFindings = findings.filter((entry) => entry.route === '/pt/');
+  const detailFindings = findings.filter((entry) => entry.route === CURRENT_DETAIL_ROUTE);
+  const errors = errorsIn(report);
+  assert(
+    // The recovered route produced no surviving error...
+    ptFindings.length >= 1
+      && ptFindings.every((entry) => entry.resolved_at_attempt !== null)
+      && errors.every((issue) => issue.route !== '/pt/')
+      // ...while the unresolved one ran to the deadline and failed.
+      && detailFindings.length >= 1
+      && detailFindings.every((entry) => entry.resolved_at_attempt === null)
+      && errors.some((issue) => issue.route === CURRENT_DETAIL_ROUTE)
+      && report.overall_status === 'FAILED'
+      && check.evidence.live_home_matches_checked_out_bytes === true,
+    `overall=${report.overall_status} pt=${JSON.stringify(ptFindings)} detail=${JSON.stringify(detailFindings)} errorRoutes=${JSON.stringify(errors.map((i) => i.route))}`
+  );
+});
+
+await testCase('G2d Home current with a persistently stale PT route still fails after the deadline', async (assert) => {
+  const { report } = await runEdgeGrace((overrides) => overrides.set('/pt/', () => null));
+  const check = edgeReadinessCheck(report);
+  const issue = report.issues.find((candidate) => candidate.code === 'ROUTE_NOT_FOUND' && candidate.route === '/pt/');
+  assert(
+    Boolean(issue)
+      && issue.severity === 'ERROR'
+      && report.overall_status === 'FAILED'
+      && issue.evidence.edge_grace_outcome === 'EXHAUSTED_STILL_MISMATCHED'
+      && check.observed.attempts > 1
+      // Home matched the whole time and never shortened the window.
+      && check.evidence.live_home_matches_checked_out_bytes === true
+      && check.observed.findings_unresolved >= 1,
+    `overall=${report.overall_status} issue=${JSON.stringify(issue)} check=${JSON.stringify(check?.observed)}`
+  );
+});
+
+await testCase('G2e a stale-but-valid Home with healthy routes neither fails nor triggers retries', async (assert) => {
+  // Corroboration false, but nothing propagation-eligible is wrong, so the
+  // grace loop must not engage at all. Corroboration drives nothing, in either
+  // direction.
+  const { report } = await runEdgeGrace((overrides) => {
+    overrides.set('/', () => ({ status: 200, body: STALE_HOME, contentType: 'text/html; charset=utf-8' }));
+  });
+  const check = edgeReadinessCheck(report);
+  assert(
+    errorsIn(report).length === 0
+      && check.observed.attempts === 1
+      && check.evidence.live_home_matches_checked_out_bytes === false
+      && retriesIn(report).length === 0,
+    `errors=${JSON.stringify(errorsIn(report).map((i) => [i.code, i.route]))} check=${JSON.stringify(check?.observed)}`
+  );
+});
+
+await testCase('G2f source and deployment failures never enter edge grace', async (assert) => {
+  const sourceIssue = makeIssue({ code: 'SOURCE_VALIDATOR_FAILED', severity: 'ERROR', category: 'SOURCE', domain: 'SOURCE_VALIDATION', check: 'x', resolver_class: 'CONTENT_GOVERNANCE' });
+  const deploymentIssue = makeIssue({ code: 'DEPLOYMENT_FAILED', severity: 'CRITICAL', category: 'DEPLOYMENT', domain: 'DEPLOYMENT_PROVENANCE', check: 'y', resolver_class: 'DEPLOYMENT' });
+  // Even a code that IS eligible is excluded when it comes from a non-live domain.
+  const misdomained = makeIssue({ code: 'ROUTE_NOT_FOUND', severity: 'ERROR', category: 'ROUTE', domain: 'SOURCE_VALIDATION', check: 'z', resolver_class: 'TECHNICAL' });
+  assert(
+    isPropagationEligible(sourceIssue) === false
+      && isPropagationEligible(deploymentIssue) === false
+      && isPropagationEligible(misdomained) === false,
+    JSON.stringify([isPropagationEligible(sourceIssue), isPropagationEligible(deploymentIssue), isPropagationEligible(misdomained)])
+  );
+});
+
 // ---------------------------------------------------------------------------
 // H4/H5. Delayed reconciliation: current main only, marker-based dedupe
 // ---------------------------------------------------------------------------
@@ -1037,11 +1177,12 @@ const SHELL = (body, extraHead = '') => Buffer.from(`<!doctype html>
 <footer class="site-footer">A PRASA</footer>
 </body></html>`);
 
-async function runBrowserFixture(html, { viewportFilter = null, overrides: extraOverrides = [] } = {}) {
+async function runBrowserFixture(html, { viewportFilter = null, overrides: extraOverrides = [], installGuard } = {}) {
   const overrides = new Map([['/', { status: 200, body: html, contentType: 'text/html; charset=utf-8' }], ...extraOverrides]);
   const server = await startFixtureServer(overrides, { root: BROWSER_FIXTURE_ROOT });
   const collector = browserEmitter();
   const out = tempOut('browser');
+  const notes = [];
   try {
     const { VIEWPORTS } = await import('./lib/qa-browser.mjs');
     await runBrowserChecks({
@@ -1051,15 +1192,16 @@ async function runBrowserFixture(html, { viewportFilter = null, overrides: extra
       requiredMedia: ['/required-image.png'],
       screenshotDir: path.join(out, 'screenshots'),
       emit: collector.emit,
-      notes: [],
+      notes,
       settleMs: 250,
+      ...(installGuard ? { installGuard } : {}),
     });
   } finally {
     await server.close();
   }
   // The server's own record of what it received is the ground truth for the
   // read-only claim; the issue list is only how that claim gets reported.
-  return { ...collector, out, server: { received: server.received, methods: server.methodsReceived() } };
+  return { ...collector, out, notes, server: { received: server.received, methods: server.methodsReceived() } };
 }
 
 const chromeAvailable = Boolean(findChrome());
@@ -1232,6 +1374,120 @@ if (!chromeAvailable) {
         // measuring, so the render checks judge the real page.
         && errors.length === 0,
       `blocked=${JSON.stringify(blocked)} errors=${JSON.stringify(errors.map((i) => [i.code, i.observed]))}`
+    );
+  });
+
+
+  // -------------------------------------------------------------------------
+  // G1. Guard setup is a pre-navigation safety gate, not best effort.
+  //
+  // These drive the REAL installReadOnlyGuard against a REAL Chrome, with one
+  // CDP command made to fail. The decisive assertion in every case is that the
+  // fixture server received zero requests: the browser did not merely record a
+  // complaint, it never spoke to the target at all.
+  // -------------------------------------------------------------------------
+
+  /**
+   * A session proxy whose `send` rejects for one CDP method. Everything else,
+   * including the shared connection the guard listens on, passes through, so
+   * the guard's own failure handling is what is under test.
+   */
+  const sessionFailing = (method) => (session) => ({
+    ws: session.ws,
+    sessionId: session.sessionId,
+    targetId: session.targetId,
+    close: (...args) => session.close(...args),
+    send: (name, params, options) => (name === method
+      ? Promise.reject(new Error(`simulated ${name} failure`))
+      : session.send(name, params, options)),
+  });
+
+  const REQUIRED_COMPONENT_FAULTS = [
+    { component: 'page-fetch-interception', method: 'Fetch.enable' },
+    { component: 'service-worker-bypass', method: 'Network.setBypassServiceWorker' },
+    { component: 'worker-auto-attach', method: 'Target.setAutoAttach' },
+    { component: 'in-page-guard-binding', method: 'Runtime.addBinding' },
+    { component: 'in-page-guard-script', method: 'Page.addScriptToEvaluateOnNewDocument' },
+  ];
+
+  for (const fault of REQUIRED_COMPONENT_FAULTS) {
+    await testCase(`G1 ${fault.method} failure blocks navigation (${fault.component})`, async (assert) => {
+      const wrap = sessionFailing(fault.method);
+      const { issues, checks, server, notes } = await runBrowserFixture(SHELL('<p>must never be fetched</p>'), {
+        viewportFilter: 'desktop',
+        installGuard: (session, options) => installReadOnlyGuard(wrap(session), options),
+      });
+      const issue = issues.find((candidate) => candidate.code === 'BROWSER_READ_ONLY_GUARD_SETUP_FAILED');
+      const check = checks.find((candidate) => candidate.name === 'browser read-only guard installed before navigation');
+      assert(
+        // Nothing was sent to the target. This is the whole finding.
+        server.received.length === 0
+          && Boolean(issue)
+          && issue.severity === 'ERROR'
+          && issue.category === 'QA_INFRASTRUCTURE'
+          && issue.evidence.navigated === false
+          && issue.evidence.production_requests_made === 0
+          && issue.evidence.missing_components.includes(fault.component)
+          && issue.evidence.failures.some((entry) => entry.component === fault.component)
+          && Boolean(check) && check.status === 'FAIL'
+          && notes.some((note) => note.includes('navigation refused')),
+        `requests=${JSON.stringify(server.received)} issue=${JSON.stringify(issue)} notes=${JSON.stringify(notes)}`
+      );
+    });
+  }
+
+  await testCase('G1 an optional guard component failing does not block navigation', async (assert) => {
+    // Runtime.runIfWaitingForDebugger only ever resumes an already-gated worker.
+    // Failing it leaves that worker paused, which is more restrictive, so the
+    // run proceeds normally.
+    const wrap = sessionFailing('Runtime.runIfWaitingForDebugger');
+    const { issues, server } = await runBrowserFixture(SHELL('<p>rendered normally</p>'), {
+      viewportFilter: 'desktop',
+      installGuard: (session, options) => installReadOnlyGuard(wrap(session), options),
+    });
+    assert(
+      server.received.length > 0
+        && !issues.some((issue) => issue.code === 'BROWSER_READ_ONLY_GUARD_SETUP_FAILED')
+        && server.methods.join(',') === 'GET',
+      `requests=${server.received.length} methods=${JSON.stringify(server.methods)} codes=${JSON.stringify(issues.map((i) => i.code))}`
+    );
+  });
+
+  await testCase('G1 a successful guard install records every required component and still gates traffic', async (assert) => {
+    const { issues, checks, server } = await runBrowserFixture(
+      SHELL('', `<script>
+        const M = '${MUTATING.post}';
+        fetch('/api/x', { method: M, body: 'y' }).catch(() => {});
+      </script>`),
+      { viewportFilter: 'desktop' }
+    );
+    const check = checks.find((candidate) => candidate.name === 'browser read-only guard installed before navigation');
+    const installed = check?.observed?.installed ?? [];
+    assert(
+      Boolean(check) && check.status === 'PASS'
+        && REQUIRED_GUARD_COMPONENTS.every((component) => installed.includes(component))
+        && issues.some((issue) => issue.code === 'BROWSER_FIRST_PARTY_MUTATION_BLOCKED')
+        && server.methods.join(',') === 'GET'
+        && server.received.length > 0,
+      `check=${JSON.stringify(check?.observed)} methods=${JSON.stringify(server.methods)}`
+    );
+  });
+
+  await testCase('G1 the blocked-navigation path still cleans up Chrome and its profile', async (assert) => {
+    const profiles = () => fs.readdirSync(os.tmpdir()).filter((entry) => entry.startsWith('aprasa-qa-chrome-'));
+    const before = profiles().length;
+    const wrap = sessionFailing('Target.setAutoAttach');
+    const { server } = await runBrowserFixture(SHELL('<p>never fetched</p>'), {
+      viewportFilter: 'desktop',
+      installGuard: (session, options) => installReadOnlyGuard(wrap(session), options),
+    });
+    // close() is awaited inside runBrowserChecks' finally, but Chrome unlinks
+    // its own profile files asynchronously, so allow one short settle.
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    const after = profiles().length;
+    assert(
+      server.received.length === 0 && after <= before,
+      `profiles before=${before} after=${after} requests=${server.received.length}`
     );
   });
 

@@ -52,15 +52,67 @@ const PINNED_INVARIANTS = [
   },
   {
     file: 'scripts/qa/lib/qa-browser-guard.mjs',
-    needle: "await session.send('Fetch.enable'",
+    needle: "await install('page-fetch-interception', () => session.send('Fetch.enable'",
     why: 'browser interception is installed, so page code cannot bypass the rule',
   },
   {
+    file: 'scripts/qa/lib/qa-browser-guard.mjs',
+    needle: 'export const REQUIRED_GUARD_COMPONENTS = Object.freeze([',
+    why: 'required guard components are enumerated rather than assumed',
+  },
+  {
+    file: 'scripts/qa/lib/qa-browser-guard.mjs',
+    needle: 'installed: missing.length === 0,',
+    why: 'the guard reports itself installed only when every required component is',
+  },
+  {
     file: 'scripts/qa/lib/qa-browser.mjs',
-    needle: 'installReadOnlyGuard(session',
-    why: 'the browser QA path actually installs the guard',
+    needle: 'installGuard = installReadOnlyGuard',
+    why: 'the browser QA path installs the real guard by default',
+  },
+  {
+    file: 'scripts/qa/lib/qa-browser.mjs',
+    needle: 'if (!guard.installed) {',
+    why: 'an incomplete guard blocks navigation instead of degrading to a note',
+  },
+  // Negative invariants: things whose *return* would reopen a closed finding.
+  {
+    file: 'scripts/qa/run-post-publication-qa.mjs',
+    absent: true,
+    needle: 'if (corroborated === true) {',
+    why: 'Home-byte corroboration never terminates the grace window for other routes',
   },
 ];
+
+/**
+ * Ordering invariants: the guard gate must come before the only navigation, and
+ * there must be exactly one navigation to come before. A gate placed after the
+ * request it is meant to prevent is not a gate.
+ */
+const ORDERED_INVARIANTS = [
+  {
+    file: 'scripts/qa/lib/qa-browser.mjs',
+    before: 'if (!guard.installed) {',
+    after: "session.send('Page.navigate'",
+    occurrences: 1,
+    why: 'the guard gate is evaluated before the browser navigates, and nothing else navigates',
+  },
+];
+
+export function auditOrdering(root = ROOT, invariants = ORDERED_INVARIANTS) {
+  const failures = [];
+  for (const invariant of invariants) {
+    const absolute = path.join(root, invariant.file);
+    const text = fs.existsSync(absolute) ? fs.readFileSync(absolute, 'utf8') : '';
+    const gate = text.indexOf(invariant.before);
+    const navigate = text.indexOf(invariant.after);
+    const count = text.split(invariant.after).length - 1;
+    if (gate === -1 || navigate === -1 || gate > navigate || count !== invariant.occurrences) {
+      failures.push(`${invariant.file}: lost the guarantee that ${invariant.why}`);
+    }
+  }
+  return failures;
+}
 
 export function auditWorkflowPermissions(root = ROOT, files = QA_WORKFLOWS) {
   const failures = [];
@@ -91,7 +143,10 @@ export function auditPinnedInvariants(root = ROOT, invariants = PINNED_INVARIANT
   for (const invariant of invariants) {
     const absolute = path.join(root, invariant.file);
     const text = fs.existsSync(absolute) ? fs.readFileSync(absolute, 'utf8') : '';
-    if (!text.includes(invariant.needle)) {
+    const present = text.includes(invariant.needle);
+    // `absent: true` pins a guarantee that a construct stays *gone*. A closed
+    // review finding that can silently reappear is not really closed.
+    if (invariant.absent ? present : !present) {
       failures.push(`${invariant.file}: lost the guarantee that ${invariant.why}`);
     }
   }
@@ -99,7 +154,7 @@ export function auditPinnedInvariants(root = ROOT, invariants = PINNED_INVARIANT
 }
 
 export function auditReadOnly(root = ROOT) {
-  return [...auditWorkflowPermissions(root), ...auditPinnedInvariants(root)];
+  return [...auditWorkflowPermissions(root), ...auditPinnedInvariants(root), ...auditOrdering(root)];
 }
 
 const invokedDirectly = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
@@ -110,5 +165,8 @@ if (invokedDirectly) {
     for (const failure of failures) console.error(`  - ${failure}`);
     process.exit(1);
   }
-  console.log(`Phase 2A read-only audit passed: ${QA_WORKFLOWS.length} workflows read-only, ${PINNED_INVARIANTS.length} invariants intact.`);
+  console.log(
+    `Phase 2A read-only audit passed: ${QA_WORKFLOWS.length} workflows read-only, `
+    + `${PINNED_INVARIANTS.length} invariants intact, ${ORDERED_INVARIANTS.length} ordering rule(s) held.`
+  );
 }

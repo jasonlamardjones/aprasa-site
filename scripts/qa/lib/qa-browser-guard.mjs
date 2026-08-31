@@ -27,13 +27,56 @@
 // monkey-patch serviceWorker.register: rejecting that promise inside the page
 // would surface as a first-party page error, which is precisely the kind of
 // false defect this layer exists to avoid.
+//
+// FAIL CLOSED. Installing the guard is a pre-navigation safety gate, not a
+// best-effort courtesy. If any required component cannot be installed, the
+// browser does not navigate at all: a run that proceeds with a half-installed
+// envelope is exactly the situation where worker-originated mutation traffic
+// could reach production, and a note in the report is not a substitute for not
+// sending it. The caller receives `installed: false` plus the list of failed
+// components and must refuse to navigate.
+//
+// The same rule applies per worker: `waitForDebuggerOnStart` means an
+// auto-attached worker starts paused, so if its Fetch interception cannot be
+// installed it is simply never resumed. A paused worker issues no requests,
+// which is the fail-closed outcome without needing to kill anything.
 
 /** The only methods production QA traffic may use. */
 export const READ_ONLY_METHODS = Object.freeze(['GET', 'HEAD']);
 
+/**
+ * Guard components, split by whether their absence could let traffic out.
+ *
+ * REQUIRED — absence means some class of request could be transmitted
+ * unintercepted, so a failure here blocks navigation:
+ *   page-fetch-interception  without it nothing at all is gated
+ *   service-worker-bypass    without it page traffic can be served or re-issued
+ *                            by a service worker outside interception
+ *   worker-auto-attach       without it a worker the page spawns is never
+ *                            attached, so its requests are never paused
+ *   in-page-guard-binding    the channel the in-page guard reports through
+ *   in-page-guard-script     cancels form submission and sendBeacon on the
+ *                            unload path, where interception is least reliable
+ *
+ * OPTIONAL — failure makes the run *more* restrictive, never less:
+ *   worker-resume            resuming a paused, successfully gated worker. If
+ *                            this fails the worker stays paused and issues
+ *                            nothing, so it is recorded and tolerated.
+ */
+export const REQUIRED_GUARD_COMPONENTS = Object.freeze([
+  'page-fetch-interception',
+  'service-worker-bypass',
+  'worker-auto-attach',
+  'in-page-guard-binding',
+  'in-page-guard-script',
+]);
+
+export const OPTIONAL_GUARD_COMPONENTS = Object.freeze(['worker-resume']);
+
 export const BLOCK_REASONS = Object.freeze({
   NON_READ_ONLY_METHOD: 'NON_READ_ONLY_METHOD',
   OFF_ORIGIN_TOP_LEVEL_NAVIGATION: 'OFF_ORIGIN_TOP_LEVEL_NAVIGATION',
+  WORKER_GATE_UNAVAILABLE: 'WORKER_GATE_UNAVAILABLE',
 });
 
 function originOf(url) {
@@ -101,6 +144,25 @@ export const GUARD_BINDING_NAME = '__aprasaQaGuard';
 export async function installReadOnlyGuard(session, { baseUrl, record, notes = [] }) {
   const blockedNetworkIds = new Set();
   const blockedUrls = new Set();
+  const workerGateFailures = [];
+  const installed = [];
+  const failures = [];
+
+  /**
+   * Attempt one component and record the outcome. Every component is attempted
+   * even after one fails, so the caller reports the whole picture rather than
+   * only the first symptom.
+   */
+  const install = async (component, action) => {
+    try {
+      await action();
+      installed.push(component);
+      return true;
+    } catch (error) {
+      failures.push({ component, error: String(error?.message ?? error) });
+      return false;
+    }
+  };
 
   let mainFrameId = null;
   try {
@@ -208,38 +270,60 @@ export async function installReadOnlyGuard(session, { baseUrl, record, notes = [
   async function adoptWorker(message) {
     const { sessionId, targetInfo } = message.params ?? {};
     if (!sessionId) return;
+    const kind = targetInfo?.type ?? 'worker';
     try {
       await session.ws.sendCommand('Fetch.enable', { patterns: [{ urlPattern: '*' }] }, sessionId);
     } catch (error) {
-      notes.push(`browser guard could not gate ${targetInfo?.type ?? 'worker'} target: ${error.message}`);
+      // Fail closed: the target was attached with waitForDebuggerOnStart, so it
+      // is currently paused. Not resuming it is the safe outcome — an
+      // ungateable worker that never runs can never issue a request. This is
+      // recorded as a blocked attempt so the run carries the evidence.
+      workerGateFailures.push({ kind, error: String(error?.message ?? error) });
+      record({
+        source: 'cdp-worker-gate',
+        reason: BLOCK_REASONS.WORKER_GATE_UNAVAILABLE,
+        method: 'GET',
+        url: targetInfo?.url ?? null,
+        resourceType: 'Worker',
+        frameId: null,
+        topLevel: false,
+        guard_kind: `${kind.toUpperCase()}_LEFT_PAUSED`,
+      });
+      return;
     }
     try {
       await session.ws.sendCommand('Runtime.runIfWaitingForDebugger', {}, sessionId);
-    } catch {
-      /* the target may not be waiting */
+    } catch (error) {
+      // Optional by construction: a worker that stays paused is more
+      // restricted, not less, so this never blocks the run.
+      notes.push(`browser guard left a gated ${kind} paused (resume failed: ${error.message})`);
     }
   }
 
-  // Order matters: interception must be live before anything navigates.
-  await session.send('Fetch.enable', { patterns: [{ urlPattern: '*' }] });
-  try {
-    await session.send('Network.setBypassServiceWorker', { bypass: true });
-  } catch (error) {
-    notes.push(`browser guard could not bypass service workers: ${error.message}`);
-  }
-  try {
-    await session.send('Target.setAutoAttach', { autoAttach: true, waitForDebuggerOnStart: true, flatten: true });
-  } catch (error) {
-    notes.push(`browser guard could not auto-attach worker targets: ${error.message}`);
-  }
-  try {
-    await session.send('Runtime.addBinding', { name: GUARD_BINDING_NAME });
-    await session.send('Page.addScriptToEvaluateOnNewDocument', { source: PAGE_GUARD_SOURCE });
-  } catch (error) {
-    notes.push(`browser guard could not install the in-page guard: ${error.message}`);
+  // Order matters: interception must be live before anything navigates. None
+  // of these is best-effort — see REQUIRED_GUARD_COMPONENTS above.
+  await install('page-fetch-interception', () => session.send('Fetch.enable', { patterns: [{ urlPattern: '*' }] }));
+  await install('service-worker-bypass', () => session.send('Network.setBypassServiceWorker', { bypass: true }));
+  await install('worker-auto-attach', () => session.send('Target.setAutoAttach', {
+    autoAttach: true,
+    waitForDebuggerOnStart: true,
+    flatten: true,
+  }));
+  await install('in-page-guard-binding', () => session.send('Runtime.addBinding', { name: GUARD_BINDING_NAME }));
+  await install('in-page-guard-script', () => session.send('Page.addScriptToEvaluateOnNewDocument', { source: PAGE_GUARD_SOURCE }));
+
+  const missing = REQUIRED_GUARD_COMPONENTS.filter((component) => !installed.includes(component));
+  if (missing.length) {
+    notes.push(`browser read-only guard incomplete (${missing.join(', ')}); navigation refused`);
   }
 
   return {
+    // The caller MUST NOT navigate when this is false.
+    installed: missing.length === 0,
+    installedComponents: installed,
+    missingComponents: missing,
+    failures,
+    workerGateFailures,
     blockedNetworkIds,
     blockedUrls,
     dispose: off,

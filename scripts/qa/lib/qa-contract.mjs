@@ -53,6 +53,12 @@ export const RESOLVER_CLASSES = Object.freeze([
 ]);
 
 export const CATEGORIES = Object.freeze([
+  // QA_INFRASTRUCTURE marks a failure of the QA layer itself rather than of the
+  // site: the browser binary is missing, or the read-only safety envelope could
+  // not be established. Keeping it machine-readably distinct means a consumer
+  // never has to parse a code to tell "we could not check" from "the site is
+  // wrong".
+  'QA_INFRASTRUCTURE',
   'ROUTE',
   'ASSET',
   'MEDIA',

@@ -164,7 +164,7 @@ async function settleLazyImages(session, { settleMs, budgetMs }) {
   return waitForImages(session, { settleMs, budgetMs });
 }
 
-async function collectPage(session, url, viewport, { navigationTimeoutMs, settleMs, imageSettleBudgetMs, baseUrl, notes = [] }) {
+async function collectPage(session, url, viewport, { navigationTimeoutMs, settleMs, imageSettleBudgetMs, baseUrl, notes = [], installGuard = installReadOnlyGuard }) {
   const consoleErrors = [];
   const pageErrors = [];
   const failedRequests = [];
@@ -210,11 +210,31 @@ async function collectPage(session, url, viewport, { navigationTimeoutMs, settle
 
   // Read-only enforcement goes live before anything navigates, so the very
   // first request of the page is already gated.
-  const guard = await installReadOnlyGuard(session, {
+  const guard = await installGuard(session, {
     baseUrl,
     notes,
     record: (blocked) => blockedRequests.push(blocked),
   });
+
+  // THE SAFETY GATE. Everything below this point talks to production, so a
+  // half-installed envelope stops here: no navigation, no requests, one
+  // deterministic finding. Returning early is the whole point — degrading to a
+  // note and navigating anyway is precisely the hole this closes.
+  if (!guard.installed) {
+    off();
+    guard.dispose();
+    return {
+      guardSetup: {
+        installed: false,
+        missing: guard.missingComponents,
+        failures: guard.failures,
+        installedComponents: guard.installedComponents,
+      },
+      navigated: false,
+      baseUrl,
+      guard,
+    };
+  }
 
   await session.send('Emulation.setDeviceMetricsOverride', {
     width: viewport.width,
@@ -272,6 +292,12 @@ async function collectPage(session, url, viewport, { navigationTimeoutMs, settle
   const guardBlocked = failedRequests.filter((request) => isGuardBlocked(request, guard));
 
   return {
+    guardSetup: {
+      installed: true,
+      installedComponents: guard.installedComponents,
+      workerGateFailures: guard.workerGateFailures,
+    },
+    navigated: true,
     navigation,
     loadOutcome,
     first,
@@ -308,6 +334,68 @@ function overflowOf(probe) {
 function evaluatePage({ page, route, locale, viewport, baseUrl, requiredMedia, emit, screenshotPath }) {
   const id = `${route}@${viewport.name}`;
   const evidenceBase = { route, viewport: viewport.name, screenshot: screenshotPath };
+
+  // The safety gate fired: nothing was navigated, so there is nothing to say
+  // about the site. Report the QA browser's own failure and stop.
+  if (page.guardSetup && !page.guardSetup.installed) {
+    emit.check({
+      id: `browser:guard-setup:${id}`,
+      name: 'browser read-only guard installed before navigation',
+      status: 'FAIL',
+      route,
+      locale,
+      observed: { installed: page.guardSetup.installedComponents, missing: page.guardSetup.missing },
+      expected: 'every required read-only guard component installed',
+    });
+    emit.issue({
+      code: 'BROWSER_READ_ONLY_GUARD_SETUP_FAILED',
+      severity: 'ERROR',
+      category: 'QA_INFRASTRUCTURE',
+      check: 'browser read-only guard installed before navigation',
+      route,
+      locale,
+      observed: `required guard component(s) could not be installed: ${page.guardSetup.missing.join(', ')}`,
+      expected: 'every required read-only guard component installed before any production request',
+      evidence: {
+        route,
+        viewport: viewport.name,
+        missing_components: page.guardSetup.missing,
+        installed_components: page.guardSetup.installedComponents,
+        failures: page.guardSetup.failures,
+        navigated: false,
+        production_requests_made: 0,
+      },
+      resolver_class: 'TECHNICAL',
+      retryable: true,
+    });
+    return;
+  }
+
+  if (page.guardSetup?.workerGateFailures?.length) {
+    emit.issue({
+      code: 'BROWSER_WORKER_GATE_UNAVAILABLE',
+      severity: 'WARNING',
+      category: 'QA_INFRASTRUCTURE',
+      check: 'every worker target is gated before it runs',
+      route,
+      locale,
+      observed: `${page.guardSetup.workerGateFailures.length} worker target(s) could not be gated and were left paused`,
+      expected: 'every auto-attached worker gated by the same GET/HEAD rule',
+      evidence: { ...evidenceBase, failures: page.guardSetup.workerGateFailures, workers_resumed: false },
+      resolver_class: 'TECHNICAL',
+      retryable: true,
+    });
+  }
+
+  emit.check({
+    id: `browser:guard-setup:${id}`,
+    name: 'browser read-only guard installed before navigation',
+    status: 'PASS',
+    route,
+    locale,
+    observed: { installed: page.guardSetup?.installedComponents ?? [] },
+    expected: 'every required read-only guard component installed',
+  });
 
   if (!page.first || !page.second) {
     emit.check({ id: `browser:probe:${id}`, name: 'page probe executed', status: 'FAIL', route, locale, observed: page.loadOutcome });
@@ -635,7 +723,7 @@ function evaluatePage({ page, route, locale, viewport, baseUrl, requiredMedia, e
   });
 }
 
-export async function runBrowserChecks({ baseUrl, routes, viewports = VIEWPORTS, requiredMedia = [], screenshotDir, emit, navigationTimeoutMs = 30000, settleMs = 400, imageSettleBudgetMs = 8000, notes = [] }) {
+export async function runBrowserChecks({ baseUrl, routes, viewports = VIEWPORTS, requiredMedia = [], screenshotDir, emit, navigationTimeoutMs = 30000, settleMs = 400, imageSettleBudgetMs = 8000, notes = [], installGuard = installReadOnlyGuard }) {
   let browser;
   try {
     browser = await launchBrowser();
@@ -651,7 +739,7 @@ export async function runBrowserChecks({ baseUrl, routes, viewports = VIEWPORTS,
     emit.issue({
       code: 'BROWSER_UNAVAILABLE',
       severity: 'WARNING',
-      category: 'RENDER',
+      category: 'QA_INFRASTRUCTURE',
       check: 'headless browser available',
       observed: String(error.message),
       expected: 'a Chrome/Chromium binary is available',
@@ -669,7 +757,7 @@ export async function runBrowserChecks({ baseUrl, routes, viewports = VIEWPORTS,
       for (const viewport of viewports) {
         const session = await browser.newPage();
         const url = new URL(page.route, baseUrl).toString();
-        const collected = await collectPage(session, url, viewport, { navigationTimeoutMs, settleMs, imageSettleBudgetMs, baseUrl, notes });
+        const collected = await collectPage(session, url, viewport, { navigationTimeoutMs, settleMs, imageSettleBudgetMs, baseUrl, notes, installGuard });
         let screenshotPath = null;
         if (collected.screenshot && screenshotDir) {
           const safe = page.route.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'home';
@@ -689,6 +777,14 @@ export async function runBrowserChecks({ baseUrl, routes, viewports = VIEWPORTS,
         });
         await session.close().catch(() => {});
         collected.guard.dispose();
+
+        // A guard that cannot be installed will not install on the next route
+        // either, and every further attempt would be another chance to navigate
+        // unguarded. Abandon the whole browser pass on the first failure.
+        if (!collected.guardSetup.installed) {
+          notes.push('browser pass abandoned: the read-only guard could not be installed, so no page was visited');
+          return screenshots;
+        }
       }
     }
   } finally {

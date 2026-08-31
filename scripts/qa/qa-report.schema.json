@@ -138,7 +138,7 @@
           "code": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" },
           "severity": { "enum": ["INFO", "WARNING", "ERROR", "CRITICAL"] },
           "category": {
-            "enum": ["ROUTE", "ASSET", "MEDIA", "LOCALIZATION", "CONTENT", "RENDER", "CONSOLE", "NETWORK", "DEPLOYMENT", "SOURCE", "SCHEMA"]
+            "enum": ["QA_INFRASTRUCTURE", "ROUTE", "ASSET", "MEDIA", "LOCALIZATION", "CONTENT", "RENDER", "CONSOLE", "NETWORK", "DEPLOYMENT", "SOURCE", "SCHEMA"]
           },
           "domain": {
             "enum": ["SOURCE_VALIDATION", "LIVE_HTTP_VALIDATION", "LIVE_BROWSER_VALIDATION", "DEPLOYMENT_PROVENANCE"]
