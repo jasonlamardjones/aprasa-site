@@ -436,7 +436,7 @@ await testCase('base URL is pinned to production unless a loopback test target i
 });
 
 await testCase('propagation grace never downgrades source or deployment findings', async (assert) => {
-  const sourceIssue = makeIssue({ code: 'SOURCE_VALIDATOR_FAILED', severity: 'ERROR', category: 'SOURCE', domain: 'SOURCE_VALIDATION', check: 'x', resolver_class: 'CONTENT_GOVERNANCE' });
+  const sourceIssue = makeIssue({ code: 'SOURCE_VALIDATOR_FAILED', severity: 'ERROR', category: 'SOURCE', domain: 'SOURCE_VALIDATION', check: 'x', resolver_class: 'CONTENT_GOVERNANCE', validator_id: 'things_to_do_currentness' });
   const liveIssue = makeIssue({ code: 'ROUTE_NOT_FOUND', severity: 'ERROR', category: 'ROUTE', domain: 'LIVE_HTTP_VALIDATION', check: 'y', resolver_class: 'TECHNICAL' });
   const graced = applyPropagationGrace([sourceIssue, liveIssue], 'DEPLOYMENT_PENDING');
   assert(
@@ -652,7 +652,7 @@ await testCase('H3b verified deployment with a persistently stale edge still fai
 });
 
 await testCase('H3c edge grace never downgrades a source-validator failure', async (assert) => {
-  const sourceIssue = makeIssue({ code: 'SOURCE_VALIDATOR_FAILED', severity: 'ERROR', category: 'SOURCE', domain: 'SOURCE_VALIDATION', check: 'x', resolver_class: 'CONTENT_GOVERNANCE' });
+  const sourceIssue = makeIssue({ code: 'SOURCE_VALIDATOR_FAILED', severity: 'ERROR', category: 'SOURCE', domain: 'SOURCE_VALIDATION', check: 'x', resolver_class: 'CONTENT_GOVERNANCE', validator_id: 'things_to_do_currentness' });
   const deploymentIssue = makeIssue({ code: 'DEPLOYMENT_FAILED', severity: 'CRITICAL', category: 'DEPLOYMENT', domain: 'DEPLOYMENT_PROVENANCE', check: 'y', resolver_class: 'DEPLOYMENT' });
   const liveIssue = makeIssue({ code: 'ROUTE_NOT_FOUND', severity: 'ERROR', category: 'ROUTE', domain: 'LIVE_HTTP_VALIDATION', check: 'z', resolver_class: 'TECHNICAL' });
   assert(
@@ -918,6 +918,233 @@ await testCase('V8 a real source pass at the committed date carries identity end
 });
 
 // ---------------------------------------------------------------------------
+// V9-V18. The domain/identity invariant, in both layers
+//
+// V1-V8 established that a source finding *can* carry an identity. These pin
+// that it MUST, and that a non-source finding must not — because "well-formed
+// or null" left a schema-valid 1.1.0 source finding free to arrive with
+// validator_id: null, which is exactly the state a Phase 2B authority gate
+// cannot act on. Both layers are asserted independently: the constructor is
+// what a detector hits first, the schema is what an external consumer of a
+// published artifact has to rely on, and neither is allowed to be the only
+// thing standing between a null identity and a report.
+// ---------------------------------------------------------------------------
+const ISSUE_SCHEMA = SCHEMA.properties.issues.items;
+
+/** A complete, valid issue in the given domain, built without the constructor
+ *  so the schema layer can be exercised on states the constructor now refuses. */
+function rawIssue(domain, validator_id, overrides = {}) {
+  return {
+    code: 'SOURCE_VALIDATOR_FAILED',
+    severity: 'ERROR',
+    category: 'SOURCE',
+    domain,
+    route: null,
+    locale: null,
+    check: 'c',
+    observed: null,
+    expected: null,
+    evidence: {},
+    deterministic: true,
+    resolver_class: 'CONTENT_GOVERNANCE',
+    retryable: false,
+    auto_remediation_candidate: false,
+    validator_id,
+    ...overrides,
+  };
+}
+
+function refusal(build) {
+  try {
+    build();
+    return null;
+  } catch (error) {
+    return error.message;
+  }
+}
+
+await testCase('V9 constructor rejects a SOURCE_VALIDATION issue with a null validator_id', async (assert) => {
+  const message = refusal(() => makeIssue({
+    code: 'SOURCE_CURRENTNESS_DRIFT',
+    severity: 'WARNING',
+    category: 'SOURCE',
+    domain: 'SOURCE_VALIDATION',
+    check: 'c',
+    resolver_class: 'CONTENT_GOVERNANCE',
+    validator_id: null,
+  }));
+  assert(
+    typeof message === 'string' && message.includes('SOURCE_VALIDATION') && message.includes('validator_id'),
+    `message=${JSON.stringify(message)}`
+  );
+});
+
+await testCase('V10 constructor rejects a SOURCE_VALIDATION issue with validator_id omitted', async (assert) => {
+  // The omitted case is the one a new detector actually produces: the parameter
+  // defaults to null, so without this it would have been accepted silently.
+  const message = refusal(() => makeIssue({
+    code: 'SOURCE_VALIDATOR_FAILED',
+    severity: 'ERROR',
+    category: 'SOURCE',
+    domain: 'SOURCE_VALIDATION',
+    check: 'c',
+    resolver_class: 'CONTENT_GOVERNANCE',
+  }));
+  assert(
+    typeof message === 'string' && message.includes('validator_id'),
+    `message=${JSON.stringify(message)}`
+  );
+});
+
+await testCase('V11 constructor rejects a SOURCE_VALIDATION issue with a malformed validator_id', async (assert) => {
+  const malformed = ['Things-To-Do', '9leading_digit', '', 'has space', 'UPPER', 42, {}, []];
+  const accepted = malformed.filter((validator_id) => refusal(() => makeIssue({
+    code: 'SOURCE_VALIDATOR_FAILED',
+    severity: 'ERROR',
+    category: 'SOURCE',
+    domain: 'SOURCE_VALIDATION',
+    check: 'c',
+    resolver_class: 'CONTENT_GOVERNANCE',
+    validator_id,
+  })) === null);
+  assert(accepted.length === 0, `accepted=${JSON.stringify(accepted)}`);
+});
+
+await testCase('V12 a source issue with a valid validator_id is accepted by both layers', async (assert) => {
+  const issue = makeIssue({
+    code: 'SOURCE_CURRENTNESS_DRIFT',
+    severity: 'WARNING',
+    category: 'SOURCE',
+    domain: 'SOURCE_VALIDATION',
+    check: 'c',
+    resolver_class: 'CONTENT_GOVERNANCE',
+    validator_id: 'training_opportunities_currentness',
+  });
+  const schemaErrors = validateAgainstSchema(issue, ISSUE_SCHEMA);
+  assert(
+    issue.validator_id === 'training_opportunities_currentness' && schemaErrors.length === 0,
+    `id=${issue.validator_id} schema=${JSON.stringify(schemaErrors)}`
+  );
+});
+
+await testCase('V13 schema rejects SOURCE_VALIDATION with a null validator_id', async (assert) => {
+  // The precise state the previous contract accepted, and the reason the
+  // schema needed a conditional rather than a nullable type.
+  const errors = validateAgainstSchema(rawIssue('SOURCE_VALIDATION', null), ISSUE_SCHEMA);
+  assert(
+    errors.some((error) => error.includes('validator_id')),
+    `errors=${JSON.stringify(errors)}`
+  );
+});
+
+await testCase('V14 schema rejects SOURCE_VALIDATION with validator_id missing entirely', async (assert) => {
+  const { validator_id: _dropped, ...missing } = rawIssue('SOURCE_VALIDATION', 'card_media');
+  const errors = validateAgainstSchema(missing, ISSUE_SCHEMA);
+  assert(
+    errors.some((error) => error.includes('validator_id') && error.includes('required')),
+    `errors=${JSON.stringify(errors)}`
+  );
+});
+
+await testCase('V15 non-source with a null validator_id passes both layers', async (assert) => {
+  const issue = makeIssue({
+    code: 'ROUTE_NOT_FOUND',
+    severity: 'ERROR',
+    category: 'ROUTE',
+    domain: 'LIVE_HTTP_VALIDATION',
+    check: 'c',
+    resolver_class: 'TECHNICAL',
+  });
+  const explicitNull = makeIssue({
+    code: 'DEPLOYMENT_FAILED',
+    severity: 'CRITICAL',
+    category: 'DEPLOYMENT',
+    domain: 'DEPLOYMENT_PROVENANCE',
+    check: 'c',
+    resolver_class: 'DEPLOYMENT',
+    validator_id: null,
+  });
+  const schemaErrors = [
+    ...validateAgainstSchema(issue, ISSUE_SCHEMA),
+    ...validateAgainstSchema(explicitNull, ISSUE_SCHEMA),
+  ];
+  assert(
+    issue.validator_id === null && explicitNull.validator_id === null && schemaErrors.length === 0,
+    `schema=${JSON.stringify(schemaErrors)}`
+  );
+});
+
+await testCase('V16 non-source with a non-null validator_id is rejected by both layers', async (assert) => {
+  // A live finding has no producing validator, so an identity there would be a
+  // fabricated provenance claim rather than a harmless extra field.
+  const message = refusal(() => makeIssue({
+    code: 'ROUTE_NOT_FOUND',
+    severity: 'ERROR',
+    category: 'ROUTE',
+    domain: 'LIVE_HTTP_VALIDATION',
+    check: 'c',
+    resolver_class: 'TECHNICAL',
+    validator_id: 'things_to_do_sitemap',
+  }));
+  const schemaErrors = validateAgainstSchema(
+    rawIssue('LIVE_HTTP_VALIDATION', 'things_to_do_sitemap', { code: 'ROUTE_NOT_FOUND', category: 'ROUTE', resolver_class: 'TECHNICAL' }),
+    ISSUE_SCHEMA
+  );
+  assert(
+    typeof message === 'string'
+      && message.includes('SOURCE_VALIDATION')
+      && schemaErrors.some((error) => error.includes('validator_id')),
+    `message=${JSON.stringify(message)} schema=${JSON.stringify(schemaErrors)}`
+  );
+});
+
+await testCase('V17 a real source-validator pass still carries identity end to end under the invariant', async (assert) => {
+  // The tightened contract must not break the real path. Pinned to the
+  // committed reference date for the same reason V8 is.
+  const { report, schemaErrors } = await runAgainstFixture({ skipSource: false });
+  const sourceChecks = report.checks.filter((check) => check.domain === 'SOURCE_VALIDATION');
+  const sourceIssues = report.issues.filter((issue) => issue.domain === 'SOURCE_VALIDATION');
+  const registered = new Set(Object.keys(SOURCE_VALIDATORS));
+  const unattributed = sourceIssues.filter((issue) => !registered.has(issue.validator_id));
+  const strayIdentity = report.issues.filter((issue) => issue.domain !== 'SOURCE_VALIDATION' && issue.validator_id !== null);
+  assert(
+    schemaErrors.length === 0
+      && sourceChecks.length > 0
+      && unattributed.length === 0
+      && strayIdentity.length === 0,
+    `schema=${schemaErrors.join('; ')} checks=${sourceChecks.length} unattributed=${JSON.stringify(unattributed.map((i) => [i.code, i.validator_id]))} stray=${JSON.stringify(strayIdentity.map((i) => [i.code, i.validator_id]))}`
+  );
+});
+
+await testCase('V18 both SOURCE_CURRENTNESS_DRIFT producers stay attributable under the invariant', async (assert) => {
+  // The original blocker, re-asserted against the tightened contract: the two
+  // producers of one code must remain separable by (code, validator_id) alone,
+  // and each must now be schema-valid only because it carries its identity.
+  const collector = sourceEmitter();
+  await runSourceValidation(collector.emit, {
+    asOf: COMMITTED_AS_OF,
+    today: '2026-08-31',
+    runStep: stepRunnerFailing('currentness-today', 'training-currentness-today'),
+  });
+
+  const drift = collector.issues.filter((issue) => issue.code === 'SOURCE_CURRENTNESS_DRIFT');
+  const identities = drift.map((issue) => issue.validator_id).sort();
+  const schemaErrors = drift.flatMap((issue) => validateAgainstSchema(issue, ISSUE_SCHEMA));
+  // Blanking either identity must make that finding schema-invalid — proof the
+  // separation is enforced, not merely present.
+  const blanked = drift.flatMap((issue) => validateAgainstSchema({ ...issue, validator_id: null }, ISSUE_SCHEMA));
+
+  assert(
+    drift.length === 2
+      && identities.join(',') === 'things_to_do_currentness,training_opportunities_currentness'
+      && new Set(identities).size === 2
+      && schemaErrors.length === 0
+      && blanked.length >= 2,
+    `identities=${JSON.stringify(identities)} schema=${JSON.stringify(schemaErrors)} blanked=${JSON.stringify(blanked)}`
+  );
+});
+
+// ---------------------------------------------------------------------------
 // G2. Edge grace is owned by the individual finding, not by the run
 //
 // The second review reproduced a false failure: Home served exact current
@@ -1046,10 +1273,10 @@ await testCase('G2e a stale-but-valid Home with healthy routes neither fails nor
 });
 
 await testCase('G2f source and deployment failures never enter edge grace', async (assert) => {
-  const sourceIssue = makeIssue({ code: 'SOURCE_VALIDATOR_FAILED', severity: 'ERROR', category: 'SOURCE', domain: 'SOURCE_VALIDATION', check: 'x', resolver_class: 'CONTENT_GOVERNANCE' });
+  const sourceIssue = makeIssue({ code: 'SOURCE_VALIDATOR_FAILED', severity: 'ERROR', category: 'SOURCE', domain: 'SOURCE_VALIDATION', check: 'x', resolver_class: 'CONTENT_GOVERNANCE', validator_id: 'things_to_do_currentness' });
   const deploymentIssue = makeIssue({ code: 'DEPLOYMENT_FAILED', severity: 'CRITICAL', category: 'DEPLOYMENT', domain: 'DEPLOYMENT_PROVENANCE', check: 'y', resolver_class: 'DEPLOYMENT' });
   // Even a code that IS eligible is excluded when it comes from a non-live domain.
-  const misdomained = makeIssue({ code: 'ROUTE_NOT_FOUND', severity: 'ERROR', category: 'ROUTE', domain: 'SOURCE_VALIDATION', check: 'z', resolver_class: 'TECHNICAL' });
+  const misdomained = makeIssue({ code: 'ROUTE_NOT_FOUND', severity: 'ERROR', category: 'ROUTE', domain: 'SOURCE_VALIDATION', check: 'z', resolver_class: 'TECHNICAL', validator_id: 'things_to_do_sitemap' });
   assert(
     isPropagationEligible(sourceIssue) === false
       && isPropagationEligible(deploymentIssue) === false

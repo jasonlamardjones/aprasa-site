@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://aprasa.org/schemas/post-publication-qa-report-1.1.0.json",
   "title": "A PRASA post-publication QA report",
-  "description": "Phase 2A read-only detection report. Consumers must treat auto_remediation_candidate as classification metadata only; Phase 2A has no mutation authority. validator_id is the stable identity of the source validator behind a finding, and is null outside the SOURCE_VALIDATION domain; consumers must key on it rather than parsing evidence.command.",
+  "description": "Phase 2A read-only detection report. Consumers must treat auto_remediation_candidate as classification metadata only; Phase 2A has no mutation authority. validator_id is the stable identity of the source validator behind a finding; consumers must key on it rather than parsing evidence.command. On issues the schema enforces the invariant in both directions: a SOURCE_VALIDATION issue must carry a non-null, pattern-valid validator_id, and an issue in any other domain must carry null. A consumer may therefore rely on every 1.1.0 source finding being attributable without inspecting evidence.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -158,6 +158,18 @@
           "retryable": { "type": "boolean" },
           "auto_remediation_candidate": { "type": "boolean" },
           "validator_id": { "type": ["string", "null"], "pattern": "^[a-z][a-z0-9_]*$" }
+        },
+        "if": {
+          "required": ["domain"],
+          "properties": { "domain": { "const": "SOURCE_VALIDATION" } }
+        },
+        "then": {
+          "required": ["validator_id"],
+          "properties": { "validator_id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" } }
+        },
+        "else": {
+          "required": ["validator_id"],
+          "properties": { "validator_id": { "type": "null" } }
         }
       }
     },

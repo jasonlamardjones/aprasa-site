@@ -95,6 +95,21 @@ const PINNED_INVARIANTS = [
     needle: 'validator_id: assertValidatorId(validator_id),',
     why: 'validator_id is validated by the contract rather than passed through unchecked',
   },
+  {
+    file: 'scripts/qa/lib/qa-contract.mjs',
+    needle: 'validator_id: assertIssueValidatorId(domain, validator_id),',
+    why: 'an issue identity is validated against its own domain, so a source finding cannot be built without one',
+  },
+  {
+    file: 'scripts/qa/lib/qa-contract.mjs',
+    needle: "if (domain === 'SOURCE_VALIDATION') {",
+    why: 'the domain/identity invariant is enforced fail-closed at construction, not left to the schema alone',
+  },
+  {
+    file: 'scripts/qa/qa-report.schema.json',
+    needle: '"then": {',
+    why: 'the published schema conditionally requires a non-null identity on SOURCE_VALIDATION issues',
+  },
   // Negative invariants: things whose *return* would reopen a closed finding.
   {
     file: 'scripts/qa/run-post-publication-qa.mjs',

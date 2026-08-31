@@ -359,8 +359,9 @@ Only `FAILED` fails the workflow. Warnings never do.
 
 Every check and issue carries `validator_id`: the stable, machine-readable
 identity of the source validator behind it, or `null` outside the
-`SOURCE_VALIDATION` domain. It behaves like `route` and `locale` already do in
-this contract — required on issues, frequently null.
+`SOURCE_VALIDATION` domain. Like `route` and `locale`, it is required on issues
+and frequently null — but unlike them, *which* of the two it may be is fixed by
+the issue's own domain rather than left to the detector.
 
 It exists because **two structurally different validators legitimately emit the
 same issue code**. `SOURCE_CURRENTNESS_DRIFT` is produced both by
@@ -394,6 +395,35 @@ committed `as_of` and once against today — so two steps share one identity and
 are separated by their issue code (`SOURCE_VALIDATOR_FAILED` vs
 `SOURCE_CURRENTNESS_DRIFT`) and by `evidence.step_id`. The pair
 `(code, validator_id)` is the stable discriminator.
+
+#### The domain/identity invariant
+
+"Required, and either an identity or null" is weaker than it sounds: it still
+permits a `SOURCE_VALIDATION` issue to arrive with `validator_id: null`, which
+is precisely the finding a Phase 2B authority gate cannot act on. It would be
+forced back to `evidence.command` — the string this field exists to replace.
+
+So the invariant is enforced in **both** directions, and in **both** layers:
+
+| Issue domain | `validator_id` |
+| --- | --- |
+| `SOURCE_VALIDATION` | present, non-null, matching `^[a-z][a-z0-9_]*$` |
+| every other domain | exactly `null` |
+
+- **Constructor** — `makeIssue()` throws on either violation. A detector that
+  forgets an identity fails where it is written, rather than emitting a
+  schema-valid but unroutable finding. Omitted counts as null and is refused
+  the same way, since omission is what a new detector actually produces.
+- **Schema** — `qa-report.schema.json` carries an `if`/`then`/`else` on the
+  issue object, so an external consumer reading a published artifact gets the
+  same guarantee without trusting the producer.
+
+A non-null identity outside `SOURCE_VALIDATION` is rejected rather than
+ignored: there is no validator behind a live HTTP, browser or deployment
+finding, so an identity there would be a fabricated provenance claim.
+
+Checks are deliberately untouched by this invariant. They are diagnostic
+records with a minimal required list, not the routing input Phase 2B acts on.
 
 The version moved to `1.1.0` because `validator_id` is *required* on issues, so
 a consumer has to be able to tell a report that guarantees it from one that does

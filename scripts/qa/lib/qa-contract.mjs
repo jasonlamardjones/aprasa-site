@@ -41,6 +41,42 @@ function assertValidatorId(value) {
   return value;
 }
 
+/**
+ * The domain/identity invariant on issues, enforced fail-closed at construction.
+ *
+ * `validator_id` being merely *well-formed or null* is not enough for a finding.
+ * Phase 2B decides repository write authority from the pair
+ * `(code, validator_id)`, so a SOURCE_VALIDATION issue that carries a null
+ * identity silently pushes that decision back onto `evidence.command` — the
+ * shell string this field exists to replace. The two directions are therefore
+ * both errors, not defaults:
+ *
+ *   SOURCE_VALIDATION  -> a present, non-null, pattern-valid identity
+ *   every other domain -> exactly null; there is no validator behind a live
+ *                         HTTP, browser or deployment finding, so a
+ *                         plausible-looking id there would be a fabricated
+ *                         provenance claim
+ *
+ * Rejecting at the constructor means an under-specified detector fails where it
+ * is written rather than emitting a schema-valid but unroutable finding.
+ */
+function assertIssueValidatorId(domain, value) {
+  if (domain === 'SOURCE_VALIDATION') {
+    if (typeof value !== 'string' || !VALIDATOR_ID_PATTERN.test(value)) {
+      throw new Error(
+        `qa-contract: a SOURCE_VALIDATION issue requires a non-null snake_case validator_id, got ${JSON.stringify(value ?? null)}`
+      );
+    }
+    return value;
+  }
+  if (value !== null && value !== undefined) {
+    throw new Error(
+      `qa-contract: validator_id must be null outside SOURCE_VALIDATION (domain "${domain}"), got ${JSON.stringify(value)}`
+    );
+  }
+  return null;
+}
+
 export const MODES = Object.freeze([
   'IMMEDIATE_POST_DEPLOY',
   'DELAYED_RECHECK',
@@ -229,7 +265,7 @@ export function makeIssue({
     resolver_class,
     retryable: Boolean(retryable),
     auto_remediation_candidate: Boolean(auto_remediation_candidate),
-    validator_id: assertValidatorId(validator_id),
+    validator_id: assertIssueValidatorId(domain, validator_id),
   };
 }
 

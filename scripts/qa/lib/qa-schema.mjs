@@ -12,6 +12,10 @@ const SUPPORTED = new Set([
   '$schema', '$id', 'title', 'description',
   'type', 'const', 'enum', 'required', 'properties', 'additionalProperties',
   'items', 'pattern', 'minimum',
+  // Conditional application. Needed so the published schema — not only the
+  // constructor — can express that a field's legal values depend on a sibling
+  // field, which is what pins the domain/identity invariant on issues.
+  'if', 'then', 'else',
 ]);
 
 function typeOf(value) {
@@ -77,6 +81,16 @@ function validateNode(value, schema, pointer, errors) {
 
   if (Array.isArray(value) && schema.items) {
     value.forEach((item, index) => validateNode(item, schema.items, `${pointer}/${index}`, errors));
+  }
+
+  // draft-07 if/then/else: the `if` subschema is a test, not an assertion, so
+  // its own errors are discarded and only the selected branch contributes.
+  // A missing branch means "no further constraint", per the specification.
+  if ('if' in schema) {
+    const probe = [];
+    validateNode(value, schema.if, pointer, probe);
+    const branch = probe.length === 0 ? schema.then : schema.else;
+    if (branch) validateNode(value, branch, pointer, errors);
   }
 }
 
