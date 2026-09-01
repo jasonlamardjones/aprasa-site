@@ -40,7 +40,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { loadPacket, validatePacket } from './lib/event-publication-contract.mjs';
+import { loadPacket, requiredPtKeys, validatePacket } from './lib/event-publication-contract.mjs';
 import { isExpired, isReviewDue } from './lib/things-to-do-currentness.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -124,31 +124,22 @@ const SEARCH_DAYS = 400;
 
 /**
  * The nearest date to the committed baseline that either does or does not
- * cross a lifecycle boundary, whichever the caller asks for. Derived from the
- * committed events, so it moves with the data instead of pinning a calendar
- * day.
+ * cross a rendered lifecycle boundary, whichever the caller asks for. Derived
+ * from the committed events, so it moves with the data instead of pinning a
+ * calendar day.
  *
- * `direction` is explicit because the two callers need different guarantees.
- * "any" searches outward in both directions and is what the divergence tests
- * want -- they only care that the date differs from the baseline, and the
- * nearest such date in either direction is equally valid.
- *
- * "forward" is REQUIRED by the historical-regression helper and is not an
- * optimization. A bidirectional search can return a date EARLIER than the
- * baseline whenever the nearest boundary lies behind it, which is the ordinary
- * case once the baseline has moved past its nearest end_date. Building the
- * "advanced" repository from such a date rewinds it instead, and the
- * historical-regression proof silently inverts: the negative control then
- * pins a packet at a date that no longer rewinds anything, is accepted, and
- * the test that is supposed to prove the bounded-diff guard is still armed
- * proves nothing. Reported by independent exact-SHA review.
+ * Only the two divergence tests use this. They search the governed corpus
+ * because they are ABOUT the governed corpus, and they are direction-agnostic
+ * by nature -- a date that diverges from the baseline diverges whichever side
+ * it falls on. The historical regression deliberately does NOT use this: it
+ * builds its own boundary by arithmetic, so there is no search that could
+ * resolve backwards and no dependency on a convenient governed expiry.
  */
-function divergentAsOf(root, { crossesLifecycle, direction = 'any' }) {
+function divergentAsOf(root, { crossesLifecycle }) {
   const baseline = committedAsOf(root);
   const target = renderVector(root, baseline);
-  const signs = direction === 'forward' ? [1] : [1, -1];
   for (let distance = 1; distance <= SEARCH_DAYS; distance += 1) {
-    for (const sign of signs) {
+    for (const sign of [1, -1]) {
       const candidate = shiftDay(baseline, sign * distance);
       // A review-due candidate is refused by the currentness validator before
       // the diff-scope check runs, so it cannot decide either divergence case.
@@ -157,47 +148,9 @@ function divergentAsOf(root, { crossesLifecycle, direction = 'any' }) {
     }
   }
   throw new Error(
-    `no ${direction === 'forward' ? 'forward ' : ''}${crossesLifecycle ? 'crossing' : 'non-crossing'} ` +
-    `publication-viable as_of exists within ${SEARCH_DAYS} days of baseline ${baseline}`
+    `no ${crossesLifecycle ? 'crossing' : 'non-crossing'} publication-viable ` +
+    `as_of exists within ${SEARCH_DAYS} days of baseline ${baseline}`
   );
-}
-
-/**
- * A lifecycle crossing STRICTLY AFTER the committed baseline.
- *
- * Fails closed. It never falls back to an earlier date, because an earlier
- * date does not advance the repository -- it rewinds it -- and the negative
- * control built on top would then pin a packet that no longer diverges, be
- * accepted, and report a pass while proving nothing.
- *
- * Failing closed is reachable: it means no unexpired day-precision record
- * remains within the search window, so no future expiry exists to advance
- * across and the historical-regression scenario is not constructible from
- * committed data. That is a real precondition, reported rather than papered
- * over.
- */
-function forwardCrossingAsOf(root) {
-  const baseline = committedAsOf(root);
-  let advanced;
-  try {
-    advanced = divergentAsOf(root, { crossesLifecycle: true, direction: 'forward' });
-  } catch {
-    throw new Error(
-      `no forward lifecycle crossing within ${SEARCH_DAYS} days of baseline ${baseline}: ` +
-      'no unexpired day-precision record remains, so the historical-regression ' +
-      'scenario is not constructible from committed event data'
-    );
-  }
-  if (!(advanced > baseline)) {
-    throw new Error(`forward crossing search returned ${advanced}, which does not advance baseline ${baseline}`);
-  }
-  if (renderVector(root, advanced) === renderVector(root, baseline)) {
-    throw new Error(`${advanced} regenerates no surface from baseline ${baseline}`);
-  }
-  if (hasReviewDue(root, advanced)) {
-    throw new Error(`${advanced} carries a review-due record and cannot test the diff-scope contract`);
-  }
-  return { baseline, advanced };
 }
 
 /** The committed ready fixture, rebound to a chosen as_of, on disk. */
@@ -234,28 +187,159 @@ function expectPrepared(result) {
   }
 }
 
+function expectBoundedDiffRefusal(result, context) {
+  if (result.status === 0) throw new Error(`${context}: accepted; the bounded-diff guard is not holding`);
+  if (!/STATUS: VALIDATION_FAILED/.test(result.stdout) || !/Unexpected dry-run diff scope/.test(result.stdout)) {
+    throw new Error(`${context}: expected a bounded-diff refusal, got: ${result.stdout.trim()}`);
+  }
+}
+
 /**
- * A copy of the repository whose committed baseline has already advanced past
- * a lifecycle boundary and whose surfaces were regenerated by the canonical
- * generator -- i.e. the state a merged currentness repair leaves behind. This
- * is the exact condition that used to break the pinned ready fixture.
+ * A throwaway repository carrying its OWN deterministic lifecycle boundary.
+ *
+ * The historical regression needs a repository whose committed baseline sits
+ * strictly after an expiry that regenerates surfaces. Deriving that boundary
+ * from the governed corpus made the test depend on a convenient future event
+ * existing there: once the committed baseline passes the last day-precision
+ * end_date, no future expiry remains, and the helper failed closed and
+ * reddened CI for a reason that has nothing to do with the contract under
+ * test. Month-precision records do not fill the gap -- REVIEW_DUE stays public
+ * and renders identically, so it is not an expiry transition at all.
+ *
+ * So the boundary is constructed here instead. A TEST-ONLY record is cloned
+ * from a governed one, given a distinct id and route, and dated relative to
+ * the chosen baseline:
+ *
+ *   end_date = baseline - 1  ->  EXPIRED at `baseline`, CURRENT at `end_date`
+ *
+ * That single record guarantees a rendered lifecycle change between those two
+ * dates whatever the governed corpus contains -- zero future expiries, only
+ * month-precision records, or no boundary for years. The synthetic record
+ * lives only in the temporary copy: production event data, the production
+ * currentness resolver and every committed surface are untouched, and no
+ * production validator is weakened to accommodate it.
  */
-function withAdvancedRepository(fn) {
-  // Resolve and assert the direction BEFORE copying or regenerating anything,
-  // so a repository that cannot produce a forward crossing fails loudly here
-  // rather than being built backwards and quietly proving the wrong thing.
-  const { baseline, advanced } = forwardCrossingAsOf(ROOT);
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'aprasa-advanced-currentness-'));
+const SYNTHETIC_ID = 'automation-regression-boundary-event';
+// scripts/validate-things-to-do-currentness.mjs decides whether a record is on
+// Home by matching `<h3>${record.title}</h3>`, so a clone that kept the source
+// title would be read as the GOVERNED record appearing on Home and trip a
+// false currentness error the moment the synthetic record renders as current.
+// The title has to be as distinct as the id and the route.
+const SYNTHETIC_TITLE = 'Automation Regression Boundary Event';
+
+function cloneJson(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function insertHomeMarkers(file, id) {
+  const html = fs.readFileSync(file, 'utf8');
+  const matches = [...html.matchAll(/<!-- END GENERATED EVENT: [a-z0-9]+(?:-[a-z0-9]+)* -->/g)];
+  if (!matches.length) throw new Error(`${file} has no generated-event marker block`);
+  const last = matches[matches.length - 1];
+  const at = last.index + last[0].length;
+  const insertion = `\n        <!-- BEGIN GENERATED EVENT: ${id} -->\n        <!-- END GENERATED EVENT: ${id} -->`;
+  fs.writeFileSync(file, html.slice(0, at) + insertion + html.slice(at));
+}
+
+/** The governed record the synthetic one is cloned from: day precision, published, with media. */
+function cloneSource(root) {
+  const source = records(root).find(
+    (item) => item.publication_state === 'published' && item.media && (item.end_precision ?? 'day') === 'day'
+  );
+  if (!source) throw new Error('no published day-precision record available to clone');
+  return source;
+}
+
+function withSyntheticBoundaryRepository({ baseline = committedAsOf(ROOT) } = {}, fn) {
+  // `advanced` is the repository's committed baseline; `priorTo` is the day the
+  // synthetic record expires on. advanced > priorTo always, by construction --
+  // there is no search, so there is nothing to accidentally resolve backwards.
+  const advanced = baseline;
+  const priorTo = shiftDay(advanced, -1);
+  if (!(advanced > priorTo)) throw new Error(`synthetic boundary is not forward: ${advanced} !> ${priorTo}`);
+
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'aprasa-synthetic-boundary-'));
   const root = path.join(dir, 'repo');
   try {
     fs.cpSync(ROOT, root, { recursive: true, filter: (src) => path.basename(src) !== '.git' });
+
+    const source = cloneSource(root);
+    const synthetic = cloneJson(source);
+    synthetic.id = SYNTHETIC_ID;
+    synthetic.title = SYNTHETIC_TITLE;
+    synthetic.detail_page = `things-to-do/${SYNTHETIC_ID}/`;
+    synthetic.media_manifest_title = SYNTHETIC_TITLE;
+    synthetic.end_precision = 'day';
+    delete synthetic.end_month;
+    delete synthetic.start_datetime;
+    delete synthetic.end_datetime;
+    synthetic.start_date = shiftDay(advanced, -8);
+    synthetic.end_date = priorTo;
+    synthetic.checked_at = synthetic.start_date;
+
+    const eventsPath = path.join(root, 'data', 'things-to-do-events.json');
+    const events = readJson(eventsPath);
+    if (events.records.some((item) => item.id === SYNTHETIC_ID)) {
+      throw new Error(`${SYNTHETIC_ID} collides with a governed record id`);
+    }
+    if (events.records.some((item) => item.title === SYNTHETIC_TITLE)) {
+      throw new Error(`${SYNTHETIC_TITLE} collides with a governed record title`);
+    }
+    events.records.push(synthetic);
+    writeJson(eventsPath, events);
+
+    const manifestPath = path.join(root, 'internal', 'provider-media-manifest.json');
+    const manifest = readJson(manifestPath);
+    const sourceMedia = manifest.records.find(
+      (item) => item.section === 'things-to-do' && item.title === source.media_manifest_title
+    );
+    if (!sourceMedia) throw new Error(`no media manifest record for ${source.media_manifest_title}`);
+    const syntheticMedia = cloneJson(sourceMedia);
+    syntheticMedia.title = synthetic.media_manifest_title;
+    syntheticMedia.media_checked_date = synthetic.checked_at;
+    manifest.records.push(syntheticMedia);
+    writeJson(manifestPath, manifest);
+
+    // PT coverage, taken key-for-key from the cloned record so the locale
+    // contract stays satisfied without inventing governed translations.
+    const localePath = path.join(root, 'data', 'locales', 'locale-data.generated.json');
+    const locale = readJson(localePath);
+    for (const key of requiredPtKeys(synthetic)) {
+      const sourceKey = key.replace(`event.${SYNTHETIC_ID}.`, `event.${source.id}.`);
+      const pt = key.endsWith('.title') ? SYNTHETIC_TITLE : locale.keys[sourceKey]?.pt;
+      if (pt == null) throw new Error(`cloned record is missing PT key ${sourceKey}`);
+      locale.keys[key] = {
+        key,
+        en: '',
+        pt,
+        scope_status: 'REQUIRED_FOR_PT_LAUNCH',
+        identity_policy: 'TRANSLATE_NORMALLY',
+        record_id: SYNTHETIC_ID,
+        translation_status: 'APPROVED',
+        source_revision: 'TEST_ONLY_REGRESSION_BOUNDARY',
+        context_notes: 'Ephemeral test-only row; never a governed locale source mutation.',
+        linguistic_notes: ''
+      };
+    }
+    writeJson(localePath, locale);
+
+    insertHomeMarkers(path.join(root, 'index.html'), SYNTHETIC_ID);
+    insertHomeMarkers(path.join(root, 'pt', 'index.html'), SYNTHETIC_ID);
+
     const currentnessPath = path.join(root, 'data', 'things-to-do-currentness.json');
     writeJson(currentnessPath, { ...readJson(currentnessPath), as_of: advanced });
     run(root, ['scripts/generate-things-to-do.mjs', `--as-of=${advanced}`, '--write']);
     run(root, ['scripts/generate-things-to-do.mjs', `--as-of=${advanced}`, '--locale=pt', '--write']);
     run(root, ['scripts/build-sitemap.mjs', '--write']);
-    if (committedAsOf(root) !== advanced) throw new Error('advanced repository did not adopt the advanced baseline');
-    return fn({ root, asOf: advanced, baseline });
+
+    if (committedAsOf(root) !== advanced) throw new Error('temporary repository did not adopt the advanced baseline');
+    if (renderVector(root, advanced) === renderVector(root, priorTo)) {
+      throw new Error(`synthetic boundary did not change rendered state between ${priorTo} and ${advanced}`);
+    }
+    if (hasReviewDue(root, advanced) || hasReviewDue(root, priorTo)) {
+      throw new Error('synthetic boundary window carries a review-due record');
+    }
+    return fn({ root, advanced, priorTo, syntheticId: SYNTHETIC_ID });
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
@@ -293,63 +377,76 @@ record('normal ready path declares no currentness mutation at the committed base
   });
 });
 
-// --- Historical regression: an advanced repository baseline ---------------
+// --- Historical regression: a self-contained lifecycle boundary -----------
 
-record('the advanced repository is built strictly forward of the baseline', () => {
-  withAdvancedRepository(({ root, asOf, baseline }) => {
-    if (!(asOf > baseline)) throw new Error(`advanced ${asOf} does not follow baseline ${baseline}`);
-    if (renderVector(root, asOf) === renderVector(root, baseline)) {
-      throw new Error(`${asOf} regenerates no surface from ${baseline}`);
-    }
-    if (hasReviewDue(root, asOf)) throw new Error(`${asOf} carries a review-due record`);
-    if (committedAsOf(root) !== asOf) throw new Error('advanced repository baseline was not adopted');
+record('the synthetic boundary repository is built strictly forward of its expiry', () => {
+  withSyntheticBoundaryRepository({}, ({ root, advanced, priorTo, syntheticId }) => {
+    if (!(advanced > priorTo)) throw new Error(`advanced ${advanced} does not follow ${priorTo}`);
+    if (committedAsOf(root) !== advanced) throw new Error('temporary repository baseline was not adopted');
+    const synthetic = records(root).find((item) => item.id === syntheticId);
+    if (!synthetic) throw new Error('synthetic record was not injected');
+    if (synthetic.end_date !== priorTo) throw new Error('synthetic record does not carry the intended expiry');
+    if (isExpired(synthetic, priorTo)) throw new Error(`synthetic record is already expired at ${priorTo}`);
+    if (!isExpired(synthetic, advanced)) throw new Error(`synthetic record has not expired at ${advanced}`);
   });
 });
 
-record('advanced committed baseline no longer breaks the normal ready path', () => {
-  withAdvancedRepository(({ root, asOf, baseline }) => {
-    if (!(asOf > baseline)) throw new Error(`advanced ${asOf} does not follow baseline ${baseline}`);
-    withPacket(committedAsOf(root), ({ file }) => expectPrepared(prepare(file, root)), root);
+record('the synthetic boundary is arithmetic, not a search of the governed corpus', () => {
+  withSyntheticBoundaryRepository({}, ({ root, advanced, priorTo, syntheticId }) => {
+    // The window is derived, not discovered: no governed record is consulted to
+    // find it, so no governed record can withhold it.
+    if (priorTo !== shiftDay(advanced, -1)) throw new Error('boundary window was not derived by arithmetic');
+    const synthetic = records(root).find((item) => item.id === syntheticId);
+    if (isExpired(synthetic, priorTo) || !isExpired(synthetic, advanced)) {
+      throw new Error('the synthetic record alone does not span the boundary');
+    }
+    // And it is not merely riding on a governed boundary that happens to exist.
+    const governed = records(root).filter((item) => item.id !== syntheticId);
+    const governedVector = (asOf) => governed.map((item) => `${item.id}:${isExpired(item, asOf)}`).join('|');
+    const governedHelps = governedVector(advanced) !== governedVector(priorTo);
+    if (governedHelps) return; // harmless, but today it must not be load-bearing
+    if (renderVector(root, advanced) === renderVector(root, priorTo)) {
+      throw new Error('with no governed boundary in the window the rendered change vanished');
+    }
+  });
+});
+
+record('an advanced committed baseline no longer breaks the normal ready path', () => {
+  withSyntheticBoundaryRepository({}, ({ root, advanced }) => {
+    withPacket(advanced, ({ file }) => expectPrepared(prepare(file, root)), root);
   });
 });
 
 /**
- * The negative control. It pins the packet to the ORIGINAL baseline inside the
- * advanced repository, which is a rewind across a lifecycle boundary by
- * construction -- forwardCrossingAsOf() guarantees advanced > baseline and
- * that the two resolve different state vectors. It therefore does not depend
- * on the fixture file's stored date happening to be older, which is a
- * coincidence of today's data rather than a property of the contract.
+ * The negative control. It pins the packet to the day the synthetic record
+ * expires on, which is strictly before the repository's committed baseline, so
+ * preparing it rewinds that record back into its current rendering and
+ * regenerates surfaces no packet owns. Guaranteed by construction rather than
+ * by the governed corpus or by the fixture file's stored date.
  */
 record('a packet rewinding the advanced repository is refused', () => {
-  withAdvancedRepository(({ root, asOf, baseline }) => {
-    if (!(baseline < asOf)) throw new Error(`rewind date ${baseline} does not precede ${asOf}`);
-    withPacket(baseline, ({ file }) => {
-      const result = prepare(file, root);
-      if (result.status === 0) throw new Error('a rewinding packet was accepted; the bounded-diff guard is not holding');
-      if (!/STATUS: VALIDATION_FAILED/.test(result.stdout) || !/Unexpected dry-run diff scope/.test(result.stdout)) {
-        throw new Error(`expected a bounded-diff refusal, got: ${result.stdout.trim()}`);
-      }
+  withSyntheticBoundaryRepository({}, ({ root, advanced, priorTo }) => {
+    if (!(priorTo < advanced)) throw new Error(`rewind date ${priorTo} does not precede ${advanced}`);
+    withPacket(priorTo, ({ file }) => {
+      expectBoundedDiffRefusal(prepare(file, root), `rewind to ${priorTo} from ${advanced}`);
     }, root);
   });
 });
 
 /**
- * The same control, aimed at the fixture's own stored date. Whether that date
- * rewinds the advanced repository is data-dependent, so this asserts the
- * canonical resolver's verdict either way rather than assuming a refusal --
- * a fixture date that no longer diverges must be PREPARED, not refused.
+ * The same control aimed at the fixture's own stored date. Whether that date
+ * rewinds the temporary repository is data-dependent, so this asserts the
+ * canonical resolver's verdict either way rather than assuming a refusal -- a
+ * fixture date that no longer diverges must be PREPARED, not refused.
  */
 record('the fixture stored date is judged by the canonical resolver, not assumed', () => {
-  withAdvancedRepository(({ root, asOf }) => {
+  withSyntheticBoundaryRepository({}, ({ root, advanced }) => {
     const stored = loadPacket(path.join(ROOT, FIXTURE)).control.as_of;
-    const rewinds = renderVector(root, stored) !== renderVector(root, asOf) && !hasReviewDue(root, stored);
+    const rewinds = renderVector(root, stored) !== renderVector(root, advanced) && !hasReviewDue(root, stored);
     withPacket(stored, ({ file }) => {
       const result = prepare(file, root);
-      if (rewinds && result.status === 0) {
-        throw new Error(`stored fixture date ${stored} crosses a boundary from ${asOf} but was accepted`);
-      }
-      if (!rewinds) expectPrepared(result);
+      if (rewinds) expectBoundedDiffRefusal(result, `stored fixture date ${stored} from ${advanced}`);
+      else expectPrepared(result);
     }, root);
   });
 });
