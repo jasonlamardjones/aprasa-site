@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { END_PRECISIONS, ISO_MONTH_PATTERN, MONTH_PRECISION, endPrecisionOf } from './lib/things-to-do-currentness.mjs';
 
 const file = new URL('../data/things-to-do-events.json', import.meta.url);
 const manifestFile = new URL('../internal/provider-media-manifest.json', import.meta.url);
@@ -42,6 +43,25 @@ for (const record of data.records ?? []) {
 
   if (record.end_date && record.start_date && record.end_date < record.start_date) {
     errors.push(`${label}: end_date before start_date`);
+  }
+
+  // End precision. Absent end_precision means "day", so every record written
+  // before this field existed keeps exactly the semantics it already had.
+  if (record.end_precision !== undefined && !END_PRECISIONS.includes(record.end_precision)) {
+    errors.push(`${label}: invalid end_precision "${record.end_precision}" (expected "day" or "month")`);
+  } else if (endPrecisionOf(record) === MONTH_PRECISION) {
+    // Month precision states the month a record ends in and nothing finer.
+    // The exact-day fields must be empty, or the record would be asserting a
+    // closing day its source never established.
+    if (!ISO_MONTH_PATTERN.test(record.end_month ?? '')) {
+      errors.push(`${label}: end_precision "month" requires end_month as YYYY-MM`);
+    } else if (record.start_date && record.end_month < record.start_date.slice(0, 7)) {
+      errors.push(`${label}: end_month before start_date month`);
+    }
+    if (record.end_date != null) errors.push(`${label}: end_precision "month" requires end_date null`);
+    if (record.end_datetime != null) errors.push(`${label}: end_precision "month" requires end_datetime null`);
+  } else if (record.end_month !== undefined) {
+    errors.push(`${label}: end_month is only valid with end_precision "month"`);
   }
 
   if (!allowedMediaPolicies.has(record.media_policy)) {

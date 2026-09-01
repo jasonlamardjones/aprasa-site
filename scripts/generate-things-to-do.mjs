@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { t, hasKey } from './lib/locale.mjs';
 import { factKeyBase } from './lib/things-to-do-keys.mjs';
+import { currentnessState, isExpired as recordIsExpired, EXPIRED, REVIEW_DUE } from './lib/things-to-do-currentness.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(scriptDir, '..');
@@ -122,8 +123,11 @@ function escapeHtml(value = '') {
     .replaceAll("'", '&#039;');
 }
 
+// EXPIRED only. A REVIEW_DUE record is still public: it keeps its Home card
+// and its detail page is not labelled a past event. Reverification is demanded
+// by the currentness validator, never by silently removing the record.
 function isExpired(record) {
-  return record.publication_state === 'expired' || Boolean(record.end_date && record.end_date < asOf);
+  return recordIsExpired(record, asOf);
 }
 
 function resolveDetailTarget(record) {
@@ -228,6 +232,10 @@ function renderSchema(record, loc, expired) {
 
   if (record.start_datetime) schema.startDate = record.start_datetime;
   else if (record.start_date) schema.startDate = record.start_date;
+  // endDate is emitted only from a verified exact value. A month-precision
+  // record deliberately serializes no endDate at all: Schema.org has no
+  // month-granular end, and inventing a day would publish a closing date no
+  // source establishes.
   if (record.end_datetime) schema.endDate = record.end_datetime;
   else if (record.start_date && record.end_date) schema.endDate = record.end_date;
   if (typeof record.free_admission === 'boolean') schema.isAccessibleForFree = record.free_admission;
@@ -255,6 +263,9 @@ function renderHomeArticle(record, loc) {
   const dialogMedia = record.media ? `\n              <div class="dialog-media"><img src="${homeMediaPrefix}${escapeHtml(record.media.asset)}" alt="${escapeHtml(loc.mediaAlt)}" loading="lazy" width="${record.media.width}" height="${record.media.height}"></div>` : '';
   const goodToKnow = loc.goodToKnow ? `\n              <h3>${escapeHtml(CHROME.goodToKnowHeading)}</h3>\n              <p>${escapeHtml(loc.goodToKnow)}</p>` : '';
   const dialogAction = loc.actionLabel ? `\n              <a class="dialog-link" href="${escapeHtml(record.source_url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(loc.actionLabel)} <span aria-hidden="true">↗</span></a>` : '';
+  // Only an exact day-precision end is published here. A month-precision
+  // record has no verified closing day, so no end attribute is emitted --
+  // never a day synthesized from end_month.
   const endAttribute = record.end_date ? ` data-event-end="${record.end_date}"` : '';
 
   return `        <article class="resource-card" data-event-id="${escapeHtml(record.id)}"${endAttribute} data-checked="${escapeHtml(record.checked_at)}">${media}
@@ -428,6 +439,7 @@ function replaceGeneratedEvent(homeHtml, record, loc) {
   }
 
   const contentStart = beginIndex + beginMarker.length;
+  // Only EXPIRED empties a slot. CURRENT and REVIEW_DUE both render.
   const body = isExpired(record) ? '' : `\n${renderHomeArticle(record, loc)}\n        `;
   return homeHtml.slice(0, contentStart) + body + homeHtml.slice(endIndex);
 }
@@ -467,7 +479,13 @@ for (const record of selected) {
     fs.writeFileSync(target, output);
     console.log(`Wrote ${locale}/${record.detail_page}index.html as of ${asOf}`);
   } else {
-    console.log(`Prepared ${record.id} (${locale}): ${isExpired(record) ? 'past detail + removed from Home' : 'current detail + Home card'}`);
+    const state = currentnessState(record, asOf);
+    const disposition = state === EXPIRED
+      ? 'past detail + removed from Home'
+      : state === REVIEW_DUE
+        ? 'review-due detail + retained Home card (reverification required)'
+        : 'current detail + Home card';
+    console.log(`Prepared ${record.id} (${locale}): ${disposition}`);
   }
 }
 

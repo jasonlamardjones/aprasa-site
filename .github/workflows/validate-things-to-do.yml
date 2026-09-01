@@ -178,6 +178,43 @@ jobs:
               exit 1
             fi
           }
+          # REVIEW-DUE records stay public: the detail route keeps rendering and
+          # must NOT acquire a past-event label just because its end month began.
+          refute_past_event() {
+            if grep -q 'Past event' "things-to-do/$1/index.html"; then
+              echo "$1 detail page is wrongly marked Past event as of $2 (review-due is not expired)."
+              exit 1
+            fi
+          }
+          # Asserts the currentness validator's exact exit code.
+          #   0 = all current, 1 = expired drift, 3 = review-due (reverify)
+          # Written as an EXPECTED-outcome assertion so a review-due date can be
+          # tested deterministically without leaving CI permanently red.
+          expect_currentness_exit() {
+            set +e
+            output=$(node scripts/validate-things-to-do-currentness.mjs --as-of="$1" 2>&1)
+            code=$?
+            set -e
+            if [ "$code" -ne "$2" ]; then
+              echo "Currentness validator exited $code as of $1; expected $2."
+              echo "$output"
+              exit 1
+            fi
+          }
+          # A record whose closing day is unknown must never gain one.
+          refute_exact_november_day() {
+            # \b matters: without it "[0-9]{1,2}" happily matches the "20" of
+            # "2026", so "until November 2026" would false-positive as a day.
+            if grep -rEq '(\b[0-9]{1,2}\b[[:space:]]+(de[[:space:]]+)?(November|novembro))|((November|novembro)[[:space:]]+\b[0-9]{1,2}\b)' \
+              things-to-do/sinergia-da-materia/index.html pt/things-to-do/sinergia-da-materia/index.html index.html pt/index.html; then
+              echo "An exact November day was published for sinergia-da-materia as of $1."
+              exit 1
+            fi
+            if grep -q '"endDate"' things-to-do/sinergia-da-materia/index.html pt/things-to-do/sinergia-da-materia/index.html; then
+              echo "A month-precision record serialized an endDate as of $1."
+              exit 1
+            fi
+          }
 
           node scripts/generate-things-to-do.mjs --as-of=2026-08-24 --write
           node scripts/validate-things-to-do-currentness.mjs --as-of=2026-08-24
@@ -218,13 +255,61 @@ jobs:
             exit 1
           fi
 
+          # Sinergia da Matéria carries month precision (end_month 2026-11) after
+          # the Project 03 source correction of 01 September 2026: the exhibition
+          # is on view until November 2026 with no established closing day. It is
+          # CURRENT through September and October, and REVIEW-DUE — never expired
+          # — once November begins. This block previously asserted the opposite
+          # (absent at 2026-09-01), which encoded the superseded 31 August 2026
+          # canonical as a passing condition.
           node scripts/generate-things-to-do.mjs --as-of=2026-09-01 --write
-          node scripts/validate-things-to-do-currentness.mjs --as-of=2026-09-01
+          expect_currentness_exit 2026-09-01 0
           node scripts/validate-things-to-do-surface-equivalence.mjs --as-of=2026-09-01
-          check_home_absent sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-09-01
+          check_home_present sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-09-01
+          refute_past_event sinergia-da-materia 2026-09-01
+          refute_exact_november_day 2026-09-01
           check_home_present eclipse "Exposição “Eclipse”" 2026-09-01
           if grep -rq 'https://schema.org/EventCompleted' things-to-do/*/index.html; then
             echo 'A generated detail page emits invalid Schema.org EventCompleted status.'
+            exit 1
+          fi
+
+          # Last day before the end month begins: still unambiguously CURRENT.
+          node scripts/generate-things-to-do.mjs --as-of=2026-10-31 --write
+          expect_currentness_exit 2026-10-31 0
+          node scripts/validate-things-to-do-surface-equivalence.mjs --as-of=2026-10-31
+          check_home_present sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-10-31
+          refute_past_event sinergia-da-materia 2026-10-31
+          refute_exact_november_day 2026-10-31
+          check_home_absent eclipse "Exposição “Eclipse”" 2026-10-31
+          require_past_event eclipse-yuran-henrique 2026-10-31
+
+          # November boundary: REVIEW-DUE. The validator must fail non-zero to
+          # demand reverification (exit 3, distinct from exit 1 expired drift),
+          # while the record stays on Home and off the past-event path. The
+          # expected-exit assertion is why this does not make CI permanently red.
+          node scripts/generate-things-to-do.mjs --as-of=2026-11-01 --write
+          expect_currentness_exit 2026-11-01 3
+          node scripts/validate-things-to-do-surface-equivalence.mjs --as-of=2026-11-01
+          check_home_present sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-11-01
+          refute_past_event sinergia-da-materia 2026-11-01
+          refute_exact_november_day 2026-11-01
+
+          # Exit 3 keeps a review-due record out of the Phase 2B drift grammar:
+          # "- <id>: " marks a record as deterministically repairable, and a
+          # record with no verified closing day must never be offered for
+          # automated removal.
+          set +e
+          review_output=$(node scripts/validate-things-to-do-currentness.mjs --as-of=2026-11-01 2>&1)
+          set -e
+          if echo "$review_output" | grep -Eq '^[[:space:]]*-[[:space:]]+sinergia-da-materia:[[:space:]]'; then
+            echo 'Review-due record leaked into the Phase 2B deterministic drift grammar.'
+            echo "$review_output"
+            exit 1
+          fi
+          if ! echo "$review_output" | grep -q 'REVIEW-DUE sinergia-da-materia'; then
+            echo 'Review-due record was not reported for reverification at the November boundary.'
+            echo "$review_output"
             exit 1
           fi
 

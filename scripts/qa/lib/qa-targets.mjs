@@ -10,6 +10,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { isExpired as recordIsExpired } from '../../lib/things-to-do-currentness.mjs';
 
 export const CAPE_VERDE_TZ = 'Atlantic/Cape_Verde';
 
@@ -64,12 +65,19 @@ function repoFileForRoute(root, route) {
 }
 
 /**
- * A record is expired under the incumbent rule used by
- * scripts/validate-things-to-do-currentness.mjs: an explicit expired
- * publication_state, or an end_date strictly before the reference date.
+ * A record is expired under the shared resolver used by
+ * scripts/validate-things-to-do-currentness.mjs. Re-exported here so QA keeps
+ * one definition of expiry rather than a second copy of the rule.
+ *
+ * REVIEW_DUE is deliberately NOT expired. That matters beyond rendering: the
+ * QA pass turns `expiredAtAsOf`/`expiredToday` into TTD_EXPIRED_SURFACED and
+ * TTD_CURRENTNESS_DRIFT findings, which are Phase 2B's auto-remediation
+ * candidates. Reporting a review-due record as expired would hand Phase 2B a
+ * deterministic removal repair for a record whose closing day is unknown --
+ * exactly the outcome month precision exists to prevent.
  */
 export function isExpired(record, asOf) {
-  return record.publication_state === 'expired' || Boolean(record.end_date && record.end_date < asOf);
+  return recordIsExpired(record, asOf);
 }
 
 export function loadTargets(root, { affectedRoutes = [] } = {}) {

@@ -1,0 +1,38 @@
+{
+  "event_id": "sinergia-da-materia",
+  "package_id": "aprasa-pt-sinergia-da-materia-admission",
+  "source_revision": "P09-PT-SINERGIA-ADMISSION-2026-09-01-r1",
+  "project_09_status": "approved",
+  "revision_class": "ADDITIVE_EVENT_KEYS",
+  "owning_project": "Project 03",
+  "authorizing_ruling": "P03-SINERGIA-CURRENTNESS-2026-09-01",
+  "supplied_rows_approved": 2,
+  "review_required": 0,
+  "blocking_issue": null,
+  "rows": [
+    {
+      "key": "event.sinergia-da-materia.detail.fact.admission.label",
+      "source_revision": "P09-PT-SINERGIA-ADMISSION-2026-09-01-r1",
+      "source_en": "Admission",
+      "pt": "Admissão",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "sinergia-da-materia",
+      "translation_status": "APPROVED",
+      "context_notes": "Detail fact label for the free-admission row added after Project 03 confirmed free admission for the CNAD Galeria Zero exhibition on 01 September 2026. Matches the incumbent admission fact label already approved for other Things-to-Do event records.",
+      "linguistic_notes": ""
+    },
+    {
+      "key": "event.sinergia-da-materia.detail.fact.admission.value_display",
+      "source_revision": "P09-PT-SINERGIA-ADMISSION-2026-09-01-r1",
+      "source_en": "Free admission",
+      "pt": "Entrada livre",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "sinergia-da-materia",
+      "translation_status": "APPROVED",
+      "context_notes": "Free admission confirmed by Project 03 on 01 September 2026 (CNAD). Strictly additive: introduces no change to any previously approved key.",
+      "linguistic_notes": "“Entrada livre” is the incumbent governed PT rendering of free admission across Things-to-Do records."
+    }
+  ]
+}
