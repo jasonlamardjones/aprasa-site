@@ -282,6 +282,8 @@ try {
   const staged = git(root, ['diff', '--cached', '--name-only']).stdout.trim().split(/\r?\n/).filter(Boolean).sort();
   if (JSON.stringify(staged) !== JSON.stringify(changed)) throw new Error(`PHASE2B_STAGED_SCOPE_MISMATCH: ${staged.join(', ')}`);
 
+  git(root, ['config', 'user.name', 'A PRASA Phase 2B Automation']);
+  git(root, ['config', 'user.email', 'automation@aprasa.org']);
   git(root, ['commit', '-m', `Automated repair: Things-to-Do currentness ${auth.asOf}`]);
   committed = true;
   candidateSha = git(root, ['rev-parse', 'HEAD']).stdout.trim();

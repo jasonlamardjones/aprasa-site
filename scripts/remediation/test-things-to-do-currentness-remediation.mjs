@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   assessDuplicateState,
   assertBoundedWriteSet,
@@ -165,5 +168,28 @@ assert.equal(assessDuplicateState({
   remoteBranchSha: parseRemoteBranchProbe(branchProbe({ stdout: `${OTHER_SHA}\trefs/heads/${BRANCH}` }), BRANCH),
   draftPr: parseOpenPrProbe(prProbe({ stdout: JSON.stringify([openPr]) }), { repository: 'o/r', branch: BRANCH }),
 }), 'AMBIGUOUS_DUPLICATE_STATE');
+
+// The root checkout must carry repository-local commit identity before the authorized repair commit.
+const runnerSource = fs.readFileSync(
+  path.join(path.dirname(fileURLToPath(import.meta.url)), 'run-things-to-do-currentness-remediation.mjs'),
+  'utf8',
+);
+const rootNameConfig = runnerSource.indexOf("git(root, ['config', 'user.name', 'A PRASA Phase 2B Automation']);");
+const rootEmailConfig = runnerSource.indexOf("git(root, ['config', 'user.email', 'automation@aprasa.org']);");
+const rootCommit = runnerSource.indexOf("git(root, ['commit', '-m',");
+assert.ok(rootNameConfig > -1, 'root checkout must configure user.name');
+assert.ok(rootEmailConfig > -1, 'root checkout must configure user.email');
+assert.ok(rootCommit > -1, 'root repair commit must exist');
+assert.ok(rootNameConfig < rootCommit && rootEmailConfig < rootCommit, 'identity must precede the repair commit');
+
+// The staging clone keeps its own unchanged repository-local identity.
+assert.ok(runnerSource.includes("git(stagingRoot, ['config', 'user.name', 'A PRASA Phase 2B Automation']);"));
+assert.ok(runnerSource.includes("git(stagingRoot, ['config', 'user.email', 'automation@aprasa.org']);"));
+
+// Identity is never written to global Git configuration.
+assert.ok(!/--global|--system|GIT_CONFIG_GLOBAL/.test(runnerSource), 'no global/system git config writes');
+for (const call of runnerSource.match(/\['config',[^\]]*\]/g) ?? []) {
+  assert.ok(/^\['config', 'user\.(name|email)', '[^']+'\]$/.test(call), `unexpected git config call: ${call}`);
+}
 
 console.log('Phase 2B currentness remediation unit tests passed.');
