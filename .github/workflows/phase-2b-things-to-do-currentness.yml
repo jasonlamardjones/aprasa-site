@@ -1,0 +1,63 @@
+name: Phase 2B — Things-to-Do currentness remediation
+
+on:
+  workflow_run:
+    workflows:
+      - Post-publication QA
+    types:
+      - completed
+
+# This is the first and only Phase 2B write-authorized workflow. Phase 2A stays
+# read-only. These permissions are limited to reading its artifact, pushing one
+# bounded repair branch, and creating one draft PR. There is no merge, Pages,
+# deployment, issue, package, or environment write authority.
+permissions:
+  actions: read
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: phase2b-things-to-do-currentness
+  cancel-in-progress: false
+
+jobs:
+  remediate:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out the exact QA source commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Download the producing Phase 2A artifact
+        uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          pattern: post-publication-qa-*-${{ github.event.workflow_run.id }}-*
+          path: qa-input
+          merge-multiple: true
+
+      - name: Run bounded Phase 2B remediation adapter
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          node scripts/remediation/run-things-to-do-currentness-remediation.mjs \
+            --report=qa-input/post-publication-qa.json \
+            --repository='${{ github.repository }}' \
+            --workflow-run-id='${{ github.event.workflow_run.id }}' \
+            --workflow-run-attempt='${{ github.event.workflow_run.run_attempt }}' \
+            --workflow-head-sha='${{ github.event.workflow_run.head_sha }}'

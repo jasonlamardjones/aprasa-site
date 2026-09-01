@@ -1,0 +1,37 @@
+name: Phase 2B currentness tests
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/remediation/**'
+      - 'scripts/qa/qa-report.schema.json'
+      - 'scripts/qa/lib/qa-schema.mjs'
+      - '.github/workflows/phase-2b-*.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/remediation/**'
+      - 'scripts/qa/qa-report.schema.json'
+      - 'scripts/qa/lib/qa-schema.mjs'
+      - '.github/workflows/phase-2b-*.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Syntax checks
+        run: |
+          node --check scripts/remediation/lib/things-to-do-currentness-remediation.mjs
+          node --check scripts/remediation/run-things-to-do-currentness-remediation.mjs
+          node --check scripts/remediation/test-things-to-do-currentness-remediation.mjs
+      - name: Unit tests
+        run: node scripts/remediation/test-things-to-do-currentness-remediation.mjs
