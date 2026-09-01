@@ -41,7 +41,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { loadPacket, validatePacket } from './lib/event-publication-contract.mjs';
-import { currentnessState } from './lib/things-to-do-currentness.mjs';
+import { isExpired, isReviewDue } from './lib/things-to-do-currentness.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const FIXTURE = 'automation/things-to-do/fixtures/ready.json';
@@ -79,16 +79,39 @@ function committedAsOf(root = ROOT) {
   return readJson(path.join(root, 'data', 'things-to-do-currentness.json')).as_of;
 }
 
+function records(root) {
+  return readJson(path.join(root, 'data', 'things-to-do-events.json')).records;
+}
+
 /**
- * Every record's resolved currentness state at a date. Two dates that produce
- * the same vector regenerate byte-identical surfaces; two that differ cross at
- * least one lifecycle boundary. This is what makes "crosses a boundary"
- * testable without naming a date.
+ * What the generator actually renders from, per record, at a date.
+ *
+ * EXPIRY is the surface-bearing distinction, not the full currentness state.
+ * CURRENT and REVIEW_DUE render identically -- a review-due record stays on
+ * Home and its detail route is deliberately NOT labelled a past event -- so a
+ * current -> review-due transition changes currentnessState() while leaving
+ * every byte of every surface alone. Keying this vector on the full state
+ * would therefore report "crosses a boundary" for a transition that
+ * regenerates nothing, and the bounded-diff tests built on it would assert a
+ * diff that never materializes.
  */
-function stateVector(root, asOf) {
-  return readJson(path.join(root, 'data', 'things-to-do-events.json'))
-    .records.map((item) => `${item.id}:${currentnessState(item, asOf)}`)
-    .join('|');
+function renderVector(root, asOf) {
+  return records(root).map((item) => `${item.id}:${isExpired(item, asOf)}`).join('|');
+}
+
+/**
+ * True when any record demands reverification at a date.
+ *
+ * This is a publication-viability test, not a rendering one. The canonical
+ * currentness validator exits 3 at a review-due date, and
+ * prepare-event-publication.mjs runs that validator, so the whole dry-run is
+ * refused before the bounded-diff check is ever reached. That refusal is
+ * governed behavior -- a record with no established closing day must be
+ * reverified by a human first -- so a date carrying it cannot be used to test
+ * the diff-scope contract, which is a different guard entirely.
+ */
+function hasReviewDue(root, asOf) {
+  return records(root).some((item) => isReviewDue(item, asOf));
 }
 
 function shiftDay(day, offset) {
@@ -97,21 +120,84 @@ function shiftDay(day, offset) {
   return date.toISOString().slice(0, 10);
 }
 
+const SEARCH_DAYS = 400;
+
 /**
  * The nearest date to the committed baseline that either does or does not
  * cross a lifecycle boundary, whichever the caller asks for. Derived from the
  * committed events, so it moves with the data instead of pinning a calendar
  * day.
+ *
+ * `direction` is explicit because the two callers need different guarantees.
+ * "any" searches outward in both directions and is what the divergence tests
+ * want -- they only care that the date differs from the baseline, and the
+ * nearest such date in either direction is equally valid.
+ *
+ * "forward" is REQUIRED by the historical-regression helper and is not an
+ * optimization. A bidirectional search can return a date EARLIER than the
+ * baseline whenever the nearest boundary lies behind it, which is the ordinary
+ * case once the baseline has moved past its nearest end_date. Building the
+ * "advanced" repository from such a date rewinds it instead, and the
+ * historical-regression proof silently inverts: the negative control then
+ * pins a packet at a date that no longer rewinds anything, is accepted, and
+ * the test that is supposed to prove the bounded-diff guard is still armed
+ * proves nothing. Reported by independent exact-SHA review.
  */
-function divergentAsOf(root, { crossesLifecycle }) {
+function divergentAsOf(root, { crossesLifecycle, direction = 'any' }) {
   const baseline = committedAsOf(root);
-  const target = stateVector(root, baseline);
-  for (let offset = 1; offset <= 400; offset += 1) {
-    for (const candidate of [shiftDay(baseline, offset), shiftDay(baseline, -offset)]) {
-      if ((stateVector(root, candidate) !== target) === crossesLifecycle) return candidate;
+  const target = renderVector(root, baseline);
+  const signs = direction === 'forward' ? [1] : [1, -1];
+  for (let distance = 1; distance <= SEARCH_DAYS; distance += 1) {
+    for (const sign of signs) {
+      const candidate = shiftDay(baseline, sign * distance);
+      // A review-due candidate is refused by the currentness validator before
+      // the diff-scope check runs, so it cannot decide either divergence case.
+      if (hasReviewDue(root, candidate)) continue;
+      if ((renderVector(root, candidate) !== target) === crossesLifecycle) return candidate;
     }
   }
-  throw new Error(`no ${crossesLifecycle ? 'crossing' : 'non-crossing'} as_of exists near ${baseline}`);
+  throw new Error(
+    `no ${direction === 'forward' ? 'forward ' : ''}${crossesLifecycle ? 'crossing' : 'non-crossing'} ` +
+    `publication-viable as_of exists within ${SEARCH_DAYS} days of baseline ${baseline}`
+  );
+}
+
+/**
+ * A lifecycle crossing STRICTLY AFTER the committed baseline.
+ *
+ * Fails closed. It never falls back to an earlier date, because an earlier
+ * date does not advance the repository -- it rewinds it -- and the negative
+ * control built on top would then pin a packet that no longer diverges, be
+ * accepted, and report a pass while proving nothing.
+ *
+ * Failing closed is reachable: it means no unexpired day-precision record
+ * remains within the search window, so no future expiry exists to advance
+ * across and the historical-regression scenario is not constructible from
+ * committed data. That is a real precondition, reported rather than papered
+ * over.
+ */
+function forwardCrossingAsOf(root) {
+  const baseline = committedAsOf(root);
+  let advanced;
+  try {
+    advanced = divergentAsOf(root, { crossesLifecycle: true, direction: 'forward' });
+  } catch {
+    throw new Error(
+      `no forward lifecycle crossing within ${SEARCH_DAYS} days of baseline ${baseline}: ` +
+      'no unexpired day-precision record remains, so the historical-regression ' +
+      'scenario is not constructible from committed event data'
+    );
+  }
+  if (!(advanced > baseline)) {
+    throw new Error(`forward crossing search returned ${advanced}, which does not advance baseline ${baseline}`);
+  }
+  if (renderVector(root, advanced) === renderVector(root, baseline)) {
+    throw new Error(`${advanced} regenerates no surface from baseline ${baseline}`);
+  }
+  if (hasReviewDue(root, advanced)) {
+    throw new Error(`${advanced} carries a review-due record and cannot test the diff-scope contract`);
+  }
+  return { baseline, advanced };
 }
 
 /** The committed ready fixture, rebound to a chosen as_of, on disk. */
@@ -155,17 +241,21 @@ function expectPrepared(result) {
  * is the exact condition that used to break the pinned ready fixture.
  */
 function withAdvancedRepository(fn) {
+  // Resolve and assert the direction BEFORE copying or regenerating anything,
+  // so a repository that cannot produce a forward crossing fails loudly here
+  // rather than being built backwards and quietly proving the wrong thing.
+  const { baseline, advanced } = forwardCrossingAsOf(ROOT);
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'aprasa-advanced-currentness-'));
   const root = path.join(dir, 'repo');
   try {
     fs.cpSync(ROOT, root, { recursive: true, filter: (src) => path.basename(src) !== '.git' });
-    const advanced = divergentAsOf(ROOT, { crossesLifecycle: true });
     const currentnessPath = path.join(root, 'data', 'things-to-do-currentness.json');
     writeJson(currentnessPath, { ...readJson(currentnessPath), as_of: advanced });
     run(root, ['scripts/generate-things-to-do.mjs', `--as-of=${advanced}`, '--write']);
     run(root, ['scripts/generate-things-to-do.mjs', `--as-of=${advanced}`, '--locale=pt', '--write']);
     run(root, ['scripts/build-sitemap.mjs', '--write']);
-    return fn({ root, asOf: advanced });
+    if (committedAsOf(root) !== advanced) throw new Error('advanced repository did not adopt the advanced baseline');
+    return fn({ root, asOf: advanced, baseline });
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
@@ -205,25 +295,61 @@ record('normal ready path declares no currentness mutation at the committed base
 
 // --- Historical regression: an advanced repository baseline ---------------
 
-record('advanced committed baseline no longer breaks the normal ready path', () => {
-  withAdvancedRepository(({ root, asOf }) => {
-    if (asOf === committedAsOf()) throw new Error('advanced repository did not actually advance');
-    if (stateVector(root, asOf) === stateVector(ROOT, committedAsOf())) {
-      throw new Error('advanced repository did not cross a lifecycle boundary');
+record('the advanced repository is built strictly forward of the baseline', () => {
+  withAdvancedRepository(({ root, asOf, baseline }) => {
+    if (!(asOf > baseline)) throw new Error(`advanced ${asOf} does not follow baseline ${baseline}`);
+    if (renderVector(root, asOf) === renderVector(root, baseline)) {
+      throw new Error(`${asOf} regenerates no surface from ${baseline}`);
     }
+    if (hasReviewDue(root, asOf)) throw new Error(`${asOf} carries a review-due record`);
+    if (committedAsOf(root) !== asOf) throw new Error('advanced repository baseline was not adopted');
+  });
+});
+
+record('advanced committed baseline no longer breaks the normal ready path', () => {
+  withAdvancedRepository(({ root, asOf, baseline }) => {
+    if (!(asOf > baseline)) throw new Error(`advanced ${asOf} does not follow baseline ${baseline}`);
     withPacket(committedAsOf(root), ({ file }) => expectPrepared(prepare(file, root)), root);
   });
 });
 
-record('the pinned historical date is what used to fail, and still would', () => {
-  withAdvancedRepository(({ root }) => {
-    const stale = loadPacket(path.join(ROOT, FIXTURE)).control.as_of;
-    withPacket(stale, ({ file }) => {
+/**
+ * The negative control. It pins the packet to the ORIGINAL baseline inside the
+ * advanced repository, which is a rewind across a lifecycle boundary by
+ * construction -- forwardCrossingAsOf() guarantees advanced > baseline and
+ * that the two resolve different state vectors. It therefore does not depend
+ * on the fixture file's stored date happening to be older, which is a
+ * coincidence of today's data rather than a property of the contract.
+ */
+record('a packet rewinding the advanced repository is refused', () => {
+  withAdvancedRepository(({ root, asOf, baseline }) => {
+    if (!(baseline < asOf)) throw new Error(`rewind date ${baseline} does not precede ${asOf}`);
+    withPacket(baseline, ({ file }) => {
       const result = prepare(file, root);
       if (result.status === 0) throw new Error('a rewinding packet was accepted; the bounded-diff guard is not holding');
-      if (!/Unexpected dry-run diff scope/.test(result.stdout)) {
+      if (!/STATUS: VALIDATION_FAILED/.test(result.stdout) || !/Unexpected dry-run diff scope/.test(result.stdout)) {
         throw new Error(`expected a bounded-diff refusal, got: ${result.stdout.trim()}`);
       }
+    }, root);
+  });
+});
+
+/**
+ * The same control, aimed at the fixture's own stored date. Whether that date
+ * rewinds the advanced repository is data-dependent, so this asserts the
+ * canonical resolver's verdict either way rather than assuming a refusal --
+ * a fixture date that no longer diverges must be PREPARED, not refused.
+ */
+record('the fixture stored date is judged by the canonical resolver, not assumed', () => {
+  withAdvancedRepository(({ root, asOf }) => {
+    const stored = loadPacket(path.join(ROOT, FIXTURE)).control.as_of;
+    const rewinds = renderVector(root, stored) !== renderVector(root, asOf) && !hasReviewDue(root, stored);
+    withPacket(stored, ({ file }) => {
+      const result = prepare(file, root);
+      if (rewinds && result.status === 0) {
+        throw new Error(`stored fixture date ${stored} crosses a boundary from ${asOf} but was accepted`);
+      }
+      if (!rewinds) expectPrepared(result);
     }, root);
   });
 });
