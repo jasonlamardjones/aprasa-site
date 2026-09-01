@@ -25,7 +25,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { t } from './lib/locale.mjs';
-import { factKeyBase } from './lib/things-to-do-keys.mjs';
+import { bodyParagraphs, factKeyBase } from './lib/things-to-do-keys.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const events = JSON.parse(fs.readFileSync(path.join(root, 'data', 'things-to-do-events.json'), 'utf8')).records;
@@ -80,7 +80,23 @@ for (const record of events) {
   checkPair(record.id, 'display.status (date)', region, t(`event.${record.id}.display.status`, 'en'), t(`event.${record.id}.display.status`, 'pt'));
   checkPair(record.id, 'display.meta', region, t(`event.${record.id}.display.meta`, 'en'), t(`event.${record.id}.display.meta`, 'pt'));
   checkPair(record.id, 'display.checked (currentness)', region, t(`event.${record.id}.display.checked`, 'en'), t(`event.${record.id}.display.checked`, 'pt'));
-  checkPair(record.id, 'detail.body', region, t(`event.${record.id}.detail.body`, 'en'), t(`event.${record.id}.detail.body`, 'pt'));
+  // The detail body is rendered as one <p> per governed paragraph, so it is
+  // checked one paragraph at a time via the same shared bodyParagraphs() rule
+  // the generator renders with — looking for the whole multi-paragraph string
+  // contiguously would fail on markup the generator is correct to emit. A
+  // single-paragraph body yields exactly one check with the identical label
+  // and expectation this had before paragraph support existed.
+  {
+    const enBody = bodyParagraphs(t(`event.${record.id}.detail.body`, 'en'));
+    const ptBody = bodyParagraphs(t(`event.${record.id}.detail.body`, 'pt'));
+    if (enBody.length !== ptBody.length) {
+      errors.push(`${record.id}: governed EN detail body has ${enBody.length} paragraph(s) but PT has ${ptBody.length} — approved paragraph structure must match across locales`);
+    }
+    ptBody.forEach((paragraph, index) => {
+      const field = ptBody.length === 1 ? 'detail.body' : `detail.body paragraph ${index + 1}`;
+      checkPair(record.id, field, region, enBody[index], paragraph);
+    });
+  }
   checkPair(record.id, 'detail.checked', region, t(`event.${record.id}.detail.checked`, 'en'), t(`event.${record.id}.detail.checked`, 'pt'));
 
   if (record.card_action) {
