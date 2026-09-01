@@ -1,0 +1,789 @@
+{
+  "package_id": "aprasa-pt-training-record-namespace-migration-r10",
+  "source_revision": "P03-PT-SOURCE-2026-09-01-r10",
+  "previous_revision": "P03-PT-SOURCE-2026-09-01-r9",
+  "revision_class": "RENAME_KEYS",
+  "semantic_authority": "Project 03 — A PRASA Business, Brand & Administration",
+  "linguistic_authority": "Project 09 — governed PT overlay",
+  "project_09_status": "approved",
+  "project_09_verdict": "APPROVED FOR ATOMIC NAMESPACE MIGRATION (PROJECT 04 / T1)",
+  "intent": "Atomic rename of the governed Home training presentation keys from the legacy home.training.record.<record_id>.<field> namespace to the canonical training.record.<record_id>.<field> namespace. This package carries NO translation, NO retranslation, NO normalization and NO wording change of any kind: every row restates the currently effective EN and PT value verbatim so the build can assert byte-for-byte equivalence across the rename and fail closed on any drift.",
+  "scope_note": "Covers exactly the nine currently published Home training records. The retired EMAR / Kre+ records (home.training.record.emar-*) are deliberately NOT migrated: they are retired-record residue with no generator consumer and no counterpart in data/training-opportunities.json.",
+  "review_required": 0,
+  "blocking_issue": null,
+  "supplied_rows_approved": 76,
+  "row_count": 76,
+  "records": [
+    "myrtle",
+    "academia-crescer",
+    "kafe-djan-djan",
+    "hp-life",
+    "openlearn",
+    "iefp-pepe",
+    "iefp-training",
+    "ibm-skillsbuild",
+    "microsoft-learn"
+  ],
+  "rows": [
+    {
+      "from_key": "home.training.record.myrtle.action",
+      "to_key": "training.record.myrtle.action",
+      "record_id": "myrtle",
+      "field": "action",
+      "expected_en": "Explore Myrtle programs",
+      "expected_pt": "Explorar programas da Myrtle",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.myrtle.body",
+      "to_key": "training.record.myrtle.body",
+      "record_id": "myrtle",
+      "field": "body",
+      "expected_en": "Explore language, computer, workplace-English and other learning programs from Myrtle Atividades Educativas in Mindelo.",
+      "expected_pt": "Explore programas de línguas, informática, inglês para o trabalho e outras áreas de aprendizagem da Myrtle Atividades Educativas, em Mindelo.",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.myrtle.checked",
+      "to_key": "training.record.myrtle.checked",
+      "record_id": "myrtle",
+      "field": "checked",
+      "expected_en": "Checked 17 August 2026 against the provider’s current first-party site.",
+      "expected_pt": "Revisto em 17 de agosto de 2026 com base no atual site oficial da entidade.",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.myrtle.good",
+      "to_key": "training.record.myrtle.good",
+      "record_id": "myrtle",
+      "field": "good",
+      "expected_en": "Programs, schedules, prices and enrollment availability can change. Check current information directly with Myrtle before acting.",
+      "expected_pt": "Os programas, horários, preços e disponibilidade de inscrições podem mudar. Consulte diretamente a Myrtle para obter informações atuais antes de avançar.",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.myrtle.meta",
+      "to_key": "training.record.myrtle.meta",
+      "record_id": "myrtle",
+      "field": "meta",
+      "expected_en": "Language, computer, workplace-English and other learning programs",
+      "expected_pt": "Programas de línguas, informática, inglês para o trabalho e outras áreas de aprendizagem",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.myrtle.status",
+      "to_key": "training.record.myrtle.status",
+      "record_id": "myrtle",
+      "field": "status",
+      "expected_en": "Mindelo · Learning programs",
+      "expected_pt": "Mindelo · Programas de aprendizagem",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.myrtle.title",
+      "to_key": "training.record.myrtle.title",
+      "record_id": "myrtle",
+      "field": "title",
+      "expected_en": "Myrtle Atividades Educativas",
+      "expected_pt": "Myrtle Atividades Educativas",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.academia-crescer.alt",
+      "to_key": "training.record.academia-crescer.alt",
+      "record_id": "academia-crescer",
+      "field": "alt",
+      "expected_en": "Recruitment poster from Academia de Estudo Crescer for study-room monitors in Mathematics, Basic Education, Special Education and Physics/Chemistry for the 2026/2027 school year.",
+      "expected_pt": "Cartaz de recrutamento da Academia de Estudo Crescer para monitores de sala de estudo nas áreas de Matemática, Ensino Básico, Educação Especial e Física/Química para o ano letivo de 2026/2027.",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.academia-crescer.body",
+      "to_key": "training.record.academia-crescer.body",
+      "record_id": "academia-crescer",
+      "field": "body",
+      "expected_en": "Academia de Estudo Crescer is recruiting study-room monitors for Mathematics, Basic Education, Special Education and Physics/Chemistry for the 2026/2027 school year.",
+      "expected_pt": "A Academia de Estudo Crescer está a recrutar monitores de sala de estudo para Matemática, Ensino Básico, Educação Especial e Física/Química para o ano letivo de 2026/2027.",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.academia-crescer.checked",
+      "to_key": "training.record.academia-crescer.checked",
+      "record_id": "academia-crescer",
+      "field": "checked",
+      "expected_en": "Checked 17 August 2026 against the founder-supplied recruitment poster.",
+      "expected_pt": "Revisto em 17 de agosto de 2026 com base no cartaz de recrutamento fornecido pelo fundador.",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.academia-crescer.detail_checked",
+      "to_key": "training.record.academia-crescer.detail_checked",
+      "record_id": "academia-crescer",
+      "field": "detail_checked",
+      "expected_en": "Checked 17 August 2026 against a founder-supplied recruitment poster received through a local church/community chat.",
+      "expected_pt": "Revisto em 17 de agosto de 2026 com base num cartaz de recrutamento fornecido pelo fundador, recebido através de um grupo local de igreja/comunidade.",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.academia-crescer.detail_title",
+      "to_key": "training.record.academia-crescer.detail_title",
+      "record_id": "academia-crescer",
+      "field": "detail_title",
+      "expected_en": "Study-Room Monitor Recruitment",
+      "expected_pt": "Recrutamento de Monitores de Sala de Estudo",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.academia-crescer.fact.areas",
+      "to_key": "training.record.academia-crescer.fact.areas",
+      "record_id": "academia-crescer",
+      "field": "fact.areas",
+      "expected_en": "Mathematics, Basic Education, Special Education and Physics/Chemistry",
+      "expected_pt": "Matemática, Ensino Básico, Educação Especial e Física/Química",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.academia-crescer.fact.cv_delivery",
+      "to_key": "training.record.academia-crescer.fact.cv_delivery",
+      "record_id": "academia-crescer",
+      "field": "fact.cv_delivery",
+      "expected_en": "Madeiralzinho or Monte Sossego secretariats",
+      "expected_pt": "Secretarias de Madeiralzinho ou Monte Sossego",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.academia-crescer.fact.delivery_hours",
+      "to_key": "training.record.academia-crescer.fact.delivery_hours",
+      "record_id": "academia-crescer",
+      "field": "fact.delivery_hours",
+      "expected_en": "08:00–12:00 and 14:00–18:00",
+      "expected_pt": "08:00–12:00 e 14:00–18:00",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.academia-crescer.fact.school_year",
+      "to_key": "training.record.academia-crescer.fact.school_year",
+      "record_id": "academia-crescer",
+      "field": "fact.school_year",
+      "expected_en": "2026/2027",
+      "expected_pt": "2026/2027",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.academia-crescer.good",
+      "to_key": "training.record.academia-crescer.good",
+      "record_id": "academia-crescer",
+      "field": "good",
+      "expected_en": "CVs are accepted at the Madeiralzinho or Monte Sossego secretariats during the hours published on the recruitment notice. No application deadline is shown on the poster, so confirm that recruitment is still open before submitting.",
+      "expected_pt": "Os CV são aceites nas secretarias de Madeiralzinho ou Monte Sossego durante o horário publicado no anúncio de recrutamento. O cartaz não indica prazo de candidatura, por isso confirme se o recrutamento continua aberto antes de entregar a candidatura.",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.academia-crescer.requirements",
+      "to_key": "training.record.academia-crescer.requirements",
+      "record_id": "academia-crescer",
+      "field": "requirements",
+      "expected_en": "Sense of responsibility and commitment; good communication skills and the ability to work with children and young people. Training or experience in the relevant area is valued.",
+      "expected_pt": "Sentido de responsabilidade e compromisso; boa capacidade de comunicação e aptidão para trabalhar com crianças e jovens. Formação ou experiência na área relevante é valorizada.",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.academia-crescer.status",
+      "to_key": "training.record.academia-crescer.status",
+      "record_id": "academia-crescer",
+      "field": "status",
+      "expected_en": "Recruiting for 2026/2027 · Confirm current availability",
+      "expected_pt": "A recrutar para 2026/2027 · Confirme a disponibilidade atual",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.academia-crescer.title",
+      "to_key": "training.record.academia-crescer.title",
+      "record_id": "academia-crescer",
+      "field": "title",
+      "expected_en": "Academia de Estudo Crescer — Study-Room Monitor Recruitment",
+      "expected_pt": "Academia de Estudo Crescer — Recrutamento de Monitores de Sala de Estudo",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.kafe-djan-djan.alt",
+      "to_key": "training.record.kafe-djan-djan.alt",
+      "record_id": "kafe-djan-djan",
+      "field": "alt",
+      "expected_en": "Kafê Djan Djan hiring flyer: Procuramos Assistente de Restauração, experiência prévia valorizada mas não obrigatória, contactar a gerência de segunda a sexta das 11h00 às 14h00.",
+      "expected_pt": "Folheto de recrutamento do Kafê Djan Djan: Procuramos Assistente de Restauração, experiência prévia valorizada mas não obrigatória, contactar a gerência de segunda a sexta das 11h00 às 14h00.",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.kafe-djan-djan.checked",
+      "to_key": "training.record.kafe-djan-djan.checked",
+      "record_id": "kafe-djan-djan",
+      "field": "checked",
+      "expected_en": "Checked 22 August 2026 against the founder-supplied hiring flyer.",
+      "expected_pt": "Revisto em 22 de agosto de 2026 com base no folheto de recrutamento fornecido pelo fundador.",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.kafe-djan-djan.fact.interviews",
+      "to_key": "training.record.kafe-djan-djan.fact.interviews",
+      "record_id": "kafe-djan-djan",
+      "field": "fact.interviews",
+      "expected_en": "In person with management, Monday to Friday, 11h00–14h00",
+      "expected_pt": "Presencialmente com a gerência, de segunda a sexta, 11h00–14h00",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.kafe-djan-djan.fact.location",
+      "to_key": "training.record.kafe-djan-djan.fact.location",
+      "record_id": "kafe-djan-djan",
+      "field": "fact.location",
+      "expected_en": "Kafê Djan Djan Mindelo — frente a CMSV / ao lado da loja Barbot",
+      "expected_pt": "Kafê Djan Djan Mindelo — frente a CMSV / ao lado da loja Barbot",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.kafe-djan-djan.good",
+      "to_key": "training.record.kafe-djan-djan.good",
+      "record_id": "kafe-djan-djan",
+      "field": "good",
+      "expected_en": "Prior experience is a plus but not required. No salary, benefits, phone number, email or application deadline were shown on the flyer, so none are listed here. Apply in person during the stated hours.",
+      "expected_pt": "A experiência prévia é valorizada, mas não obrigatória. O folheto não indicava salário, benefícios, número de telefone, e-mail nem prazo de candidatura, por isso esses elementos não são apresentados aqui. Candidate-se presencialmente durante o horário indicado.",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.kafe-djan-djan.meta",
+      "to_key": "training.record.kafe-djan-djan.meta",
+      "record_id": "kafe-djan-djan",
+      "field": "meta",
+      "expected_en": "Kafê Livraria Galeria · walk-in interviews Mon–Fri 11:00–14:00",
+      "expected_pt": "Kafê Livraria Galeria · entrevistas presenciais de segunda a sexta, 11:00–14:00",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.kafe-djan-djan.original_1",
+      "to_key": "training.record.kafe-djan-djan.original_1",
+      "record_id": "kafe-djan-djan",
+      "field": "original_1",
+      "expected_en": "PROCURAMOS Assistente de Restauração — com experiência prévia, valorizada mas NÃO OBRIGATÓRIA para atendimento, serviço de mesa e preparação de refeições ligeiras.",
+      "expected_pt": "PROCURAMOS Assistente de Restauração — com experiência prévia, valorizada mas NÃO OBRIGATÓRIA para atendimento, serviço de mesa e preparação de refeições ligeiras.",
+      "expected_scope_status": "INTENTIONALLY_UNCHANGED",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.kafe-djan-djan.original_2",
+      "to_key": "training.record.kafe-djan-djan.original_2",
+      "record_id": "kafe-djan-djan",
+      "field": "original_2",
+      "expected_en": "Kafê Djan Djan Mindelo. Frente a CMSV / ao lado da loja Barbot.",
+      "expected_pt": "Kafê Djan Djan Mindelo. Frente a CMSV / ao lado da loja Barbot.",
+      "expected_scope_status": "INTENTIONALLY_UNCHANGED",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.kafe-djan-djan.original_3",
+      "to_key": "training.record.kafe-djan-djan.original_3",
+      "record_id": "kafe-djan-djan",
+      "field": "original_3",
+      "expected_en": "Para mais informações: contacte pessoalmente a gerência, de segunda a sexta, das 11h00 às 14h00, para uma entrevista.",
+      "expected_pt": "Para mais informações: contacte pessoalmente a gerência, de segunda a sexta, das 11h00 às 14h00, para uma entrevista.",
+      "expected_scope_status": "INTENTIONALLY_UNCHANGED",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.kafe-djan-djan.original_heading",
+      "to_key": "training.record.kafe-djan-djan.original_heading",
+      "record_id": "kafe-djan-djan",
+      "field": "original_heading",
+      "expected_en": "Original posting (Portuguese)",
+      "expected_pt": "Publicação original (português)",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.kafe-djan-djan.status",
+      "to_key": "training.record.kafe-djan-djan.status",
+      "record_id": "kafe-djan-djan",
+      "field": "status",
+      "expected_en": "Hiring now · Mindelo",
+      "expected_pt": "A contratar agora · Mindelo",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.kafe-djan-djan.title",
+      "to_key": "training.record.kafe-djan-djan.title",
+      "record_id": "kafe-djan-djan",
+      "field": "title",
+      "expected_en": "Kafê Djan Djan — Assistente de Restauração",
+      "expected_pt": "Kafê Djan Djan — Assistente de Restauração",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.hp-life.action",
+      "to_key": "training.record.hp-life.action",
+      "record_id": "hp-life",
+      "field": "action",
+      "expected_en": "Explore HP LIFE",
+      "expected_pt": "Explorar HP LIFE",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.hp-life.body",
+      "to_key": "training.record.hp-life.body",
+      "record_id": "hp-life",
+      "field": "body",
+      "expected_en": "32 free, self-paced courses in business, digital skills and professional development. All courses are available in eight languages, including Portuguese.",
+      "expected_pt": "32 cursos gratuitos e ao seu ritmo sobre negócios, competências digitais e desenvolvimento profissional. Todos os cursos estão disponíveis em oito línguas, incluindo português.",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.hp-life.checked",
+      "to_key": "training.record.hp-life.checked",
+      "record_id": "hp-life",
+      "field": "checked",
+      "expected_en": "Checked 10 August 2026",
+      "expected_pt": "Revisto em 10 de agosto de 2026",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.hp-life.detail_checked",
+      "to_key": "training.record.hp-life.detail_checked",
+      "record_id": "hp-life",
+      "field": "detail_checked",
+      "expected_en": "Checked 10 August 2026 against information published by the provider.",
+      "expected_pt": "Revisto em 10 de agosto de 2026 com base em informações publicadas pela entidade.",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.hp-life.good",
+      "to_key": "training.record.hp-life.good",
+      "record_id": "hp-life",
+      "field": "good",
+      "expected_en": "Complete a course to receive a free Certificate of Completion. HP LIFE states that its certificates are not accredited or endorsed by educational bodies.",
+      "expected_pt": "Conclua um curso para receber gratuitamente um Certificado de Conclusão. A HP LIFE informa que os seus certificados não são acreditados nem reconhecidos por entidades educativas.",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.hp-life.status",
+      "to_key": "training.record.hp-life.status",
+      "record_id": "hp-life",
+      "field": "status",
+      "expected_en": "Free business & digital skills · Online",
+      "expected_pt": "Competências empresariais e digitais gratuitas · Online",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.hp-life.title",
+      "to_key": "training.record.hp-life.title",
+      "record_id": "hp-life",
+      "field": "title",
+      "expected_en": "HP LIFE",
+      "expected_pt": "HP LIFE",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.openlearn.action",
+      "to_key": "training.record.openlearn.action",
+      "record_id": "openlearn",
+      "field": "action",
+      "expected_en": "Browse OpenLearn courses",
+      "expected_pt": "Ver cursos do OpenLearn",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.openlearn.body",
+      "to_key": "training.record.openlearn.body",
+      "record_id": "openlearn",
+      "field": "body",
+      "expected_en": "OpenLearn provides hundreds of free courses across nine subject areas, including digital and computing, languages, money and business, science, and society. All OpenLearn courses are free to study and are available to start now.",
+      "expected_pt": "O OpenLearn disponibiliza centenas de cursos gratuitos em nove áreas temáticas, incluindo digital e informática, línguas, finanças e negócios, ciência e sociedade. Todos os cursos do OpenLearn são gratuitos e podem ser iniciados de imediato.",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.openlearn.card_action",
+      "to_key": "training.record.openlearn.card_action",
+      "record_id": "openlearn",
+      "field": "card_action",
+      "expected_en": "Browse courses",
+      "expected_pt": "Ver cursos",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.openlearn.checked",
+      "to_key": "training.record.openlearn.checked",
+      "record_id": "openlearn",
+      "field": "checked",
+      "expected_en": "Checked 8 August 2026",
+      "expected_pt": "Revisto em 8 de agosto de 2026",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.openlearn.detail_checked",
+      "to_key": "training.record.openlearn.detail_checked",
+      "record_id": "openlearn",
+      "field": "detail_checked",
+      "expected_en": "Checked 8 August 2026 against information published by the provider.",
+      "expected_pt": "Revisto em 8 de agosto de 2026 com base em informações publicadas pela entidade.",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.openlearn.good",
+      "to_key": "training.record.openlearn.good",
+      "record_id": "openlearn",
+      "field": "good",
+      "expected_en": "The material checked for this record was in English; Portuguese availability has not been confirmed. Successful completion can provide a free Statement of Participation, but OpenLearn free courses do not carry formal credit toward a qualification, and digital badges are available only on some courses.",
+      "expected_pt": "O material consultado para este registo estava em inglês; a disponibilidade em português não foi confirmada. A conclusão com êxito pode dar direito a uma Declaração de Participação gratuita, mas os cursos gratuitos do OpenLearn não atribuem créditos formais para uma qualificação e os emblemas digitais estão disponíveis apenas em alguns cursos.",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.openlearn.status",
+      "to_key": "training.record.openlearn.status",
+      "record_id": "openlearn",
+      "field": "status",
+      "expected_en": "Free · Online",
+      "expected_pt": "Gratuito · Online",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.openlearn.title",
+      "to_key": "training.record.openlearn.title",
+      "record_id": "openlearn",
+      "field": "title",
+      "expected_en": "OpenLearn: free courses from The Open University",
+      "expected_pt": "OpenLearn: cursos gratuitos da The Open University",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.iefp-pepe.action",
+      "to_key": "training.record.iefp-pepe.action",
+      "record_id": "iefp-pepe",
+      "field": "action",
+      "expected_en": "View IEFP opportunities",
+      "expected_pt": "Ver oportunidades do IEFP",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.iefp-pepe.body",
+      "to_key": "training.record.iefp-pepe.body",
+      "record_id": "iefp-pepe",
+      "field": "body",
+      "expected_en": "PEPE is IEFP's platform for employment and professional-internship opportunities in Cabo Verde. Visitors can review listings, create a candidate account, and sign in to apply directly through the provider.",
+      "expected_pt": "O PEPE é a plataforma do IEFP para oportunidades de emprego e estágios profissionais em Cabo Verde. Os visitantes podem consultar anúncios, criar uma conta de candidato e iniciar sessão para se candidatarem diretamente através da entidade.",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.iefp-pepe.card_action",
+      "to_key": "training.record.iefp-pepe.card_action",
+      "record_id": "iefp-pepe",
+      "field": "card_action",
+      "expected_en": "View opportunities",
+      "expected_pt": "Ver oportunidades",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.iefp-pepe.checked",
+      "to_key": "training.record.iefp-pepe.checked",
+      "record_id": "iefp-pepe",
+      "field": "checked",
+      "expected_en": "Checked 8 August 2026",
+      "expected_pt": "Revisto em 8 de agosto de 2026",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.iefp-pepe.detail_checked",
+      "to_key": "training.record.iefp-pepe.detail_checked",
+      "record_id": "iefp-pepe",
+      "field": "detail_checked",
+      "expected_en": "Checked 8 August 2026 against information published by the provider.",
+      "expected_pt": "Revisto em 8 de agosto de 2026 com base em informações publicadas pela entidade.",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.iefp-pepe.good",
+      "to_key": "training.record.iefp-pepe.good",
+      "record_id": "iefp-pepe",
+      "field": "good",
+      "expected_en": "An account and sign-in are required to apply. Each listing has its own deadline and conditions. A listing shown on PEPE should not be treated as current without checking its individual details.",
+      "expected_pt": "É necessário ter uma conta e iniciar sessão para se candidatar. Cada anúncio tem o seu próprio prazo e condições. Um anúncio apresentado no PEPE não deve ser considerado atual sem verificar os respetivos detalhes.",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.iefp-pepe.status",
+      "to_key": "training.record.iefp-pepe.status",
+      "record_id": "iefp-pepe",
+      "field": "status",
+      "expected_en": "Employment & internship portal",
+      "expected_pt": "Portal de emprego e estágios",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.iefp-pepe.title",
+      "to_key": "training.record.iefp-pepe.title",
+      "record_id": "iefp-pepe",
+      "field": "title",
+      "expected_en": "IEFP PEPE: employment and professional-internship portal",
+      "expected_pt": "IEFP PEPE: portal de emprego e estágios profissionais",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.iefp-training.action",
+      "to_key": "training.record.iefp-training.action",
+      "record_id": "iefp-training",
+      "field": "action",
+      "expected_en": "See current training",
+      "expected_pt": "Ver formação atual",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.iefp-training.body",
+      "to_key": "training.record.iefp-training.body",
+      "record_id": "iefp-training",
+      "field": "body",
+      "expected_en": "Browse current professional-training options for São Vicente directly through IEFP. Current listings include practical areas such as customer service, sales, food and beverage, business, marketing, software and technical skills.",
+      "expected_pt": "Consulte diretamente no IEFP as opções atuais de formação profissional para São Vicente. As ofertas atuais incluem áreas práticas como atendimento ao cliente, vendas, restauração e bebidas, negócios, marketing, software e competências técnicas.",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.iefp-training.checked",
+      "to_key": "training.record.iefp-training.checked",
+      "record_id": "iefp-training",
+      "field": "checked",
+      "expected_en": "Checked 10 August 2026",
+      "expected_pt": "Revisto em 10 de agosto de 2026",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.iefp-training.detail_checked",
+      "to_key": "training.record.iefp-training.detail_checked",
+      "record_id": "iefp-training",
+      "field": "detail_checked",
+      "expected_en": "Checked 10 August 2026 against information published by the provider.",
+      "expected_pt": "Revisto em 10 de agosto de 2026 com base em informações publicadas pela entidade.",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.iefp-training.good",
+      "to_key": "training.record.iefp-training.good",
+      "record_id": "iefp-training",
+      "field": "good",
+      "expected_en": "Courses, places, entry requirements and application availability can change. Check the individual IEFP listing before applying.",
+      "expected_pt": "Os cursos, vagas, requisitos de entrada e disponibilidade de candidaturas podem mudar. Consulte o anúncio específico do IEFP antes de se candidatar.",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.iefp-training.status",
+      "to_key": "training.record.iefp-training.status",
+      "record_id": "iefp-training",
+      "field": "status",
+      "expected_en": "Current professional training · São Vicente",
+      "expected_pt": "Formação profissional atual · São Vicente",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.iefp-training.title",
+      "to_key": "training.record.iefp-training.title",
+      "record_id": "iefp-training",
+      "field": "title",
+      "expected_en": "IEFP — Training in São Vicente",
+      "expected_pt": "IEFP — Formação em São Vicente",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.ibm-skillsbuild.action",
+      "to_key": "training.record.ibm-skillsbuild.action",
+      "record_id": "ibm-skillsbuild",
+      "field": "action",
+      "expected_en": "Explore IBM SkillsBuild",
+      "expected_pt": "Explorar IBM SkillsBuild",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.ibm-skillsbuild.body",
+      "to_key": "training.record.ibm-skillsbuild.body",
+      "record_id": "ibm-skillsbuild",
+      "field": "body",
+      "expected_en": "Free learning in areas including AI, cybersecurity, data, information technology, project management, customer service and workplace skills. IBM provides learning for adult learners, university students and secondary-school learners.",
+      "expected_pt": "Aprendizagem gratuita em áreas como IA, cibersegurança, dados, tecnologias de informação, gestão de projetos, atendimento ao cliente e competências para o trabalho. A IBM disponibiliza aprendizagem para adultos, estudantes universitários e alunos do ensino secundário.",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.ibm-skillsbuild.checked",
+      "to_key": "training.record.ibm-skillsbuild.checked",
+      "record_id": "ibm-skillsbuild",
+      "field": "checked",
+      "expected_en": "Checked 10 August 2026",
+      "expected_pt": "Revisto em 10 de agosto de 2026",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.ibm-skillsbuild.detail_checked",
+      "to_key": "training.record.ibm-skillsbuild.detail_checked",
+      "record_id": "ibm-skillsbuild",
+      "field": "detail_checked",
+      "expected_en": "Checked 10 August 2026 against information published by the provider.",
+      "expected_pt": "Revisto em 10 de agosto de 2026 com base em informações publicadas pela entidade.",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.ibm-skillsbuild.good",
+      "to_key": "training.record.ibm-skillsbuild.good",
+      "record_id": "ibm-skillsbuild",
+      "field": "good",
+      "expected_en": "Available learning and digital credentials vary by pathway. Use the IBM SkillsBuild catalogue to check the requirements for a specific course or credential.",
+      "expected_pt": "A aprendizagem disponível e as credenciais digitais variam consoante o percurso. Consulte o catálogo do IBM SkillsBuild para verificar os requisitos de um curso ou credencial específicos.",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.ibm-skillsbuild.status",
+      "to_key": "training.record.ibm-skillsbuild.status",
+      "record_id": "ibm-skillsbuild",
+      "field": "status",
+      "expected_en": "Free technology & career skills · Online",
+      "expected_pt": "Competências tecnológicas e profissionais gratuitas · Online",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.ibm-skillsbuild.title",
+      "to_key": "training.record.ibm-skillsbuild.title",
+      "record_id": "ibm-skillsbuild",
+      "field": "title",
+      "expected_en": "IBM SkillsBuild",
+      "expected_pt": "IBM SkillsBuild",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.microsoft-learn.action",
+      "to_key": "training.record.microsoft-learn.action",
+      "record_id": "microsoft-learn",
+      "field": "action",
+      "expected_en": "Explore Microsoft Learn",
+      "expected_pt": "Explorar Microsoft Learn",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.microsoft-learn.body",
+      "to_key": "training.record.microsoft-learn.body",
+      "record_id": "microsoft-learn",
+      "field": "body",
+      "expected_en": "Free, self-paced learning paths and modules for Microsoft technologies, including AI, cloud, data, security and other technical skills. You can access training without creating an account; signing in lets you track progress and accomplishments.",
+      "expected_pt": "Percursos de aprendizagem e módulos gratuitos, ao seu ritmo, sobre tecnologias Microsoft, incluindo IA, cloud, dados, segurança e outras competências técnicas. Pode aceder à formação sem criar uma conta; ao iniciar sessão, pode acompanhar o progresso e as conquistas.",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.microsoft-learn.checked",
+      "to_key": "training.record.microsoft-learn.checked",
+      "record_id": "microsoft-learn",
+      "field": "checked",
+      "expected_en": "Checked 10 August 2026",
+      "expected_pt": "Revisto em 10 de agosto de 2026",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.microsoft-learn.detail_checked",
+      "to_key": "training.record.microsoft-learn.detail_checked",
+      "record_id": "microsoft-learn",
+      "field": "detail_checked",
+      "expected_en": "Checked 10 August 2026 against information published by the provider.",
+      "expected_pt": "Revisto em 10 de agosto de 2026 com base em informações publicadas pela entidade.",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.microsoft-learn.good",
+      "to_key": "training.record.microsoft-learn.good",
+      "record_id": "microsoft-learn",
+      "field": "good",
+      "expected_en": "Microsoft Learn training content is free, but Microsoft certification exams are separate and may cost money.",
+      "expected_pt": "Os conteúdos de formação do Microsoft Learn são gratuitos, mas os exames de certificação Microsoft são separados e podem ter custos.",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.microsoft-learn.status",
+      "to_key": "training.record.microsoft-learn.status",
+      "record_id": "microsoft-learn",
+      "field": "status",
+      "expected_en": "Free technical learning · Online",
+      "expected_pt": "Aprendizagem técnica gratuita · Online",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    },
+    {
+      "from_key": "home.training.record.microsoft-learn.title",
+      "to_key": "training.record.microsoft-learn.title",
+      "record_id": "microsoft-learn",
+      "field": "title",
+      "expected_en": "Microsoft Learn",
+      "expected_pt": "Microsoft Learn",
+      "expected_scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "translation_status": "APPROVED"
+    }
+  ]
+}

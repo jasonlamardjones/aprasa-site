@@ -1,0 +1,53 @@
+{
+  "package_id": "aprasa-academia-cv-statement-removal-r12",
+  "revision_class": "OVERRIDE_EXISTING_KEYS",
+  "source_revision": "P03-PT-SOURCE-2026-09-01-r12",
+  "previous_revision": "P03-PT-SOURCE-2026-09-01-r11",
+  "revision_type": "REVIEW_DUE_CV_ACCEPTANCE_STATEMENT_REMOVAL",
+  "semantic_authority": "Project 03 — REVIEW-DUE public-copy ruling of 01 September 2026",
+  "linguistic_authority": "Project 09 — approved EN/PT strings",
+  "project_09_status": "approved",
+  "project_09_verdict": "APPROVED FOR PROJECT 04 T1 INDEPENDENT-REVIEW PATCH",
+  "intent": "Removes the residual CV-acceptance statement (\"CVs are accepted …\" / \"Os CV são aceites …\") from the Academia de Estudo Crescer good-to-know text. Pure removal of the leading sentence: no replacement sentence is authorized or introduced, and no substitute submission-status wording of any kind is added. The retained sentence is the already-approved current-availability caution, byte-identical to its approved text. The record stays REVIEW-DUE and retained on Home.",
+  "affected_records": [
+    "academia-crescer"
+  ],
+  "declared_new_row_count_in_handoff": 0,
+  "declared_overridden_row_count_in_handoff": 1,
+  "actual_row_objects_supplied": 1,
+  "missing_or_unaccounted_row_count": 0,
+  "supplied_rows_approved": 1,
+  "review_required": 0,
+  "semantic_escalations_required": 0,
+  "source_english_changed": true,
+  "localization_architecture_reopened": false,
+  "duplicate_keys": [],
+  "placeholder_mismatches": [],
+  "a_prasa_to_a_praca_violations": [],
+  "blocking_issue": null,
+  "change_control_status": {
+    "new_keys_introduced": 0,
+    "existing_keys_overridden": 1,
+    "english_source_values_modified": 1,
+    "lifecycle_or_publication_state_modified": 0,
+    "protected_identities_modified": 0,
+    "additional_languages_authorized": 0
+  },
+  "rows": [
+    {
+      "key": "training.record.academia-crescer.good",
+      "source_revision": "P03-PT-SOURCE-2026-09-01-r12",
+      "baseline_source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "old_en": "CVs are accepted at the Madeiralzinho or Monte Sossego secretariats during the hours published on the recruitment notice. No application deadline is shown on the poster, so confirm that recruitment is still open before submitting.",
+      "new_en": "No application deadline is shown on the poster, so confirm that recruitment is still open before submitting.",
+      "old_pt": "Os CV são aceites nas secretarias de Madeiralzinho ou Monte Sossego durante o horário publicado no anúncio de recrutamento. O cartaz não indica prazo de candidatura, por isso confirme se o recrutamento continua aberto antes de entregar a candidatura.",
+      "new_pt": "O cartaz não indica prazo de candidatura, por isso confirme se o recrutamento continua aberto antes de entregar a candidatura.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "academia-crescer",
+      "semantic_change": true,
+      "ruling_note": "Leading CV-acceptance sentence removed entirely. No replacement authorized; retained sentence is the approved current-availability caution, unchanged.",
+      "translation_status": "APPROVED"
+    }
+  ]
+}

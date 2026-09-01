@@ -1,0 +1,702 @@
+{
+  "version": 1,
+  "schema": "aprasa.training-opportunities.v1",
+  "governance": {
+    "semantic_authority": "Project 03 — A PRASA Business, Brand & Administration",
+    "linguistic_authority": "Project 09 — governed PT overlay",
+    "lifecycle_authority": "Project 03 approved lifecycle classes and publication states",
+    "localization_namespace": "training.record.<record_id>.<field>",
+    "surface": "Home — Trainings, Tools & Opportunities",
+    "phase": "T1 — structured foundation. Not yet wired into scripts/build-all.mjs.",
+    "notes": [
+      "Every presentation string is a reference into the governed locale overlay. This file carries NO copy of its own: it is structure, identity, provenance and linkage only.",
+      "Provider names are locale-independent identity literals, deliberately absent from the overlay (same policy as scripts/build-static-pages.mjs ALLOWED_UNTRANSLATED).",
+      "Records are emitted in array order; that order is the published Home order."
+    ]
+  },
+  "lifecycle_classes": [
+    "evergreen-learning-resource",
+    "institutional-training-catalog",
+    "fixed-window-opportunity",
+    "rolling-opportunity",
+    "recurring-opportunity"
+  ],
+  "publication_states": {
+    "CURRENT": "visible on the current surface",
+    "REVIEW-DUE": "remains visible; review age alone never expires or removes a record",
+    "EXPIRED": "fixed-window record past its end date; removed from the current surface",
+    "WITHDRAWN": "removed from the current surface",
+    "SUPERSEDED": "removed from the current surface",
+    "TEMPORARILY_UNAVAILABLE": "retained with an explicitly approved unavailable status treatment"
+  },
+  "records": [
+    {
+      "id": "myrtle",
+      "lifecycle_class": "institutional-training-catalog",
+      "publication_state": "CURRENT",
+      "provider": "Myrtle Atividades Educativas",
+      "source": {
+        "source_url": "https://myrtleducativas.com/",
+        "provenance": "The provider's current first-party site."
+      },
+      "checked_at": "2026-08-17",
+      "media_manifest_title": "Myrtle Atividades Educativas",
+      "card": {
+        "attributes": {
+          "data-learning-spotlight": "myrtle"
+        },
+        "spotlight_label": {
+          "locale_key": "spotlight.learning.label"
+        },
+        "action_tags": null,
+        "status": {
+          "locale_key": "training.record.myrtle.status"
+        },
+        "title": {
+          "locale_key": "training.record.myrtle.title"
+        },
+        "meta": {
+          "locale_key": "training.record.myrtle.meta"
+        },
+        "body": {
+          "locale_key": "training.record.myrtle.body"
+        },
+        "checked": {
+          "locale_key": "training.record.myrtle.checked"
+        },
+        "action": {
+          "href": "https://myrtleducativas.com/",
+          "label": {
+            "locale_key": "training.record.myrtle.action"
+          }
+        }
+      },
+      "detail": {
+        "spotlight_label": {
+          "locale_key": "spotlight.learning.label"
+        },
+        "action_tags": null,
+        "title": {
+          "locale_key": "training.record.myrtle.title"
+        },
+        "facts": null,
+        "details_body": {
+          "locale_key": "training.record.myrtle.body"
+        },
+        "requirements": null,
+        "original_posting": null,
+        "good_to_know": {
+          "locale_key": "training.record.myrtle.good"
+        },
+        "checked": {
+          "locale_key": "training.record.myrtle.checked"
+        },
+        "action": {
+          "href": "https://myrtleducativas.com/",
+          "label": {
+            "locale_key": "training.record.myrtle.action"
+          }
+        }
+      }
+    },
+    {
+      "id": "academia-crescer",
+      "lifecycle_class": "recurring-opportunity",
+      "publication_state": "REVIEW-DUE",
+      "provider": "Academia de Estudo Crescer",
+      "source": {
+        "source_url": null,
+        "provenance": "Founder-supplied recruitment poster received through a local church/community chat on 2026-08-17."
+      },
+      "checked_at": "2026-08-17",
+      "media_manifest_title": "Academia de Estudo Crescer — Study-Room Monitor Recruitment",
+      "media": {
+        "asset": "assets/card-media/trainings-tools/academia-crescer-recruitment-2026-2027.webp",
+        "width": 960,
+        "height": 1440,
+        "loading": "lazy",
+        "decoding": "async",
+        "alt": {
+          "locale_key": "training.record.academia-crescer.alt"
+        },
+        "card_class": "card-media card-media-poster",
+        "detail_class": "dialog-media dialog-media-poster",
+        "layout": "block",
+        "attribute_order": [
+          "src",
+          "width",
+          "height",
+          "loading",
+          "decoding",
+          "alt"
+        ]
+      },
+      "card": {
+        "action_tags": [
+          {
+            "locale_key": "ui.action_tag.job"
+          },
+          {
+            "locale_key": "ui.action_tag.employment_opportunity"
+          }
+        ],
+        "status": {
+          "locale_key": "training.record.academia-crescer.status"
+        },
+        "title": {
+          "locale_key": "training.record.academia-crescer.title"
+        },
+        "body": {
+          "locale_key": "training.record.academia-crescer.body"
+        },
+        "checked": {
+          "locale_key": "training.record.academia-crescer.checked"
+        },
+        "action": null
+      },
+      "detail": {
+        "action_tags": [
+          {
+            "locale_key": "ui.action_tag.job"
+          },
+          {
+            "locale_key": "ui.action_tag.employment_opportunity"
+          }
+        ],
+        "title": {
+          "locale_key": "training.record.academia-crescer.detail_title"
+        },
+        "facts": [
+          {
+            "label": {
+              "locale_key": "ui.school_year"
+            },
+            "value": {
+              "locale_key": "training.record.academia-crescer.fact.school_year"
+            }
+          },
+          {
+            "label": {
+              "locale_key": "ui.areas"
+            },
+            "value": {
+              "locale_key": "training.record.academia-crescer.fact.areas"
+            }
+          }
+        ],
+        "details_body": null,
+        "requirements": {
+          "locale_key": "training.record.academia-crescer.requirements"
+        },
+        "original_posting": null,
+        "good_to_know": {
+          "locale_key": "training.record.academia-crescer.good"
+        },
+        "checked": {
+          "locale_key": "training.record.academia-crescer.detail_checked"
+        },
+        "action": null
+      }
+    },
+    {
+      "id": "kafe-djan-djan",
+      "lifecycle_class": "rolling-opportunity",
+      "publication_state": "REVIEW-DUE",
+      "provider": "Kafê Djan Djan, Mindelo",
+      "source": {
+        "source_url": null,
+        "provenance": "Founder-supplied hiring flyer, uploaded 2026-08-22."
+      },
+      "checked_at": "2026-08-22",
+      "media_manifest_title": "Kafê Djan Djan — Assistente de Restauração",
+      "card": {
+        "attributes": {
+          "data-checked": "2026-08-22"
+        },
+        "action_tags": [
+          {
+            "locale_key": "ui.action_tag.job"
+          },
+          {
+            "locale_key": "ui.action_tag.employment_opportunity"
+          }
+        ],
+        "status": {
+          "locale_key": "training.record.kafe-djan-djan.status"
+        },
+        "title": {
+          "locale_key": "training.record.kafe-djan-djan.title"
+        },
+        "meta": {
+          "locale_key": "training.record.kafe-djan-djan.meta"
+        },
+        "body": null,
+        "checked": {
+          "locale_key": "training.record.kafe-djan-djan.checked"
+        },
+        "action": null
+      },
+      "detail": {
+        "action_tags": [
+          {
+            "locale_key": "ui.action_tag.job"
+          },
+          {
+            "locale_key": "ui.action_tag.employment_opportunity"
+          }
+        ],
+        "title": {
+          "locale_key": "training.record.kafe-djan-djan.title"
+        },
+        "facts": [
+          {
+            "label": {
+              "locale_key": "ui.location"
+            },
+            "value": {
+              "locale_key": "training.record.kafe-djan-djan.fact.location"
+            }
+          }
+        ],
+        "details_body": null,
+        "requirements": null,
+        "original_posting": null,
+        "good_to_know": {
+          "locale_key": "training.record.kafe-djan-djan.good"
+        },
+        "checked": {
+          "locale_key": "training.record.kafe-djan-djan.checked"
+        },
+        "action": null
+      }
+    },
+    {
+      "id": "hp-life",
+      "lifecycle_class": "evergreen-learning-resource",
+      "publication_state": "CURRENT",
+      "provider": "HP Foundation",
+      "source": {
+        "source_url": "https://www.life-global.org/",
+        "provenance": "Information published by the provider."
+      },
+      "checked_at": "2026-08-10",
+      "media_manifest_title": "HP LIFE",
+      "card": {
+        "action_tags": [
+          {
+            "locale_key": "ui.action_tag.free"
+          },
+          {
+            "locale_key": "ui.action_tag.online"
+          },
+          {
+            "locale_key": "ui.action_tag.portuguese_available"
+          },
+          {
+            "locale_key": "ui.action_tag.certificate_completion"
+          }
+        ],
+        "status": {
+          "locale_key": "training.record.hp-life.status"
+        },
+        "title": {
+          "locale_key": "training.record.hp-life.title"
+        },
+        "body": null,
+        "checked": {
+          "locale_key": "training.record.hp-life.checked"
+        },
+        "action": {
+          "href": "https://www.life-global.org/",
+          "label": {
+            "locale_key": "training.record.hp-life.action"
+          }
+        }
+      },
+      "detail": {
+        "action_tags": [
+          {
+            "locale_key": "ui.action_tag.free"
+          },
+          {
+            "locale_key": "ui.action_tag.online"
+          },
+          {
+            "locale_key": "ui.action_tag.portuguese_available"
+          },
+          {
+            "locale_key": "ui.action_tag.certificate_completion"
+          }
+        ],
+        "title": {
+          "locale_key": "training.record.hp-life.title"
+        },
+        "facts": null,
+        "details_body": {
+          "locale_key": "training.record.hp-life.body"
+        },
+        "requirements": null,
+        "original_posting": null,
+        "good_to_know": {
+          "locale_key": "training.record.hp-life.good"
+        },
+        "checked": {
+          "locale_key": "training.record.hp-life.detail_checked"
+        },
+        "action": {
+          "href": "https://www.life-global.org/",
+          "label": {
+            "locale_key": "training.record.hp-life.action"
+          }
+        }
+      }
+    },
+    {
+      "id": "openlearn",
+      "lifecycle_class": "evergreen-learning-resource",
+      "publication_state": "CURRENT",
+      "provider": "The Open University / OpenLearn",
+      "source": {
+        "source_url": "https://www.open.edu/openlearn/free-courses",
+        "provenance": "Information published by the provider."
+      },
+      "checked_at": "2026-08-08",
+      "media_manifest_title": "OpenLearn: free courses from The Open University",
+      "card": {
+        "action_tags": null,
+        "status": {
+          "locale_key": "training.record.openlearn.status"
+        },
+        "title": {
+          "locale_key": "training.record.openlearn.title"
+        },
+        "body": null,
+        "checked": {
+          "locale_key": "training.record.openlearn.checked"
+        },
+        "action": {
+          "href": "https://www.open.edu/openlearn/free-courses",
+          "label": {
+            "locale_key": "training.record.openlearn.card_action"
+          }
+        }
+      },
+      "detail": {
+        "action_tags": null,
+        "title": {
+          "locale_key": "training.record.openlearn.title"
+        },
+        "facts": null,
+        "details_body": {
+          "locale_key": "training.record.openlearn.body"
+        },
+        "requirements": null,
+        "original_posting": null,
+        "good_to_know": {
+          "locale_key": "training.record.openlearn.good"
+        },
+        "checked": {
+          "locale_key": "training.record.openlearn.detail_checked"
+        },
+        "action": {
+          "href": "https://www.open.edu/openlearn/free-courses",
+          "label": {
+            "locale_key": "training.record.openlearn.action"
+          }
+        }
+      }
+    },
+    {
+      "id": "iefp-pepe",
+      "lifecycle_class": "institutional-training-catalog",
+      "publication_state": "CURRENT",
+      "provider": "Instituto do Emprego e Formação Profissional (IEFP)",
+      "source": {
+        "source_url": "https://pepe.iefp.cv/frontend/web/index.php/pt/site",
+        "provenance": "Information published by the provider."
+      },
+      "checked_at": "2026-08-08",
+      "media_manifest_title": "IEFP PEPE: employment and professional-internship portal",
+      "card": {
+        "action_tags": null,
+        "status": {
+          "locale_key": "training.record.iefp-pepe.status"
+        },
+        "title": {
+          "locale_key": "training.record.iefp-pepe.title"
+        },
+        "body": null,
+        "checked": {
+          "locale_key": "training.record.iefp-pepe.checked"
+        },
+        "action": {
+          "href": "https://pepe.iefp.cv/frontend/web/index.php/pt/site",
+          "label": {
+            "locale_key": "training.record.iefp-pepe.card_action"
+          }
+        }
+      },
+      "detail": {
+        "action_tags": null,
+        "title": {
+          "locale_key": "training.record.iefp-pepe.title"
+        },
+        "facts": null,
+        "details_body": {
+          "locale_key": "training.record.iefp-pepe.body"
+        },
+        "requirements": null,
+        "original_posting": null,
+        "good_to_know": {
+          "locale_key": "training.record.iefp-pepe.good"
+        },
+        "checked": {
+          "locale_key": "training.record.iefp-pepe.detail_checked"
+        },
+        "action": {
+          "href": "https://pepe.iefp.cv/frontend/web/index.php/pt/site",
+          "label": {
+            "locale_key": "training.record.iefp-pepe.action"
+          }
+        }
+      }
+    },
+    {
+      "id": "iefp-training",
+      "lifecycle_class": "institutional-training-catalog",
+      "publication_state": "CURRENT",
+      "provider": "IEFP Cabo Verde",
+      "source": {
+        "source_url": "https://iefp.cv/",
+        "provenance": "Information published by the provider."
+      },
+      "checked_at": "2026-08-10",
+      "media_manifest_title": "IEFP — Training in São Vicente",
+      "card": {
+        "action_tags": [
+          {
+            "literal_identity": "São Vicente"
+          },
+          {
+            "locale_key": "ui.action_tag.training"
+          },
+          {
+            "locale_key": "ui.action_tag.apply_through_provider"
+          }
+        ],
+        "status": {
+          "locale_key": "training.record.iefp-training.status"
+        },
+        "title": {
+          "locale_key": "training.record.iefp-training.title"
+        },
+        "body": null,
+        "checked": {
+          "locale_key": "training.record.iefp-training.checked"
+        },
+        "action": {
+          "href": "https://iefp.cv/",
+          "label": {
+            "locale_key": "training.record.iefp-training.action"
+          }
+        }
+      },
+      "detail": {
+        "action_tags": [
+          {
+            "literal_identity": "São Vicente"
+          },
+          {
+            "locale_key": "ui.action_tag.training"
+          },
+          {
+            "locale_key": "ui.action_tag.apply_through_provider"
+          }
+        ],
+        "title": {
+          "locale_key": "training.record.iefp-training.title"
+        },
+        "facts": null,
+        "details_body": {
+          "locale_key": "training.record.iefp-training.body"
+        },
+        "requirements": null,
+        "original_posting": null,
+        "good_to_know": {
+          "locale_key": "training.record.iefp-training.good"
+        },
+        "checked": {
+          "locale_key": "training.record.iefp-training.detail_checked"
+        },
+        "action": {
+          "href": "https://iefp.cv/",
+          "label": {
+            "locale_key": "training.record.iefp-training.action"
+          }
+        }
+      }
+    },
+    {
+      "id": "ibm-skillsbuild",
+      "lifecycle_class": "evergreen-learning-resource",
+      "publication_state": "CURRENT",
+      "provider": "IBM",
+      "source": {
+        "source_url": "https://skillsbuild.org/",
+        "provenance": "Information published by the provider."
+      },
+      "checked_at": "2026-08-10",
+      "media_manifest_title": "IBM SkillsBuild",
+      "card": {
+        "action_tags": [
+          {
+            "locale_key": "ui.action_tag.free"
+          },
+          {
+            "locale_key": "ui.action_tag.online"
+          },
+          {
+            "locale_key": "ui.action_tag.technology"
+          },
+          {
+            "locale_key": "ui.action_tag.career_skills"
+          }
+        ],
+        "status": {
+          "locale_key": "training.record.ibm-skillsbuild.status"
+        },
+        "title": {
+          "locale_key": "training.record.ibm-skillsbuild.title"
+        },
+        "body": null,
+        "checked": {
+          "locale_key": "training.record.ibm-skillsbuild.checked"
+        },
+        "action": {
+          "href": "https://skillsbuild.org/",
+          "label": {
+            "locale_key": "training.record.ibm-skillsbuild.action"
+          }
+        }
+      },
+      "detail": {
+        "action_tags": [
+          {
+            "locale_key": "ui.action_tag.free"
+          },
+          {
+            "locale_key": "ui.action_tag.online"
+          },
+          {
+            "locale_key": "ui.action_tag.technology"
+          },
+          {
+            "locale_key": "ui.action_tag.career_skills"
+          }
+        ],
+        "title": {
+          "locale_key": "training.record.ibm-skillsbuild.title"
+        },
+        "facts": null,
+        "details_body": {
+          "locale_key": "training.record.ibm-skillsbuild.body"
+        },
+        "requirements": null,
+        "original_posting": null,
+        "good_to_know": {
+          "locale_key": "training.record.ibm-skillsbuild.good"
+        },
+        "checked": {
+          "locale_key": "training.record.ibm-skillsbuild.detail_checked"
+        },
+        "action": {
+          "href": "https://skillsbuild.org/",
+          "label": {
+            "locale_key": "training.record.ibm-skillsbuild.action"
+          }
+        }
+      }
+    },
+    {
+      "id": "microsoft-learn",
+      "lifecycle_class": "evergreen-learning-resource",
+      "publication_state": "CURRENT",
+      "provider": "Microsoft",
+      "source": {
+        "source_url": "https://learn.microsoft.com/training/",
+        "provenance": "Information published by the provider."
+      },
+      "checked_at": "2026-08-10",
+      "media_manifest_title": "Microsoft Learn",
+      "card": {
+        "action_tags": [
+          {
+            "locale_key": "ui.action_tag.free"
+          },
+          {
+            "locale_key": "ui.action_tag.online"
+          },
+          {
+            "locale_key": "ui.action_tag.technology"
+          },
+          {
+            "locale_key": "ui.action_tag.self_paced"
+          }
+        ],
+        "status": {
+          "locale_key": "training.record.microsoft-learn.status"
+        },
+        "title": {
+          "locale_key": "training.record.microsoft-learn.title"
+        },
+        "body": null,
+        "checked": {
+          "locale_key": "training.record.microsoft-learn.checked"
+        },
+        "action": {
+          "href": "https://learn.microsoft.com/training/",
+          "label": {
+            "locale_key": "training.record.microsoft-learn.action"
+          }
+        }
+      },
+      "detail": {
+        "action_tags": [
+          {
+            "locale_key": "ui.action_tag.free"
+          },
+          {
+            "locale_key": "ui.action_tag.online"
+          },
+          {
+            "locale_key": "ui.action_tag.technology"
+          },
+          {
+            "locale_key": "ui.action_tag.self_paced"
+          }
+        ],
+        "title": {
+          "locale_key": "training.record.microsoft-learn.title"
+        },
+        "facts": null,
+        "details_body": {
+          "locale_key": "training.record.microsoft-learn.body"
+        },
+        "requirements": null,
+        "original_posting": null,
+        "good_to_know": {
+          "locale_key": "training.record.microsoft-learn.good"
+        },
+        "checked": {
+          "locale_key": "training.record.microsoft-learn.detail_checked"
+        },
+        "action": {
+          "href": "https://learn.microsoft.com/training/",
+          "label": {
+            "locale_key": "training.record.microsoft-learn.action"
+          }
+        }
+      }
+    }
+  ]
+}

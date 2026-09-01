@@ -55,6 +55,7 @@
 // scripts/lib/locale.mjs.
 
 import { readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
@@ -68,6 +69,7 @@ const DELTA6_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r6-delta.sour
 const DELTA7_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r7-delta.source.json");
 const DELTA8_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r8-delta.source.json");
 const DELTA9_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r9-delta.source.json");
+const R10_MIGRATION_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r10-migration.source.json");
 const LOCALE_DIR = path.join(ROOT, "data", "locales");
 const OUT_PATH = path.join(ROOT, "data", "locales", "locale-data.generated.json");
 
@@ -951,6 +953,366 @@ for (const fileName of eventDeltaFiles) {
   });
 }
 
+// --- r10 migration: ATOMIC namespace rename, applied last -------------------
+//
+// Project 09 approved moving the governed Home training presentation keys off
+// the legacy `home.training.record.<record_id>.<field>` namespace onto the
+// canonical `training.record.<record_id>.<field>` namespace. This is a
+// different revision class again: not additive (r3/r4/r5/r7/r8) and not a PT
+// value override (r6), but revision_class "RENAME_KEYS".
+//
+// A rename is the one operation that can silently lose approved text, so the
+// guard here is deliberately the strictest in this file. For every row:
+//   - the from_key MUST currently exist (nothing renamed out of thin air);
+//   - the to_key MUST NOT already exist (no collision, and no possibility of
+//     the new namespace quietly shadowing an existing approved value);
+//   - the currently effective EN and PT values MUST match the package's
+//     declared expected_en / expected_pt BYTE-FOR-BYTE, and the scope_status
+//     must match too.
+// Only then is the row moved. Every other field of the row (provenance,
+// identity_policy, translation_status, source_revision, notes) is carried
+// across untouched — the only thing that changes is `key`.
+//
+// The migration is ATOMIC by construction: the legacy key is deleted in the
+// same pass that writes the new one, so the generated table never carries
+// both. There is no alias layer and no fallback — a stale consumer that still
+// asks for a legacy key gets a hard LocaleLookupError from scripts/lib/locale.mjs,
+// which is the intended fail-closed behavior, not a regression.
+//
+// Scope is exactly the nine currently published Home training records. The
+// retired EMAR / Kre+ records keep their legacy keys: they have no generator
+// consumer and no counterpart in data/training-opportunities.json, so
+// migrating them would move dead rows for no benefit.
+const r10Migration = JSON.parse(readFileSync(R10_MIGRATION_PATH, "utf8"));
+
+const EXPECTED_R10 = {
+  package_id: "aprasa-pt-training-record-namespace-migration-r10",
+  source_revision: "P03-PT-SOURCE-2026-09-01-r10",
+  previous_revision: "P03-PT-SOURCE-2026-09-01-r9",
+  revision_class: "RENAME_KEYS",
+  row_count: 76,
+};
+
+if (r10Migration.package_id !== EXPECTED_R10.package_id) {
+  fail(`r10 package_id mismatch: got "${r10Migration.package_id}", expected "${EXPECTED_R10.package_id}"`);
+}
+if (r10Migration.source_revision !== EXPECTED_R10.source_revision) {
+  fail(`r10 source_revision mismatch: got "${r10Migration.source_revision}", expected "${EXPECTED_R10.source_revision}"`);
+}
+if (r10Migration.previous_revision !== EXPECTED_R10.previous_revision) {
+  fail(`r10 previous_revision mismatch: got "${r10Migration.previous_revision}", expected "${EXPECTED_R10.previous_revision}"`);
+}
+if (r10Migration.revision_class !== EXPECTED_R10.revision_class) {
+  fail(`r10 revision_class must be ${EXPECTED_R10.revision_class}, got "${r10Migration.revision_class}"`);
+}
+if (r10Migration.project_09_status !== "approved") {
+  fail(`r10 Project 09 status is not approved: "${r10Migration.project_09_status}"`);
+}
+if (r10Migration.review_required !== 0 || r10Migration.blocking_issue != null) {
+  fail(`r10 has unresolved localization review state`);
+}
+if (!Array.isArray(r10Migration.rows) || r10Migration.rows.length !== EXPECTED_R10.row_count) {
+  fail(`r10 row count mismatch: got ${Array.isArray(r10Migration.rows) ? r10Migration.rows.length : "n/a"}, expected ${EXPECTED_R10.row_count}`);
+}
+if (r10Migration.supplied_rows_approved !== r10Migration.rows.length) {
+  fail(`r10 supplied_rows_approved mismatch: got ${r10Migration.supplied_rows_approved}, expected ${r10Migration.rows.length}`);
+}
+
+const r10Records = new Set(r10Migration.records || []);
+const r10Renamed = [];
+const r10Plan = new Map();
+const r10SeenFrom = new Set();
+const r10SeenTo = new Set();
+
+for (const row of r10Migration.rows) {
+  const { from_key: fromKey, to_key: toKey } = row;
+
+  if (!fromKey || !toKey) fail(`r10 row is missing from_key/to_key: ${JSON.stringify(row)}`);
+  if (r10SeenFrom.has(fromKey)) fail(`r10 renames "${fromKey}" more than once`);
+  if (r10SeenTo.has(toKey)) fail(`r10 targets "${toKey}" more than once`);
+  r10SeenFrom.add(fromKey);
+  r10SeenTo.add(toKey);
+
+  // The rename must be a pure namespace move of a governed record field: the
+  // record_id and field are declared explicitly and both key names must be
+  // exactly reconstructible from them, so a row can never smuggle in a
+  // renamed/normalized field name alongside the namespace change.
+  if (!r10Records.has(row.record_id)) {
+    fail(`r10 row "${fromKey}" targets record "${row.record_id}", which is not in the package's declared record list`);
+  }
+  if (fromKey !== `home.training.record.${row.record_id}.${row.field}`) {
+    fail(`r10 from_key "${fromKey}" is not the legacy form of record "${row.record_id}" field "${row.field}"`);
+  }
+  if (toKey !== `training.record.${row.record_id}.${row.field}`) {
+    fail(`r10 to_key "${toKey}" is not the canonical form of record "${row.record_id}" field "${row.field}"`);
+  }
+
+  const current = keys[fromKey];
+  if (!current) fail(`r10 cannot rename "${fromKey}": key does not exist in the merged overlay`);
+  if (keys[toKey]) fail(`r10 cannot rename "${fromKey}" to "${toKey}": target key already exists`);
+  if (r10Plan.has(toKey)) fail(`r10 cannot rename "${fromKey}" to "${toKey}": another row is already being renamed away from that key`);
+
+  // Byte-for-byte equivalence assertion across the rename. This is what makes
+  // the migration provably text-preserving rather than merely intended to be.
+  if (current.en !== row.expected_en) {
+    fail(`r10 EN drift on "${fromKey}": overlay has ${JSON.stringify(current.en)}, package declares ${JSON.stringify(row.expected_en)}`);
+  }
+  if (current.pt !== row.expected_pt) {
+    fail(`r10 PT drift on "${fromKey}": overlay has ${JSON.stringify(current.pt)}, package declares ${JSON.stringify(row.expected_pt)}`);
+  }
+  if (current.scope_status !== row.expected_scope_status) {
+    fail(`r10 scope_status drift on "${fromKey}": overlay has "${current.scope_status}", package declares "${row.expected_scope_status}"`);
+  }
+  if (current.record_id !== row.record_id) {
+    fail(`r10 record_id drift on "${fromKey}": overlay has "${current.record_id}", package declares "${row.record_id}"`);
+  }
+  if (row.translation_status !== "APPROVED") {
+    fail(`r10 row "${fromKey}" is not APPROVED (status: ${row.translation_status})`);
+  }
+
+  r10Plan.set(fromKey, toKey);
+  r10Renamed.push(toKey);
+}
+
+// Apply the whole plan in a single ordered rebuild. Renaming in place would
+// move every renamed key to the end of the emitted object and turn a 76-key
+// rename into a whole-file diff; rebuilding in the original insertion order
+// keeps each row where it already was, so the generated table's diff shows
+// exactly the key names that changed and nothing else.
+const r10Ordered = Object.entries(keys).map(([key, row]) => {
+  const toKey = r10Plan.get(key);
+  return toKey ? [toKey, { ...row, key: toKey }] : [key, row];
+});
+for (const key of Object.keys(keys)) delete keys[key];
+for (const [key, row] of r10Ordered) keys[key] = row;
+for (const [fromKey, toKey] of r10Plan) {
+  seen.delete(fromKey);
+  seen.add(toKey);
+}
+
+// Post-condition: no key from a migrated record may survive under the legacy
+// namespace. This catches a partially-declared package (a record field added
+// to the overlay later but never added to the rename manifest) rather than
+// letting it ship as a silent dual namespace.
+for (const key of Object.keys(keys)) {
+  if (!key.startsWith("home.training.record.")) continue;
+  const rest = key.slice("home.training.record.".length);
+  const orphanRecord = [...r10Records].find((id) => rest === id || rest.startsWith(`${id}.`));
+  if (orphanRecord) {
+    fail(`r10 left "${key}" behind under the legacy namespace — record "${orphanRecord}" is migrated, so every one of its keys must be in the rename manifest (no dual canonical namespace)`);
+  }
+}
+
+if (r10Renamed.length !== EXPECTED_R10.row_count) {
+  fail(`r10 renamed ${r10Renamed.length} keys, expected ${EXPECTED_R10.row_count}`);
+}
+
+// --- Governed override packages: FIXED, CODE-SIDE AUTHORIZATION -----------
+//
+// These packages are the only mechanism that may restate an already-approved
+// EN/PT value, so they are the one place where a generic "override" lane could
+// quietly become an ungoverned semantic-rewrite lane.
+//
+// An earlier version of this stage read the package's own `affected_records`,
+// `semantic_authority` and row list and validated the package against itself.
+// Independent review proved that fence worthless: a probe swapped in unrelated
+// authority strings and an unrelated Myrtle rewrite and the builder accepted
+// them, because the file being checked was also the file defining what "valid"
+// meant. Authority cannot be self-asserted by editable data.
+//
+// So the authorization contract now lives HERE, in code, frozen, and the
+// package is checked against it — never the other way round. The contract
+// pins, per package: its file, package/revision identifiers, the exact
+// semantic and linguistic authority references, the authorized record ids, and
+// the complete set of authorized (key, old_en, new_en, old_pt, new_pt) tuples,
+// plus a SHA-256 digest over those tuples. The package supplies no authority of
+// its own; every field it declares must equal the pinned value.
+//
+// Consequence: a package can only ever apply exactly the replacements already
+// enumerated below. An extra row, a missing row, a different key, a different
+// record, a nudged replacement string, an altered baseline, a renamed package
+// or a reworded authority reference all fail closed, because none of them can
+// match the frozen tuple map or its digest. Changing what is authorized
+// requires a reviewed code change, not a data edit.
+const GOVERNED_OVERRIDE_CONTRACTS = Object.freeze([
+  Object.freeze({
+    label: "r11",
+    file: "pt-overlay-r11-review-due-copy.source.json",
+    package_id: "aprasa-training-review-due-copy-r11",
+    revision_class: "OVERRIDE_EXISTING_KEYS",
+    source_revision: "P03-PT-SOURCE-2026-09-01-r11",
+    previous_revision: "P03-PT-SOURCE-2026-09-01-r10",
+    semantic_authority: "Project 03 — REVIEW-DUE public-copy ruling of 01 September 2026",
+    linguistic_authority: "Project 09 — approved EN/PT strings",
+    records: Object.freeze(["kafe-djan-djan", "academia-crescer"]),
+    tuples_digest: "3dfb05ec5518cf382d23b4109534d29c81c3917b6eb64225db56fcf55e354d3f",
+    tuples: Object.freeze([
+      Object.freeze({
+        key: "training.record.kafe-djan-djan.status",
+        old_en: "Hiring now · Mindelo",
+        new_en: "Assistente de Restauração · Mindelo",
+        old_pt: "A contratar agora · Mindelo",
+        new_pt: "Assistente de Restauração · Mindelo",
+      }),
+      Object.freeze({
+        key: "training.record.kafe-djan-djan.meta",
+        old_en: "Kafê Livraria Galeria · walk-in interviews Mon–Fri 11:00–14:00",
+        new_en: "Kafê Livraria Galeria",
+        old_pt: "Kafê Livraria Galeria · entrevistas presenciais de segunda a sexta, 11:00–14:00",
+        new_pt: "Kafê Livraria Galeria",
+      }),
+      Object.freeze({
+        key: "training.record.kafe-djan-djan.good",
+        old_en: "Prior experience is a plus but not required. No salary, benefits, phone number, email or application deadline were shown on the flyer, so none are listed here. Apply in person during the stated hours.",
+        new_en: "Prior experience is a plus but not required. No salary, benefits, phone number, email or application deadline were shown on the flyer, so none are listed here.",
+        old_pt: "A experiência prévia é valorizada, mas não obrigatória. O folheto não indicava salário, benefícios, número de telefone, e-mail nem prazo de candidatura, por isso esses elementos não são apresentados aqui. Candidate-se presencialmente durante o horário indicado.",
+        new_pt: "A experiência prévia é valorizada, mas não obrigatória. O folheto não indicava salário, benefícios, número de telefone, e-mail nem prazo de candidatura, por isso esses elementos não são apresentados aqui.",
+      }),
+      Object.freeze({
+        key: "training.record.academia-crescer.status",
+        old_en: "Recruiting for 2026/2027 · Confirm current availability",
+        new_en: "2026/2027 study-room monitor recruitment",
+        old_pt: "A recrutar para 2026/2027 · Confirme a disponibilidade atual",
+        new_pt: "Recrutamento de monitor de sala de estudo 2026/2027",
+      }),
+      Object.freeze({
+        key: "training.record.academia-crescer.body",
+        old_en: "Academia de Estudo Crescer is recruiting study-room monitors for Mathematics, Basic Education, Special Education and Physics/Chemistry for the 2026/2027 school year.",
+        new_en: "Confirm current availability with Academia de Estudo Crescer.",
+        old_pt: "A Academia de Estudo Crescer está a recrutar monitores de sala de estudo para Matemática, Ensino Básico, Educação Especial e Física/Química para o ano letivo de 2026/2027.",
+        new_pt: "Confirme a disponibilidade atual junto da Academia de Estudo Crescer.",
+      }),
+    ]),
+  }),
+  Object.freeze({
+    label: "r12",
+    file: "pt-overlay-r12-academia-cv-statement.source.json",
+    package_id: "aprasa-academia-cv-statement-removal-r12",
+    revision_class: "OVERRIDE_EXISTING_KEYS",
+    source_revision: "P03-PT-SOURCE-2026-09-01-r12",
+    previous_revision: "P03-PT-SOURCE-2026-09-01-r11",
+    semantic_authority: "Project 03 — REVIEW-DUE public-copy ruling of 01 September 2026",
+    linguistic_authority: "Project 09 — approved EN/PT strings",
+    records: Object.freeze(["academia-crescer"]),
+    tuples_digest: "bd6f76798ad163aea53d8b3c9dcd58a532ea6ca70979f239bfef66271b9752cb",
+    tuples: Object.freeze([
+      Object.freeze({
+        key: "training.record.academia-crescer.good",
+        old_en: "CVs are accepted at the Madeiralzinho or Monte Sossego secretariats during the hours published on the recruitment notice. No application deadline is shown on the poster, so confirm that recruitment is still open before submitting.",
+        new_en: "No application deadline is shown on the poster, so confirm that recruitment is still open before submitting.",
+        old_pt: "Os CV são aceites nas secretarias de Madeiralzinho ou Monte Sossego durante o horário publicado no anúncio de recrutamento. O cartaz não indica prazo de candidatura, por isso confirme se o recrutamento continua aberto antes de entregar a candidatura.",
+        new_pt: "O cartaz não indica prazo de candidatura, por isso confirme se o recrutamento continua aberto antes de entregar a candidatura.",
+      }),
+    ]),
+  }),
+]);
+
+function tuplesDigest(tuples) {
+  const canonical = [...tuples]
+    .sort((a, b) => a.key.localeCompare(b.key))
+    .map((t) => [t.key, t.old_en, t.new_en, t.old_pt, t.new_pt]);
+  return createHash("sha256").update(JSON.stringify(canonical)).digest("hex");
+}
+
+const governedOverrideResults = [];
+
+for (const contract of GOVERNED_OVERRIDE_CONTRACTS) {
+  const tag = contract.label;
+
+  // Self-check: the frozen tuples must still hash to the pinned digest. This
+  // catches an edit to the contract itself that did not go through the digest.
+  if (tuplesDigest(contract.tuples) !== contract.tuples_digest) {
+    fail(`${tag} contract tuples do not match their pinned digest — the authorization contract has been edited without updating tuples_digest`);
+  }
+
+  const pkg = JSON.parse(readFileSync(path.join(LOCALE_DIR, contract.file), "utf8"));
+
+  // Every identity/authority field is compared against the pinned value. The
+  // package declares them; it does not get to define them.
+  for (const field of ["package_id", "revision_class", "source_revision", "previous_revision", "semantic_authority", "linguistic_authority"]) {
+    if (pkg[field] !== contract[field]) {
+      fail(`${tag} ${field} is not the authorized value: got ${JSON.stringify(pkg[field])}, authorized ${JSON.stringify(contract[field])}`);
+    }
+  }
+  if (pkg.project_09_status !== "approved") fail(`${tag} Project 09 status is not approved: ${JSON.stringify(pkg.project_09_status)}`);
+  if (pkg.review_required !== 0 || pkg.semantic_escalations_required !== 0 || pkg.blocking_issue != null) {
+    fail(`${tag} has unresolved localization review state`);
+  }
+  if (pkg.change_control_status?.new_keys_introduced !== 0) fail(`${tag} must introduce no new keys`);
+  if (pkg.change_control_status?.lifecycle_or_publication_state_modified !== 0) {
+    fail(`${tag} must not modify lifecycle or publication state`);
+  }
+
+  // The declared record set must equal the authorized record set exactly.
+  const declaredRecords = [...(pkg.affected_records || [])].sort();
+  const authorizedRecords = [...contract.records].sort();
+  if (JSON.stringify(declaredRecords) !== JSON.stringify(authorizedRecords)) {
+    fail(`${tag} affected_records is not the authorized set: got ${JSON.stringify(declaredRecords)}, authorized ${JSON.stringify(authorizedRecords)}`);
+  }
+
+  if (!Array.isArray(pkg.rows)) fail(`${tag} rows must be an array`);
+  if (pkg.rows.length !== contract.tuples.length) {
+    fail(`${tag} row count is not authorized: got ${pkg.rows.length}, authorized ${contract.tuples.length}`);
+  }
+  if (pkg.supplied_rows_approved !== pkg.rows.length) {
+    fail(`${tag} supplied_rows_approved mismatch: got ${pkg.supplied_rows_approved}`);
+  }
+
+  const authorizedByKey = new Map(contract.tuples.map((t) => [t.key, t]));
+  const appliedKeys = new Set();
+
+  for (const row of pkg.rows) {
+    const tuple = authorizedByKey.get(row.key);
+    if (!tuple) {
+      fail(`${tag} row "${row.key}" is not an authorized target key`);
+    }
+    if (appliedKeys.has(row.key)) fail(`${tag} overrides "${row.key}" more than once`);
+    appliedKeys.add(row.key);
+
+    // The full tuple must match the frozen contract, in both directions and
+    // both locales. This is what stops a replacement string being nudged.
+    for (const field of ["old_en", "new_en", "old_pt", "new_pt"]) {
+      if (row[field] !== tuple[field]) {
+        fail(`${tag} row "${row.key}" ${field} is not the authorized value: got ${JSON.stringify(row[field])}, authorized ${JSON.stringify(tuple[field])}`);
+      }
+    }
+    if (!contract.records.includes(row.record_id) || !row.key.startsWith(`training.record.${row.record_id}.`)) {
+      fail(`${tag} row "${row.key}" targets record "${row.record_id}", which is outside the authorized records`);
+    }
+    if (row.translation_status !== "APPROVED") fail(`${tag} row "${row.key}" is not APPROVED`);
+
+    // Baseline drift guard: the live overlay must still hold the authorized
+    // old_en/old_pt before anything is written.
+    const current = keys[row.key];
+    if (!current) fail(`${tag} cannot override "${row.key}": key does not exist in the merged overlay`);
+    if (current.en !== tuple.old_en) {
+      fail(`${tag} EN baseline drift on "${row.key}": overlay has ${JSON.stringify(current.en)}, authorized old_en ${JSON.stringify(tuple.old_en)}`);
+    }
+    if (current.pt !== tuple.old_pt) {
+      fail(`${tag} PT baseline drift on "${row.key}": overlay has ${JSON.stringify(current.pt)}, authorized old_pt ${JSON.stringify(tuple.old_pt)}`);
+    }
+
+    keys[row.key] = { ...current, en: tuple.new_en, pt: tuple.new_pt, source_revision: contract.source_revision };
+  }
+
+  // Every authorized tuple must actually have been applied — a package that
+  // silently drops a row cannot leave a governed value un-corrected.
+  for (const key of authorizedByKey.keys()) {
+    if (!appliedKeys.has(key)) fail(`${tag} is missing authorized row "${key}"`);
+  }
+
+  governedOverrideResults.push({
+    label: tag,
+    package_id: contract.package_id,
+    source_revision: contract.source_revision,
+    revision_class: contract.revision_class,
+    overridden_keys: appliedKeys.size,
+    tuples_digest: contract.tuples_digest,
+  });
+}
+
+const governedOverrideCount = governedOverrideResults.reduce((n, r) => n + r.overridden_keys, 0);
+
 const output = {
   provenance: {
     source_revision: eventDeltaPackages.at(-1)?.source_revision ?? delta8.source_revision,
@@ -969,6 +1331,7 @@ const output = {
       "data/locales/pt-overlay-r8-delta.source.json",
       "data/locales/pt-overlay-r9-delta.source.json",
       ...eventDeltaPackages.map((item) => item.file),
+      "data/locales/pt-overlay-r9-migration.source.json",
     ],
     base_revision: pkg.source_revision,
     delta_revision: delta.source_revision,
@@ -987,6 +1350,14 @@ const output = {
     delta9_superseding_ruling: delta9.superseding_ruling,
     delta9_owning_project: delta9.owning_project,
     event_delta_packages: eventDeltaPackages,
+    r10_revision: r10Migration.source_revision,
+    r10_package_id: r10Migration.package_id,
+    r10_revision_class: r10Migration.revision_class,
+    r10_renamed_keys: r10Renamed.length,
+    r10_canonical_namespace: "training.record.<record_id>.<field>",
+    r10_retired_namespace: "home.training.record.<record_id>.<field>",
+    governed_override_packages: governedOverrideResults,
+    governed_override_authorization: "fixed code-side contract in scripts/build-locale-data.mjs (GOVERNED_OVERRIDE_CONTRACTS)",
   },
   counts: {
     total_rows: rows.length + delta.rows.length + delta4.rows.length + delta5.rows.length + delta7.rows.length + delta8.rows.length + eventDeltaRequired + eventDeltaUnchanged,
@@ -1001,9 +1372,11 @@ const output = {
     r8_delta_rows: delta8.rows.length,
     r9_source_correction_rows: delta9.rows.length,
     event_delta_rows: eventDeltaRequired + eventDeltaUnchanged,
+    r10_renamed_rows: r10Renamed.length,
+    governed_override_rows: governedOverrideCount,
   },
   keys,
 };
 
 writeFileSync(OUT_PATH, JSON.stringify(output, null, 2) + "\n");
-console.log(`[build-locale-data] wrote ${Object.keys(keys).length} keys to ${path.relative(ROOT, OUT_PATH)} (r6 overrode ${delta6Overridden} PT values; r9 corrected ${delta9Corrected} EN/PT source values; event deltas added ${eventDeltaRequired + eventDeltaUnchanged} keys)`);
+console.log(`[build-locale-data] wrote ${Object.keys(keys).length} keys to ${path.relative(ROOT, OUT_PATH)} (r6 overrode ${delta6Overridden} PT values; r9 corrected ${delta9Corrected} EN/PT source values; event deltas added ${eventDeltaRequired + eventDeltaUnchanged} keys; r10 renamed ${r10Renamed.length} keys onto training.record.*; governed overrides applied ${governedOverrideCount} value(s) across ${governedOverrideResults.length} authorized package(s))`);
