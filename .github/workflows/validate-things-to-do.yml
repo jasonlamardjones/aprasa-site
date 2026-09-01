@@ -15,6 +15,7 @@ on:
       - 'scripts/prepare-event-publication.mjs'
       - 'scripts/write-event-publication.mjs'
       - 'scripts/test-event-publication-write.mjs'
+      - 'scripts/test-event-publication-packet-currentness.mjs'
       - 'scripts/validate-event-publication-packet.mjs'
       - 'scripts/lib/event-publication-contract.mjs'
       - 'scripts/lib/event-publication-write.mjs'
@@ -49,11 +50,11 @@ jobs:
         run: |
           set -e
 
-          node scripts/validate-event-publication-packet.mjs \
-            --packet=automation/things-to-do/fixtures/ready.json
-          node scripts/prepare-event-publication.mjs \
-            --packet=automation/things-to-do/fixtures/ready.json \
-            | grep -q 'STATUS: REVIEW_READY'
+          # The ready path is bound to the repository's committed currentness
+          # baseline, so it no longer fails merely because a currentness repair
+          # advanced that baseline. Deliberate as_of divergence is asserted
+          # separately inside this harness.
+          node scripts/test-event-publication-packet-currentness.mjs
 
           expect_block() {
             fixture="$1"
