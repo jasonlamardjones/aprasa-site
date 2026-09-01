@@ -21,6 +21,25 @@
 // Ways to Help record. Like r3/r4/r5 it is strictly additive and is applied
 // after r6 so it cannot be silently reverted by the brand-voice override.
 //
+// data/locales/pt-overlay-r9-delta.source.json is a THIRD class again:
+// revision_class "OVERRIDE_EXISTING_KEYS_WITH_SOURCE_CORRECTION". r6 reopens
+// approved PT wording while holding the English source immutable, which is
+// right for a brand-voice pass but structurally unable to carry a correction
+// where the underlying FACT changed. r9 exists for that case: Project 03 ruled
+// on 01 September 2026 that Sinergia da Matéria's governed 31 July - 31 August
+// 2026 date meaning is superseded by authoritative CNAD evidence, so both the
+// English source value and its PT translation must move together, and the
+// change is openly semantic.
+//
+// Because it can rewrite approved English, its guard is the strictest of the
+// three. Every row must name its target key, declare byte-exact old_en AND
+// old_pt that match the currently effective values, supply both replacements,
+// and carry the full authorization chain (semantic_change,
+// source_correction_authorized, owning_project, superseding_ruling). Any
+// missing link, any drift, any undeclared key, or any attempt to introduce a
+// new key fails the build. It is deliberately NOT a general rewrite lane: the
+// additive guards and r6 are untouched by it.
+//
 // data/locales/pt-overlay-r6-delta.source.json is the one exception, and it is
 // a different class of revision: revision_class "OVERRIDE_EXISTING_KEYS". It
 // carries the governed Project 09 package P09-PT-BRAND-VOICE-2026-08-26-v1, a
@@ -48,6 +67,7 @@ const DELTA5_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r5-delta.sour
 const DELTA6_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r6-delta.source.json");
 const DELTA7_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r7-delta.source.json");
 const DELTA8_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r8-delta.source.json");
+const DELTA9_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r9-delta.source.json");
 const LOCALE_DIR = path.join(ROOT, "data", "locales");
 const OUT_PATH = path.join(ROOT, "data", "locales", "locale-data.generated.json");
 
@@ -701,6 +721,173 @@ if (delta8Unchanged !== EXPECTED_DELTA8.intentionally_unchanged) {
   fail(`r8 intentionally_unchanged mismatch: got ${delta8Unchanged}, expected ${EXPECTED_DELTA8.intentionally_unchanged}`);
 }
 
+// --- r9 delta: authorized SOURCE CORRECTION on top of r2..r8 ---
+// Rewrites approved EN *and* PT for a bounded, explicitly ruled-on set of keys
+// whose underlying fact was superseded. See the header note for why neither
+// the additive guards nor r6 can carry this.
+const EXPECTED_DELTA9 = {
+  package_id: "aprasa-pt-sinergia-da-materia-source-correction-r9-delta",
+  revision_class: "OVERRIDE_EXISTING_KEYS_WITH_SOURCE_CORRECTION",
+  source_revision: "P03-PT-SOURCE-2026-09-01-r9",
+  previous_revision: "P03-PT-SOURCE-2026-08-29-r8",
+  owning_project: "Project 03",
+  superseding_ruling: "P03-SINERGIA-CURRENTNESS-2026-09-01",
+  row_count: 3,
+  approved: 3,
+  review_required: 0,
+  new_keys_introduced: 0,
+  // Every authorized target, named here as well as in the package. A key the
+  // build does not already expect cannot be corrected by editing the package
+  // alone.
+  authorized_keys: [
+    "event.sinergia-da-materia.display.status",
+    "event.sinergia-da-materia.detail.fact.dates.value_display",
+    "event.sinergia-da-materia.seo.description",
+  ],
+};
+
+const delta9 = JSON.parse(readFileSync(DELTA9_PATH, "utf8"));
+
+if (delta9.package_id !== EXPECTED_DELTA9.package_id) {
+  fail(`r9 package_id mismatch: got "${delta9.package_id}", expected "${EXPECTED_DELTA9.package_id}"`);
+}
+if (delta9.revision_class !== EXPECTED_DELTA9.revision_class) {
+  fail(`r9 revision_class mismatch: got "${delta9.revision_class}", expected "${EXPECTED_DELTA9.revision_class}"`);
+}
+if (delta9.source_revision !== EXPECTED_DELTA9.source_revision) {
+  fail(`r9 source_revision mismatch: got "${delta9.source_revision}"`);
+}
+if (delta9.previous_revision !== EXPECTED_DELTA9.previous_revision) {
+  fail(`r9 previous_revision mismatch: got "${delta9.previous_revision}"`);
+}
+if (delta9.owning_project !== EXPECTED_DELTA9.owning_project) {
+  fail(`r9 owning_project mismatch: got "${delta9.owning_project}"`);
+}
+if (delta9.superseding_ruling !== EXPECTED_DELTA9.superseding_ruling) {
+  fail(`r9 superseding_ruling mismatch: got "${delta9.superseding_ruling}"`);
+}
+if (delta9.source_correction_authorized !== true) {
+  fail("r9 is not declared source_correction_authorized");
+}
+if (delta9.semantic_change !== true) {
+  fail("r9 must declare semantic_change — a source correction is semantic by definition");
+}
+if (delta9.superseded_source_status !== "SUPERSEDED") {
+  fail(`r9 superseded_source_status must be SUPERSEDED, got "${delta9.superseded_source_status}"`);
+}
+if (delta9.rows.length !== EXPECTED_DELTA9.row_count) {
+  fail(`r9 row count mismatch: got ${delta9.rows.length}, expected ${EXPECTED_DELTA9.row_count}`);
+}
+if (delta9.supplied_rows_approved !== EXPECTED_DELTA9.approved) {
+  fail(`r9 supplied_rows_approved mismatch: got ${delta9.supplied_rows_approved}`);
+}
+if (delta9.review_required !== 0) fail(`r9 review_required is non-zero: ${delta9.review_required}`);
+if (delta9.blocking_issue != null) fail(`r9 has an unresolved blocking issue: ${JSON.stringify(delta9.blocking_issue)}`);
+if (delta9.missing_or_unaccounted_row_count !== 0) {
+  fail(`r9 missing_or_unaccounted_row_count is non-zero: ${delta9.missing_or_unaccounted_row_count}`);
+}
+if (delta9.semantic_escalations_required !== 0) {
+  fail(`r9 semantic_escalations_required is non-zero: ${delta9.semantic_escalations_required}`);
+}
+if ((delta9.duplicate_keys || []).length !== 0) fail(`r9 duplicate_keys is non-empty`);
+if ((delta9.placeholder_mismatches || []).length !== 0) fail(`r9 placeholder_mismatches is non-empty`);
+if ((delta9.a_prasa_to_a_praca_violations || []).length !== 0) fail(`r9 a_prasa_to_a_praca_violations is non-empty`);
+if (delta9.change_control_status?.new_keys_introduced !== EXPECTED_DELTA9.new_keys_introduced) {
+  fail("r9 new_keys_introduced must be 0 — a source correction may not add keys");
+}
+if (delta9.change_control_status?.additional_languages_authorized !== 0) {
+  fail("r9 additional_languages_authorized is non-zero");
+}
+if (delta9.change_control_status?.unrelated_keys_touched !== 0) {
+  fail("r9 unrelated_keys_touched is non-zero");
+}
+
+const delta9Seen = new Set();
+let delta9Corrected = 0;
+for (const row of delta9.rows) {
+  if (delta9Seen.has(row.key)) fail(`r9 duplicate key in supplied rows: "${row.key}"`);
+  delta9Seen.add(row.key);
+
+  // Undeclared target: the package cannot widen its own scope.
+  if (!EXPECTED_DELTA9.authorized_keys.includes(row.key)) {
+    fail(`r9 key "${row.key}" is not an authorized source-correction target`);
+  }
+  if (row.target_key !== row.key) {
+    fail(`r9 key "${row.key}" declares a mismatched target_key "${row.target_key}"`);
+  }
+
+  const existing = keys[row.key];
+  if (!existing) fail(`r9 key "${row.key}" does not exist in the r2..r8 baseline — a correction may not introduce keys`);
+
+  // Byte-exact old-value match, on BOTH sides. Drift fails rather than
+  // overwriting a value the ruling never actually saw.
+  if (existing.en !== row.old_en) {
+    fail(`r9 key "${row.key}" old_en does not match the effective value: effective=${JSON.stringify(existing.en)} declared=${JSON.stringify(row.old_en)}`);
+  }
+  if (existing.pt !== row.old_pt) {
+    fail(`r9 key "${row.key}" old_pt does not match the effective value: effective=${JSON.stringify(existing.pt)} declared=${JSON.stringify(row.old_pt)}`);
+  }
+  if (!row.new_en) fail(`r9 key "${row.key}" has no new_en value`);
+  if (!row.new_pt) fail(`r9 key "${row.key}" has no new_pt value`);
+  if (row.new_en === row.old_en && row.new_pt === row.old_pt) {
+    fail(`r9 key "${row.key}" is a no-op`);
+  }
+
+  // Full authorization chain, per row — never inherited from the package alone.
+  if (row.semantic_change !== true) fail(`r9 key "${row.key}" must declare semantic_change: true`);
+  if (row.source_correction_authorized !== true) fail(`r9 key "${row.key}" is not source_correction_authorized`);
+  if (row.owning_project !== EXPECTED_DELTA9.owning_project) fail(`r9 key "${row.key}" owning_project mismatch`);
+  if (row.superseding_ruling !== EXPECTED_DELTA9.superseding_ruling) fail(`r9 key "${row.key}" superseding_ruling mismatch`);
+  if (row.superseded_source_status !== "SUPERSEDED") fail(`r9 key "${row.key}" superseded_source_status must be SUPERSEDED`);
+  if (!row.replacement_status) fail(`r9 key "${row.key}" has no replacement_status`);
+  if (row.revision_class !== EXPECTED_DELTA9.revision_class) fail(`r9 key "${row.key}" revision_class mismatch`);
+  if (row.source_revision !== EXPECTED_DELTA9.source_revision) fail(`r9 key "${row.key}" source_revision mismatch`);
+  if (row.translation_status !== "APPROVED") fail(`r9 key "${row.key}" is not APPROVED`);
+
+  const enPlaceholders = (row.new_en.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+  const ptPlaceholders = (row.new_pt.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+  if (JSON.stringify(enPlaceholders) !== JSON.stringify(ptPlaceholders)) {
+    fail(`r9 key "${row.key}" placeholder mismatch`);
+  }
+  if (/A PRA[CÇ]A/.test(row.new_pt) || /A PRA[CÇ]A/.test(row.new_en)) {
+    fail(`r9 key "${row.key}" corrupts the A PRASA identity`);
+  }
+  // No inferred factual value: a month-precision correction must not smuggle
+  // an exact day back in through the localized text.
+  for (const [side, text] of [["new_en", row.new_en], ["new_pt", row.new_pt]]) {
+    if (/\b(\d{1,2})\s+(de\s+)?(November|novembro)\b/i.test(text) || /\b(November|novembro)\s+\d{1,2}\b/i.test(text)) {
+      fail(`r9 key "${row.key}" ${side} infers an exact November day: ${JSON.stringify(text)}`);
+    }
+  }
+
+  // Correct EN and PT together, preserving the superseded provenance so the
+  // prior approved meaning stays auditable after the swap.
+  keys[row.key] = {
+    ...existing,
+    en: row.new_en,
+    pt: row.new_pt,
+    source_revision: row.source_revision,
+    context_notes: row.context_notes || existing.context_notes || "",
+    linguistic_notes: row.linguistic_notes || existing.linguistic_notes || "",
+    source_correction: {
+      revision_class: row.revision_class,
+      owning_project: row.owning_project,
+      superseding_ruling: row.superseding_ruling,
+      superseded_source_status: row.superseded_source_status,
+      replacement_status: row.replacement_status,
+      semantic_change: true,
+      superseded_en: row.old_en,
+      superseded_pt: row.old_pt,
+      superseded_source_revision: existing.source_revision,
+    },
+  };
+  delta9Corrected += 1;
+}
+
+if (delta9Corrected !== EXPECTED_DELTA9.row_count) {
+  fail(`r9 corrected count mismatch: got ${delta9Corrected}, expected ${EXPECTED_DELTA9.row_count}`);
+}
+
 // Phase 1B event deltas are complete Project 09-approved, strictly additive
 // packages. Discovery removes the need to edit this build script for each
 // ordinary event while retaining the same fail-closed row checks as r3-r8.
@@ -780,6 +967,7 @@ const output = {
       "data/locales/pt-overlay-r6-delta.source.json",
       "data/locales/pt-overlay-r7-delta.source.json",
       "data/locales/pt-overlay-r8-delta.source.json",
+      "data/locales/pt-overlay-r9-delta.source.json",
       ...eventDeltaPackages.map((item) => item.file),
     ],
     base_revision: pkg.source_revision,
@@ -793,6 +981,11 @@ const output = {
     delta7_package_id: delta7.package_id,
     delta8_revision: delta8.source_revision,
     delta8_package_id: delta8.package_id,
+    delta9_revision: delta9.source_revision,
+    delta9_package_id: delta9.package_id,
+    delta9_revision_class: delta9.revision_class,
+    delta9_superseding_ruling: delta9.superseding_ruling,
+    delta9_owning_project: delta9.owning_project,
     event_delta_packages: eventDeltaPackages,
   },
   counts: {
@@ -806,10 +999,11 @@ const output = {
     r6_override_rows: delta6.rows.length,
     r7_delta_rows: delta7.rows.length,
     r8_delta_rows: delta8.rows.length,
+    r9_source_correction_rows: delta9.rows.length,
     event_delta_rows: eventDeltaRequired + eventDeltaUnchanged,
   },
   keys,
 };
 
 writeFileSync(OUT_PATH, JSON.stringify(output, null, 2) + "\n");
-console.log(`[build-locale-data] wrote ${Object.keys(keys).length} keys to ${path.relative(ROOT, OUT_PATH)} (r6 overrode ${delta6Overridden} PT values; event deltas added ${eventDeltaRequired + eventDeltaUnchanged} keys)`);
+console.log(`[build-locale-data] wrote ${Object.keys(keys).length} keys to ${path.relative(ROOT, OUT_PATH)} (r6 overrode ${delta6Overridden} PT values; r9 corrected ${delta9Corrected} EN/PT source values; event deltas added ${eventDeltaRequired + eventDeltaUnchanged} keys)`);

@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { isPubliclyCurrent } from './lib/things-to-do-currentness.mjs';
 
 const input = new URL('../data/things-to-do-events.json', import.meta.url);
 const records = JSON.parse(fs.readFileSync(input, 'utf8')).records;
@@ -14,10 +15,9 @@ if (!/^\d{4}-\d{2}-\d{2}$/.test(asOf)) {
   process.exit(1);
 }
 
+// CURRENT and REVIEW_DUE are both publicly current; only EXPIRED is not.
 function isCurrent(record) {
-  if (record.publication_state === 'expired') return false;
-  if (!record.end_date) return true;
-  return record.end_date >= asOf;
+  return isPubliclyCurrent(record, asOf);
 }
 
 function escapeHtml(value = '') {

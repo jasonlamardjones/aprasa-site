@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { isExpired } from './lib/things-to-do-currentness.mjs';
 
 const root = process.cwd();
 const manifestPath = path.join(root, 'internal', 'provider-media-manifest.json');
@@ -60,7 +61,7 @@ for (const record of manifest.records) {
   const isExpiredDatedEvent = Boolean(
     canonicalEvent
     && canonicalEvent.kind === 'dated-event'
-    && (canonicalEvent.publication_state === 'expired' || (canonicalEvent.end_date && canonicalEvent.end_date < asOf))
+    && isExpired(canonicalEvent, asOf)
   );
 
   if (!appearsOnHome && !isExpiredDatedEvent) {
