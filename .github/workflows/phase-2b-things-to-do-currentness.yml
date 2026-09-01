@@ -46,7 +46,10 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           pattern: post-publication-qa-*-${{ github.event.workflow_run.id }}-*
-          path: qa-input
+          # Outside GITHUB_WORKSPACE on purpose: the adapter refuses to run in a
+          # dirty worktree, and an artifact unpacked into the checkout is itself
+          # an untracked change. Keep this in step with --report below.
+          path: ${{ runner.temp }}/qa-input
           merge-multiple: true
 
       - name: Run bounded Phase 2B remediation adapter
@@ -56,7 +59,7 @@ jobs:
         shell: bash
         run: |
           node scripts/remediation/run-things-to-do-currentness-remediation.mjs \
-            --report=qa-input/post-publication-qa.json \
+            --report='${{ runner.temp }}/qa-input/post-publication-qa.json' \
             --repository='${{ github.repository }}' \
             --workflow-run-id='${{ github.event.workflow_run.id }}' \
             --workflow-run-attempt='${{ github.event.workflow_run.run_attempt }}' \

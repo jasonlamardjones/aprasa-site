@@ -182,22 +182,6 @@
             "value": {
               "locale_key": "training.record.academia-crescer.fact.areas"
             }
-          },
-          {
-            "label": {
-              "locale_key": "ui.cv_delivery"
-            },
-            "value": {
-              "locale_key": "training.record.academia-crescer.fact.cv_delivery"
-            }
-          },
-          {
-            "label": {
-              "locale_key": "ui.delivery_hours"
-            },
-            "value": {
-              "locale_key": "training.record.academia-crescer.fact.delivery_hours"
-            }
           }
         ],
         "details_body": null,

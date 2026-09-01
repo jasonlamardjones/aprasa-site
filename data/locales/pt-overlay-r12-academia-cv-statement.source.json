@@ -1,8 +1,8 @@
 {
-  "package_id": "aprasa-academia-cv-statement-removal-r11",
+  "package_id": "aprasa-academia-cv-statement-removal-r12",
   "revision_class": "OVERRIDE_EXISTING_KEYS",
-  "source_revision": "P03-PT-SOURCE-2026-09-01-r11",
-  "previous_revision": "P03-PT-SOURCE-2026-09-01-r10",
+  "source_revision": "P03-PT-SOURCE-2026-09-01-r12",
+  "previous_revision": "P03-PT-SOURCE-2026-09-01-r11",
   "revision_type": "REVIEW_DUE_CV_ACCEPTANCE_STATEMENT_REMOVAL",
   "semantic_authority": "Project 03 — REVIEW-DUE public-copy ruling of 01 September 2026",
   "linguistic_authority": "Project 09 — approved EN/PT strings",
@@ -36,7 +36,7 @@
   "rows": [
     {
       "key": "training.record.academia-crescer.good",
-      "source_revision": "P03-PT-SOURCE-2026-09-01-r11",
+      "source_revision": "P03-PT-SOURCE-2026-09-01-r12",
       "baseline_source_revision": "P03-PT-SOURCE-2026-08-25-r1",
       "old_en": "CVs are accepted at the Madeiralzinho or Monte Sossego secretariats during the hours published on the recruitment notice. No application deadline is shown on the poster, so confirm that recruitment is still open before submitting.",
       "new_en": "No application deadline is shown on the poster, so confirm that recruitment is still open before submitting.",

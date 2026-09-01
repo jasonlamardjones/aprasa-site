@@ -1,8 +1,8 @@
 {
-  "package_id": "aprasa-training-review-due-copy-r10",
+  "package_id": "aprasa-training-review-due-copy-r11",
   "revision_class": "OVERRIDE_EXISTING_KEYS",
-  "source_revision": "P03-PT-SOURCE-2026-09-01-r10",
-  "previous_revision": "P03-PT-SOURCE-2026-09-01-r9",
+  "source_revision": "P03-PT-SOURCE-2026-09-01-r11",
+  "previous_revision": "P03-PT-SOURCE-2026-09-01-r10",
   "revision_type": "REVIEW_DUE_CURRENTNESS_COPY_RULING",
   "semantic_authority": "Project 03 — REVIEW-DUE public-copy ruling of 01 September 2026",
   "linguistic_authority": "Project 09 — approved EN/PT strings",
@@ -37,7 +37,7 @@
   "rows": [
     {
       "key": "training.record.kafe-djan-djan.status",
-      "source_revision": "P03-PT-SOURCE-2026-09-01-r10",
+      "source_revision": "P03-PT-SOURCE-2026-09-01-r11",
       "baseline_source_revision": "P03-PT-SOURCE-2026-08-25-r1",
       "old_en": "Hiring now · Mindelo",
       "new_en": "Assistente de Restauração · Mindelo",
@@ -52,7 +52,7 @@
     },
     {
       "key": "training.record.kafe-djan-djan.meta",
-      "source_revision": "P03-PT-SOURCE-2026-09-01-r10",
+      "source_revision": "P03-PT-SOURCE-2026-09-01-r11",
       "baseline_source_revision": "P03-PT-SOURCE-2026-08-25-r1",
       "old_en": "Kafê Livraria Galeria · walk-in interviews Mon–Fri 11:00–14:00",
       "new_en": "Kafê Livraria Galeria",
@@ -67,7 +67,7 @@
     },
     {
       "key": "training.record.kafe-djan-djan.good",
-      "source_revision": "P03-PT-SOURCE-2026-09-01-r10",
+      "source_revision": "P03-PT-SOURCE-2026-09-01-r11",
       "baseline_source_revision": "P03-PT-SOURCE-2026-08-25-r1",
       "old_en": "Prior experience is a plus but not required. No salary, benefits, phone number, email or application deadline were shown on the flyer, so none are listed here. Apply in person during the stated hours.",
       "new_en": "Prior experience is a plus but not required. No salary, benefits, phone number, email or application deadline were shown on the flyer, so none are listed here.",
@@ -82,7 +82,7 @@
     },
     {
       "key": "training.record.academia-crescer.status",
-      "source_revision": "P03-PT-SOURCE-2026-09-01-r10",
+      "source_revision": "P03-PT-SOURCE-2026-09-01-r11",
       "baseline_source_revision": "P03-PT-SOURCE-2026-08-25-r1",
       "old_en": "Recruiting for 2026/2027 · Confirm current availability",
       "new_en": "2026/2027 study-room monitor recruitment",
@@ -97,7 +97,7 @@
     },
     {
       "key": "training.record.academia-crescer.body",
-      "source_revision": "P03-PT-SOURCE-2026-09-01-r10",
+      "source_revision": "P03-PT-SOURCE-2026-09-01-r11",
       "baseline_source_revision": "P03-PT-SOURCE-2026-08-25-r1",
       "old_en": "Academia de Estudo Crescer is recruiting study-room monitors for Mathematics, Basic Education, Special Education and Physics/Chemistry for the 2026/2027 school year.",
       "new_en": "Confirm current availability with Academia de Estudo Crescer.",

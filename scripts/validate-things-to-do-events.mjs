@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { END_PRECISIONS, MONTH_PRECISION, endPrecisionOf, isValidIsoMonth, startMonthOf } from './lib/things-to-do-currentness.mjs';
 
 const file = new URL('../data/things-to-do-events.json', import.meta.url);
 const manifestFile = new URL('../internal/provider-media-manifest.json', import.meta.url);
@@ -42,6 +43,34 @@ for (const record of data.records ?? []) {
 
   if (record.end_date && record.start_date && record.end_date < record.start_date) {
     errors.push(`${label}: end_date before start_date`);
+  }
+
+  // End precision. Absent end_precision means "day", so every record written
+  // before this field existed keeps exactly the semantics it already had.
+  if (record.end_precision !== undefined && !END_PRECISIONS.includes(record.end_precision)) {
+    errors.push(`${label}: invalid end_precision "${record.end_precision}" (expected "day" or "month")`);
+  } else if (endPrecisionOf(record) === MONTH_PRECISION) {
+    // Month precision states the month a record ends in and nothing finer.
+    // The exact-day fields must be empty, or the record would be asserting a
+    // closing day its source never established.
+    // A real calendar month, not merely YYYY-MM shaped: 2026-00, 2026-13,
+    // 2026-99 and 9999-99 all match the shape and none of them is a month.
+    if (!isValidIsoMonth(record.end_month)) {
+      errors.push(`${label}: end_precision "month" requires end_month as a valid calendar month YYYY-MM (01-12)`);
+    } else {
+      // The end month cannot precede the month the record starts in. The start
+      // may be given as start_date OR start_datetime, so read whichever the
+      // record validly supplies rather than start_date alone -- a record whose
+      // start is expressed only as start_datetime was previously unchecked.
+      const startMonth = startMonthOf(record);
+      if (startMonth && record.end_month < startMonth) {
+        errors.push(`${label}: end_month ${record.end_month} before start month ${startMonth}`);
+      }
+    }
+    if (record.end_date != null) errors.push(`${label}: end_precision "month" requires end_date null`);
+    if (record.end_datetime != null) errors.push(`${label}: end_precision "month" requires end_datetime null`);
+  } else if (record.end_month !== undefined) {
+    errors.push(`${label}: end_month is only valid with end_precision "month"`);
   }
 
   if (!allowedMediaPolicies.has(record.media_policy)) {

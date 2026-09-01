@@ -90,6 +90,99 @@ if (data.provenance.delta8_package_id !== "aprasa-pt-part-ilhas-artemisa-ferreir
   fail(`unexpected delta8_package_id: ${data.provenance.delta8_package_id}`);
 }
 
+if (data.provenance.delta9_revision !== "P03-PT-SOURCE-2026-09-01-r9") {
+  fail(`unexpected delta9_revision: ${data.provenance.delta9_revision}`);
+}
+if (data.provenance.delta9_package_id !== "aprasa-pt-sinergia-da-materia-source-correction-r9-delta") {
+  fail(`unexpected delta9_package_id: ${data.provenance.delta9_package_id}`);
+}
+if (data.provenance.delta9_revision_class !== "OVERRIDE_EXISTING_KEYS_WITH_SOURCE_CORRECTION") {
+  fail(`unexpected delta9_revision_class: ${data.provenance.delta9_revision_class}`);
+}
+if (data.provenance.delta9_superseding_ruling !== "P03-SINERGIA-CURRENTNESS-2026-09-01") {
+  fail(`unexpected delta9_superseding_ruling: ${data.provenance.delta9_superseding_ruling}`);
+}
+if (data.provenance.delta9_owning_project !== "Project 03") {
+  fail(`unexpected delta9_owning_project: ${data.provenance.delta9_owning_project}`);
+}
+
+// --- r9 source correction (Sinergia da Matéria, Project 03, 01 September 2026) ---
+// Pins the governed month-level public meaning in both locales, proves the
+// superseded July-August meaning is gone from every corrected key, and proves
+// no exact November closing day was introduced anywhere in the overlay.
+const r9Id = "event.sinergia-da-materia";
+const r9Expected = {
+  [`${r9Id}.display.status`]: {
+    en: "On view until November 2026",
+    pt: "Em exibição até novembro de 2026",
+  },
+  [`${r9Id}.detail.fact.dates.value_display`]: {
+    en: "On view until November 2026",
+    pt: "Em exibição até novembro de 2026",
+  },
+  [`${r9Id}.seo.description`]: {
+    en: "Sinergia da Matéria: Entre o Bruto e o Traço is an exhibition by Davitson Almeida at CNAD’s Galeria Zero in Mindelo, on view until November 2026.",
+    pt: "Sinergia da Matéria: Entre o Bruto e o Traço é uma exposição de Davitson Almeida na Galeria Zero do CNAD, em Mindelo, em exibição até novembro de 2026.",
+  },
+};
+for (const [key, expected] of Object.entries(r9Expected)) {
+  const row = data.keys[key];
+  if (!row) {
+    fail(`r9 corrected key missing from locale data: ${key}`);
+    continue;
+  }
+  if (row.en !== expected.en) fail(`${key} EN is not the approved correction: got ${JSON.stringify(row.en)}`);
+  if (row.pt !== expected.pt) fail(`${key} PT is not the approved correction: got ${JSON.stringify(row.pt)}`);
+  if (row.source_revision !== "P03-PT-SOURCE-2026-09-01-r9") {
+    fail(`${key} does not carry the r9 source revision: got ${row.source_revision}`);
+  }
+  // Superseded provenance must survive the swap so the prior approved meaning
+  // stays auditable.
+  const correction = row.source_correction;
+  if (!correction) {
+    fail(`${key} lost its source-correction provenance`);
+    continue;
+  }
+  if (correction.superseded_source_status !== "SUPERSEDED") fail(`${key} superseded_source_status is not SUPERSEDED`);
+  if (correction.owning_project !== "Project 03") fail(`${key} correction owning_project mismatch`);
+  if (correction.superseding_ruling !== "P03-SINERGIA-CURRENTNESS-2026-09-01") fail(`${key} correction ruling reference mismatch`);
+  if (correction.semantic_change !== true) fail(`${key} correction does not declare semantic_change`);
+  if (!correction.superseded_en || !correction.superseded_pt) fail(`${key} correction did not preserve the superseded EN/PT values`);
+  for (const [side, text] of [["EN", row.en], ["PT", row.pt]]) {
+    if (/31 August 2026|31 de agosto de 2026/.test(text)) {
+      fail(`${key} ${side} still carries the superseded 31 August 2026 meaning`);
+    }
+  }
+}
+
+// No governed string anywhere may name an exact day in November 2026 for this
+// record: the closing day is not established and must never be inferred.
+for (const [key, row] of Object.entries(data.keys)) {
+  if (!key.startsWith(`${r9Id}.`)) continue;
+  for (const [side, text] of [["EN", row.en ?? ""], ["PT", row.pt ?? ""]]) {
+    if (/\b\d{1,2}\s+(de\s+)?(November|novembro)\b/i.test(text) || /\b(November|novembro)\s+\d{1,2}\b/i.test(text)) {
+      fail(`${key} ${side} infers an exact November day: ${JSON.stringify(text)}`);
+    }
+  }
+}
+
+// --- Sinergia free admission (additive lane, Project 03 confirmation) ---
+const r9Admission = {
+  [`${r9Id}.detail.fact.admission.label`]: { en: "Admission", pt: "Admissão" },
+  [`${r9Id}.detail.fact.admission.value_display`]: { en: "Free admission", pt: "Entrada livre" },
+};
+for (const [key, expected] of Object.entries(r9Admission)) {
+  const row = data.keys[key];
+  if (!row) {
+    fail(`Sinergia admission key missing from locale data: ${key}`);
+    continue;
+  }
+  if (row.en !== expected.en) fail(`${key} EN mismatch: got ${JSON.stringify(row.en)}`);
+  if (row.pt !== expected.pt) fail(`${key} PT mismatch: got ${JSON.stringify(row.pt)}`);
+  // Additive, never routed through the source-correction class.
+  if (row.source_correction) fail(`${key} must not carry a source correction — free admission is an additive addition`);
+}
+
 // --- r8 delta spot checks (same-day PART_ILHAS / Artemisa Ferreira event) ---
 // Pins the governed date/time, the free-admission fact established by the
 // Project 03 ruling of 29 August 2026, the official-title identity policy, and

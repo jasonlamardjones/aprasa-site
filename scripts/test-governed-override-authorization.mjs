@@ -24,8 +24,8 @@ import { spawnSync } from 'node:child_process';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 
-const R10 = 'pt-overlay-r10-review-due-copy.source.json';
-const R11 = 'pt-overlay-r11-academia-cv-statement.source.json';
+const R11 = 'pt-overlay-r11-review-due-copy.source.json';
+const R12 = 'pt-overlay-r12-academia-cv-statement.source.json';
 
 let passed = 0;
 const failures = [];
@@ -75,10 +75,10 @@ function probe(name, file, mutate, expectPattern) {
 }
 
 // --- the exact probe that defeated the previous fence ----------------------
-probe('unrelated Myrtle semantic rewrite smuggled into r10', R10, (pkg) => {
+probe('unrelated Myrtle semantic rewrite smuggled into r11', R11, (pkg) => {
   pkg.rows.push({
     key: 'training.record.myrtle.body',
-    source_revision: 'P03-PT-SOURCE-2026-09-01-r10',
+    source_revision: 'P03-PT-SOURCE-2026-09-01-r11',
     old_en: 'Explore language, computer, workplace-English and other learning programs from Myrtle Atividades Educativas in Mindelo.',
     new_en: 'Myrtle is closed until further notice.',
     old_pt: 'Explore programas de línguas, informática, inglês para o trabalho e outras áreas de aprendizagem da Myrtle Atividades Educativas, em Mindelo.',
@@ -92,81 +92,81 @@ probe('unrelated Myrtle semantic rewrite smuggled into r10', R10, (pkg) => {
   pkg.change_control_status.existing_keys_overridden = pkg.rows.length;
 }, /affected_records is not the authorized set|row count is not authorized/);
 
-probe('unrelated record swapped in place of an authorized row', R10, (pkg) => {
+probe('unrelated record swapped in place of an authorized row', R11, (pkg) => {
   pkg.rows[0].key = 'training.record.myrtle.status';
   pkg.rows[0].record_id = 'myrtle';
 }, /not an authorized target key/);
 
 // --- authority references --------------------------------------------------
-probe('modified semantic authority', R10, (pkg) => {
+probe('modified semantic authority', R11, (pkg) => {
   pkg.semantic_authority = 'Project 99 — self-granted authority';
 }, /semantic_authority is not the authorized value/);
 
-probe('modified linguistic authority', R10, (pkg) => {
+probe('modified linguistic authority', R11, (pkg) => {
   pkg.linguistic_authority = 'Project 99 — self-granted linguistic authority';
 }, /linguistic_authority is not the authorized value/);
 
 // --- package / revision identity -------------------------------------------
-probe('changed package identifier', R10, (pkg) => {
-  pkg.package_id = 'aprasa-training-review-due-copy-r10-v2';
+probe('changed package identifier', R11, (pkg) => {
+  pkg.package_id = 'aprasa-training-review-due-copy-r11-v2';
 }, /package_id is not the authorized value/);
 
-probe('changed revision identifier', R10, (pkg) => {
-  pkg.source_revision = 'P03-PT-SOURCE-2026-09-02-r10b';
+probe('changed revision identifier', R11, (pkg) => {
+  pkg.source_revision = 'P03-PT-SOURCE-2026-09-02-r11b';
 }, /source_revision is not the authorized value/);
 
 // --- row set ---------------------------------------------------------------
-probe('extra sixth row', R10, (pkg) => {
+probe('extra sixth row', R11, (pkg) => {
   pkg.rows.push({ ...pkg.rows[0], key: 'training.record.kafe-djan-djan.checked' });
   pkg.supplied_rows_approved = pkg.rows.length;
 }, /row count is not authorized/);
 
-probe('missing authorized row', R10, (pkg) => {
+probe('missing authorized row', R11, (pkg) => {
   pkg.rows.splice(0, 1);
   pkg.supplied_rows_approved = pkg.rows.length;
 }, /row count is not authorized/);
 
-probe('row count declaration inflated', R10, (pkg) => {
+probe('row count declaration inflated', R11, (pkg) => {
   pkg.supplied_rows_approved = 99;
 }, /supplied_rows_approved mismatch/);
 
 // --- tuple contents --------------------------------------------------------
-probe('modified replacement string (new_en)', R10, (pkg) => {
+probe('modified replacement string (new_en)', R11, (pkg) => {
   pkg.rows[0].new_en = 'Possibly hiring · Mindelo';
 }, /new_en is not the authorized value/);
 
-probe('modified replacement string (new_pt)', R10, (pkg) => {
+probe('modified replacement string (new_pt)', R11, (pkg) => {
   pkg.rows[3].new_pt = 'Ainda a recrutar para 2026/2027';
 }, /new_pt is not the authorized value/);
 
-probe('modified baseline value (old_en)', R10, (pkg) => {
+probe('modified baseline value (old_en)', R11, (pkg) => {
   pkg.rows[0].old_en = 'Something else entirely';
 }, /old_en is not the authorized value/);
 
-probe('modified baseline value (old_pt)', R10, (pkg) => {
+probe('modified baseline value (old_pt)', R11, (pkg) => {
   pkg.rows[1].old_pt = 'Something else entirely';
 }, /old_pt is not the authorized value/);
 
 // --- governance flags ------------------------------------------------------
-probe('unapproved Project 09 status', R10, (pkg) => {
+probe('unapproved Project 09 status', R11, (pkg) => {
   pkg.project_09_status = 'draft';
 }, /Project 09 status is not approved/);
 
-probe('lifecycle/state modification claimed', R10, (pkg) => {
+probe('lifecycle/state modification claimed', R11, (pkg) => {
   pkg.change_control_status.lifecycle_or_publication_state_modified = 1;
 }, /must not modify lifecycle or publication state/);
 
-// --- the same fence applies to r11 -----------------------------------------
-probe('r11: unrelated record smuggled in', R11, (pkg) => {
+// --- the same fence applies to r12 -----------------------------------------
+probe('r12: unrelated record smuggled in', R12, (pkg) => {
   pkg.rows[0].key = 'training.record.myrtle.good';
   pkg.rows[0].record_id = 'myrtle';
 }, /not an authorized target key/);
 
-probe('r11: replacement string reworded', R11, (pkg) => {
+probe('r12: replacement string reworded', R12, (pkg) => {
   pkg.rows[0].new_en = 'CVs may still be accepted at the secretariats.';
 }, /new_en is not the authorized value/);
 
-probe('r11: authority reference changed', R11, (pkg) => {
+probe('r12: authority reference changed', R12, (pkg) => {
   pkg.semantic_authority = 'Project 04 — implementation self-authorization';
 }, /semantic_authority is not the authorized value/);
 

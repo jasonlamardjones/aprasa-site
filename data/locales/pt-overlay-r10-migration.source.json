@@ -1,7 +1,7 @@
 {
-  "package_id": "aprasa-pt-training-record-namespace-migration-r9",
-  "source_revision": "P03-PT-SOURCE-2026-09-01-r9",
-  "previous_revision": "P03-PT-SOURCE-2026-08-29-r8",
+  "package_id": "aprasa-pt-training-record-namespace-migration-r10",
+  "source_revision": "P03-PT-SOURCE-2026-09-01-r10",
+  "previous_revision": "P03-PT-SOURCE-2026-09-01-r9",
   "revision_class": "RENAME_KEYS",
   "semantic_authority": "Project 03 — A PRASA Business, Brand & Administration",
   "linguistic_authority": "Project 09 — governed PT overlay",
