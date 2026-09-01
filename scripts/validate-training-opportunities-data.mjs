@@ -36,8 +36,12 @@ const PUBLICATION_STATES = new Set([
   'EXPIRED',
   'WITHDRAWN',
   'SUPERSEDED',
-  'TEMPORARILY UNAVAILABLE',
+  'TEMPORARILY_UNAVAILABLE',
 ]);
+// The space-separated spelling is a legacy form, not an accepted alias. It is
+// listed explicitly so a stray occurrence produces a precise error naming the
+// canonical token rather than a generic "invalid state".
+const REJECTED_STATE_SPELLINGS = new Map([['TEMPORARILY UNAVAILABLE', 'TEMPORARILY_UNAVAILABLE']]);
 
 const MEDIA_LAYOUTS = new Set(['block', 'inline']);
 const MEDIA_ATTRS = new Set(['src', 'alt', 'loading', 'decoding', 'width', 'height']);
@@ -73,7 +77,11 @@ else {
 if (!data.publication_states || typeof data.publication_states !== 'object') fail('publication_states is required');
 else {
   for (const state of Object.keys(data.publication_states)) {
-    if (!PUBLICATION_STATES.has(state)) fail(`declared publication state "${state}" is not a Project 03 approved state`);
+    if (REJECTED_STATE_SPELLINGS.has(state)) {
+      fail(`declared publication state "${state}" uses the retired spelling; the canonical token is "${REJECTED_STATE_SPELLINGS.get(state)}"`);
+    } else if (!PUBLICATION_STATES.has(state)) {
+      fail(`declared publication state "${state}" is not a Project 03 approved state`);
+    }
   }
   for (const state of PUBLICATION_STATES) {
     if (!(state in data.publication_states)) fail(`approved publication state "${state}" is missing from publication_states`);
@@ -150,7 +158,9 @@ for (const [index, record] of (data.records ?? []).entries()) {
   if (!LIFECYCLE_CLASSES.has(record.lifecycle_class)) {
     fail(`${where}: invalid lifecycle_class ${JSON.stringify(record.lifecycle_class)}`);
   }
-  if (!PUBLICATION_STATES.has(record.publication_state)) {
+  if (REJECTED_STATE_SPELLINGS.has(record.publication_state)) {
+    fail(`${where}: publication_state ${JSON.stringify(record.publication_state)} uses the retired spelling; the canonical token is "${REJECTED_STATE_SPELLINGS.get(record.publication_state)}"`);
+  } else if (!PUBLICATION_STATES.has(record.publication_state)) {
     fail(`${where}: invalid publication_state ${JSON.stringify(record.publication_state)}`);
   }
   if (typeof record.provider !== 'string' || !record.provider.trim()) {

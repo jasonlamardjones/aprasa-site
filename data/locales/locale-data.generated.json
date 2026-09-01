@@ -37,10 +37,25 @@
     "r9_renamed_keys": 76,
     "r9_canonical_namespace": "training.record.<record_id>.<field>",
     "r9_retired_namespace": "home.training.record.<record_id>.<field>",
-    "r10_revision": "P03-PT-SOURCE-2026-09-01-r10",
-    "r10_package_id": "aprasa-training-review-due-copy-r10",
-    "r10_revision_class": "OVERRIDE_EXISTING_KEYS",
-    "r10_overridden_keys": 5
+    "governed_override_packages": [
+      {
+        "label": "r10",
+        "package_id": "aprasa-training-review-due-copy-r10",
+        "source_revision": "P03-PT-SOURCE-2026-09-01-r10",
+        "revision_class": "OVERRIDE_EXISTING_KEYS",
+        "overridden_keys": 5,
+        "tuples_digest": "3dfb05ec5518cf382d23b4109534d29c81c3917b6eb64225db56fcf55e354d3f"
+      },
+      {
+        "label": "r11",
+        "package_id": "aprasa-academia-cv-statement-removal-r11",
+        "source_revision": "P03-PT-SOURCE-2026-09-01-r11",
+        "revision_class": "OVERRIDE_EXISTING_KEYS",
+        "overridden_keys": 1,
+        "tuples_digest": "bd6f76798ad163aea53d8b3c9dcd58a532ea6ca70979f239bfef66271b9752cb"
+      }
+    ],
+    "governed_override_authorization": "fixed code-side contract in scripts/build-locale-data.mjs (GOVERNED_OVERRIDE_CONTRACTS)"
   },
   "counts": {
     "total_rows": 821,
@@ -55,7 +70,7 @@
     "r8_delta_rows": 21,
     "event_delta_rows": 0,
     "r9_renamed_rows": 76,
-    "r10_override_rows": 5
+    "governed_override_rows": 6
   },
   "keys": {
     "global.skip_to_content": {
@@ -1860,13 +1875,13 @@
     },
     "training.record.academia-crescer.good": {
       "key": "training.record.academia-crescer.good",
-      "en": "CVs are accepted at the Madeiralzinho or Monte Sossego secretariats during the hours published on the recruitment notice. No application deadline is shown on the poster, so confirm that recruitment is still open before submitting.",
-      "pt": "Os CV são aceites nas secretarias de Madeiralzinho ou Monte Sossego durante o horário publicado no anúncio de recrutamento. O cartaz não indica prazo de candidatura, por isso confirme se o recrutamento continua aberto antes de entregar a candidatura.",
+      "en": "No application deadline is shown on the poster, so confirm that recruitment is still open before submitting.",
+      "pt": "O cartaz não indica prazo de candidatura, por isso confirme se o recrutamento continua aberto antes de entregar a candidatura.",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": "academia-crescer",
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-09-01-r11",
       "context_notes": "Home training/opportunity card and detail presentation.",
       "linguistic_notes": ""
     },

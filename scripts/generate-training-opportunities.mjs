@@ -218,6 +218,15 @@ function renderDetail(record) {
   return lines;
 }
 
+// A cleared region is exactly its marker pair and nothing else: deterministic,
+// idempotent, and trivially distinguishable from a populated one.
+function renderEmptyRegion(record) {
+  return [
+    `        <!-- BEGIN GENERATED TRAINING: ${record.id} -->`,
+    `        <!-- END GENERATED TRAINING: ${record.id} -->`,
+  ].join('\n');
+}
+
 function renderRegion(record) {
   return [
     `        <!-- BEGIN GENERATED TRAINING: ${record.id} -->`,
@@ -231,31 +240,18 @@ function renderRegion(record) {
 const data = JSON.parse(fs.readFileSync(DATA_PATH, 'utf8'));
 if (data.version !== 1) fail(`unsupported data version ${data.version}`);
 
-// Which publication states appear on the current surface, per the Project 03
-// approved Home behavior. REVIEW-DUE is visible: review age alone never
-// expires or removes a record, so a record awaiting human reverification keeps
-// its existing approved presentation unchanged. Encoding that here is what
-// lets publication_state carry the governance state without the generator
-// silently dropping ownership of a still-published record.
+// Publication state drives what a record's marker region CONTAINS, never
+// whether the generator looks at that region at all. Every canonical record is
+// processed on every run, in every state. Filtering the record list to the
+// visible states before touching the surface was a real defect: a populated
+// record transitioned to a removed state simply stopped being generator-owned,
+// its stale card stayed visibly on Home, and the run still reported success
+// with a smaller record count. State decides content; ownership is total.
 const VISIBLE_STATES = new Set(['CURRENT', 'REVIEW-DUE']);
 const REMOVED_STATES = new Set(['EXPIRED', 'WITHDRAWN', 'SUPERSEDED']);
-
-// TEMPORARILY UNAVAILABLE is retained on the surface, but only with an
-// explicitly approved unavailable status treatment. No such treatment is
-// authorized in T1, so rather than render the record as though it were
-// ordinary (asserting an availability nobody approved) or drop it (removing a
-// record governance says to retain), generation fails closed until that
-// treatment is approved.
-for (const record of data.records) {
-  const state = record.publication_state;
-  if (VISIBLE_STATES.has(state) || REMOVED_STATES.has(state)) continue;
-  if (state === 'TEMPORARILY UNAVAILABLE') {
-    fail(`record ${record.id}: TEMPORARILY UNAVAILABLE has no approved status treatment in T1`);
-  }
-  fail(`record ${record.id}: unsupported publication_state "${state}"`);
-}
-
-const records = data.records.filter((r) => VISIBLE_STATES.has(r.publication_state));
+// Canonical token is the underscore form. The space form is not an alias and
+// must never be accepted anywhere.
+const TEMPORARILY_UNAVAILABLE = 'TEMPORARILY_UNAVAILABLE';
 
 let html;
 try {
@@ -267,8 +263,24 @@ try {
 let out = html;
 const missing = [];
 const drifted = [];
+let renderedCount = 0;
+let clearedCount = 0;
 
-for (const record of records) {
+for (const record of data.records) {
+  const state = record.publication_state;
+
+  // TEMPORARILY_UNAVAILABLE is retained on the surface by governance, but only
+  // with an explicitly approved unavailable status treatment. None is
+  // authorized in T1, so rather than render the record as though it were
+  // ordinary (asserting an availability nobody approved) or clear it (removing
+  // a record governance says to retain), generation fails closed.
+  if (state === TEMPORARILY_UNAVAILABLE) {
+    fail(`record ${record.id}: ${TEMPORARILY_UNAVAILABLE} has no approved status treatment in T1`);
+  }
+  if (!VISIBLE_STATES.has(state) && !REMOVED_STATES.has(state)) {
+    fail(`record ${record.id}: unsupported publication_state "${state}"`);
+  }
+
   const begin = `<!-- BEGIN GENERATED TRAINING: ${record.id} -->`;
   const end = `<!-- END GENERATED TRAINING: ${record.id} -->`;
   const startIdx = out.indexOf(begin);
@@ -282,9 +294,28 @@ for (const record of records) {
   const lineStart = out.lastIndexOf('\n', startIdx) + 1;
   const regionEnd = endIdx + end.length;
   const current = out.slice(lineStart, regionEnd);
-  const rendered = renderRegion(record);
+
+  // A removed-state record keeps its marker pair — the region stays canonical
+  // and generator-owned, ready to be repopulated if the record returns to a
+  // visible state — but the content between the markers is emptied. Because
+  // this is compared like any other region, stale card markup left inside it
+  // is drift and can never be reported as "matches".
+  const rendered = VISIBLE_STATES.has(state) ? renderRegion(record) : renderEmptyRegion(record);
+  if (VISIBLE_STATES.has(state)) renderedCount += 1;
+  else clearedCount += 1;
+
   if (current !== rendered) drifted.push(record.id);
   out = out.slice(0, lineStart) + rendered + out.slice(regionEnd);
+}
+
+// A marker pair on the surface with no canonical record behind it is an
+// orphan: nothing owns it, so nothing would ever clear or refresh it.
+const canonicalIds = new Set(data.records.map((r) => r.id));
+for (const match of out.matchAll(/<!-- BEGIN GENERATED TRAINING: ([^>]+?) -->/g)) {
+  const id = match[1].trim();
+  if (!canonicalIds.has(id)) {
+    fail(`${homeRel}: marker region "${id}" has no canonical record in ${path.relative(root, DATA_PATH)}`);
+  }
 }
 
 if (missing.length) {
@@ -293,15 +324,15 @@ if (missing.length) {
 
 if (write) {
   if (out === html) {
-    console.log(`[generate-training-opportunities] ${homeRel} (${locale}) already current as of ${asOf} — ${records.length} record(s), no change.`);
+    console.log(`[generate-training-opportunities] ${homeRel} (${locale}) already current as of ${asOf} — ${data.records.length} region(s) owned (${renderedCount} rendered, ${clearedCount} cleared), no change.`);
   } else {
     fs.writeFileSync(homePath, out);
-    console.log(`[generate-training-opportunities] wrote ${homeRel} (${locale}) as of ${asOf} — ${records.length} record(s), ${drifted.length} region(s) updated.`);
+    console.log(`[generate-training-opportunities] wrote ${homeRel} (${locale}) as of ${asOf} — ${data.records.length} region(s) owned (${renderedCount} rendered, ${clearedCount} cleared), ${drifted.length} updated.`);
   }
 } else if (drifted.length) {
   console.error(`[generate-training-opportunities] DRIFT in ${homeRel} (${locale}) as of ${asOf}: ${drifted.join(', ')}`);
   console.error('Re-run with --write to regenerate these regions from data/training-opportunities.json.');
   process.exit(1);
 } else {
-  console.log(`[generate-training-opportunities] ${homeRel} (${locale}) matches generated output as of ${asOf} — ${records.length} record(s).`);
+  console.log(`[generate-training-opportunities] ${homeRel} (${locale}) matches generated output as of ${asOf} — ${data.records.length} region(s) owned (${renderedCount} rendered, ${clearedCount} cleared).`);
 }

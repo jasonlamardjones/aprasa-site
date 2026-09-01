@@ -27,7 +27,7 @@
     "EXPIRED": "fixed-window record past its end date; removed from the current surface",
     "WITHDRAWN": "removed from the current surface",
     "SUPERSEDED": "removed from the current surface",
-    "TEMPORARILY UNAVAILABLE": "retained with an explicitly approved unavailable status treatment"
+    "TEMPORARILY_UNAVAILABLE": "retained with an explicitly approved unavailable status treatment"
   },
   "records": [
     {

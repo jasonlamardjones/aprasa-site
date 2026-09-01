@@ -36,6 +36,7 @@
 // scripts/lib/locale.mjs.
 
 import { readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
@@ -49,7 +50,6 @@ const DELTA6_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r6-delta.sour
 const DELTA7_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r7-delta.source.json");
 const DELTA8_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r8-delta.source.json");
 const R9_MIGRATION_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r9-migration.source.json");
-const R10_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r10-review-due-copy.source.json");
 const LOCALE_DIR = path.join(ROOT, "data", "locales");
 const OUT_PATH = path.join(ROOT, "data", "locales", "locale-data.generated.json");
 
@@ -920,135 +920,211 @@ if (r9Renamed.length !== EXPECTED_R9.row_count) {
   fail(`r9 renamed ${r9Renamed.length} keys, expected ${EXPECTED_R9.row_count}`);
 }
 
-// --- r10 override: REVIEW-DUE currentness copy ruling, applied after r9 ----
+// --- Governed override packages: FIXED, CODE-SIDE AUTHORIZATION -----------
 //
-// Project 03's ruling of 01 September 2026 resolved the public-copy treatment
-// for the two REVIEW-DUE Home training records. Stale operational and
-// present-tense currentness claims come off the surface, and Project 09's
-// approved replacement strings go on.
+// These packages are the only mechanism that may restate an already-approved
+// EN/PT value, so they are the one place where a generic "override" lane could
+// quietly become an ungoverned semantic-rewrite lane.
 //
-// revision_class is OVERRIDE_EXISTING_KEYS, like r6 — but with one deliberate
-// difference that the guard below enforces rather than hides: r6 was a
-// Portuguese-only brand-voice refinement and was forbidden from touching any
-// English source value, whereas r10 is a semantic currentness correction and
-// MUST change both locales. So this stage declares and verifies old_en as well
-// as old_pt, and requires source_english_changed to be true. Both directions
-// are checked byte-for-byte before anything is written: a package that no
-// longer matches the text actually in the overlay fails the build instead of
-// silently overwriting whatever it finds.
+// An earlier version of this stage read the package's own `affected_records`,
+// `semantic_authority` and row list and validated the package against itself.
+// Independent review proved that fence worthless: a probe swapped in unrelated
+// authority strings and an unrelated Myrtle rewrite and the builder accepted
+// them, because the file being checked was also the file defining what "valid"
+// meant. Authority cannot be self-asserted by editable data.
 //
-// It runs after r9 so it addresses keys by their canonical
-// training.record.<record_id>.<field> names. Overriding a value never creates
-// or removes a key, so the key count is unchanged.
-const r10 = JSON.parse(readFileSync(R10_PATH, "utf8"));
+// So the authorization contract now lives HERE, in code, frozen, and the
+// package is checked against it — never the other way round. The contract
+// pins, per package: its file, package/revision identifiers, the exact
+// semantic and linguistic authority references, the authorized record ids, and
+// the complete set of authorized (key, old_en, new_en, old_pt, new_pt) tuples,
+// plus a SHA-256 digest over those tuples. The package supplies no authority of
+// its own; every field it declares must equal the pinned value.
+//
+// Consequence: a package can only ever apply exactly the replacements already
+// enumerated below. An extra row, a missing row, a different key, a different
+// record, a nudged replacement string, an altered baseline, a renamed package
+// or a reworded authority reference all fail closed, because none of them can
+// match the frozen tuple map or its digest. Changing what is authorized
+// requires a reviewed code change, not a data edit.
+const GOVERNED_OVERRIDE_CONTRACTS = Object.freeze([
+  Object.freeze({
+    label: "r10",
+    file: "pt-overlay-r10-review-due-copy.source.json",
+    package_id: "aprasa-training-review-due-copy-r10",
+    revision_class: "OVERRIDE_EXISTING_KEYS",
+    source_revision: "P03-PT-SOURCE-2026-09-01-r10",
+    previous_revision: "P03-PT-SOURCE-2026-09-01-r9",
+    semantic_authority: "Project 03 — REVIEW-DUE public-copy ruling of 01 September 2026",
+    linguistic_authority: "Project 09 — approved EN/PT strings",
+    records: Object.freeze(["kafe-djan-djan", "academia-crescer"]),
+    tuples_digest: "3dfb05ec5518cf382d23b4109534d29c81c3917b6eb64225db56fcf55e354d3f",
+    tuples: Object.freeze([
+      Object.freeze({
+        key: "training.record.kafe-djan-djan.status",
+        old_en: "Hiring now · Mindelo",
+        new_en: "Assistente de Restauração · Mindelo",
+        old_pt: "A contratar agora · Mindelo",
+        new_pt: "Assistente de Restauração · Mindelo",
+      }),
+      Object.freeze({
+        key: "training.record.kafe-djan-djan.meta",
+        old_en: "Kafê Livraria Galeria · walk-in interviews Mon–Fri 11:00–14:00",
+        new_en: "Kafê Livraria Galeria",
+        old_pt: "Kafê Livraria Galeria · entrevistas presenciais de segunda a sexta, 11:00–14:00",
+        new_pt: "Kafê Livraria Galeria",
+      }),
+      Object.freeze({
+        key: "training.record.kafe-djan-djan.good",
+        old_en: "Prior experience is a plus but not required. No salary, benefits, phone number, email or application deadline were shown on the flyer, so none are listed here. Apply in person during the stated hours.",
+        new_en: "Prior experience is a plus but not required. No salary, benefits, phone number, email or application deadline were shown on the flyer, so none are listed here.",
+        old_pt: "A experiência prévia é valorizada, mas não obrigatória. O folheto não indicava salário, benefícios, número de telefone, e-mail nem prazo de candidatura, por isso esses elementos não são apresentados aqui. Candidate-se presencialmente durante o horário indicado.",
+        new_pt: "A experiência prévia é valorizada, mas não obrigatória. O folheto não indicava salário, benefícios, número de telefone, e-mail nem prazo de candidatura, por isso esses elementos não são apresentados aqui.",
+      }),
+      Object.freeze({
+        key: "training.record.academia-crescer.status",
+        old_en: "Recruiting for 2026/2027 · Confirm current availability",
+        new_en: "2026/2027 study-room monitor recruitment",
+        old_pt: "A recrutar para 2026/2027 · Confirme a disponibilidade atual",
+        new_pt: "Recrutamento de monitor de sala de estudo 2026/2027",
+      }),
+      Object.freeze({
+        key: "training.record.academia-crescer.body",
+        old_en: "Academia de Estudo Crescer is recruiting study-room monitors for Mathematics, Basic Education, Special Education and Physics/Chemistry for the 2026/2027 school year.",
+        new_en: "Confirm current availability with Academia de Estudo Crescer.",
+        old_pt: "A Academia de Estudo Crescer está a recrutar monitores de sala de estudo para Matemática, Ensino Básico, Educação Especial e Física/Química para o ano letivo de 2026/2027.",
+        new_pt: "Confirme a disponibilidade atual junto da Academia de Estudo Crescer.",
+      }),
+    ]),
+  }),
+  Object.freeze({
+    label: "r11",
+    file: "pt-overlay-r11-academia-cv-statement.source.json",
+    package_id: "aprasa-academia-cv-statement-removal-r11",
+    revision_class: "OVERRIDE_EXISTING_KEYS",
+    source_revision: "P03-PT-SOURCE-2026-09-01-r11",
+    previous_revision: "P03-PT-SOURCE-2026-09-01-r10",
+    semantic_authority: "Project 03 — REVIEW-DUE public-copy ruling of 01 September 2026",
+    linguistic_authority: "Project 09 — approved EN/PT strings",
+    records: Object.freeze(["academia-crescer"]),
+    tuples_digest: "bd6f76798ad163aea53d8b3c9dcd58a532ea6ca70979f239bfef66271b9752cb",
+    tuples: Object.freeze([
+      Object.freeze({
+        key: "training.record.academia-crescer.good",
+        old_en: "CVs are accepted at the Madeiralzinho or Monte Sossego secretariats during the hours published on the recruitment notice. No application deadline is shown on the poster, so confirm that recruitment is still open before submitting.",
+        new_en: "No application deadline is shown on the poster, so confirm that recruitment is still open before submitting.",
+        old_pt: "Os CV são aceites nas secretarias de Madeiralzinho ou Monte Sossego durante o horário publicado no anúncio de recrutamento. O cartaz não indica prazo de candidatura, por isso confirme se o recrutamento continua aberto antes de entregar a candidatura.",
+        new_pt: "O cartaz não indica prazo de candidatura, por isso confirme se o recrutamento continua aberto antes de entregar a candidatura.",
+      }),
+    ]),
+  }),
+]);
 
-const EXPECTED_R10 = {
-  package_id: "aprasa-training-review-due-copy-r10",
-  revision_class: "OVERRIDE_EXISTING_KEYS",
-  source_revision: "P03-PT-SOURCE-2026-09-01-r10",
-  previous_revision: "P03-PT-SOURCE-2026-09-01-r9",
-  row_count: 5,
-};
-
-if (r10.package_id !== EXPECTED_R10.package_id) {
-  fail(`r10 package_id mismatch: got "${r10.package_id}", expected "${EXPECTED_R10.package_id}"`);
-}
-if (r10.revision_class !== EXPECTED_R10.revision_class) {
-  fail(`r10 revision_class must be ${EXPECTED_R10.revision_class}, got "${r10.revision_class}"`);
-}
-if (r10.source_revision !== EXPECTED_R10.source_revision) {
-  fail(`r10 source_revision mismatch: got "${r10.source_revision}"`);
-}
-if (r10.previous_revision !== EXPECTED_R10.previous_revision) {
-  fail(`r10 previous_revision mismatch: got "${r10.previous_revision}"`);
-}
-if (r10.project_09_status !== "approved") {
-  fail(`r10 Project 09 status is not approved: "${r10.project_09_status}"`);
-}
-if (r10.review_required !== 0 || r10.semantic_escalations_required !== 0 || r10.blocking_issue != null) {
-  fail(`r10 has unresolved localization review state`);
-}
-if (!Array.isArray(r10.rows) || r10.rows.length !== EXPECTED_R10.row_count) {
-  fail(`r10 row count mismatch: got ${Array.isArray(r10.rows) ? r10.rows.length : "n/a"}, expected ${EXPECTED_R10.row_count}`);
-}
-if (r10.supplied_rows_approved !== r10.rows.length) {
-  fail(`r10 supplied_rows_approved mismatch: got ${r10.supplied_rows_approved}`);
-}
-// r10 is explicitly authorized to change English; r6-class packages are not.
-// Requiring the flag to be true keeps a PT-only package from being smuggled in
-// under this stage's looser English rule.
-if (r10.source_english_changed !== true) {
-  fail(`r10 must declare source_english_changed: true (it is a semantic currentness correction, not a brand-voice delta)`);
-}
-if (r10.change_control_status?.new_keys_introduced !== 0) {
-  fail(`r10 must introduce no new keys`);
-}
-if (r10.change_control_status?.lifecycle_or_publication_state_modified !== 0) {
-  fail(`r10 must not modify lifecycle or publication state`);
-}
-if ((r10.duplicate_keys || []).length !== 0) {
-  fail(`r10 duplicate_keys is non-empty: ${JSON.stringify(r10.duplicate_keys)}`);
+function tuplesDigest(tuples) {
+  const canonical = [...tuples]
+    .sort((a, b) => a.key.localeCompare(b.key))
+    .map((t) => [t.key, t.old_en, t.new_en, t.old_pt, t.new_pt]);
+  return createHash("sha256").update(JSON.stringify(canonical)).digest("hex");
 }
 
-const r10Records = new Set(r10.affected_records || []);
-const r10Seen = new Set();
-let r10Overridden = 0;
+const governedOverrideResults = [];
 
-for (const row of r10.rows) {
-  if (r10Seen.has(row.key)) fail(`r10 overrides "${row.key}" more than once`);
-  r10Seen.add(row.key);
+for (const contract of GOVERNED_OVERRIDE_CONTRACTS) {
+  const tag = contract.label;
 
-  const current = keys[row.key];
-  if (!current) fail(`r10 cannot override "${row.key}": key does not exist in the merged overlay`);
-
-  // Scope fence: r10 may only touch the two records the ruling names.
-  if (!r10Records.has(row.record_id) || !row.key.startsWith(`training.record.${row.record_id}.`)) {
-    fail(`r10 row "${row.key}" is outside the records this ruling covers (${[...r10Records].join(", ")})`);
+  // Self-check: the frozen tuples must still hash to the pinned digest. This
+  // catches an edit to the contract itself that did not go through the digest.
+  if (tuplesDigest(contract.tuples) !== contract.tuples_digest) {
+    fail(`${tag} contract tuples do not match their pinned digest — the authorization contract has been edited without updating tuples_digest`);
   }
 
-  // Byte-for-byte drift guard, in BOTH locales, before any write.
-  if (current.en !== row.old_en) {
-    fail(`r10 EN drift on "${row.key}": overlay has ${JSON.stringify(current.en)}, package declares old_en ${JSON.stringify(row.old_en)}`);
-  }
-  if (current.pt !== row.old_pt) {
-    fail(`r10 PT drift on "${row.key}": overlay has ${JSON.stringify(current.pt)}, package declares old_pt ${JSON.stringify(row.old_pt)}`);
-  }
-  if (row.translation_status !== "APPROVED") {
-    fail(`r10 row "${row.key}" is not APPROVED (status: ${row.translation_status})`);
-  }
-  if (!row.new_en || !row.new_pt) {
-    fail(`r10 row "${row.key}" is missing an approved replacement value`);
-  }
-  if (row.new_en === row.old_en && row.new_pt === row.old_pt) {
-    fail(`r10 row "${row.key}" changes nothing`);
-  }
+  const pkg = JSON.parse(readFileSync(path.join(LOCALE_DIR, contract.file), "utf8"));
 
-  // The ruling forbids substituting speculative availability wording for the
-  // claims it removes. Checking the replacements here means the prohibition is
-  // enforced by the build rather than resting on review alone.
-  const FORBIDDEN = [
-    "possibly hiring", "check if hiring", "may still be hiring",
-    "still recruiting", "now recruiting", "applications open", "possibly recruiting",
-    "hiring now", "review-due",
-    "possivelmente a contratar", "ainda a contratar", "a contratar agora",
-    "ainda a recrutar", "a recrutar agora", "candidaturas abertas",
-  ];
-  for (const value of [row.new_en, row.new_pt]) {
-    const lowered = value.toLowerCase();
-    for (const phrase of FORBIDDEN) {
-      if (lowered.includes(phrase)) {
-        fail(`r10 replacement for "${row.key}" reintroduces prohibited currentness wording: "${phrase}"`);
-      }
+  // Every identity/authority field is compared against the pinned value. The
+  // package declares them; it does not get to define them.
+  for (const field of ["package_id", "revision_class", "source_revision", "previous_revision", "semantic_authority", "linguistic_authority"]) {
+    if (pkg[field] !== contract[field]) {
+      fail(`${tag} ${field} is not the authorized value: got ${JSON.stringify(pkg[field])}, authorized ${JSON.stringify(contract[field])}`);
     }
   }
+  if (pkg.project_09_status !== "approved") fail(`${tag} Project 09 status is not approved: ${JSON.stringify(pkg.project_09_status)}`);
+  if (pkg.review_required !== 0 || pkg.semantic_escalations_required !== 0 || pkg.blocking_issue != null) {
+    fail(`${tag} has unresolved localization review state`);
+  }
+  if (pkg.change_control_status?.new_keys_introduced !== 0) fail(`${tag} must introduce no new keys`);
+  if (pkg.change_control_status?.lifecycle_or_publication_state_modified !== 0) {
+    fail(`${tag} must not modify lifecycle or publication state`);
+  }
 
-  keys[row.key] = { ...current, en: row.new_en, pt: row.new_pt, source_revision: row.source_revision };
-  r10Overridden += 1;
+  // The declared record set must equal the authorized record set exactly.
+  const declaredRecords = [...(pkg.affected_records || [])].sort();
+  const authorizedRecords = [...contract.records].sort();
+  if (JSON.stringify(declaredRecords) !== JSON.stringify(authorizedRecords)) {
+    fail(`${tag} affected_records is not the authorized set: got ${JSON.stringify(declaredRecords)}, authorized ${JSON.stringify(authorizedRecords)}`);
+  }
+
+  if (!Array.isArray(pkg.rows)) fail(`${tag} rows must be an array`);
+  if (pkg.rows.length !== contract.tuples.length) {
+    fail(`${tag} row count is not authorized: got ${pkg.rows.length}, authorized ${contract.tuples.length}`);
+  }
+  if (pkg.supplied_rows_approved !== pkg.rows.length) {
+    fail(`${tag} supplied_rows_approved mismatch: got ${pkg.supplied_rows_approved}`);
+  }
+
+  const authorizedByKey = new Map(contract.tuples.map((t) => [t.key, t]));
+  const appliedKeys = new Set();
+
+  for (const row of pkg.rows) {
+    const tuple = authorizedByKey.get(row.key);
+    if (!tuple) {
+      fail(`${tag} row "${row.key}" is not an authorized target key`);
+    }
+    if (appliedKeys.has(row.key)) fail(`${tag} overrides "${row.key}" more than once`);
+    appliedKeys.add(row.key);
+
+    // The full tuple must match the frozen contract, in both directions and
+    // both locales. This is what stops a replacement string being nudged.
+    for (const field of ["old_en", "new_en", "old_pt", "new_pt"]) {
+      if (row[field] !== tuple[field]) {
+        fail(`${tag} row "${row.key}" ${field} is not the authorized value: got ${JSON.stringify(row[field])}, authorized ${JSON.stringify(tuple[field])}`);
+      }
+    }
+    if (!contract.records.includes(row.record_id) || !row.key.startsWith(`training.record.${row.record_id}.`)) {
+      fail(`${tag} row "${row.key}" targets record "${row.record_id}", which is outside the authorized records`);
+    }
+    if (row.translation_status !== "APPROVED") fail(`${tag} row "${row.key}" is not APPROVED`);
+
+    // Baseline drift guard: the live overlay must still hold the authorized
+    // old_en/old_pt before anything is written.
+    const current = keys[row.key];
+    if (!current) fail(`${tag} cannot override "${row.key}": key does not exist in the merged overlay`);
+    if (current.en !== tuple.old_en) {
+      fail(`${tag} EN baseline drift on "${row.key}": overlay has ${JSON.stringify(current.en)}, authorized old_en ${JSON.stringify(tuple.old_en)}`);
+    }
+    if (current.pt !== tuple.old_pt) {
+      fail(`${tag} PT baseline drift on "${row.key}": overlay has ${JSON.stringify(current.pt)}, authorized old_pt ${JSON.stringify(tuple.old_pt)}`);
+    }
+
+    keys[row.key] = { ...current, en: tuple.new_en, pt: tuple.new_pt, source_revision: contract.source_revision };
+  }
+
+  // Every authorized tuple must actually have been applied — a package that
+  // silently drops a row cannot leave a governed value un-corrected.
+  for (const key of authorizedByKey.keys()) {
+    if (!appliedKeys.has(key)) fail(`${tag} is missing authorized row "${key}"`);
+  }
+
+  governedOverrideResults.push({
+    label: tag,
+    package_id: contract.package_id,
+    source_revision: contract.source_revision,
+    revision_class: contract.revision_class,
+    overridden_keys: appliedKeys.size,
+    tuples_digest: contract.tuples_digest,
+  });
 }
 
-if (r10Overridden !== EXPECTED_R10.row_count) {
-  fail(`r10 overridden count mismatch: got ${r10Overridden}, expected ${EXPECTED_R10.row_count}`);
-}
+const governedOverrideCount = governedOverrideResults.reduce((n, r) => n + r.overridden_keys, 0);
 
 const output = {
   provenance: {
@@ -1087,10 +1163,8 @@ const output = {
     r9_renamed_keys: r9Renamed.length,
     r9_canonical_namespace: "training.record.<record_id>.<field>",
     r9_retired_namespace: "home.training.record.<record_id>.<field>",
-    r10_revision: r10.source_revision,
-    r10_package_id: r10.package_id,
-    r10_revision_class: r10.revision_class,
-    r10_overridden_keys: r10Overridden,
+    governed_override_packages: governedOverrideResults,
+    governed_override_authorization: "fixed code-side contract in scripts/build-locale-data.mjs (GOVERNED_OVERRIDE_CONTRACTS)",
   },
   counts: {
     total_rows: rows.length + delta.rows.length + delta4.rows.length + delta5.rows.length + delta7.rows.length + delta8.rows.length + eventDeltaRequired + eventDeltaUnchanged,
@@ -1105,10 +1179,10 @@ const output = {
     r8_delta_rows: delta8.rows.length,
     event_delta_rows: eventDeltaRequired + eventDeltaUnchanged,
     r9_renamed_rows: r9Renamed.length,
-    r10_override_rows: r10Overridden,
+    governed_override_rows: governedOverrideCount,
   },
   keys,
 };
 
 writeFileSync(OUT_PATH, JSON.stringify(output, null, 2) + "\n");
-console.log(`[build-locale-data] wrote ${Object.keys(keys).length} keys to ${path.relative(ROOT, OUT_PATH)} (r6 overrode ${delta6Overridden} PT values; event deltas added ${eventDeltaRequired + eventDeltaUnchanged} keys; r9 renamed ${r9Renamed.length} keys onto training.record.*; r10 overrode ${r10Overridden} REVIEW-DUE copy values)`);
+console.log(`[build-locale-data] wrote ${Object.keys(keys).length} keys to ${path.relative(ROOT, OUT_PATH)} (r6 overrode ${delta6Overridden} PT values; event deltas added ${eventDeltaRequired + eventDeltaUnchanged} keys; r9 renamed ${r9Renamed.length} keys onto training.record.*; governed overrides applied ${governedOverrideCount} value(s) across ${governedOverrideResults.length} authorized package(s))`);
