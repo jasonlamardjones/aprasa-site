@@ -49,6 +49,7 @@ const DELTA6_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r6-delta.sour
 const DELTA7_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r7-delta.source.json");
 const DELTA8_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r8-delta.source.json");
 const R9_MIGRATION_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r9-migration.source.json");
+const R10_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r10-review-due-copy.source.json");
 const LOCALE_DIR = path.join(ROOT, "data", "locales");
 const OUT_PATH = path.join(ROOT, "data", "locales", "locale-data.generated.json");
 
@@ -919,6 +920,136 @@ if (r9Renamed.length !== EXPECTED_R9.row_count) {
   fail(`r9 renamed ${r9Renamed.length} keys, expected ${EXPECTED_R9.row_count}`);
 }
 
+// --- r10 override: REVIEW-DUE currentness copy ruling, applied after r9 ----
+//
+// Project 03's ruling of 01 September 2026 resolved the public-copy treatment
+// for the two REVIEW-DUE Home training records. Stale operational and
+// present-tense currentness claims come off the surface, and Project 09's
+// approved replacement strings go on.
+//
+// revision_class is OVERRIDE_EXISTING_KEYS, like r6 — but with one deliberate
+// difference that the guard below enforces rather than hides: r6 was a
+// Portuguese-only brand-voice refinement and was forbidden from touching any
+// English source value, whereas r10 is a semantic currentness correction and
+// MUST change both locales. So this stage declares and verifies old_en as well
+// as old_pt, and requires source_english_changed to be true. Both directions
+// are checked byte-for-byte before anything is written: a package that no
+// longer matches the text actually in the overlay fails the build instead of
+// silently overwriting whatever it finds.
+//
+// It runs after r9 so it addresses keys by their canonical
+// training.record.<record_id>.<field> names. Overriding a value never creates
+// or removes a key, so the key count is unchanged.
+const r10 = JSON.parse(readFileSync(R10_PATH, "utf8"));
+
+const EXPECTED_R10 = {
+  package_id: "aprasa-training-review-due-copy-r10",
+  revision_class: "OVERRIDE_EXISTING_KEYS",
+  source_revision: "P03-PT-SOURCE-2026-09-01-r10",
+  previous_revision: "P03-PT-SOURCE-2026-09-01-r9",
+  row_count: 5,
+};
+
+if (r10.package_id !== EXPECTED_R10.package_id) {
+  fail(`r10 package_id mismatch: got "${r10.package_id}", expected "${EXPECTED_R10.package_id}"`);
+}
+if (r10.revision_class !== EXPECTED_R10.revision_class) {
+  fail(`r10 revision_class must be ${EXPECTED_R10.revision_class}, got "${r10.revision_class}"`);
+}
+if (r10.source_revision !== EXPECTED_R10.source_revision) {
+  fail(`r10 source_revision mismatch: got "${r10.source_revision}"`);
+}
+if (r10.previous_revision !== EXPECTED_R10.previous_revision) {
+  fail(`r10 previous_revision mismatch: got "${r10.previous_revision}"`);
+}
+if (r10.project_09_status !== "approved") {
+  fail(`r10 Project 09 status is not approved: "${r10.project_09_status}"`);
+}
+if (r10.review_required !== 0 || r10.semantic_escalations_required !== 0 || r10.blocking_issue != null) {
+  fail(`r10 has unresolved localization review state`);
+}
+if (!Array.isArray(r10.rows) || r10.rows.length !== EXPECTED_R10.row_count) {
+  fail(`r10 row count mismatch: got ${Array.isArray(r10.rows) ? r10.rows.length : "n/a"}, expected ${EXPECTED_R10.row_count}`);
+}
+if (r10.supplied_rows_approved !== r10.rows.length) {
+  fail(`r10 supplied_rows_approved mismatch: got ${r10.supplied_rows_approved}`);
+}
+// r10 is explicitly authorized to change English; r6-class packages are not.
+// Requiring the flag to be true keeps a PT-only package from being smuggled in
+// under this stage's looser English rule.
+if (r10.source_english_changed !== true) {
+  fail(`r10 must declare source_english_changed: true (it is a semantic currentness correction, not a brand-voice delta)`);
+}
+if (r10.change_control_status?.new_keys_introduced !== 0) {
+  fail(`r10 must introduce no new keys`);
+}
+if (r10.change_control_status?.lifecycle_or_publication_state_modified !== 0) {
+  fail(`r10 must not modify lifecycle or publication state`);
+}
+if ((r10.duplicate_keys || []).length !== 0) {
+  fail(`r10 duplicate_keys is non-empty: ${JSON.stringify(r10.duplicate_keys)}`);
+}
+
+const r10Records = new Set(r10.affected_records || []);
+const r10Seen = new Set();
+let r10Overridden = 0;
+
+for (const row of r10.rows) {
+  if (r10Seen.has(row.key)) fail(`r10 overrides "${row.key}" more than once`);
+  r10Seen.add(row.key);
+
+  const current = keys[row.key];
+  if (!current) fail(`r10 cannot override "${row.key}": key does not exist in the merged overlay`);
+
+  // Scope fence: r10 may only touch the two records the ruling names.
+  if (!r10Records.has(row.record_id) || !row.key.startsWith(`training.record.${row.record_id}.`)) {
+    fail(`r10 row "${row.key}" is outside the records this ruling covers (${[...r10Records].join(", ")})`);
+  }
+
+  // Byte-for-byte drift guard, in BOTH locales, before any write.
+  if (current.en !== row.old_en) {
+    fail(`r10 EN drift on "${row.key}": overlay has ${JSON.stringify(current.en)}, package declares old_en ${JSON.stringify(row.old_en)}`);
+  }
+  if (current.pt !== row.old_pt) {
+    fail(`r10 PT drift on "${row.key}": overlay has ${JSON.stringify(current.pt)}, package declares old_pt ${JSON.stringify(row.old_pt)}`);
+  }
+  if (row.translation_status !== "APPROVED") {
+    fail(`r10 row "${row.key}" is not APPROVED (status: ${row.translation_status})`);
+  }
+  if (!row.new_en || !row.new_pt) {
+    fail(`r10 row "${row.key}" is missing an approved replacement value`);
+  }
+  if (row.new_en === row.old_en && row.new_pt === row.old_pt) {
+    fail(`r10 row "${row.key}" changes nothing`);
+  }
+
+  // The ruling forbids substituting speculative availability wording for the
+  // claims it removes. Checking the replacements here means the prohibition is
+  // enforced by the build rather than resting on review alone.
+  const FORBIDDEN = [
+    "possibly hiring", "check if hiring", "may still be hiring",
+    "still recruiting", "now recruiting", "applications open", "possibly recruiting",
+    "hiring now", "review-due",
+    "possivelmente a contratar", "ainda a contratar", "a contratar agora",
+    "ainda a recrutar", "a recrutar agora", "candidaturas abertas",
+  ];
+  for (const value of [row.new_en, row.new_pt]) {
+    const lowered = value.toLowerCase();
+    for (const phrase of FORBIDDEN) {
+      if (lowered.includes(phrase)) {
+        fail(`r10 replacement for "${row.key}" reintroduces prohibited currentness wording: "${phrase}"`);
+      }
+    }
+  }
+
+  keys[row.key] = { ...current, en: row.new_en, pt: row.new_pt, source_revision: row.source_revision };
+  r10Overridden += 1;
+}
+
+if (r10Overridden !== EXPECTED_R10.row_count) {
+  fail(`r10 overridden count mismatch: got ${r10Overridden}, expected ${EXPECTED_R10.row_count}`);
+}
+
 const output = {
   provenance: {
     source_revision: eventDeltaPackages.at(-1)?.source_revision ?? delta8.source_revision,
@@ -956,6 +1087,10 @@ const output = {
     r9_renamed_keys: r9Renamed.length,
     r9_canonical_namespace: "training.record.<record_id>.<field>",
     r9_retired_namespace: "home.training.record.<record_id>.<field>",
+    r10_revision: r10.source_revision,
+    r10_package_id: r10.package_id,
+    r10_revision_class: r10.revision_class,
+    r10_overridden_keys: r10Overridden,
   },
   counts: {
     total_rows: rows.length + delta.rows.length + delta4.rows.length + delta5.rows.length + delta7.rows.length + delta8.rows.length + eventDeltaRequired + eventDeltaUnchanged,
@@ -970,9 +1105,10 @@ const output = {
     r8_delta_rows: delta8.rows.length,
     event_delta_rows: eventDeltaRequired + eventDeltaUnchanged,
     r9_renamed_rows: r9Renamed.length,
+    r10_override_rows: r10Overridden,
   },
   keys,
 };
 
 writeFileSync(OUT_PATH, JSON.stringify(output, null, 2) + "\n");
-console.log(`[build-locale-data] wrote ${Object.keys(keys).length} keys to ${path.relative(ROOT, OUT_PATH)} (r6 overrode ${delta6Overridden} PT values; event deltas added ${eventDeltaRequired + eventDeltaUnchanged} keys; r9 renamed ${r9Renamed.length} keys onto training.record.*)`);
+console.log(`[build-locale-data] wrote ${Object.keys(keys).length} keys to ${path.relative(ROOT, OUT_PATH)} (r6 overrode ${delta6Overridden} PT values; event deltas added ${eventDeltaRequired + eventDeltaUnchanged} keys; r9 renamed ${r9Renamed.length} keys onto training.record.*; r10 overrode ${r10Overridden} REVIEW-DUE copy values)`);

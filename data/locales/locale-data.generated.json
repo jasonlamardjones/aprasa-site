@@ -36,7 +36,11 @@
     "r9_revision_class": "RENAME_KEYS",
     "r9_renamed_keys": 76,
     "r9_canonical_namespace": "training.record.<record_id>.<field>",
-    "r9_retired_namespace": "home.training.record.<record_id>.<field>"
+    "r9_retired_namespace": "home.training.record.<record_id>.<field>",
+    "r10_revision": "P03-PT-SOURCE-2026-09-01-r10",
+    "r10_package_id": "aprasa-training-review-due-copy-r10",
+    "r10_revision_class": "OVERRIDE_EXISTING_KEYS",
+    "r10_overridden_keys": 5
   },
   "counts": {
     "total_rows": 821,
@@ -50,7 +54,8 @@
     "r7_delta_rows": 19,
     "r8_delta_rows": 21,
     "event_delta_rows": 0,
-    "r9_renamed_rows": 76
+    "r9_renamed_rows": 76,
+    "r10_override_rows": 5
   },
   "keys": {
     "global.skip_to_content": {
@@ -1735,25 +1740,25 @@
     },
     "training.record.academia-crescer.status": {
       "key": "training.record.academia-crescer.status",
-      "en": "Recruiting for 2026/2027 · Confirm current availability",
-      "pt": "A recrutar para 2026/2027 · Confirme a disponibilidade atual",
+      "en": "2026/2027 study-room monitor recruitment",
+      "pt": "Recrutamento de monitor de sala de estudo 2026/2027",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": "academia-crescer",
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-09-01-r10",
       "context_notes": "Home training/opportunity card and detail presentation.",
       "linguistic_notes": ""
     },
     "training.record.academia-crescer.body": {
       "key": "training.record.academia-crescer.body",
-      "en": "Academia de Estudo Crescer is recruiting study-room monitors for Mathematics, Basic Education, Special Education and Physics/Chemistry for the 2026/2027 school year.",
-      "pt": "A Academia de Estudo Crescer está a recrutar monitores de sala de estudo para Matemática, Ensino Básico, Educação Especial e Física/Química para o ano letivo de 2026/2027.",
+      "en": "Confirm current availability with Academia de Estudo Crescer.",
+      "pt": "Confirme a disponibilidade atual junto da Academia de Estudo Crescer.",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": "academia-crescer",
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-09-01-r10",
       "context_notes": "Home training/opportunity card and detail presentation.",
       "linguistic_notes": ""
     },
@@ -1891,25 +1896,25 @@
     },
     "training.record.kafe-djan-djan.status": {
       "key": "training.record.kafe-djan-djan.status",
-      "en": "Hiring now · Mindelo",
-      "pt": "A contratar agora · Mindelo",
+      "en": "Assistente de Restauração · Mindelo",
+      "pt": "Assistente de Restauração · Mindelo",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": "kafe-djan-djan",
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-09-01-r10",
       "context_notes": "Home training/opportunity card and detail presentation.",
       "linguistic_notes": ""
     },
     "training.record.kafe-djan-djan.meta": {
       "key": "training.record.kafe-djan-djan.meta",
-      "en": "Kafê Livraria Galeria · walk-in interviews Mon–Fri 11:00–14:00",
-      "pt": "Kafê Livraria Galeria · entrevistas presenciais de segunda a sexta, 11:00–14:00",
+      "en": "Kafê Livraria Galeria",
+      "pt": "Kafê Livraria Galeria",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": "kafe-djan-djan",
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-09-01-r10",
       "context_notes": "Home training/opportunity card and detail presentation.",
       "linguistic_notes": ""
     },
@@ -1975,13 +1980,13 @@
     },
     "training.record.kafe-djan-djan.good": {
       "key": "training.record.kafe-djan-djan.good",
-      "en": "Prior experience is a plus but not required. No salary, benefits, phone number, email or application deadline were shown on the flyer, so none are listed here. Apply in person during the stated hours.",
-      "pt": "A experiência prévia é valorizada, mas não obrigatória. O folheto não indicava salário, benefícios, número de telefone, e-mail nem prazo de candidatura, por isso esses elementos não são apresentados aqui. Candidate-se presencialmente durante o horário indicado.",
+      "en": "Prior experience is a plus but not required. No salary, benefits, phone number, email or application deadline were shown on the flyer, so none are listed here.",
+      "pt": "A experiência prévia é valorizada, mas não obrigatória. O folheto não indicava salário, benefícios, número de telefone, e-mail nem prazo de candidatura, por isso esses elementos não são apresentados aqui.",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": "kafe-djan-djan",
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-09-01-r10",
       "context_notes": "Home training/opportunity card and detail presentation.",
       "linguistic_notes": ""
     },

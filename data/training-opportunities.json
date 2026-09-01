@@ -225,27 +225,6 @@
       },
       "checked_at": "2026-08-22",
       "media_manifest_title": "Kafê Djan Djan — Assistente de Restauração",
-      "media": {
-        "asset": "assets/events/kafe-djan-djan-hiring-flyer.jpg",
-        "width": 1122,
-        "height": 1402,
-        "loading": "lazy",
-        "decoding": "async",
-        "alt": {
-          "locale_key": "training.record.kafe-djan-djan.alt"
-        },
-        "card_class": "card-media",
-        "detail_class": "dialog-media",
-        "layout": "inline",
-        "attribute_order": [
-          "src",
-          "alt",
-          "loading",
-          "decoding",
-          "width",
-          "height"
-        ]
-      },
       "card": {
         "attributes": {
           "data-checked": "2026-08-22"
@@ -293,35 +272,11 @@
             "value": {
               "locale_key": "training.record.kafe-djan-djan.fact.location"
             }
-          },
-          {
-            "label": {
-              "locale_key": "ui.interviews"
-            },
-            "value": {
-              "locale_key": "training.record.kafe-djan-djan.fact.interviews"
-            }
           }
         ],
         "details_body": null,
         "requirements": null,
-        "original_posting": {
-          "heading": {
-            "locale_key": "training.record.kafe-djan-djan.original_heading"
-          },
-          "lang": "pt",
-          "paragraphs": [
-            {
-              "locale_key": "training.record.kafe-djan-djan.original_1"
-            },
-            {
-              "locale_key": "training.record.kafe-djan-djan.original_2"
-            },
-            {
-              "locale_key": "training.record.kafe-djan-djan.original_3"
-            }
-          ]
-        },
+        "original_posting": null,
         "good_to_know": {
           "locale_key": "training.record.kafe-djan-djan.good"
         },
