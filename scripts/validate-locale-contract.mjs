@@ -298,8 +298,12 @@ if (data.keys["home.training.emar.fact_value.applications"]?.pt !== "até 30 de 
 const r3Keys = [
   "ui.cv_delivery",
   "ui.delivery_hours",
-  "home.training.record.openlearn.card_action",
-  "home.training.record.iefp-pepe.card_action",
+  // Migrated to the canonical training.record.* namespace by the r9
+  // RENAME_KEYS package (Project 09 atomic namespace migration). The r3 delta
+  // still owns these two rows; only the key name moved, the approved EN/PT
+  // values are unchanged and are asserted byte-for-byte by build-locale-data.mjs.
+  "training.record.openlearn.card_action",
+  "training.record.iefp-pepe.card_action",
   "home.help.record.cruz-vermelha.card_action",
   "home.help.record.biosfera.card_action",
   "home.help.record.no-bai.card_action",

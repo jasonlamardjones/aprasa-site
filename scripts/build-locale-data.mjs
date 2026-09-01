@@ -48,6 +48,7 @@ const DELTA5_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r5-delta.sour
 const DELTA6_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r6-delta.source.json");
 const DELTA7_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r7-delta.source.json");
 const DELTA8_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r8-delta.source.json");
+const R9_MIGRATION_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r9-migration.source.json");
 const LOCALE_DIR = path.join(ROOT, "data", "locales");
 const OUT_PATH = path.join(ROOT, "data", "locales", "locale-data.generated.json");
 
@@ -764,6 +765,160 @@ for (const fileName of eventDeltaFiles) {
   });
 }
 
+// --- r9 migration: ATOMIC namespace rename, applied last -------------------
+//
+// Project 09 approved moving the governed Home training presentation keys off
+// the legacy `home.training.record.<record_id>.<field>` namespace onto the
+// canonical `training.record.<record_id>.<field>` namespace. This is a
+// different revision class again: not additive (r3/r4/r5/r7/r8) and not a PT
+// value override (r6), but revision_class "RENAME_KEYS".
+//
+// A rename is the one operation that can silently lose approved text, so the
+// guard here is deliberately the strictest in this file. For every row:
+//   - the from_key MUST currently exist (nothing renamed out of thin air);
+//   - the to_key MUST NOT already exist (no collision, and no possibility of
+//     the new namespace quietly shadowing an existing approved value);
+//   - the currently effective EN and PT values MUST match the package's
+//     declared expected_en / expected_pt BYTE-FOR-BYTE, and the scope_status
+//     must match too.
+// Only then is the row moved. Every other field of the row (provenance,
+// identity_policy, translation_status, source_revision, notes) is carried
+// across untouched — the only thing that changes is `key`.
+//
+// The migration is ATOMIC by construction: the legacy key is deleted in the
+// same pass that writes the new one, so the generated table never carries
+// both. There is no alias layer and no fallback — a stale consumer that still
+// asks for a legacy key gets a hard LocaleLookupError from scripts/lib/locale.mjs,
+// which is the intended fail-closed behavior, not a regression.
+//
+// Scope is exactly the nine currently published Home training records. The
+// retired EMAR / Kre+ records keep their legacy keys: they have no generator
+// consumer and no counterpart in data/training-opportunities.json, so
+// migrating them would move dead rows for no benefit.
+const r9 = JSON.parse(readFileSync(R9_MIGRATION_PATH, "utf8"));
+
+const EXPECTED_R9 = {
+  package_id: "aprasa-pt-training-record-namespace-migration-r9",
+  source_revision: "P03-PT-SOURCE-2026-09-01-r9",
+  previous_revision: "P03-PT-SOURCE-2026-08-29-r8",
+  revision_class: "RENAME_KEYS",
+  row_count: 76,
+};
+
+if (r9.package_id !== EXPECTED_R9.package_id) {
+  fail(`r9 package_id mismatch: got "${r9.package_id}", expected "${EXPECTED_R9.package_id}"`);
+}
+if (r9.source_revision !== EXPECTED_R9.source_revision) {
+  fail(`r9 source_revision mismatch: got "${r9.source_revision}", expected "${EXPECTED_R9.source_revision}"`);
+}
+if (r9.previous_revision !== EXPECTED_R9.previous_revision) {
+  fail(`r9 previous_revision mismatch: got "${r9.previous_revision}", expected "${EXPECTED_R9.previous_revision}"`);
+}
+if (r9.revision_class !== EXPECTED_R9.revision_class) {
+  fail(`r9 revision_class must be ${EXPECTED_R9.revision_class}, got "${r9.revision_class}"`);
+}
+if (r9.project_09_status !== "approved") {
+  fail(`r9 Project 09 status is not approved: "${r9.project_09_status}"`);
+}
+if (r9.review_required !== 0 || r9.blocking_issue != null) {
+  fail(`r9 has unresolved localization review state`);
+}
+if (!Array.isArray(r9.rows) || r9.rows.length !== EXPECTED_R9.row_count) {
+  fail(`r9 row count mismatch: got ${Array.isArray(r9.rows) ? r9.rows.length : "n/a"}, expected ${EXPECTED_R9.row_count}`);
+}
+if (r9.supplied_rows_approved !== r9.rows.length) {
+  fail(`r9 supplied_rows_approved mismatch: got ${r9.supplied_rows_approved}, expected ${r9.rows.length}`);
+}
+
+const r9Records = new Set(r9.records || []);
+const r9Renamed = [];
+const r9Plan = new Map();
+const r9SeenFrom = new Set();
+const r9SeenTo = new Set();
+
+for (const row of r9.rows) {
+  const { from_key: fromKey, to_key: toKey } = row;
+
+  if (!fromKey || !toKey) fail(`r9 row is missing from_key/to_key: ${JSON.stringify(row)}`);
+  if (r9SeenFrom.has(fromKey)) fail(`r9 renames "${fromKey}" more than once`);
+  if (r9SeenTo.has(toKey)) fail(`r9 targets "${toKey}" more than once`);
+  r9SeenFrom.add(fromKey);
+  r9SeenTo.add(toKey);
+
+  // The rename must be a pure namespace move of a governed record field: the
+  // record_id and field are declared explicitly and both key names must be
+  // exactly reconstructible from them, so a row can never smuggle in a
+  // renamed/normalized field name alongside the namespace change.
+  if (!r9Records.has(row.record_id)) {
+    fail(`r9 row "${fromKey}" targets record "${row.record_id}", which is not in the package's declared record list`);
+  }
+  if (fromKey !== `home.training.record.${row.record_id}.${row.field}`) {
+    fail(`r9 from_key "${fromKey}" is not the legacy form of record "${row.record_id}" field "${row.field}"`);
+  }
+  if (toKey !== `training.record.${row.record_id}.${row.field}`) {
+    fail(`r9 to_key "${toKey}" is not the canonical form of record "${row.record_id}" field "${row.field}"`);
+  }
+
+  const current = keys[fromKey];
+  if (!current) fail(`r9 cannot rename "${fromKey}": key does not exist in the merged overlay`);
+  if (keys[toKey]) fail(`r9 cannot rename "${fromKey}" to "${toKey}": target key already exists`);
+  if (r9Plan.has(toKey)) fail(`r9 cannot rename "${fromKey}" to "${toKey}": another row is already being renamed away from that key`);
+
+  // Byte-for-byte equivalence assertion across the rename. This is what makes
+  // the migration provably text-preserving rather than merely intended to be.
+  if (current.en !== row.expected_en) {
+    fail(`r9 EN drift on "${fromKey}": overlay has ${JSON.stringify(current.en)}, package declares ${JSON.stringify(row.expected_en)}`);
+  }
+  if (current.pt !== row.expected_pt) {
+    fail(`r9 PT drift on "${fromKey}": overlay has ${JSON.stringify(current.pt)}, package declares ${JSON.stringify(row.expected_pt)}`);
+  }
+  if (current.scope_status !== row.expected_scope_status) {
+    fail(`r9 scope_status drift on "${fromKey}": overlay has "${current.scope_status}", package declares "${row.expected_scope_status}"`);
+  }
+  if (current.record_id !== row.record_id) {
+    fail(`r9 record_id drift on "${fromKey}": overlay has "${current.record_id}", package declares "${row.record_id}"`);
+  }
+  if (row.translation_status !== "APPROVED") {
+    fail(`r9 row "${fromKey}" is not APPROVED (status: ${row.translation_status})`);
+  }
+
+  r9Plan.set(fromKey, toKey);
+  r9Renamed.push(toKey);
+}
+
+// Apply the whole plan in a single ordered rebuild. Renaming in place would
+// move every renamed key to the end of the emitted object and turn a 76-key
+// rename into a whole-file diff; rebuilding in the original insertion order
+// keeps each row where it already was, so the generated table's diff shows
+// exactly the key names that changed and nothing else.
+const r9Ordered = Object.entries(keys).map(([key, row]) => {
+  const toKey = r9Plan.get(key);
+  return toKey ? [toKey, { ...row, key: toKey }] : [key, row];
+});
+for (const key of Object.keys(keys)) delete keys[key];
+for (const [key, row] of r9Ordered) keys[key] = row;
+for (const [fromKey, toKey] of r9Plan) {
+  seen.delete(fromKey);
+  seen.add(toKey);
+}
+
+// Post-condition: no key from a migrated record may survive under the legacy
+// namespace. This catches a partially-declared package (a record field added
+// to the overlay later but never added to the rename manifest) rather than
+// letting it ship as a silent dual namespace.
+for (const key of Object.keys(keys)) {
+  if (!key.startsWith("home.training.record.")) continue;
+  const rest = key.slice("home.training.record.".length);
+  const orphanRecord = [...r9Records].find((id) => rest === id || rest.startsWith(`${id}.`));
+  if (orphanRecord) {
+    fail(`r9 left "${key}" behind under the legacy namespace — record "${orphanRecord}" is migrated, so every one of its keys must be in the rename manifest (no dual canonical namespace)`);
+  }
+}
+
+if (r9Renamed.length !== EXPECTED_R9.row_count) {
+  fail(`r9 renamed ${r9Renamed.length} keys, expected ${EXPECTED_R9.row_count}`);
+}
+
 const output = {
   provenance: {
     source_revision: eventDeltaPackages.at(-1)?.source_revision ?? delta8.source_revision,
@@ -781,6 +936,7 @@ const output = {
       "data/locales/pt-overlay-r7-delta.source.json",
       "data/locales/pt-overlay-r8-delta.source.json",
       ...eventDeltaPackages.map((item) => item.file),
+      "data/locales/pt-overlay-r9-migration.source.json",
     ],
     base_revision: pkg.source_revision,
     delta_revision: delta.source_revision,
@@ -794,6 +950,12 @@ const output = {
     delta8_revision: delta8.source_revision,
     delta8_package_id: delta8.package_id,
     event_delta_packages: eventDeltaPackages,
+    r9_revision: r9.source_revision,
+    r9_package_id: r9.package_id,
+    r9_revision_class: r9.revision_class,
+    r9_renamed_keys: r9Renamed.length,
+    r9_canonical_namespace: "training.record.<record_id>.<field>",
+    r9_retired_namespace: "home.training.record.<record_id>.<field>",
   },
   counts: {
     total_rows: rows.length + delta.rows.length + delta4.rows.length + delta5.rows.length + delta7.rows.length + delta8.rows.length + eventDeltaRequired + eventDeltaUnchanged,
@@ -807,9 +969,10 @@ const output = {
     r7_delta_rows: delta7.rows.length,
     r8_delta_rows: delta8.rows.length,
     event_delta_rows: eventDeltaRequired + eventDeltaUnchanged,
+    r9_renamed_rows: r9Renamed.length,
   },
   keys,
 };
 
 writeFileSync(OUT_PATH, JSON.stringify(output, null, 2) + "\n");
-console.log(`[build-locale-data] wrote ${Object.keys(keys).length} keys to ${path.relative(ROOT, OUT_PATH)} (r6 overrode ${delta6Overridden} PT values; event deltas added ${eventDeltaRequired + eventDeltaUnchanged} keys)`);
+console.log(`[build-locale-data] wrote ${Object.keys(keys).length} keys to ${path.relative(ROOT, OUT_PATH)} (r6 overrode ${delta6Overridden} PT values; event deltas added ${eventDeltaRequired + eventDeltaUnchanged} keys; r9 renamed ${r9Renamed.length} keys onto training.record.*)`);
