@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { END_PRECISIONS, ISO_MONTH_PATTERN, MONTH_PRECISION, endPrecisionOf } from './lib/things-to-do-currentness.mjs';
+import { END_PRECISIONS, MONTH_PRECISION, endPrecisionOf, isValidIsoMonth, startMonthOf } from './lib/things-to-do-currentness.mjs';
 
 const file = new URL('../data/things-to-do-events.json', import.meta.url);
 const manifestFile = new URL('../internal/provider-media-manifest.json', import.meta.url);
@@ -53,10 +53,19 @@ for (const record of data.records ?? []) {
     // Month precision states the month a record ends in and nothing finer.
     // The exact-day fields must be empty, or the record would be asserting a
     // closing day its source never established.
-    if (!ISO_MONTH_PATTERN.test(record.end_month ?? '')) {
-      errors.push(`${label}: end_precision "month" requires end_month as YYYY-MM`);
-    } else if (record.start_date && record.end_month < record.start_date.slice(0, 7)) {
-      errors.push(`${label}: end_month before start_date month`);
+    // A real calendar month, not merely YYYY-MM shaped: 2026-00, 2026-13,
+    // 2026-99 and 9999-99 all match the shape and none of them is a month.
+    if (!isValidIsoMonth(record.end_month)) {
+      errors.push(`${label}: end_precision "month" requires end_month as a valid calendar month YYYY-MM (01-12)`);
+    } else {
+      // The end month cannot precede the month the record starts in. The start
+      // may be given as start_date OR start_datetime, so read whichever the
+      // record validly supplies rather than start_date alone -- a record whose
+      // start is expressed only as start_datetime was previously unchecked.
+      const startMonth = startMonthOf(record);
+      if (startMonth && record.end_month < startMonth) {
+        errors.push(`${label}: end_month ${record.end_month} before start month ${startMonth}`);
+      }
     }
     if (record.end_date != null) errors.push(`${label}: end_precision "month" requires end_date null`);
     if (record.end_datetime != null) errors.push(`${label}: end_precision "month" requires end_datetime null`);

@@ -50,6 +50,39 @@ export const END_PRECISIONS = Object.freeze([DAY_PRECISION, MONTH_PRECISION]);
 export const ISO_DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 export const ISO_MONTH_PATTERN = /^\d{4}-\d{2}$/;
 
+/**
+ * True only for a real calendar month in YYYY-MM form.
+ *
+ * ISO_MONTH_PATTERN alone is a SHAPE test: it happily accepts 2026-00,
+ * 2026-13, 2026-99 and 9999-99, none of which are months. Shape was never
+ * sufficient here -- an impossible month feeds the month-boundary comparison
+ * and the schema check alike, so it is rejected at the one place both of them
+ * read from.
+ */
+export function isValidIsoMonth(value) {
+  if (typeof value !== 'string' || !ISO_MONTH_PATTERN.test(value)) return false;
+  const month = Number(value.slice(5, 7));
+  return month >= 1 && month <= 12;
+}
+
+/**
+ * The calendar month containing a record's canonical start, or null when the
+ * record supplies no valid start.
+ *
+ * A record may express its start as start_date or start_datetime; this reads
+ * whichever it validly supplies, preferring start_date, exactly as
+ * scripts/lib/event-publication-contract.mjs already resolves a start day.
+ * The month is taken from the local calendar date AS WRITTEN -- no timezone
+ * conversion, no arithmetic -- because the governed value is the local
+ * calendar month the source states, and shifting it by an offset would change
+ * a governed date rather than read it.
+ */
+export function startMonthOf(record) {
+  const startDay = record?.start_date ?? record?.start_datetime?.slice(0, 10);
+  if (typeof startDay !== 'string' || !ISO_DAY_PATTERN.test(startDay)) return null;
+  return startDay.slice(0, 7);
+}
+
 /** Declared end precision, defaulting to "day" when the field is absent. */
 export function endPrecisionOf(record) {
   return record?.end_precision ?? DAY_PRECISION;
@@ -61,13 +94,15 @@ export function isMonthPrecision(record) {
 
 /**
  * First day of end_month, for the month-boundary comparison only.
- * Returns null for day-precision records and for a malformed end_month, so a
- * bad value can never silently read as "not yet due".
+ * Returns null for day-precision records and for a malformed end_month --
+ * including an impossible calendar month such as 2026-13 -- so a bad value can
+ * never silently read as "not yet due". Behavior for a valid month is
+ * unchanged.
  */
 export function reviewDueFrom(record) {
   if (!isMonthPrecision(record)) return null;
   const month = record?.end_month;
-  if (typeof month !== 'string' || !ISO_MONTH_PATTERN.test(month)) return null;
+  if (!isValidIsoMonth(month)) return null;
   return `${month}-01`;
 }
 

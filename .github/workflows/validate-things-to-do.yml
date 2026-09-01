@@ -94,6 +94,13 @@ jobs:
       - name: Validate canonical records
         run: node scripts/validate-things-to-do-events.mjs
 
+      # Negative schema coverage for the month-precision end fields: impossible
+      # calendar months, and end_month preceding the start month whether the
+      # start is given as start_date or start_datetime. Runs the shipped
+      # validator against candidate records in a throwaway copy of the tree.
+      - name: Event schema regression tests
+        run: node scripts/test-things-to-do-event-schema.mjs
+
       - name: Validate committed current surfaces
         run: |
           node scripts/validate-things-to-do-currentness.mjs --as-of="$AS_OF"
