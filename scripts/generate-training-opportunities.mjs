@@ -231,11 +231,31 @@ function renderRegion(record) {
 const data = JSON.parse(fs.readFileSync(DATA_PATH, 'utf8'));
 if (data.version !== 1) fail(`unsupported data version ${data.version}`);
 
-// T1 renders exactly the records that are CURRENT on the published surface.
-// Lifecycle-driven removal of the other approved publication states is T2
-// pipeline work and is deliberately not implemented here; a non-CURRENT
-// record simply has no marker region to fill on this surface yet.
-const records = data.records.filter((r) => r.publication_state === 'CURRENT');
+// Which publication states appear on the current surface, per the Project 03
+// approved Home behavior. REVIEW-DUE is visible: review age alone never
+// expires or removes a record, so a record awaiting human reverification keeps
+// its existing approved presentation unchanged. Encoding that here is what
+// lets publication_state carry the governance state without the generator
+// silently dropping ownership of a still-published record.
+const VISIBLE_STATES = new Set(['CURRENT', 'REVIEW-DUE']);
+const REMOVED_STATES = new Set(['EXPIRED', 'WITHDRAWN', 'SUPERSEDED']);
+
+// TEMPORARILY UNAVAILABLE is retained on the surface, but only with an
+// explicitly approved unavailable status treatment. No such treatment is
+// authorized in T1, so rather than render the record as though it were
+// ordinary (asserting an availability nobody approved) or drop it (removing a
+// record governance says to retain), generation fails closed until that
+// treatment is approved.
+for (const record of data.records) {
+  const state = record.publication_state;
+  if (VISIBLE_STATES.has(state) || REMOVED_STATES.has(state)) continue;
+  if (state === 'TEMPORARILY UNAVAILABLE') {
+    fail(`record ${record.id}: TEMPORARILY UNAVAILABLE has no approved status treatment in T1`);
+  }
+  fail(`record ${record.id}: unsupported publication_state "${state}"`);
+}
+
+const records = data.records.filter((r) => VISIBLE_STATES.has(r.publication_state));
 
 let html;
 try {
