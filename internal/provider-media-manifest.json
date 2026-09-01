@@ -153,6 +153,22 @@
       "media_alt": null
     },
     {
+      "section": "things-to-do",
+      "title": "50 Anos de Memória, Criação e Resistência",
+      "provider": "CNAD",
+      "source_url": "https://cnad.cv/info/",
+      "media_type": "editorial-fallback",
+      "media_state": "fallback-final",
+      "media_source": null,
+      "media_asset": null,
+      "fallback_category": "things-visual-arts",
+      "fallback_reason": "No exhibition-specific authentic media is cleared for this record. Project 03 ruled governed fallback media approved (option B), so the standard shared A PRASA editorial fallback region renders for this card; no record-specific asset was created and no provider-specific media claim is made.",
+      "media_provenance": "Shared A PRASA editorial fallback media region rendered by the incumbent front-end foundation (prasa-launch.js). No record-specific image asset is ingested for this record.",
+      "media_asset_source_url": null,
+      "media_checked_date": "2026-09-01",
+      "media_alt": null
+    },
+    {
       "section": "trainings-tools",
       "title": "Kafê Djan Djan — Assistente de Restauração",
       "provider": "Kafê Djan Djan, Mindelo",

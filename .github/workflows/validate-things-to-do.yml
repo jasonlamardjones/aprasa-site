@@ -101,6 +101,12 @@ jobs:
       - name: Event schema regression tests
         run: node scripts/test-things-to-do-event-schema.mjs
 
+      # Governed detail bodies must reach a reader with their approved
+      # paragraph structure: the 50 Anos body as two visibly separate
+      # paragraphs, every single-paragraph incumbent body as exactly one.
+      - name: Detail-body paragraph regression tests
+        run: node scripts/test-things-to-do-detail-paragraphs.mjs
+
       - name: Validate committed current surfaces
         run: |
           node scripts/validate-things-to-do-currentness.mjs --as-of="$AS_OF"

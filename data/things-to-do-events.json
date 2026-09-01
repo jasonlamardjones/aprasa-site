@@ -223,6 +223,63 @@
         "action_label": "See official event page"
       },
       "seo": {"description": "PART_ILHAS conversation with filmmaker and poet Artemisa Ferreira about creative process, images, intention and what happens before a work takes shape at Centro Cultural do Mindelo.", "title": "PART_ILHAS — ciclo de conversas com Artemisa Ferreira | A PRASA", "schema_type": "Event"}
+    },
+    {
+      "id": "50-anos-de-memoria-criacao-e-resistencia",
+      "kind": "dated-event",
+      "title": "50 Anos de Memória, Criação e Resistência",
+      "provider": "CNAD",
+      "summary": "An exhibition at CNAD’s Galeria Bela Duarte marking the 50th anniversary of Cooperativa Resistência.",
+      "category": "visual-arts",
+      "location": {
+        "name": "Galeria Bela Duarte, CNAD",
+        "locality": "Mindelo"
+      },
+      "source_url": "https://cnad.cv/info/",
+      "source_type": "provider-visitor-info",
+      "start_date": "2026-07-23",
+      "start_datetime": null,
+      "end_datetime": null,
+      "end_date": null,
+      "end_precision": "month",
+      "end_month": "2026-11",
+      "checked_at": "2026-09-01",
+      "publication_state": "published",
+      "media_policy": "fallback_allowed",
+      "media_manifest_title": "50 Anos de Memória, Criação e Resistência",
+      "detail_page": "things-to-do/50-anos-de-memoria-criacao-e-resistencia/",
+      "free_admission": null,
+      "display": {
+        "status": "Opened 23 July 2026 · On view into November 2026",
+        "meta": "Galeria Bela Duarte, CNAD",
+        "checked": "Checked 1 September 2026"
+      },
+      "media": null,
+      "card_action": {
+        "label": "Visitor information",
+        "url": "https://cnad.cv/info/"
+      },
+      "detail": {
+        "facts": [
+          {
+            "label": "Dates",
+            "value": "Opened 23 July 2026 · On view into November 2026"
+          },
+          {
+            "label": "Where",
+            "value": "Galeria Bela Duarte, CNAD, Mindelo"
+          }
+        ],
+        "body": "50 Anos de Memória, Criação e Resistência is an exhibition at CNAD’s Galeria Bela Duarte in Mindelo, presented in connection with the 50th anniversary of Cooperativa Resistência.\n\nThe exhibition opened on 23 July 2026 and is on view into November 2026.",
+        "good_to_know": "Confirm current access and opening hours with CNAD before visiting.",
+        "checked": "Checked 1 September 2026",
+        "action_label": "Visitor information"
+      },
+      "seo": {
+        "description": "50 Anos de Memória, Criação e Resistência is an exhibition at CNAD’s Galeria Bela Duarte in Mindelo, presented in connection with the 50th anniversary of Cooperativa Resistência.",
+        "title": "50 Anos de Memória, Criação e Resistência — CNAD Exhibition in Mindelo | A PRASA",
+        "schema_type": "ExhibitionEvent"
+      }
     }
   ]
 }
