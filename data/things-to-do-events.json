@@ -339,66 +339,6 @@
         "title": "4.º Campeonato Nacional Sénior de Boxe | A PRASA",
         "schema_type": "SportsEvent"
       }
-    },
-    {
-      "id": "diva-barros-na-casa-da-morna",
-      "kind": "dated-event",
-      "title": "Diva Barros, na Casa da Morna",
-      "provider": "Casa da Morna",
-      "summary": "See Diva Barros live at Casa da Morna in Mindelo on Friday evening, 4 September.",
-      "category": "live-music",
-      "location": {
-        "name": "Casa da Morna",
-        "street": "Avenida Marginal",
-        "locality": "Mindelo, São Vicente"
-      },
-      "source_url": "https://cvcultural.cv/eventos/diva-barros-na-casa-da-morna-1",
-      "source_type": "official-event-listing",
-      "start_date": "2026-09-04",
-      "start_datetime": "2026-09-04T19:30:00-01:00",
-      "end_datetime": null,
-      "end_date": "2026-09-04",
-      "checked_at": "2026-09-02",
-      "publication_state": "published",
-      "media_policy": "fallback_allowed",
-      "media_manifest_title": "Diva Barros, na Casa da Morna",
-      "detail_page": "things-to-do/diva-barros-na-casa-da-morna/",
-      "free_admission": null,
-      "display": {
-        "status": "Friday, 4 September 2026 · 19:30",
-        "meta": "Casa da Morna · Mindelo, São Vicente",
-        "checked": "Checked 2 September 2026"
-      },
-      "media": null,
-      "card_action": {
-        "label": "See event",
-        "url": "https://cvcultural.cv/eventos/diva-barros-na-casa-da-morna-1"
-      },
-      "detail": {
-        "facts": [
-          {
-            "label": "Date",
-            "value": "Friday, 4 September 2026 · 19:30"
-          },
-          {
-            "label": "Where",
-            "value": "Casa da Morna\nAvenida Marginal\nMindelo, São Vicente"
-          },
-          {
-            "label": "Provider",
-            "value": "Casa da Morna"
-          }
-        ],
-        "body": "Diva Barros performs live at Casa da Morna on Avenida Marginal in Mindelo on Friday, 4 September 2026, at 19:30.\n\nAdmission conditions have not been confirmed.",
-        "good_to_know": "Check current admission information with Casa da Morna before attending.",
-        "checked": "Checked 2 September 2026 against the current event listing.",
-        "action_label": "See event"
-      },
-      "seo": {
-        "description": "See Diva Barros live at Casa da Morna in Mindelo on Friday, 4 September 2026, at 19:30.",
-        "title": "Diva Barros, na Casa da Morna | A PRASA",
-        "schema_type": "MusicEvent"
-      }
     }
   ]
 }

@@ -440,22 +440,6 @@ html[lang="pt"] img.lang-only-pt { display: block; }
 .detail-list div { padding-top: .65rem; border-top: 1px solid rgba(30,61,46,.14); }
 .detail-list dt { color: var(--green); font-size: .75rem; font-weight: 750; text-transform: uppercase; letter-spacing: .06em; }
 .detail-list dd { margin: .18rem 0 0; }
-/* Diva Barros, na Casa da Morna — presentation-only.
-   The governed Where value is an approved three-line address (venue / street /
-   locality) whose breaks exist as real newline characters in the canonical
-   record and in the Project 09 locale row. Default CSS whitespace handling
-   collapses them into spaces, so the approved address renders as one run-on
-   line. `pre-line` honors the newlines that are already in the generated HTML:
-   no <br> is introduced into governed text or locale data, renderFacts is
-   untouched, and the localization validators are untouched.
-
-   Scoped by event id to this record's Where fact only — the second fact in the
-   governed fact order (Date, Where, Provider) — which covers all four surfaces
-   that render it: the EN and PT Home Details dialogs and the EN and PT detail
-   pages. NOTE: this selector is positionally coupled to that governed fact
-   order; if this record's facts are ever reordered, the rule must move with
-   the Where fact. */
-[data-event-id="diva-barros-na-casa-da-morna"] .detail-list > div:nth-child(2) > dd { white-space: pre-line; }
 .dialog-link { justify-content: flex-start; margin-top: .8rem; }
 
 .record-page { padding: 2.25rem 0 2.8rem; }
