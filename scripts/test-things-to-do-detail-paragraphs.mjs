@@ -28,7 +28,19 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const records = JSON.parse(fs.readFileSync(path.join(root, 'data', 'things-to-do-events.json'), 'utf8')).records;
 const asOf = JSON.parse(fs.readFileSync(path.join(root, 'data', 'things-to-do-currentness.json'), 'utf8')).as_of;
 
-const MULTI_PARAGRAPH_ID = '50-anos-de-memoria-criacao-e-resistencia';
+// The expected paragraph structure of a record is DERIVED from that record's
+// own canonical governed body, never from a pinned id. A corpus that gains a
+// second legitimately multi-paragraph governed record (the 4.º Campeonato
+// Nacional Senior de Boxe record does exactly that) must therefore be covered
+// by the generic rule rather than by a second hardcoded exception.
+function governedParagraphs(record) {
+  return bodyParagraphs(record.detail?.body);
+}
+
+// Retained as distinct regression coverage for the record this suite was
+// written for: 50 Anos must stay multi-paragraph. It is NOT the exclusive
+// multi-paragraph record any more, and nothing below branches on it.
+const FIFTY_ANOS_ID = '50-anos-de-memoria-criacao-e-resistencia';
 
 let passed = 0;
 const failures = [];
@@ -103,13 +115,30 @@ check(
   JSON.stringify(bodyParagraphs('')) === JSON.stringify(['']) && JSON.stringify(bodyParagraphs(null)) === JSON.stringify([''])
 );
 
-// --- Exactly one record is multi-paragraph ---------------------------------
-const multiParagraphIds = records
-  .filter((record) => bodyParagraphs(record.detail?.body).length > 1)
-  .map((record) => record.id);
+// --- The corpus exercises BOTH obligations ---------------------------------
+// The suite's two obligations are only meaningful while the corpus actually
+// contains each shape. These assertions keep that guarantee without pinning
+// which records, or how many, are multi-paragraph.
+const multiParagraphIds = records.filter((record) => governedParagraphs(record).length > 1).map((record) => record.id);
+const singleParagraphIds = records.filter((record) => governedParagraphs(record).length === 1).map((record) => record.id);
 check(
-  'exactly one governed record has a multi-paragraph body (50 Anos)',
-  JSON.stringify(multiParagraphIds) === JSON.stringify([MULTI_PARAGRAPH_ID]),
+  'the governed corpus contains at least one multi-paragraph body',
+  multiParagraphIds.length > 0,
+  `multi-paragraph ids: ${JSON.stringify(multiParagraphIds)}`
+);
+check(
+  'the governed corpus contains at least one single-paragraph body (the generic rule stays unreachable for them)',
+  singleParagraphIds.length > 0,
+  `single-paragraph ids: ${JSON.stringify(singleParagraphIds)}`
+);
+check(
+  'every governed record resolves to at least one paragraph',
+  records.every((record) => governedParagraphs(record).length >= 1)
+);
+// Distinct retained coverage: the original multi-paragraph record stays multi-paragraph.
+check(
+  '50 Anos still has a two-paragraph governed body',
+  governedParagraphs(records.find((record) => record.id === FIFTY_ANOS_ID) ?? {}).length === 2,
   `multi-paragraph ids: ${JSON.stringify(multiParagraphIds)}`
 );
 
@@ -119,7 +148,10 @@ for (const record of records) {
 
   for (const locale of ['en', 'pt']) {
     const expected = bodyParagraphs(t(`event.${record.id}.detail.body`, locale));
-    const expectedCount = record.id === MULTI_PARAGRAPH_ID ? 2 : 1;
+    // Derived from the CANONICAL record, so this also proves the localized
+    // body agrees with the governed source on paragraph structure -- the job
+    // the pinned literal used to do, now done for every record in both locales.
+    const expectedCount = governedParagraphs(record).length;
 
     check(
       `${record.id} (${locale}): governed body resolves to ${expectedCount} paragraph(s)`,
@@ -175,14 +207,16 @@ for (const record of records) {
 // Concatenating the rendered paragraphs back together with the approved
 // separator must reproduce the governed source string byte-for-byte, so this
 // fails if rendering ever edits, reflows or drops approved copy.
-for (const locale of ['en', 'pt']) {
-  const governed = t(`event.${MULTI_PARAGRAPH_ID}.detail.body`, locale);
-  const rejoined = bodyParagraphs(governed).join('\n\n');
-  check(
-    `50 Anos (${locale}): governed body round-trips through paragraph splitting byte-for-byte`,
-    rejoined === governed,
-    `governed ${JSON.stringify(governed)}\n       rejoined ${JSON.stringify(rejoined)}`
-  );
+for (const id of multiParagraphIds) {
+  for (const locale of ['en', 'pt']) {
+    const governed = t(`event.${id}.detail.body`, locale);
+    const rejoined = bodyParagraphs(governed).join('\n\n');
+    check(
+      `${id} (${locale}): governed body round-trips through paragraph splitting byte-for-byte`,
+      rejoined === governed,
+      `governed ${JSON.stringify(governed)}\n       rejoined ${JSON.stringify(rejoined)}`
+    );
+  }
 }
 
 console.log(`\nDetail-body paragraph tests: ${passed}/${passed + failures.length} passed.`);
