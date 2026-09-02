@@ -280,6 +280,65 @@
         "title": "50 Anos de Memória, Criação e Resistência — CNAD Exhibition in Mindelo | A PRASA",
         "schema_type": "ExhibitionEvent"
       }
+    },
+    {
+      "id": "4-campeonato-nacional-senior-de-boxe",
+      "kind": "dated-event",
+      "title": "4.º Campeonato Nacional Sénior de Boxe",
+      "provider": "Federação Cabo-verdiana de Boxe",
+      "summary": "More than 50 senior boxers from across Cabo Verde are expected in São Vicente for the fourth National Senior Boxing Championship, running 4–6 September at Pavilhão dos Salesianos.",
+      "category": "sport",
+      "location": {
+        "name": "Pavilhão dos Salesianos",
+        "locality": "São Vicente"
+      },
+      "source_url": "https://inforpress.cv/pt/sao-vicente-mais-de-50-atletas-disputam-campeonato-nacional-senior-de-boxe-de-04-a-06-de-setembro",
+      "source_type": "news-agency-report",
+      "start_date": "2026-09-04",
+      "start_datetime": null,
+      "end_datetime": null,
+      "end_date": "2026-09-06",
+      "checked_at": "2026-09-02",
+      "publication_state": "published",
+      "media_policy": "fallback_allowed",
+      "media_manifest_title": "4.º Campeonato Nacional Sénior de Boxe",
+      "detail_page": "things-to-do/4-campeonato-nacional-senior-de-boxe/",
+      "free_admission": null,
+      "display": {
+        "status": "4–6 September 2026",
+        "meta": "Pavilhão dos Salesianos · São Vicente",
+        "checked": "Checked 2 September 2026"
+      },
+      "media": null,
+      "card_action": {
+        "label": "See event",
+        "url": "https://inforpress.cv/pt/sao-vicente-mais-de-50-atletas-disputam-campeonato-nacional-senior-de-boxe-de-04-a-06-de-setembro"
+      },
+      "detail": {
+        "facts": [
+          {
+            "label": "Date",
+            "value": "4–6 September 2026"
+          },
+          {
+            "label": "Where",
+            "value": "Pavilhão dos Salesianos, São Vicente"
+          },
+          {
+            "label": "Provider",
+            "value": "Federação Cabo-verdiana de Boxe"
+          }
+        ],
+        "body": "The 4.º Campeonato Nacional Sénior de Boxe takes place in São Vicente from 4 to 6 September 2026 at Pavilhão dos Salesianos.\n\nMore than 50 senior boxers from across Cabo Verde are expected to participate.",
+        "good_to_know": null,
+        "checked": "Checked 2 September 2026 against current reporting of the Federação Cabo-verdiana de Boxe announcement.",
+        "action_label": "See event"
+      },
+      "seo": {
+        "description": "More than 50 senior boxers from across Cabo Verde are expected in São Vicente for the 4.º Campeonato Nacional Sénior de Boxe, 4–6 September 2026, at Pavilhão dos Salesianos.",
+        "title": "4.º Campeonato Nacional Sénior de Boxe | A PRASA",
+        "schema_type": "SportsEvent"
+      }
     }
   ]
 }
