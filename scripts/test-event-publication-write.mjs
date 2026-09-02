@@ -76,10 +76,171 @@ function assertClean(root, expectedHead = null) {
   }
 }
 
-function createRepository({ branch = 'feature/phase1b-test' } = {}) {
+const CURRENTNESS_FILE = 'data/things-to-do-currentness.json';
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+// Test-only synthetic lifecycle-boundary record. It exists solely inside an
+// isolated temporary repository so the deliberate-divergence regression below
+// owns its own CURRENT -> EXPIRED transition instead of borrowing one from the
+// governed corpus. Borrowing one is what produced the previous date treadmill:
+// a live record with a conveniently future expiry stops being convenient the
+// moment it expires, and nothing in the corpus is obliged to keep supplying a
+// replacement. Day precision only; REVIEW_DUE is a month-precision
+// reverification signal, never an expiry transition, so it is never used here.
+const BOUNDARY_ID = 'phase1b-temp-lifecycle-boundary';
+const BOUNDARY_TITLE = 'Phase 1B Temporary Lifecycle Boundary';
+
+function readCommittedCurrentness(root) {
+  const value = JSON.parse(fs.readFileSync(path.join(root, CURRENTNESS_FILE), 'utf8')).as_of;
+  if (!ISO_DAY.test(value ?? '')) {
+    throw new Error(`committed currentness baseline is not an ISO day: ${JSON.stringify(value)}`);
+  }
+  return value;
+}
+
+// Day arithmetic on the committed baseline, never on the system clock: every
+// date this harness derives is a function of what the repository has committed,
+// so the same implementation keeps passing as that baseline moves.
+function shiftDay(day, days) {
+  const at = new Date(`${day}T00:00:00Z`);
+  at.setUTCDate(at.getUTCDate() + days);
+  return at.toISOString().slice(0, 10);
+}
+
+function renderDay(day, locale) {
+  return new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
+    .format(new Date(`${day}T00:00:00Z`));
+}
+
+function writeJsonFile(file, value) {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+function insertHomeMarkers(root, relative, id) {
+  const file = path.join(root, relative);
+  let html = fs.readFileSync(file, 'utf8');
+  const begin = `<!-- BEGIN GENERATED EVENT: ${id} -->`;
+  const end = `<!-- END GENERATED EVENT: ${id} -->`;
+  if (html.includes(begin) || html.includes(end)) throw new Error(`${relative} already contains ${id}`);
+  const matches = [...html.matchAll(/<!-- END GENERATED EVENT: [a-z0-9]+(?:-[a-z0-9]+)* -->/g)];
+  if (!matches.length) throw new Error(`${relative} has no incumbent event markers`);
+  const last = matches.at(-1);
+  const at = last.index + last[0].length;
+  html = `${html.slice(0, at)}\n        ${begin}\n        ${end}${html.slice(at)}`;
+  fs.writeFileSync(file, html);
+}
+
+// The canonical generator sequence, identical to the one the guarded write
+// itself runs. The temporary repository is rebuilt through it so its committed
+// baseline is self-consistent at whichever currentness date the case simulates.
+function runCanonicalGenerators(root, asOf) {
+  run(root, process.execPath, ['scripts/build-locale-data.mjs']);
+  run(root, process.execPath, ['scripts/generate-things-to-do.mjs', `--as-of=${asOf}`, '--locale=en', '--write']);
+  run(root, process.execPath, ['scripts/build-static-pages.mjs', '--write']);
+  run(root, process.execPath, ['scripts/generate-things-to-do.mjs', `--as-of=${asOf}`, '--locale=pt', '--home=pt/index.html', '--write']);
+  run(root, process.execPath, ['scripts/build-sitemap.mjs', '--write']);
+}
+
+// Derive the synthetic record from the committed fixture packet so it carries a
+// complete, already-approved shape (event, media manifest, PT package) without
+// inventing governed content. Its id, detail route and title are rewritten so it
+// can never collide with a governed record, and its day-precision end_date is
+// pinned to `boundary`: CURRENT at `boundary`, EXPIRED at `boundary` + 1 day.
+function installBoundaryRecord(root, boundary) {
+  const source = JSON.parse(fs.readFileSync(path.join(root, FIXTURE), 'utf8'));
+  const derived = JSON.parse(
+    JSON.stringify(source)
+      .split(source.event.id).join(BOUNDARY_ID)
+      .split(source.event.title).join(BOUNDARY_TITLE)
+  );
+
+  const en = renderDay(boundary, 'en-GB');
+  const pt = renderDay(boundary, 'pt-PT');
+  const event = derived.event;
+  event.start_datetime = `${boundary}T18:30:00-01:00`;
+  event.end_date = boundary;
+  event.checked_at = boundary;
+  event.display.status = `${en} · 18:30`;
+  event.display.checked = `Checked ${en}`;
+  event.detail.facts[0].value = `${en} · 18:30`;
+  event.detail.checked = `Checked ${en} against the approved fixture packet.`;
+
+  const ptText = {
+    [`event.${BOUNDARY_ID}.display.status`]: [`${en} · 18:30`, `${pt} · 18:30`],
+    [`event.${BOUNDARY_ID}.display.checked`]: [`Checked ${en}`, `Revisto em ${pt}`],
+    [`event.${BOUNDARY_ID}.detail.fact.date.value_display`]: [`${en} · 18:30`, `${pt} · 18:30`],
+    [`event.${BOUNDARY_ID}.detail.checked`]: [
+      `Checked ${en} against the approved fixture packet.`,
+      `Revisto em ${pt} contra o pacote de teste aprovado.`
+    ]
+  };
+  for (const [key, [sourceEn, ptValue]] of Object.entries(ptText)) {
+    derived.localization.pt_values[key] = ptValue;
+    const row = derived.localization.approved_package.rows.find((item) => item.key === key);
+    if (!row) throw new Error(`synthetic boundary record is missing PT row ${key}`);
+    row.source_en = sourceEn;
+    row.pt = ptValue;
+  }
+
+  const eventsPath = path.join(root, 'data', 'things-to-do-events.json');
+  const events = JSON.parse(fs.readFileSync(eventsPath, 'utf8'));
+  events.records.push(event);
+  writeJsonFile(eventsPath, events);
+
+  const manifestPath = path.join(root, 'internal', 'provider-media-manifest.json');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  const manifestRecord = derived.media.approved_manifest;
+  manifestRecord.media_checked_date = boundary;
+  manifest.records.push(manifestRecord);
+  writeJsonFile(manifestPath, manifest);
+
+  writeJsonFile(path.join(root, 'data', 'locales', `pt-overlay-event-${BOUNDARY_ID}.source.json`), {
+    ...derived.localization.approved_package,
+    event_id: BOUNDARY_ID,
+    supplied_rows_approved: derived.localization.approved_package.rows.length,
+    review_required: 0,
+    blocking_issue: null
+  });
+
+  insertHomeMarkers(root, 'index.html', BOUNDARY_ID);
+  insertHomeMarkers(root, path.join('pt', 'index.html'), BOUNDARY_ID);
+}
+
+const BOUNDARY_ROUTES = [
+  `things-to-do/${BOUNDARY_ID}/index.html`,
+  `pt/things-to-do/${BOUNDARY_ID}/index.html`
+];
+
+// The temporary repository owns the normal success path's currentness binding.
+//
+// Project 03 ruling A: the harness may read committed repository currentness and
+// bind the TEST COPY of the packet to it. The committed historical literal in
+// the fixture is deliberately left alone -- statically repinning it only moves
+// the treadmill to the next baseline advance. Production code still receives an
+// explicit control.as_of and still derives nothing.
+//
+//   committedAsOf  simulate a different committed baseline in the temporary
+//                  repository (the repository is rebuilt through the canonical
+//                  generators so its committed state stays self-consistent).
+//   boundaryDay    install the test-only synthetic lifecycle-boundary record
+//                  with a day-precision end_date pinned to this day.
+//   asOf           override the test packet's control.as_of. Only the
+//                  deliberate cross-boundary divergence case supplies this;
+//                  every normal case stays bound to committed currentness.
+function createRepository({ branch = 'feature/phase1b-test', committedAsOf = null, boundaryDay = null, asOf = null } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aprasa-phase1b-test-'));
   const remote = `${root}-remote.git`;
   fs.cpSync(ROOT, root, { recursive: true, filter: (src) => path.basename(src) !== '.git' });
+
+  if (committedAsOf) {
+    if (!ISO_DAY.test(committedAsOf)) throw new Error(`simulated committed baseline is not an ISO day: ${committedAsOf}`);
+    writeJsonFile(path.join(root, CURRENTNESS_FILE), { ...JSON.parse(fs.readFileSync(path.join(root, CURRENTNESS_FILE), 'utf8')), as_of: committedAsOf });
+  }
+  if (boundaryDay) installBoundaryRecord(root, boundaryDay);
+  const committed = readCommittedCurrentness(root);
+  if (committedAsOf || boundaryDay) runCanonicalGenerators(root, committed);
+
   run(root, 'git', ['init', '-q', '-b', 'main']);
   run(root, 'git', ['config', 'user.name', 'Phase 1B Test']);
   run(root, 'git', ['config', 'user.email', 'phase1b-test@aprasa.org']);
@@ -91,6 +252,10 @@ function createRepository({ branch = 'feature/phase1b-test' } = {}) {
   const baseline = run(root, 'git', ['rev-parse', 'HEAD']);
   const packet = JSON.parse(fs.readFileSync(path.join(root, FIXTURE), 'utf8'));
   packet.control.expected_main_sha = baseline;
+  // The complete explicit packet is written once, before any proof exists, so
+  // the bound as_of is inside the exact bytes the dry-run proof digests.
+  packet.control.as_of = asOf ?? committed;
+  if (!ISO_DAY.test(packet.control.as_of)) throw new Error(`test packet control.as_of is not an explicit ISO day: ${JSON.stringify(packet.control.as_of)}`);
   const packetPath = path.join(root, '.git', 'phase1b-packet.json');
   fs.writeFileSync(packetPath, `${JSON.stringify(packet, null, 2)}\n`);
   if (branch !== 'main') run(root, 'git', ['switch', '-q', '-c', branch]);
@@ -98,6 +263,7 @@ function createRepository({ branch = 'feature/phase1b-test' } = {}) {
     root,
     remote,
     baseline,
+    committed,
     packet,
     packetPath,
     cleanup() {
@@ -213,6 +379,19 @@ try {
   proofContext.cleanup();
   throw error;
 }
+
+record('dry-run proof binds the committed-baseline as_of it was created from', () => {
+  if (trustedProof.as_of !== proofContext.committed) {
+    throw new Error(`proof as_of ${trustedProof.as_of} is not the committed baseline ${proofContext.committed}`);
+  }
+  const onDisk = JSON.parse(fs.readFileSync(proofContext.packetPath, 'utf8'));
+  if (onDisk.control.as_of !== trustedProof.as_of || proofContext.packet.control.as_of !== trustedProof.as_of) {
+    throw new Error('packet as_of drifted away from the proof after the proof was created');
+  }
+  // The bound as_of is inside the exact bytes the proof digests, so the proof
+  // still validates against the unmodified packet and nothing else.
+  assertDryRunProof(proofContext.root, proofContext.packet, proofContext.packetPath, trustedProof, proofSafety.head, proofSafety.authoritativeMain);
+});
 
 record('forged proof is rejected', () => {
   const forged = { ...trustedProof, status: 'REVIEW_READY', packet_sha256: '0'.repeat(64) };
@@ -374,6 +553,93 @@ record('PR-creation failure reports pushed commit and deterministic resume', () 
   }
   assertClean(ctx.root);
 }));
+
+// --- Project 03 ruling A: committed-baseline binding ------------------------
+
+record('normal test packet carries an explicit ISO control.as_of equal to committed currentness', () => withRepository((ctx) => {
+  const committed = readCommittedCurrentness(ctx.root);
+  const onDisk = JSON.parse(fs.readFileSync(ctx.packetPath, 'utf8'));
+  if (!ISO_DAY.test(onDisk.control.as_of ?? '')) {
+    throw new Error(`test packet control.as_of is not an explicit ISO day: ${JSON.stringify(onDisk.control.as_of)}`);
+  }
+  if (onDisk.control.as_of !== committed) {
+    throw new Error(`test packet control.as_of ${onDisk.control.as_of} is not the committed baseline ${committed}`);
+  }
+  if (onDisk.control.as_of !== ctx.packet.control.as_of) {
+    throw new Error('in-memory packet and the on-disk test packet disagree on control.as_of');
+  }
+  expectState(onDisk, 'READY_FOR_IMPLEMENTATION', { root: ctx.root, checkRepository: true });
+}), 'baseline-binding');
+
+// The binding follows the repository, not the fixture's committed literal.
+// This is the whole reason the literal does not need re-pinning.
+record('bound test packet follows committed currentness, not the committed fixture literal', () => {
+  const simulated = shiftDay(readCommittedCurrentness(ROOT), 3);
+  if (fixture.control.as_of === simulated) throw new Error('simulated baseline must differ from the committed fixture literal');
+  withRepository({ committedAsOf: simulated }, (ctx) => {
+    if (ctx.packet.control.as_of !== simulated) {
+      throw new Error(`test packet control.as_of ${ctx.packet.control.as_of} did not follow the committed baseline ${simulated}`);
+    }
+    if (!ISO_DAY.test(fixture.control.as_of ?? '')) throw new Error('committed fixture must retain an explicit ISO control.as_of');
+  });
+}, 'baseline-binding');
+
+// Binding happens only in the test copy. The real contract is unchanged and
+// still refuses a packet that does not carry a valid explicit control.as_of.
+record('real packet validation still rejects missing or malformed control.as_of', () => {
+  for (const value of [undefined, null, '', '2026-9-1', '2026-02-30', '20260901', 'today']) {
+    const packet = clone(fixture);
+    if (value === undefined) delete packet.control.as_of;
+    else packet.control.as_of = value;
+    expectState(packet, 'INVALID_INPUT');
+  }
+}, 'baseline-binding');
+
+// Regression matrix: the same harness implementation, no fixture re-pinning
+// between cases. With the current committed baseline these resolve to the
+// historical baseline, 2026-09-01, and a later baseline that has already
+// crossed a day-precision CURRENT -> EXPIRED boundary.
+const committedBaseline = readCommittedCurrentness(ROOT);
+for (const { label, options } of [
+  { label: `committed baseline ${committedBaseline}`, options: {} },
+  { label: `advanced baseline ${shiftDay(committedBaseline, 3)}`, options: { committedAsOf: shiftDay(committedBaseline, 3) } },
+  {
+    label: `later baseline ${shiftDay(committedBaseline, 10)} past a day-precision boundary`,
+    options: { committedAsOf: shiftDay(committedBaseline, 10), boundaryDay: shiftDay(committedBaseline, 9) }
+  }
+]) {
+  record(`guarded write succeeds at ${label}`, () => withRepository(options, (ctx) => {
+    if (ctx.packet.control.as_of !== ctx.committed) throw new Error('test packet was not bound to committed currentness');
+    const result = prepareRealWriteCandidate(ctx);
+    if (result.status !== 'FOUNDER_APPROVAL_REQUIRED' || result.merge_allowed !== false || !result.idempotent) {
+      throw new Error('successful result did not retain approval stop gate');
+    }
+    if (result.as_of !== ctx.committed) throw new Error(`candidate as_of ${result.as_of} is not the committed baseline ${ctx.committed}`);
+    rollbackRealWriteCandidate(ctx.root, result);
+    assertClean(ctx.root, ctx.baseline);
+  }), 'baseline-binding');
+}
+
+// The negative half of the ruling: binding the normal path must not disarm the
+// bounded-diff guard. A deliberately divergent control.as_of moves the
+// synthetic record across its own day-precision boundary, which moves derived
+// surfaces the packet never authorized, and the guard must still refuse.
+record('deliberate cross-boundary as_of divergence is refused', () => {
+  const committed = readCommittedCurrentness(ROOT);
+  const divergent = shiftDay(committed, 1);
+  withRepository({ boundaryDay: committed, asOf: divergent }, (ctx) => {
+    if (ctx.packet.control.as_of !== divergent || ctx.committed === divergent) {
+      throw new Error('divergence case did not actually diverge from committed currentness');
+    }
+    const error = expectThrow(() => prepareRealWriteCandidate(ctx), /STATUS: VALIDATION_FAILED[\s\S]*Unexpected dry-run diff scope/);
+    for (const route of BOUNDARY_ROUTES) {
+      if (!error.message.includes(route)) {
+        throw new Error(`refusal did not name the synthetic lifecycle-boundary surface ${route}`);
+      }
+    }
+    assertClean(ctx.root, ctx.baseline);
+  });
+}, 'baseline-binding');
 
 for (const result of results) {
   console.log(`${result.status} — ${result.name}${result.reason ? `: ${result.reason}` : ''}`);

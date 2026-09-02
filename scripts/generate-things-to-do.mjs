@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { t, hasKey } from './lib/locale.mjs';
-import { factKeyBase } from './lib/things-to-do-keys.mjs';
+import { bodyParagraphs, factKeyBase } from './lib/things-to-do-keys.mjs';
 import { currentnessState, isExpired as recordIsExpired, EXPIRED, REVIEW_DUE } from './lib/things-to-do-currentness.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
@@ -200,6 +200,19 @@ function localizeRecord(record) {
   };
 }
 
+// Renders a governed detail body as one <p> per paragraph, indented to sit in
+// the surrounding markup. Paragraph structure comes from the shared
+// bodyParagraphs() rule (blank line = paragraph break, single newline is not),
+// and each paragraph is escaped exactly as before — governed source copy never
+// supplies raw HTML and still cannot. A single-paragraph body produces the
+// identical one-<p> string this used to emit inline, so incumbent event output
+// is unchanged byte-for-byte.
+function renderBodyParagraphs(body, indent) {
+  return bodyParagraphs(body)
+    .map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`)
+    .join(`\n${indent}`);
+}
+
 function renderFacts(facts = []) {
   return facts.map((fact) => {
     const value = fact.value_html ?? escapeHtml(fact.value ?? '');
@@ -284,7 +297,7 @@ function renderHomeArticle(record, loc) {
               <h2>${escapeHtml(loc.title)}</h2>
               <dl class="detail-list">${renderFacts(loc.facts)}</dl>
               <h3>${escapeHtml(CHROME.detailsHeading)}</h3>
-              <p>${escapeHtml(loc.detailBody)}</p>${goodToKnow}
+              ${renderBodyParagraphs(loc.detailBody, '              ')}${goodToKnow}
               <p class="checked">${escapeHtml(loc.detailChecked)}</p>${dialogAction}
             </div>
           </template>
@@ -398,7 +411,7 @@ ${renderSchema(record, loc, expired)}
       <h1>${escapeHtml(loc.title)}</h1>
       <dl class="detail-list">${renderFacts(loc.facts)}</dl>
       <h2>${escapeHtml(CHROME.detailsHeading)}</h2>
-      <p>${escapeHtml(loc.detailBody)}</p>${goodToKnow}
+      ${renderBodyParagraphs(loc.detailBody, '      ')}${goodToKnow}
       <p class="checked">${escapeHtml(loc.detailChecked)}</p>${action}
     </article>
   </div>
