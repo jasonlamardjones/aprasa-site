@@ -439,6 +439,22 @@
       "media_asset_source_url": null,
       "media_checked_date": "2026-09-02",
       "media_alt": null
+    },
+    {
+      "section": "things-to-do",
+      "title": "Diva Barros, na Casa da Morna",
+      "provider": "Casa da Morna",
+      "source_url": "https://cvcultural.cv/eventos/diva-barros-na-casa-da-morna-1",
+      "media_type": "editorial-fallback",
+      "media_state": "fallback-final",
+      "media_source": null,
+      "media_asset": null,
+      "fallback_category": "things-live-music",
+      "fallback_reason": "No authentic event-specific media is cleared for this record. Project 03 approved governed fallback media, so the standard shared A PRASA editorial fallback region renders for this card; no record-specific asset is ingested and no venue, artist or promotional imagery is reused.",
+      "media_provenance": "Shared A PRASA editorial fallback media region rendered by the incumbent front-end foundation (prasa-launch.js). No record-specific image asset is ingested for this record.",
+      "media_asset_source_url": null,
+      "media_checked_date": "2026-09-02",
+      "media_alt": null
     }
   ]
 }

@@ -209,6 +209,27 @@
       },
       "checked_at": "2026-08-22",
       "media_manifest_title": "Kafê Djan Djan — Assistente de Restauração",
+      "media": {
+        "asset": "assets/events/kafe-djan-djan-hiring-flyer.jpg",
+        "width": 1122,
+        "height": 1402,
+        "loading": "lazy",
+        "decoding": "async",
+        "alt": {
+          "locale_key": "training.record.kafe-djan-djan.alt"
+        },
+        "card_class": "card-media card-media-poster",
+        "detail_class": "dialog-media dialog-media-poster",
+        "layout": "block",
+        "attribute_order": [
+          "src",
+          "width",
+          "height",
+          "loading",
+          "decoding",
+          "alt"
+        ]
+      },
       "card": {
         "attributes": {
           "data-checked": "2026-08-22"
