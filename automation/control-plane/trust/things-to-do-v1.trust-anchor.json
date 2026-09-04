@@ -1,0 +1,30 @@
+{
+  "anchor_id": "APRASA_TTD_EDITORIAL_V1_TRUST_ANCHOR",
+  "schema_version": "1.0.0",
+  "notes": "Deployment-side trust root for the Things-to-Do adjudication policy. The evaluator verifies the committed policy against this anchor before any rule may match. A policy that does not match this anchor cannot authorize SELECT and cannot report approved matched rules. Candidate-supplied claims never substitute for this anchor.",
+  "policy_id": "APRASA_TTD_EDITORIAL_V1",
+  "version": "1.0.0",
+  "domain": "THINGS_TO_DO",
+  "approval_reference": "PROJECT_03_POLICY_FIDELITY_REVIEW_2026-09-04",
+  "approved_owner": "PROJECT_03",
+  "technical_interpreter": "PROJECT_04",
+  "content_sha256": "42b6eb767c9f71d5985f0535a41a33e14f003b515acdd286cb515c326d62598b",
+  "rule_ids": [
+    "TTD-COMM-001",
+    "TTD-COMM-002",
+    "TTD-COMM-003",
+    "TTD-COMM-004",
+    "TTD-COPY-001",
+    "TTD-CURRENT-001",
+    "TTD-DATE-001",
+    "TTD-ELIG-001",
+    "TTD-EVID-001",
+    "TTD-EVID-002",
+    "TTD-FACT-001",
+    "TTD-FACT-002",
+    "TTD-GOV-001",
+    "TTD-GOV-002",
+    "TTD-MEDIA-001",
+    "TTD-SOURCE-001"
+  ]
+}
