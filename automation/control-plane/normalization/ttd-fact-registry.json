@@ -12,26 +12,14 @@
     "AGGREGATOR",
     "OTHER"
   ],
-  "allowed_url_schemes": [
-    "http:",
-    "https:"
-  ],
-  "confidence_levels": [
-    "HIGH",
-    "MEDIUM",
-    "LOW"
-  ],
-  "admissible_confidence": [
-    "HIGH"
-  ],
+  "allowed_url_schemes": ["http:", "https:"],
+  "confidence_levels": ["HIGH", "MEDIUM", "LOW"],
+  "admissible_confidence": ["HIGH"],
   "fact_consistency_constraints": [
     {
       "constraint_id": "TTD-FACT-CONSISTENCY-001",
       "kind": "FORBIDDEN_COMBINATION",
-      "forbidden_combination": {
-        "materially_current": true,
-        "candidate_already_ended": true
-      },
+      "forbidden_combination": { "materially_current": true, "candidate_already_ended": true },
       "reason_code": "CONTRADICTORY_MATERIAL_FACTS",
       "note": "A candidate that has fully ended cannot simultaneously be materially current. This enforces an internal contradiction in normalized facts; it creates no editorial rule and changes no approved policy semantics. TTD-CURRENT-001 continues to evaluate currentness from governed event dates."
     }
@@ -48,42 +36,12 @@
       "materiality": "MATERIAL_ELIGIBILITY",
       "directly_assertable": true
     },
-    {
-      "name": "geography_in_scope",
-      "type": "boolean",
-      "materiality": "MATERIAL_ELIGIBILITY",
-      "directly_assertable": true
-    },
-    {
-      "name": "materially_current",
-      "type": "boolean",
-      "materiality": "MATERIAL_ELIGIBILITY",
-      "directly_assertable": true
-    },
-    {
-      "name": "evidence_sufficient",
-      "type": "boolean",
-      "materiality": "MATERIAL_ELIGIBILITY",
-      "directly_assertable": true
-    },
-    {
-      "name": "material_source_conflict",
-      "type": "boolean",
-      "materiality": "MATERIAL_ELIGIBILITY",
-      "directly_assertable": true
-    },
-    {
-      "name": "conflict_resolved",
-      "type": "boolean",
-      "materiality": "OPERATIONAL",
-      "directly_assertable": true
-    },
-    {
-      "name": "required_authority_missing",
-      "type": "boolean",
-      "materiality": "MATERIAL_ELIGIBILITY",
-      "directly_assertable": true
-    },
+    { "name": "geography_in_scope", "type": "boolean", "materiality": "MATERIAL_ELIGIBILITY", "directly_assertable": true },
+    { "name": "materially_current", "type": "boolean", "materiality": "MATERIAL_ELIGIBILITY", "directly_assertable": true },
+    { "name": "evidence_sufficient", "type": "boolean", "materiality": "MATERIAL_ELIGIBILITY", "directly_assertable": true },
+    { "name": "material_source_conflict", "type": "boolean", "materiality": "MATERIAL_ELIGIBILITY", "directly_assertable": true },
+    { "name": "conflict_resolved", "type": "boolean", "materiality": "OPERATIONAL", "directly_assertable": true },
+    { "name": "required_authority_missing", "type": "boolean", "materiality": "MATERIAL_ELIGIBILITY", "directly_assertable": true },
     {
       "name": "standards_boundary_unresolved",
       "type": "boolean",
@@ -93,88 +51,25 @@
       "conservative_absent_value": true,
       "note": "Derived only from an explicit standards classification. Absence of adverse keywords is not affirmative ordinary-scope evidence. Any omission, ambiguity, low-confidence classification, or unresolved standards dimension yields true, which HOLDs under TTD-GOV-002."
     },
-    {
-      "name": "commercial_primary_proposition",
-      "type": "boolean",
-      "materiality": "MATERIAL_ELIGIBILITY",
-      "directly_assertable": true
-    },
-    {
-      "name": "first_party_source_accessible",
-      "type": "boolean",
-      "materiality": "OPERATIONAL",
-      "directly_assertable": true
-    },
-    {
-      "name": "admission_verified",
-      "type": "boolean",
-      "materiality": "OPERATIONAL",
-      "directly_assertable": true
-    },
-    {
-      "name": "secondary_detail_verified",
-      "type": "boolean",
-      "materiality": "OPERATIONAL",
-      "directly_assertable": true
-    },
-    {
-      "name": "event_identity_date_venue_sufficient",
-      "type": "boolean",
-      "materiality": "OPERATIONAL",
-      "directly_assertable": true
-    },
+    { "name": "commercial_primary_proposition", "type": "boolean", "materiality": "MATERIAL_ELIGIBILITY", "directly_assertable": true },
+    { "name": "first_party_source_accessible", "type": "boolean", "materiality": "OPERATIONAL", "directly_assertable": true },
+    { "name": "admission_verified", "type": "boolean", "materiality": "OPERATIONAL", "directly_assertable": true },
+    { "name": "secondary_detail_verified", "type": "boolean", "materiality": "OPERATIONAL", "directly_assertable": true },
+    { "name": "event_identity_date_venue_sufficient", "type": "boolean", "materiality": "OPERATIONAL", "directly_assertable": true },
     {
       "name": "authoritative_end_precision",
       "type": "enum",
-      "enum": [
-        "DAY",
-        "MONTH"
-      ],
+      "enum": ["DAY", "MONTH"],
       "materiality": "OPERATIONAL",
       "directly_assertable": true
     },
-    {
-      "name": "authentic_media_rights_unclear",
-      "type": "boolean",
-      "materiality": "OPERATIONAL",
-      "directly_assertable": true
-    },
-    {
-      "name": "governed_editorial_fallback_available",
-      "type": "boolean",
-      "materiality": "OPERATIONAL",
-      "directly_assertable": true
-    },
-    {
-      "name": "broader_source_conflicts_with_specific_scope",
-      "type": "boolean",
-      "materiality": "MATERIAL_ELIGIBILITY",
-      "directly_assertable": true
-    },
-    {
-      "name": "proposed_copy_strengthens_unknown_fact",
-      "type": "boolean",
-      "materiality": "MATERIAL_ELIGIBILITY",
-      "directly_assertable": true
-    },
-    {
-      "name": "ordinary_editorial_event",
-      "type": "boolean",
-      "materiality": "OPERATIONAL",
-      "directly_assertable": true
-    },
-    {
-      "name": "ticketed_or_commercial_venue",
-      "type": "boolean",
-      "materiality": "OPERATIONAL",
-      "directly_assertable": true
-    },
-    {
-      "name": "payment_or_commercial_relationship",
-      "type": "boolean",
-      "materiality": "OPERATIONAL",
-      "directly_assertable": true
-    },
+    { "name": "authentic_media_rights_unclear", "type": "boolean", "materiality": "OPERATIONAL", "directly_assertable": true },
+    { "name": "governed_editorial_fallback_available", "type": "boolean", "materiality": "OPERATIONAL", "directly_assertable": true },
+    { "name": "broader_source_conflicts_with_specific_scope", "type": "boolean", "materiality": "MATERIAL_ELIGIBILITY", "directly_assertable": true },
+    { "name": "proposed_copy_strengthens_unknown_fact", "type": "boolean", "materiality": "MATERIAL_ELIGIBILITY", "directly_assertable": true },
+    { "name": "ordinary_editorial_event", "type": "boolean", "materiality": "OPERATIONAL", "directly_assertable": true },
+    { "name": "ticketed_or_commercial_venue", "type": "boolean", "materiality": "OPERATIONAL", "directly_assertable": true },
+    { "name": "payment_or_commercial_relationship", "type": "boolean", "materiality": "OPERATIONAL", "directly_assertable": true },
     {
       "name": "primary_proposition",
       "type": "enum",
@@ -185,17 +80,7 @@
       "materiality": "MATERIAL_ELIGIBILITY",
       "directly_assertable": true
     },
-    {
-      "name": "current_or_former_client",
-      "type": "boolean",
-      "materiality": "OPERATIONAL",
-      "directly_assertable": true
-    },
-    {
-      "name": "candidate_already_ended",
-      "type": "boolean",
-      "materiality": "MATERIAL_ELIGIBILITY",
-      "directly_assertable": true
-    }
+    { "name": "current_or_former_client", "type": "boolean", "materiality": "OPERATIONAL", "directly_assertable": true },
+    { "name": "candidate_already_ended", "type": "boolean", "materiality": "MATERIAL_ELIGIBILITY", "directly_assertable": true }
   ]
 }
