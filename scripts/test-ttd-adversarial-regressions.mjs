@@ -11,6 +11,7 @@ import { createHarness, normalizedFromOracle, factsFromOracle, TRUSTED_AUTHORITY
 import { loadPolicy, loadTrustAnchor, evaluateNormalizedFacts, semanticFingerprint } from './lib/ttd-policy-evaluator.mjs';
 import { loadFactRegistry, normalizeCandidate, factSummary } from './lib/ttd-normalizer.mjs';
 import { loadAdjudicationContext, adjudicateCandidate } from './lib/ttd-adjudication.mjs';
+import { routeEvaluation } from './lib/ttd-adjudication-routing.mjs';
 import { digest, canonicalize } from './lib/ttd-canonical-json.mjs';
 
 const harness = createHarness('TTD_ADVERSARIAL_REGRESSIONS');
@@ -45,7 +46,8 @@ function evaluate(facts, options = {}) {
     },
     authorityResolution: supplied(options, 'authorityResolution', TRUSTED_AUTHORITY_RESOLUTION),
     evaluatedAt: FIXED_EVALUATION_TIMESTAMP,
-    materialPredicates
+    materialPredicates,
+    factConsistencyConstraints: supplied(options, 'factConsistencyConstraints', context.factConsistencyConstraints)
   });
 }
 
@@ -559,4 +561,235 @@ for (const url of ['javascript:alert(1)', 'file:///etc/passwd', 'data:text/html,
   harness.ok('the conflict is named', result.reason_codes.includes('FIELD_ACTION_CONFLICT'));
 }
 
-harness.finish([`eligibility_predicates=${ELIGIBILITY_PREDICATES.length}`, `fixtures=${oracle.fixtures.length}`]);
+// ===========================================================================
+// INDEPENDENT REVIEW FINDINGS — b27681f8246cf2eb19443aa24d76e7134ee8f070
+//
+// Four fail-closed defects were found by independent probes against that SHA.
+// Each was reproduced before being fixed. The regressions below are written
+// against the reported behaviour directly, not against the reconstructed
+// oracle, so they fail if any defect is reintroduced.
+// ===========================================================================
+
+// [REVIEW-1] Malformed standards data must never clear the standards boundary.
+{
+  const CLEARED = {
+    affirmative_ordinary_scope_evidence: true,
+    confidence: 'HIGH',
+    evidence_refs: ['S1'],
+    unresolved_dimensions: [],
+    mixed_purpose: false
+  };
+
+  // Positive control: the complete, well-formed classification still clears.
+  {
+    const evidence = baseEvidence();
+    evidence.standards_classification = { ...CLEARED };
+    const normalized = normalizeCandidate(evidence, { registry });
+    harness.equal('[REVIEW-1] a complete classification still clears the boundary',
+      normalized.facts.standards_boundary_unresolved.value, false);
+    harness.equal('[REVIEW-1] a complete classification still selects', evaluate(null, { normalized }).disposition, 'SELECT');
+  }
+
+  const malformed = [];
+  // Missing required members, one at a time.
+  for (const member of Object.keys(CLEARED)) {
+    const value = { ...CLEARED };
+    delete value[member];
+    malformed.push({ label: `missing member ${member}`, value });
+  }
+  // Wrong member types.
+  for (const [member, wrongValues] of Object.entries({
+    affirmative_ordinary_scope_evidence: ['true', 1, null, [], {}],
+    confidence: ['high', 'VERY_HIGH', 0, null, ['HIGH'], {}],
+    unresolved_dimensions: ['RELIGIOUS', 0, null, true, { a: 1 }, [1], [null], [{}]],
+    mixed_purpose: ['true', 'false', 0, 1, null, [], {}],
+    evidence_refs: ['S1', 0, null, true, {}, [], [1], [null], [{}]]
+  })) {
+    for (const wrong of wrongValues) {
+      malformed.push({ label: `${member}=${canonicalize(wrong)}`, value: { ...CLEARED, [member]: wrong } });
+    }
+  }
+  // Unmet-but-well-formed members must also fail closed.
+  malformed.push({ label: 'affirmation withheld', value: { ...CLEARED, affirmative_ordinary_scope_evidence: false } });
+  malformed.push({ label: 'unresolved dimension present', value: { ...CLEARED, unresolved_dimensions: ['RELIGIOUS'] } });
+  malformed.push({ label: 'mixed purpose declared', value: { ...CLEARED, mixed_purpose: true } });
+  malformed.push({ label: 'dangling evidence ref', value: { ...CLEARED, evidence_refs: ['GHOST'] } });
+  // Object/array shape substitution.
+  for (const shape of [[], [CLEARED], 'ORDINARY', 0, 1, true, false]) {
+    malformed.push({ label: `shape substitution ${canonicalize(shape)}`, value: shape });
+  }
+
+  for (const attempt of malformed) {
+    const evidence = baseEvidence();
+    evidence.standards_classification = attempt.value;
+    const normalized = normalizeCandidate(evidence, { registry });
+    harness.equal(`[REVIEW-1] ${attempt.label}: boundary stays unresolved`,
+      normalized.facts.standards_boundary_unresolved.value, true);
+    harness.ok(`[REVIEW-1] ${attempt.label}: a reason is recorded`,
+      typeof normalized.facts.standards_boundary_unresolved.reason === 'string'
+      && normalized.facts.standards_boundary_unresolved.reason !== 'AFFIRMATIVE_ORDINARY_SCOPE_EVIDENCE');
+
+    const result = evaluate(null, { normalized });
+    harness.ok(`[REVIEW-1] ${attempt.label}: never SELECT`, result.disposition !== 'SELECT');
+    harness.equal(`[REVIEW-1] ${attempt.label}: HOLD`, result.disposition, 'HOLD');
+    harness.equal(`[REVIEW-1] ${attempt.label}: publication blocked`, result.publication_blocked, true);
+    harness.equal(`[REVIEW-1] ${attempt.label}: human review required`, result.human_review, true);
+    harness.ok(`[REVIEW-1] ${attempt.label}: never REJECT`, result.disposition !== 'REJECT');
+
+    const composed = adjudicateCandidate({ evidence, context, authorityResolution: TRUSTED_AUTHORITY_RESOLUTION, evaluatedAt: FIXED_EVALUATION_TIMESTAMP });
+    harness.ok(`[REVIEW-1] ${attempt.label}: no downstream selection`,
+      composed.routing.automatic_route?.next_status !== 'SELECTED');
+  }
+}
+
+// [REVIEW-2] Contradictory currentness facts must never authorize SELECT.
+{
+  const contradictory = eligibleFacts();
+  contradictory.candidate_already_ended = { state: 'KNOWN', value: true, reason: 'PROBE', evidence_refs: ['S1'], rationale: null };
+  const result = evaluate(contradictory);
+  harness.ok('[REVIEW-2] current + ended never selects', result.disposition !== 'SELECT');
+  harness.equal('[REVIEW-2] current + ended holds', result.disposition, 'HOLD');
+  harness.equal('[REVIEW-2] current + ended blocks publication', result.publication_blocked, true);
+  harness.equal('[REVIEW-2] current + ended requires human review', result.human_review, true);
+  harness.ok('[REVIEW-2] the contradiction is named in the reason codes',
+    result.reason_codes.includes('CONTRADICTORY_MATERIAL_FACTS'));
+  harness.ok('[REVIEW-2] the violated constraint is named in the audit trace',
+    result.trace.fact_consistency_violations.includes('TTD-FACT-CONSISTENCY-001'));
+  harness.ok('[REVIEW-2] the contradiction appears in the composition trace',
+    result.trace.composition.some((step) => step.outcome === 'FACT_CONSISTENCY_VIOLATION'));
+  harness.equal('[REVIEW-2] no field actions are derived from contradictory facts', result.field_actions, {});
+  harness.ok('[REVIEW-2] neither side of the contradiction is silently preferred',
+    result.trace.rule_evaluations.find((entry) => entry.rule_id === 'TTD-CURRENT-001').matched === false
+    && result.trace.rule_evaluations.find((entry) => entry.rule_id === 'TTD-ELIG-001').matched === true
+    && result.disposition === 'HOLD');
+
+  // Not-current and not-ended: no valid current state can be established.
+  const indeterminate = eligibleFacts();
+  indeterminate.materially_current = { state: 'KNOWN', value: false, reason: 'PROBE', evidence_refs: ['S1'], rationale: null };
+  const indeterminateResult = evaluate(indeterminate);
+  harness.ok('[REVIEW-2] not-current and not-ended never selects', indeterminateResult.disposition !== 'SELECT');
+  harness.equal('[REVIEW-2] not-current and not-ended holds', indeterminateResult.disposition, 'HOLD');
+  harness.equal('[REVIEW-2] not-current and not-ended blocks publication', indeterminateResult.publication_blocked, true);
+
+  // The legitimate ended case must still reject rather than over-block.
+  const ended = factsFromOracle(fixtureById.get('F17').expected_normalized.facts);
+  harness.equal('[REVIEW-2] a genuinely ended candidate still rejects', evaluate(ended).disposition, 'REJECT');
+  harness.ok('[REVIEW-2] a genuinely ended candidate raises no contradiction',
+    !evaluate(ended).reason_codes.includes('CONTRADICTORY_MATERIAL_FACTS'));
+
+  // Contradictory source assertions resolve to UNKNOWN and still fail closed.
+  const evidence = baseEvidence();
+  evidence.assertions.push({ predicate: 'candidate_already_ended', value: true, confidence: 'HIGH', evidence_refs: ['S1'], rationale: 'A second source says the run has closed.' });
+  const normalized = normalizeCandidate(evidence, { registry });
+  harness.equal('[REVIEW-2] contradictory ended assertions normalize to UNKNOWN',
+    normalized.facts.candidate_already_ended.state, 'UNKNOWN');
+  const fromEvidence = evaluate(null, { normalized });
+  harness.ok('[REVIEW-2] a contradictory ended assertion never selects', fromEvidence.disposition !== 'SELECT');
+  harness.ok('[REVIEW-2] the contradictory dependency is named',
+    fromEvidence.unresolved_dependencies.includes('candidate_already_ended'));
+
+  // Rule order must not change the fail-closed result.
+  const reversed = clone(policy);
+  reversed.rules.reverse();
+  const reversedAnchor = { ...trustAnchor, content_sha256: digest(reversed) };
+  harness.equal('[REVIEW-2] reversed rule order gives the same fail-closed result',
+    semanticFingerprint(evaluate(contradictory, { policy: reversed, trustAnchor: reversedAnchor })),
+    semanticFingerprint(result));
+}
+
+// [REVIEW-3] No SELECT while any material eligibility dependency is outstanding.
+{
+  harness.ok('[REVIEW-3] the material predicate set is non-empty', materialPredicates.length > 0);
+  harness.equal('[REVIEW-3] the fully known baseline still selects', evaluate(eligibleFacts()).disposition, 'SELECT');
+
+  const degradations = [
+    { label: 'deleted', apply: (facts, name) => { delete facts[name]; } },
+    { label: 'UNKNOWN', apply: (facts, name) => { facts[name] = { state: 'UNKNOWN', value: null, reason: 'PROBE', evidence_refs: [], rationale: null }; } },
+    { label: 'null fact', apply: (facts, name) => { facts[name] = null; } },
+    { label: 'malformed value', apply: (facts, name) => { facts[name] = { state: 'KNOWN', value: { nested: true }, reason: 'PROBE', evidence_refs: [], rationale: null }; } },
+    { label: 'malformed fact shape', apply: (facts, name) => { facts[name] = 'KNOWN'; } }
+  ];
+
+  for (const name of materialPredicates) {
+    for (const degradation of degradations) {
+      const facts = eligibleFacts();
+      degradation.apply(facts, name);
+      const result = evaluate(facts);
+      harness.ok(`[REVIEW-3] ${name} ${degradation.label}: never SELECT`, result.disposition !== 'SELECT');
+      harness.equal(`[REVIEW-3] ${name} ${degradation.label}: publication blocked`, result.publication_blocked, true);
+      harness.ok(`[REVIEW-3] ${name} ${degradation.label}: dependency is named`,
+        result.unresolved_dependencies.includes(name));
+      harness.ok(`[REVIEW-3] ${name} ${degradation.label}: no favourable false is inferred`,
+        !result.matched_rule_ids.includes('TTD-ELIG-001') || result.disposition === 'HOLD');
+
+      const routed = routeEvaluation(result, { policy, vocabulary: context.vocabulary });
+      harness.ok(`[REVIEW-3] ${name} ${degradation.label}: no downstream selection`,
+        routed.automatic_route?.next_status !== 'SELECTED');
+    }
+  }
+
+  // An outstanding dependency routes to evidence verification, not escalation.
+  const facts = eligibleFacts();
+  delete facts.broader_source_conflicts_with_specific_scope;
+  const result = evaluate(facts);
+  harness.ok('[REVIEW-3] the unknown-dependency reason is recorded',
+    result.reason_codes.includes('UNKNOWN_MATERIAL_DEPENDENCY'));
+  harness.equal('[REVIEW-3] an outstanding dependency routes to evidence verification',
+    routeEvaluation(result, { policy, vocabulary: context.vocabulary }).automatic_route,
+    { next_role: 'EVIDENCE_VERIFIER', next_status: 'HOLD' });
+}
+
+// [REVIEW-4] Unsafe-key input is rejected, but the audit record still completes.
+{
+  // Two distinct vectors. A hostile JSON document parsed with JSON.parse leaves
+  // the dangerous key as an own property; the same document merged in with
+  // Object.assign instead tampers with the prototype, where Object.keys can no
+  // longer see it. Both must be refused.
+  const withOwnKey = (value, key) => JSON.parse(`{"${key}":{"polluted":true},${JSON.stringify(value).slice(1)}`);
+  const placements = [
+    { label: 'own key at top level', build: (key) => withOwnKey(baseEvidence(), key) },
+    { label: 'own key in assertion', build: (key) => { const e = baseEvidence(); e.assertions.push(JSON.parse(`{"predicate":"geography_in_scope","value":true,"confidence":"HIGH","evidence_refs":["S1"],"${key}":{"polluted":true}}`)); return e; } },
+    { label: 'own key in source ref', build: (key) => { const e = baseEvidence(); e.source_refs[0] = withOwnKey(e.source_refs[0], key); return e; } },
+    { label: 'own key in standards classification', build: (key) => { const e = baseEvidence(); e.standards_classification = withOwnKey(e.standards_classification, key); return e; } },
+    { label: 'own key in nested payload', build: (key) => { const e = baseEvidence(); e.payload = JSON.parse(`{"detail":{"${key}":{"polluted":true}}}`); return e; } },
+    { label: 'tampered prototype at top level', build: (key) => Object.assign(baseEvidence(), JSON.parse(`{"${key}":{"polluted":true}}`)) },
+    { label: 'tampered prototype in source ref', build: (key) => { const e = baseEvidence(); Object.assign(e.source_refs[0], JSON.parse(`{"${key}":{"polluted":true}}`)); return e; } },
+    { label: 'tampered prototype in standards classification', build: (key) => { const e = baseEvidence(); Object.assign(e.standards_classification, JSON.parse(`{"${key}":{"polluted":true}}`)); return e; } }
+  ];
+
+  for (const key of ['__proto__', 'constructor', 'prototype']) {
+    for (const placement of placements) {
+      const evidence = placement.build(key);
+      let composed = null;
+      let threw = null;
+      try {
+        composed = adjudicateCandidate({ evidence, context, authorityResolution: TRUSTED_AUTHORITY_RESOLUTION, evaluatedAt: FIXED_EVALUATION_TIMESTAMP });
+      } catch (error) {
+        threw = error;
+      }
+      harness.equal(`[REVIEW-4] ${key} in ${placement.label}: adjudication does not throw`, threw, null);
+      harness.ok(`[REVIEW-4] ${key} in ${placement.label}: an audit record is produced`, composed !== null && composed.audit !== undefined);
+      if (composed === null) continue;
+
+      harness.equal(`[REVIEW-4] ${key} in ${placement.label}: the candidate is rejected`, composed.audit.evaluation.ok, false);
+      harness.equal(`[REVIEW-4] ${key} in ${placement.label}: disposition holds`, composed.audit.evaluation.disposition, 'HOLD');
+      harness.ok(`[REVIEW-4] ${key} in ${placement.label}: never SELECT`, composed.audit.evaluation.disposition !== 'SELECT');
+      harness.equal(`[REVIEW-4] ${key} in ${placement.label}: publication blocked`, composed.audit.evaluation.publication_blocked, true);
+      harness.equal(`[REVIEW-4] ${key} in ${placement.label}: no rules claimed as matched`, composed.audit.evaluation.matched_rule_ids, []);
+      harness.equal(`[REVIEW-4] ${key} in ${placement.label}: no downstream execution claimed`,
+        composed.audit.routing.downstream_execution, { attempted: false, status: 'NOT_EXECUTED' });
+      harness.ok(`[REVIEW-4] ${key} in ${placement.label}: no downstream selection`,
+        composed.audit.routing.automatic_route?.next_status !== 'SELECTED');
+      harness.ok(`[REVIEW-4] ${key} in ${placement.label}: the failure is recorded in the audit`,
+        composed.audit.normalization.errors.length > 0 || composed.audit.evaluation.failures.length > 0);
+      harness.ok(`[REVIEW-4] ${key} in ${placement.label}: the audit is serializable`,
+        typeof canonicalize(composed.audit) === 'string');
+    }
+  }
+
+  harness.ok('[REVIEW-4] Object.prototype is unpolluted', ({}).polluted === undefined);
+  harness.ok('[REVIEW-4] Object.prototype has no injected default disposition', ({}).default_disposition === undefined);
+  harness.throws('[REVIEW-4] canonical serialization stays strict', () => digest(JSON.parse('{"__proto__":{"a":1}}')));
+}
+
+harness.finish([`eligibility_predicates=${ELIGIBILITY_PREDICATES.length}`, `material_predicates=${materialPredicates.length}`, `fixtures=${oracle.fixtures.length}`]);
