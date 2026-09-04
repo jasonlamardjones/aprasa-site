@@ -49,12 +49,13 @@ for (const fileName of eventDeltaFiles) {
 }
 
 // --- Overlay contract (counts) — combined r2 base (732) + r3 delta (21) + r4 delta (26)
-// + r5 delta (2) + r7 delta (19) + r8 delta (21). The r6 brand-voice delta overrides
-// 42 existing PT values and adds no keys, so every count below is unchanged by it. ---
-if (keys.length !== 821 + eventDeltaRequired + eventDeltaUnchanged) fail(`expected ${821 + eventDeltaRequired + eventDeltaUnchanged} total keys including approved event deltas, got ${keys.length}`);
+// + r5 delta (2) + r7 delta (19) + r8 delta (21) + r13 delta (8). The r6 brand-voice
+// delta overrides 42 existing PT values and adds no keys, so every count below is
+// unchanged by it; r13 adds the 8 Things-to-Do collection-hub keys, all required. ---
+if (keys.length !== 829 + eventDeltaRequired + eventDeltaUnchanged) fail(`expected ${829 + eventDeltaRequired + eventDeltaUnchanged} total keys including approved event deltas, got ${keys.length}`);
 const required = keys.filter((k) => k.scope_status === "REQUIRED_FOR_PT_LAUNCH");
 const unchanged = keys.filter((k) => k.scope_status === "INTENTIONALLY_UNCHANGED");
-if (required.length !== 793 + eventDeltaRequired) fail(`expected ${793 + eventDeltaRequired} REQUIRED_FOR_PT_LAUNCH keys, got ${required.length}`);
+if (required.length !== 801 + eventDeltaRequired) fail(`expected ${801 + eventDeltaRequired} REQUIRED_FOR_PT_LAUNCH keys, got ${required.length}`);
 if (unchanged.length !== 28 + eventDeltaUnchanged) fail(`expected ${28 + eventDeltaUnchanged} INTENTIONALLY_UNCHANGED keys, got ${unchanged.length}`);
 if (data.provenance.delta_revision !== "P03-PT-SOURCE-2026-08-25-r3") {
   fail(`unexpected delta_revision: ${data.provenance.delta_revision}`);
@@ -104,6 +105,63 @@ if (data.provenance.delta9_superseding_ruling !== "P03-SINERGIA-CURRENTNESS-2026
 }
 if (data.provenance.delta9_owning_project !== "Project 03") {
   fail(`unexpected delta9_owning_project: ${data.provenance.delta9_owning_project}`);
+}
+
+// --- r13 delta spot checks (Things-to-Do collection hub) ---
+// The hub package is chrome copy only. These assertions pin the exact approved
+// EN/PT strings the hub renders, prove the package introduced no record-scoped
+// key (which would mean event copy was reopened outside the governed event
+// lane), and prove the two keys Project 09 proposed but Project 04 bound onto
+// incumbent keys were NOT introduced as duplicates.
+const r13Expected = {
+  "things.hub.h1": [
+    "Things to Do in Mindelo & São Vicente",
+    "O que fazer em Mindelo e São Vicente",
+  ],
+  "things.hub.intro": [
+    "Discover current events, exhibitions, activities and other things happening across Mindelo and São Vicente, selected from sources A PRASA has checked.",
+    "Descobre eventos, exposições, atividades e outras coisas que estão a acontecer em Mindelo e São Vicente, selecionados a partir de fontes verificadas pela A PRASA.",
+  ],
+  "things.hub.boundary": [
+    "A curated selection of current listings — not a complete events calendar.",
+    "Uma seleção cuidada de propostas atuais — não um calendário completo de eventos.",
+  ],
+  "home.things.hub_action": ["Explore Things to Do", "Explorar o que fazer"],
+  "things.hub.card_action.label": ["View details", "Ver detalhes"],
+  "things.hub.empty_state": [
+    "There aren’t any current Things-to-Do listings available right now. Explore Mindelo Essentials or return to Home for more from A PRASA.",
+    "Neste momento, não há propostas atuais disponíveis em O que fazer na A PRASA. Explora os Essenciais de Mindelo ou volta à página inicial para descobrires mais na A PRASA.",
+  ],
+  "things.hub.meta.title": [
+    "Things to Do in Mindelo & São Vicente | A PRASA",
+    "O que fazer em Mindelo e São Vicente | A PRASA",
+  ],
+  "things.hub.meta.description": [
+    "Explore A PRASA’s curated selection of current events, exhibitions and activities in Mindelo and São Vicente, Cabo Verde.",
+    "Explora uma seleção cuidada de eventos, exposições e atividades atuais da A PRASA em Mindelo e São Vicente, Cabo Verde.",
+  ],
+};
+for (const [key, [en, pt]] of Object.entries(r13Expected)) {
+  const row = data.keys[key];
+  if (!row) {
+    fail(`r13 key missing from generated locale data: ${key}`);
+    continue;
+  }
+  if (row.en !== en) fail(`r13 ${key} EN drifted from the approved value`);
+  if (row.pt !== pt) fail(`r13 ${key} PT drifted from the approved value`);
+  if (row.scope_status !== "REQUIRED_FOR_PT_LAUNCH") fail(`r13 ${key} must be REQUIRED_FOR_PT_LAUNCH`);
+  if (row.source_revision !== "P03-PT-SOURCE-2026-09-04-r13") fail(`r13 ${key} provenance is not the r13 revision`);
+  if (row.record_id != null) fail(`r13 ${key} is record-scoped; the hub package carries no record copy`);
+}
+for (const key of ["things.hub.collection_label", "things.hub.return_label"]) {
+  if (data.keys[key]) {
+    fail(`${key} was introduced as a new key; Project 04 bound it onto the incumbent architecture instead (see the r13 package's incumbent_key_bindings)`);
+  }
+}
+// The collection wording the hub reuses instead of things.hub.collection_label.
+const r13CollectionLabel = data.keys["things.shared.back_to_things"];
+if (!r13CollectionLabel || r13CollectionLabel.en !== "← Things to Do" || r13CollectionLabel.pt !== "← O que fazer") {
+  fail("things.shared.back_to_things no longer carries the approved collection wording the hub relies on");
 }
 
 // --- r9 source correction (Sinergia da Matéria, Project 03, 01 September 2026) ---

@@ -19,6 +19,7 @@ import { fileURLToPath } from 'node:url';
 import { t } from './lib/locale.mjs';
 import { localizeStaticHtml } from './lib/static-page-transform.mjs';
 import { deepenSharedAssetPaths } from './lib/asset-paths.mjs';
+import { normalizeCanonicalHomeLinks } from './lib/canonical-links.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
@@ -178,6 +179,41 @@ function applyAboutFounderFixup(html, locale) {
   );
 }
 
+// Governed runtime strings for prasa-launch.js.
+//
+// prasa-launch.js injects editorial fallback media labels into Home's card
+// grids at runtime, so the static-page localizer never sees that copy and a
+// live audit found it rendering in English on PT Home. This writes the
+// governed values for the page's own locale into the same
+// <script type="application/json" id="i18n-strings"> block Mindelo Essentials
+// already uses for its runtime copy; prasa-launch.js reads them from there and
+// falls back to its own English defaults when the block is absent.
+//
+// Only keys with an approved governed value are emitted. The editorial
+// "section thumbnail" note used by the Trainings and Organizations shelves has
+// NO approved Portuguese value in the governed overlay, so it is deliberately
+// omitted here rather than translated: the runtime keeps its English default
+// and the item stays BLOCKED_ON_PROJECT_09_STRING_APPROVAL. Adding the
+// approved string later is a one-line addition to RUNTIME_STRING_KEYS.
+const RUNTIME_STRING_KEYS = {
+  mediaFallbackLabel: 'system.media_fallback.label',
+  mediaFallbackNote: 'system.media_fallback.note',
+  trainingsSectionLabel: 'home.training.title',
+  organizationsSectionLabel: 'home.organizations.title',
+};
+
+const RUNTIME_STRINGS_BLOCK = /<script type="application\/json" id="i18n-strings">[\s\S]*?<\/script>\n?/;
+
+function applyHomeRuntimeStrings(html, locale) {
+  const payload = {};
+  for (const [runtimeKey, localeKey] of Object.entries(RUNTIME_STRING_KEYS)) {
+    payload[runtimeKey] = t(localeKey, locale);
+  }
+  const block = `<script type="application/json" id="i18n-strings">${JSON.stringify(payload)}</script>\n`;
+  if (RUNTIME_STRINGS_BLOCK.test(html)) return html.replace(RUNTIME_STRINGS_BLOCK, block);
+  return html.replace('</head>', `${block}</head>`);
+}
+
 // localizeStaticHtml deliberately treats <script> content as opaque raw
 // text (it must never attempt to parse/rewrite arbitrary JavaScript) —
 // which means the governed presentation text inside Home's Organization
@@ -199,10 +235,19 @@ function applyHomeStructuredDataFixup(html, locale) {
   );
 }
 
-function buildPage({ name, enPath, ptPath, canonicalEn, canonicalPt, enHrefFromRoot, ptHrefFromRoot }) {
+function buildPage({ name, enPath, ptPath, canonicalEn, canonicalPt, enHrefFromRoot, ptHrefFromRoot, collectionHref = null }) {
   const enAbs = path.join(root, enPath);
   const ptAbs = path.join(root, ptPath);
   let enSource = fs.readFileSync(enAbs, 'utf8');
+
+  // 0. Canonical internal-link hygiene, applied to the authored EN source
+  //    before anything is derived from it so EN and PT can never disagree.
+  //    Home links take their clean directory form, and the legacy
+  //    "Home#things-to-do" return anchor on a Things-to-Do page points at that
+  //    page's own same-locale collection route. Idempotent, and it changes no
+  //    canonical tag and adds no redirect.
+  enSource = normalizeCanonicalHomeLinks(enSource, { collectionHref });
+  if (name === 'home') enSource = applyHomeRuntimeStrings(enSource, 'en');
 
   // 1. Inject bounded EN infrastructure (hreflang + lang-switch) into the EN
   //    source in place, if not already present (idempotent).
@@ -223,9 +268,14 @@ function buildPage({ name, enPath, ptPath, canonicalEn, canonicalPt, enHrefFromR
       .replace(/lang="pt" hreflang="pt"/, 'lang="pt" hreflang="pt" aria-current="true" class="lang-current"')
   );
   ptSource = deepenSharedAssetPaths(ptSource);
+  // The PT page sits one directory deeper, so its inherited "../"-relative
+  // Home links already resolve to the PT Home; only the document form needs
+  // normalizing, exactly as on the EN source above.
+  ptSource = normalizeCanonicalHomeLinks(ptSource, { collectionHref });
   ptSource = applyHomeHeroFixups(ptSource, name === 'home' ? 'pt' : 'en');
   ptSource = applyAboutFounderFixup(ptSource, name === 'about' ? 'pt' : 'en');
   ptSource = applyHomeStructuredDataFixup(ptSource, name === 'home' ? 'pt' : 'en');
+  if (name === 'home') ptSource = applyHomeRuntimeStrings(ptSource, 'pt');
 
   const { html: rawLocalized, unmatchedEnglish } = localizeStaticHtml(ptSource, 'pt');
   const localized = rawLocalized.replaceAll('<!--i18n:skip-->', '').replaceAll('<!--/i18n:skip-->', '');
@@ -264,9 +314,9 @@ const pages = [
     canonicalEn: 'https://aprasa.org/',
     canonicalPt: 'https://aprasa.org/pt/',
     // hrefs as they appear in the lang-switch nav INJECTED INTO THE EN FILE:
-    enHrefFromRoot: { en: 'index.html', pt: 'pt/' },
+    enHrefFromRoot: { en: './', pt: 'pt/' },
     // hrefs after the regex swap that derives the PT file's own switch nav:
-    ptHrefFromRoot: { en: '../index.html', pt: 'index.html' },
+    ptHrefFromRoot: { en: '../', pt: './' },
   },
   {
     name: 'about',
@@ -285,6 +335,9 @@ const pages = [
     canonicalPt: 'https://aprasa.org/pt/things-to-do/street-art-mindelo/',
     enHrefFromRoot: { en: '../../things-to-do/street-art-mindelo/', pt: '../../pt/things-to-do/street-art-mindelo/' },
     ptHrefFromRoot: { en: '../../../things-to-do/street-art-mindelo/', pt: '../../../pt/things-to-do/street-art-mindelo/' },
+    // Same-locale Things-to-Do collection route, relative to this page: every
+    // detail page is a direct child of its locale's hub, in both locales.
+    collectionHref: '../',
   },
   {
     name: 'water-adventure-activities-mindelo',
@@ -294,6 +347,9 @@ const pages = [
     canonicalPt: 'https://aprasa.org/pt/things-to-do/water-adventure-activities-mindelo/',
     enHrefFromRoot: { en: '../../things-to-do/water-adventure-activities-mindelo/', pt: '../../pt/things-to-do/water-adventure-activities-mindelo/' },
     ptHrefFromRoot: { en: '../../../things-to-do/water-adventure-activities-mindelo/', pt: '../../../pt/things-to-do/water-adventure-activities-mindelo/' },
+    // Same-locale Things-to-Do collection route, relative to this page: every
+    // detail page is a direct child of its locale's hub, in both locales.
+    collectionHref: '../',
   },
 ];
 

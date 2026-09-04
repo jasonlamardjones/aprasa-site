@@ -70,6 +70,7 @@ const DELTA7_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r7-delta.sour
 const DELTA8_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r8-delta.source.json");
 const DELTA9_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r9-delta.source.json");
 const R10_MIGRATION_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r10-migration.source.json");
+const DELTA13_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r13-things-to-do-hub.source.json");
 const LOCALE_DIR = path.join(ROOT, "data", "locales");
 const OUT_PATH = path.join(ROOT, "data", "locales", "locale-data.generated.json");
 
@@ -953,6 +954,136 @@ for (const fileName of eventDeltaFiles) {
   });
 }
 
+// --- r13 delta: additive merge for the Things-to-Do collection hub ----------
+// Introduces the governed EN/PT presentation copy for the dedicated
+// Things-to-Do collection surfaces (/things-to-do/ and /pt/things-to-do/) and
+// the Home preview call to action. Same class as r3/r4/r5/r7/r8: strictly
+// additive, so it may never reopen an existing key (including any key r6
+// restated or r9/r11/r12 corrected). It introduces no record-scoped key and
+// retranslates no event copy — every per-record string on the hub is the
+// existing governed `event.<id>.*` presentation, reused unchanged.
+//
+// Two keys Project 09 proposed are deliberately NOT introduced here, and the
+// package documents both bindings in its own incumbent_key_bindings block:
+//   things.hub.collection_label -> bound to the incumbent
+//     things.shared.back_to_things, which already carries the approved
+//     collection wording. A second key with the identical English string
+//     "Things to Do" would make the EN->PT static-page index ambiguous for
+//     that string and break Home's own localization.
+//   things.hub.return_label     -> not bound. The incumbent detail-page
+//     pattern has a single breadcrumb control, not a separate return control,
+//     so the approved optional return wording is not required by it.
+const EXPECTED_DELTA13 = {
+  package_id: "aprasa-pt-things-to-do-hub-r13-delta",
+  revision_class: "ADDITIVE_NEW_KEYS",
+  source_revision: "P03-PT-SOURCE-2026-09-04-r13",
+  previous_revision: "P03-PT-SOURCE-2026-09-01-r12",
+  row_count: 8,
+  approved: 8,
+  required_for_pt_launch: 8,
+  intentionally_unchanged: 0,
+  review_required: 0,
+};
+
+const delta13 = JSON.parse(readFileSync(DELTA13_PATH, "utf8"));
+
+for (const field of ["package_id", "revision_class", "source_revision", "previous_revision"]) {
+  if (delta13[field] !== EXPECTED_DELTA13[field]) {
+    fail(`r13 ${field} mismatch: got ${JSON.stringify(delta13[field])}, expected ${JSON.stringify(EXPECTED_DELTA13[field])}`);
+  }
+}
+if (delta13.project_09_status !== "approved") {
+  fail(`r13 Project 09 status is not approved: ${JSON.stringify(delta13.project_09_status)}`);
+}
+if (!Array.isArray(delta13.rows) || delta13.rows.length !== EXPECTED_DELTA13.row_count) {
+  fail(`r13 row count mismatch: got ${delta13.rows?.length}, expected ${EXPECTED_DELTA13.row_count}`);
+}
+if (delta13.supplied_rows_approved !== EXPECTED_DELTA13.approved) {
+  fail(`r13 supplied_rows_approved mismatch: got ${delta13.supplied_rows_approved}`);
+}
+if (delta13.review_required !== EXPECTED_DELTA13.review_required || delta13.blocking_issue != null) {
+  fail(`r13 has unresolved localization review state`);
+}
+if (delta13.missing_or_unaccounted_row_count !== 0) {
+  fail(`r13 missing_or_unaccounted_row_count is non-zero: ${delta13.missing_or_unaccounted_row_count}`);
+}
+if ((delta13.duplicate_keys || []).length !== 0) {
+  fail(`r13 duplicate_keys is non-empty: ${JSON.stringify(delta13.duplicate_keys)}`);
+}
+if ((delta13.placeholder_mismatches || []).length !== 0) {
+  fail(`r13 placeholder_mismatches is non-empty: ${JSON.stringify(delta13.placeholder_mismatches)}`);
+}
+if ((delta13.a_prasa_to_a_praca_violations || []).length !== 0) {
+  fail(`r13 a_prasa_to_a_praca_violations is non-empty: ${JSON.stringify(delta13.a_prasa_to_a_praca_violations)}`);
+}
+// An additive package must not be able to smuggle in a source-English rewrite
+// or a lifecycle change under a different revision_class's guarantees.
+if (delta13.source_english_changed !== false || delta13.change_control_status?.existing_keys_overridden !== 0) {
+  fail(`r13 declares a non-additive change (source_english_changed/existing_keys_overridden)`);
+}
+if (delta13.change_control_status?.new_keys_introduced !== EXPECTED_DELTA13.row_count) {
+  fail(`r13 new_keys_introduced mismatch: got ${delta13.change_control_status?.new_keys_introduced}`);
+}
+if (delta13.change_control_status?.lifecycle_or_publication_state_modified !== 0) {
+  fail(`r13 must not modify lifecycle or publication state`);
+}
+
+let delta13Required = 0;
+let delta13Unchanged = 0;
+for (const row of delta13.rows) {
+  if (seen.has(row.key)) {
+    fail(`r13 key "${row.key}" collides with an existing key — r13 must be strictly additive, never reopen an existing key`);
+  }
+  seen.add(row.key);
+
+  // The hub package is site-chrome copy, not record presentation: a
+  // record-scoped key here would mean event copy was reopened outside the
+  // governed event-delta lane.
+  if (row.record_id != null) fail(`r13 key "${row.key}" is record-scoped; the hub package carries no record copy`);
+  if (!/^(things\.hub\.|home\.things\.hub_action$)/.test(row.key)) {
+    fail(`r13 key "${row.key}" is outside the authorized things.hub.* / home.things.hub_action namespace`);
+  }
+  if (row.source_revision !== EXPECTED_DELTA13.source_revision) fail(`r13 ${row.key} source_revision mismatch`);
+  if (row.translation_status !== "APPROVED") fail(`r13 key "${row.key}" is not APPROVED (status: ${row.translation_status})`);
+
+  if (row.scope_status === "REQUIRED_FOR_PT_LAUNCH") delta13Required += 1;
+  else if (row.scope_status === "INTENTIONALLY_UNCHANGED") delta13Unchanged += 1;
+  else fail(`r13 key "${row.key}" has invalid scope_status`);
+
+  if (row.scope_status === "REQUIRED_FOR_PT_LAUNCH" && (row.pt == null || row.pt === "")) {
+    fail(`r13 REQUIRED_FOR_PT_LAUNCH key "${row.key}" has no PT value`);
+  }
+  if (!row.source_en) fail(`r13 key "${row.key}" is missing approved English text`);
+  const enPlaceholders = (row.source_en.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+  const ptPlaceholders = (row.pt.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+  if (JSON.stringify(enPlaceholders) !== JSON.stringify(ptPlaceholders)) {
+    fail(`r13 key "${row.key}" placeholder mismatch: en=${JSON.stringify(enPlaceholders)} pt=${JSON.stringify(ptPlaceholders)}`);
+  }
+  if ([row.source_en, row.pt].some((value) => value.includes("A PRAÇA"))) {
+    fail(`r13 key "${row.key}" violates protected A PRASA brand spelling`);
+  }
+
+  keys[row.key] = {
+    key: row.key,
+    en: row.source_en,
+    pt: row.pt,
+    scope_status: row.scope_status,
+    identity_policy: row.identity_policy,
+    record_id: row.record_id,
+    translation_status: row.translation_status,
+    source_revision: row.source_revision,
+    context_notes: row.context_notes || "",
+    linguistic_notes: row.linguistic_notes || "",
+  };
+}
+
+if (delta13Required !== EXPECTED_DELTA13.required_for_pt_launch) {
+  fail(`r13 required_for_pt_launch mismatch: got ${delta13Required}, expected ${EXPECTED_DELTA13.required_for_pt_launch}`);
+}
+if (delta13Unchanged !== EXPECTED_DELTA13.intentionally_unchanged) {
+  fail(`r13 intentionally_unchanged mismatch: got ${delta13Unchanged}, expected ${EXPECTED_DELTA13.intentionally_unchanged}`);
+}
+
 // --- r10 migration: ATOMIC namespace rename, applied last -------------------
 //
 // Project 09 approved moving the governed Home training presentation keys off
@@ -1332,6 +1463,7 @@ const output = {
       "data/locales/pt-overlay-r9-delta.source.json",
       ...eventDeltaPackages.map((item) => item.file),
       "data/locales/pt-overlay-r9-migration.source.json",
+      "data/locales/pt-overlay-r13-things-to-do-hub.source.json",
     ],
     base_revision: pkg.source_revision,
     delta_revision: delta.source_revision,
@@ -1347,6 +1479,10 @@ const output = {
     delta9_revision: delta9.source_revision,
     delta9_package_id: delta9.package_id,
     delta9_revision_class: delta9.revision_class,
+    delta13_package_id: delta13.package_id,
+    delta13_revision: delta13.source_revision,
+    delta13_revision_class: delta13.revision_class,
+    delta13_row_count: delta13.rows.length,
     delta9_superseding_ruling: delta9.superseding_ruling,
     delta9_owning_project: delta9.owning_project,
     event_delta_packages: eventDeltaPackages,

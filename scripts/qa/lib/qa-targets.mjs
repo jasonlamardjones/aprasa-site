@@ -11,6 +11,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { isExpired as recordIsExpired } from '../../lib/things-to-do-currentness.mjs';
+import { HUB_ROUTE, homePreviewIds } from '../../lib/things-to-do-collection.mjs';
+
+/** Public route of the collection hub in each locale. */
+export const EN_HUB_ROUTE = `/${HUB_ROUTE}`;
+export const PT_HUB_ROUTE = `/pt/${HUB_ROUTE}`;
 
 export const CAPE_VERDE_TZ = 'Atlantic/Cape_Verde';
 
@@ -118,6 +123,11 @@ export function loadTargets(root, { affectedRoutes = [] } = {}) {
   // contract (asOf) rather than wall-clock time. The committed surfaces were
   // generated for asOf, so judging them by today's date would manufacture a
   // false positive every time the site outlives its last publication run.
+  // Home is the approved limited preview of the collection since the Project 03
+  // collection approval; the full eligible collection lives on the hub. A live
+  // check therefore needs to know which surface a record is expected on, not
+  // just whether it is eligible.
+  const previewIds = homePreviewIds(records, asOf);
   const recordTargets = records.map((record) => {
     const enRoute = `/${record.detail_page}`;
     const ptRoute = ptCounterpart(enRoute);
@@ -135,6 +145,7 @@ export function loadTargets(root, { affectedRoutes = [] } = {}) {
       mediaPolicy: record.media_policy ?? 'optional',
       expiredAtAsOf: isExpired(record, asOf),
       expiredToday: isExpired(record, today),
+      inHomePreview: previewIds.has(record.id),
       endDate: record.end_date ?? null,
       publicationState: record.publication_state ?? null,
     };
@@ -172,7 +183,11 @@ export function loadTargets(root, { affectedRoutes = [] } = {}) {
  */
 export function selectHttpRoutes(targets, mode) {
   if (mode !== 'IMMEDIATE_POST_DEPLOY') return targets.pageRoutes;
-  const core = new Set(['/', '/pt/', ...targets.affectedRoutes]);
+  // The collection hubs are core public surfaces alongside the two Home
+  // surfaces: an eligible record beyond the Home preview is reachable only
+  // there, so a pass that skipped them could not tell "correctly previewed"
+  // from "lost".
+  const core = new Set(['/', '/pt/', EN_HUB_ROUTE, PT_HUB_ROUTE, ...targets.affectedRoutes]);
   for (const target of targets.recordTargets) {
     // A published event that is current at the committed as_of is always worth
     // re-checking immediately, even when the merge diff did not name its file.

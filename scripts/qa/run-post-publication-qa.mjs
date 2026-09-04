@@ -28,7 +28,7 @@ import {
   MODES,
 } from './lib/qa-contract.mjs';
 import { loadSchema, validateAgainstSchema } from './lib/qa-schema.mjs';
-import { loadTargets, selectBrowserRoutes, selectHttpRoutes, todayInCapeVerde } from './lib/qa-targets.mjs';
+import { EN_HUB_ROUTE, loadTargets, selectBrowserRoutes, selectHttpRoutes, todayInCapeVerde } from './lib/qa-targets.mjs';
 import { fetchFollowing, isNormalizingRedirect } from './lib/qa-http.mjs';
 import { corroborateByContent, resolveDeploymentProvenance } from './lib/qa-deployment.mjs';
 import { runBrowserChecks, VIEWPORTS } from './lib/qa-browser.mjs';
@@ -538,6 +538,9 @@ async function fetchAndCheckRoute(emit, { baseUrl, route, locale = null, kind = 
 
 function checkThingsToDoLiveContract(emit, { targets, bodies, baseUrl }) {
   const enHome = bodies.get('/');
+  // The EN collection hub carries the full eligible collection; Home carries
+  // the approved preview of it. Live record-presence is judged across both.
+  const enHub = bodies.get(EN_HUB_ROUTE);
   const sitemapBody = bodies.get('/sitemap.xml');
 
   for (const record of targets.recordTargets) {
@@ -629,10 +632,22 @@ function checkThingsToDoLiveContract(emit, { targets, bodies, baseUrl }) {
       });
     }
 
-    // Home currentness, judged against the committed currentness contract.
+    // Public currentness, judged against the committed currentness contract.
+    //
+    // Since the Project 03 collection approval this spans TWO surfaces: Home
+    // shows the approved limited preview and the hub shows the full eligible
+    // collection. An eligible record beyond the preview is correctly absent
+    // from Home and present on the hub, so "surfaced" means present on either
+    // one — and an expired record must be on neither.
     if (enHome !== undefined) {
       const onHome = htmlContains(enHome, (value) => `<h3>${value}</h3>`, record.title);
-      if (record.expiredAtAsOf && onHome) {
+      const onHub = enHub === undefined ? false : htmlContains(enHub, (value) => `<h3>${value}</h3>`, record.title);
+      const onSurface = onHome || onHub;
+      // The hub is only decisive when it was actually fetched. If it was not,
+      // a preview member is still fully checkable on Home; a record beyond the
+      // preview is not, and is skipped rather than reported on no evidence.
+      const checkable = onHome || enHub !== undefined || record.inHomePreview;
+      if (record.expiredAtAsOf && onSurface) {
         emit.issue({
           code: 'TTD_EXPIRED_SURFACED',
           severity: 'ERROR',
@@ -640,13 +655,13 @@ function checkThingsToDoLiveContract(emit, { targets, bodies, baseUrl }) {
           check: 'expired record is not surfaced on Home',
           route: '/',
           locale: 'en',
-          observed: `${record.id} is on the live Home surface`,
+          observed: `${record.id} is on the live ${onHome ? 'Home' : 'collection hub'} surface`,
           expected: `${record.id} absent (expired as of ${targets.asOf})`,
-          evidence: { record_id: record.id, end_date: record.endDate, publication_state: record.publicationState },
+          evidence: { record_id: record.id, end_date: record.endDate, publication_state: record.publicationState, on_home: onHome, on_hub: onHub },
           resolver_class: 'CONTENT_GOVERNANCE',
           auto_remediation_candidate: true,
         });
-      } else if (!record.expiredAtAsOf && !onHome) {
+      } else if (!record.expiredAtAsOf && !onSurface && checkable) {
         emit.issue({
           code: 'TTD_CURRENT_RECORD_MISSING_FROM_HOME',
           severity: 'ERROR',
@@ -654,13 +669,13 @@ function checkThingsToDoLiveContract(emit, { targets, bodies, baseUrl }) {
           check: 'current record is surfaced on Home',
           route: '/',
           locale: 'en',
-          observed: `${record.id} absent from the live Home surface`,
-          expected: `${record.id} present (current as of ${targets.asOf})`,
-          evidence: { record_id: record.id, end_date: record.endDate },
+          observed: `${record.id} absent from the live Home preview and collection hub`,
+          expected: `${record.id} present on Home or the collection hub (current as of ${targets.asOf})`,
+          evidence: { record_id: record.id, end_date: record.endDate, in_home_preview: record.inHomePreview, hub_fetched: enHub !== undefined },
           resolver_class: 'CONTENT_GOVERNANCE',
           auto_remediation_candidate: true,
         });
-      } else if (!record.expiredAtAsOf && record.expiredToday && onHome) {
+      } else if (!record.expiredAtAsOf && record.expiredToday && onSurface) {
         // Not a defect: the committed surfaces are correct for the currentness
         // date they were generated for, and the record has simply aged since.
         emit.issue({
@@ -670,7 +685,7 @@ function checkThingsToDoLiveContract(emit, { targets, bodies, baseUrl }) {
           check: 'live Home currentness against today',
           route: '/',
           locale: 'en',
-          observed: `${record.id} ended ${record.endDate} but is still on Home (surfaces generated for ${targets.asOf})`,
+          observed: `${record.id} ended ${record.endDate} but is still on a public collection surface (surfaces generated for ${targets.asOf})`,
           expected: `a publication run with as_of >= ${targets.today}`,
           evidence: { record_id: record.id, end_date: record.endDate, committed_as_of: targets.asOf, today: targets.today },
           resolver_class: 'CONTENT_GOVERNANCE',
@@ -679,12 +694,18 @@ function checkThingsToDoLiveContract(emit, { targets, bodies, baseUrl }) {
       }
       emit.check({
         id: `ttd:home:${label}`,
-        name: 'Home currentness matches canonical record',
-        status: record.expiredAtAsOf === onHome ? 'FAIL' : 'PASS',
+        name: 'public collection currentness matches canonical record',
+        status: !checkable ? 'SKIP' : record.expiredAtAsOf === onSurface ? 'FAIL' : 'PASS',
         route: '/',
         locale: 'en',
-        observed: { on_home: onHome, expired_at_as_of: record.expiredAtAsOf, expired_today: record.expiredToday },
-        expected: { on_home: !record.expiredAtAsOf },
+        observed: {
+          on_home: onHome,
+          on_hub: onHub,
+          in_home_preview: record.inHomePreview,
+          expired_at_as_of: record.expiredAtAsOf,
+          expired_today: record.expiredToday,
+        },
+        expected: { on_public_surface: !record.expiredAtAsOf },
       });
     }
   }

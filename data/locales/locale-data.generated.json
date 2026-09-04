@@ -21,7 +21,8 @@
       "data/locales/pt-overlay-event-4-campeonato-nacional-senior-de-boxe.source.json",
       "data/locales/pt-overlay-event-50-anos-de-memoria-criacao-e-resistencia.source.json",
       "data/locales/pt-overlay-event-sinergia-da-materia.source.json",
-      "data/locales/pt-overlay-r9-migration.source.json"
+      "data/locales/pt-overlay-r9-migration.source.json",
+      "data/locales/pt-overlay-r13-things-to-do-hub.source.json"
     ],
     "base_revision": "P03-PT-SOURCE-2026-08-25-r2",
     "delta_revision": "P03-PT-SOURCE-2026-08-25-r3",
@@ -37,6 +38,10 @@
     "delta9_revision": "P03-PT-SOURCE-2026-09-01-r9",
     "delta9_package_id": "aprasa-pt-sinergia-da-materia-source-correction-r9-delta",
     "delta9_revision_class": "OVERRIDE_EXISTING_KEYS_WITH_SOURCE_CORRECTION",
+    "delta13_package_id": "aprasa-pt-things-to-do-hub-r13-delta",
+    "delta13_revision": "P03-PT-SOURCE-2026-09-04-r13",
+    "delta13_revision_class": "ADDITIVE_NEW_KEYS",
+    "delta13_row_count": 8,
     "delta9_superseding_ruling": "P03-SINERGIA-CURRENTNESS-2026-09-01",
     "delta9_owning_project": "Project 03",
     "event_delta_packages": [
@@ -10409,6 +10414,102 @@
       "source_revision": "P09-PT-SINERGIA-ADMISSION-2026-09-01-r1",
       "context_notes": "Free admission confirmed by Project 03 on 01 September 2026 (CNAD). Strictly additive: introduces no change to any previously approved key.",
       "linguistic_notes": "“Entrada livre” is the incumbent governed PT rendering of free admission across Things-to-Do records."
+    },
+    "things.hub.h1": {
+      "key": "things.hub.h1",
+      "en": "Things to Do in Mindelo & São Vicente",
+      "pt": "O que fazer em Mindelo e São Vicente",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-09-04-r13",
+      "context_notes": "H1 of the dedicated Things-to-Do collection hub at /things-to-do/ (EN) and /pt/things-to-do/ (PT).",
+      "linguistic_notes": "Place identities Mindelo and São Vicente are preserved; the ampersand is rendered as \"e\" in Portuguese per the incumbent home.things.kicker treatment."
+    },
+    "things.hub.intro": {
+      "key": "things.hub.intro",
+      "en": "Discover current events, exhibitions, activities and other things happening across Mindelo and São Vicente, selected from sources A PRASA has checked.",
+      "pt": "Descobre eventos, exposições, atividades e outras coisas que estão a acontecer em Mindelo e São Vicente, selecionados a partir de fontes verificadas pela A PRASA.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-09-04-r13",
+      "context_notes": "Introductory paragraph of the Things-to-Do collection hub, directly under the H1.",
+      "linguistic_notes": "Second-person singular (tu) address, consistent with the governed brand voice applied to Home."
+    },
+    "things.hub.boundary": {
+      "key": "things.hub.boundary",
+      "en": "A curated selection of current listings — not a complete events calendar.",
+      "pt": "Uma seleção cuidada de propostas atuais — não um calendário completo de eventos.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-09-04-r13",
+      "context_notes": "Editorial boundary statement on the Things-to-Do collection hub. Preserves the incumbent Home boundary meaning (curated selection, not a complete events calendar) for the full-collection surface.",
+      "linguistic_notes": ""
+    },
+    "home.things.hub_action": {
+      "key": "home.things.hub_action",
+      "en": "Explore Things to Do",
+      "pt": "Explorar o que fazer",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-09-04-r13",
+      "context_notes": "Call to action in the Home Things-to-Do section that leads from the limited Home preview to the full same-locale collection hub.",
+      "linguistic_notes": ""
+    },
+    "things.hub.card_action.label": {
+      "key": "things.hub.card_action.label",
+      "en": "View details",
+      "pt": "Ver detalhes",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-09-04-r13",
+      "context_notes": "Hub-specific card call to action linking to the same-locale canonical detail route. Deliberately distinct from a record's own external card_action label (for example \"See event\" / \"Ver evento\"), which is not used on the hub.",
+      "linguistic_notes": ""
+    },
+    "things.hub.empty_state": {
+      "key": "things.hub.empty_state",
+      "en": "There aren’t any current Things-to-Do listings available right now. Explore Mindelo Essentials or return to Home for more from A PRASA.",
+      "pt": "Neste momento, não há propostas atuais disponíveis em O que fazer na A PRASA. Explora os Essenciais de Mindelo ou volta à página inicial para descobrires mais na A PRASA.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-09-04-r13",
+      "context_notes": "Shown on the Things-to-Do collection hub when canonical currentness output contains no publicly current record. Expired records are never surfaced as filler in its place.",
+      "linguistic_notes": "\"Essenciais de Mindelo\" matches the governed nav.mindelo_essentials rendering."
+    },
+    "things.hub.meta.title": {
+      "key": "things.hub.meta.title",
+      "en": "Things to Do in Mindelo & São Vicente | A PRASA",
+      "pt": "O que fazer em Mindelo e São Vicente | A PRASA",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-09-04-r13",
+      "context_notes": "<title> of the Things-to-Do collection hub in each locale.",
+      "linguistic_notes": "Protected brand string A PRASA preserved verbatim."
+    },
+    "things.hub.meta.description": {
+      "key": "things.hub.meta.description",
+      "en": "Explore A PRASA’s curated selection of current events, exhibitions and activities in Mindelo and São Vicente, Cabo Verde.",
+      "pt": "Explora uma seleção cuidada de eventos, exposições e atividades atuais da A PRASA em Mindelo e São Vicente, Cabo Verde.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-09-04-r13",
+      "context_notes": "meta description and og/twitter description of the Things-to-Do collection hub in each locale.",
+      "linguistic_notes": "Protected brand string A PRASA preserved verbatim."
     }
   }
 }

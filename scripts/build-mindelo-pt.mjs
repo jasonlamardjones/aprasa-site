@@ -16,6 +16,7 @@ import { fileURLToPath } from 'node:url';
 import { t } from './lib/locale.mjs';
 import { localizeStaticHtml } from './lib/static-page-transform.mjs';
 import { deepenSharedAssetPaths } from './lib/asset-paths.mjs';
+import { normalizeCanonicalHomeLinks } from './lib/canonical-links.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
@@ -197,6 +198,10 @@ function injectSearchIndex(html) {
 }
 
 let enSource = fs.readFileSync(enPath, 'utf8');
+// Canonical internal-link hygiene: Home links take their clean directory form
+// on the authored EN source before the PT page is derived from it. Idempotent;
+// changes no canonical tag and adds no redirect.
+enSource = normalizeCanonicalHomeLinks(enSource);
 enSource = injectHeadLinks(enSource, { selfCanonical: canonicalEn, lang: 'en' });
 enSource = injectRuntimeStrings(enSource, 'en');
 enSource = injectSearchIndex(enSource);
@@ -221,7 +226,7 @@ ptSource = injectLangSwitch(ptSource, {
 // filenames (same directory as this index.html) — from
 // pt/mindelo-essentials/ that's not "one more ../", it's a full path back
 // down into the sibling directory: ../../mindelo-essentials/mindelo-essentials.{css,js}.
-ptSource = deepenSharedAssetPaths(ptSource).replace(/((?:href|src)=")(mindelo-essentials\.(?:css|js))(")/g, (m, p1, target, p3) => `${p1}../../mindelo-essentials/${target}${p3}`);
+ptSource = normalizeCanonicalHomeLinks(deepenSharedAssetPaths(ptSource)).replace(/((?:href|src)=")(mindelo-essentials\.(?:css|js))(")/g, (m, p1, target, p3) => `${p1}../../mindelo-essentials/${target}${p3}`);
 ptSource = injectRuntimeStrings(ptSource, 'pt');
 ptSource = injectSearchIndex(ptSource);
 ptSource = applyGettingAroundLinkFixup(ptSource, 'pt');

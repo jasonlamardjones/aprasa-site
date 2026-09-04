@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { t, hasKey } from './lib/locale.mjs';
 import { bodyParagraphs, factKeyBase } from './lib/things-to-do-keys.mjs';
 import { currentnessState, isExpired as recordIsExpired, EXPIRED, REVIEW_DUE } from './lib/things-to-do-currentness.mjs';
+import { HOME_PREVIEW_LIMIT, collectionRecords, homePreviewIds, hubOutputPath, hubCanonical } from './lib/things-to-do-collection.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(scriptDir, '..');
@@ -104,6 +105,15 @@ const CHROME = {
   footerContactTitle: t('footer.contact_title', locale),
   footerContactPrompt: t('footer.contact_prompt', locale),
   footerContactAction: t('footer.contact_action', locale),
+  // Things-to-Do collection hub (Project 03 product / Project 09 approved copy).
+  thingsKicker: t('home.things.kicker', locale),
+  hubH1: t('things.hub.h1', locale),
+  hubIntro: t('things.hub.intro', locale),
+  hubBoundary: t('things.hub.boundary', locale),
+  hubCardAction: t('things.hub.card_action.label', locale),
+  hubEmptyState: t('things.hub.empty_state', locale),
+  hubMetaTitle: t('things.hub.meta.title', locale),
+  hubMetaDescription: t('things.hub.meta.description', locale),
 };
 
 const sitewideSocialFallback = {
@@ -123,12 +133,25 @@ function escapeHtml(value = '') {
     .replaceAll("'", '&#039;');
 }
 
-// EXPIRED only. A REVIEW_DUE record is still public: it keeps its Home card
-// and its detail page is not labelled a past event. Reverification is demanded
-// by the currentness validator, never by silently removing the record.
+// EXPIRED only. A REVIEW_DUE record is still public: it keeps its collection
+// membership and its detail page is not labelled a past event. Reverification
+// is demanded by the currentness validator, never by silently removing the
+// record.
 function isExpired(record) {
   return recordIsExpired(record, asOf);
 }
+
+// The approved Home preview. Project 03 approved Home as a LIMITED PREVIEW of
+// the first three eligible records in canonical order, with the full eligible
+// collection living on the dedicated hub — so eligibility alone no longer puts
+// a record on Home. Membership and ordering come from the shared collection
+// module, never from a second copy of the rule here.
+//
+// Ordering is canonical record order filtered to eligible records. It is not
+// popularity, SEO demand, provider status, commercial relationship, payment or
+// sponsorship, and must never become any of those.
+const hubRecords = collectionRecords(records, asOf);
+const homePreview = homePreviewIds(records, asOf);
 
 function resolveDetailTarget(record) {
   if (typeof record.detail_page !== 'string' || !detailRoutePattern.test(record.detail_page)) {
@@ -324,9 +347,18 @@ function detailPageLinks(record) {
   const slug = record.detail_page.replace(/^things-to-do\//, '').replace(/\/$/, '');
   return {
     rootPrefix,
-    home: locale === 'en' ? `${rootPrefix}index.html` : `${rootPrefix}pt/`,
+    // Clean canonical directory form. Home's canonical URL is
+    // https://aprasa.org/ (and /pt/), so internal navigation points at the
+    // directory, never at the explicit index.html document URL. This changes
+    // no canonical policy and adds no redirect — see scripts/lib/canonical-links.mjs.
+    home: locale === 'en' ? rootPrefix : `${rootPrefix}pt/`,
     mindelo: locale === 'en' ? `${rootPrefix}mindelo-essentials/` : `${rootPrefix}pt/mindelo-essentials/`,
     about: locale === 'en' ? `${rootPrefix}about/` : `${rootPrefix}pt/about/`,
+    // The collection this record belongs to. A detail page is a direct child
+    // of its locale's hub route (things-to-do/<slug>/ under things-to-do/, and
+    // pt/things-to-do/<slug>/ under pt/things-to-do/), so the parent-collection
+    // href is the same "../" in both locales and always stays same-locale.
+    collection: '../',
     // Equivalent-page mapping for the language switch: the same slug under
     // things-to-do/ (EN) or pt/things-to-do/ (PT), relative from either page.
     enHref: `${rootPrefix}things-to-do/${slug}/`,
@@ -404,7 +436,7 @@ ${renderSchema(record, loc, expired)}
 <main id="main">
   <div class="container record-page">
     <nav class="breadcrumb" aria-label="${escapeHtml(CHROME.breadcrumbAria)}">
-      <a href="${links.home}#things-to-do">${escapeHtml(CHROME.backToThings)}</a>
+      <a href="${links.collection}">${escapeHtml(CHROME.backToThings)}</a>
     </nav>
     <article class="dialog-record record-article" data-event-id="${escapeHtml(record.id)}">${media}${pastStatus}
       <p class="provider">${escapeHtml(record.provider)}</p>
@@ -414,6 +446,198 @@ ${renderSchema(record, loc, expired)}
       ${renderBodyParagraphs(loc.detailBody, '      ')}${goodToKnow}
       <p class="checked">${escapeHtml(loc.detailChecked)}</p>${action}
     </article>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <a class="footer-brand" href="${links.home}" aria-label="${escapeHtml(CHROME.brandAria)}">
+      <img src="${links.rootPrefix}assets/brand/A_PRASA_Lockup_Horizontal_v2_Reversed_Cream.svg" alt="" width="4959" height="725">
+    </a>
+    <p>${escapeHtml(CHROME.footerTagline)}</p>
+    <p class="footer-note">${escapeHtml(CHROME.footerIndependence)}</p>
+    <div class="footer-contact">
+      <p class="footer-contact-title">${escapeHtml(CHROME.footerContactTitle)}</p>
+      <p>${escapeHtml(CHROME.footerContactPrompt)} <a href="https://wa.me/message/GC3C5Q4MSF37I1" target="_blank" rel="noopener noreferrer">${escapeHtml(CHROME.footerContactAction)}</a>.</p>
+    </div>
+    <a class="back-top" href="#main">${escapeHtml(CHROME.backToTop)}</a>
+  </div>
+</footer>
+</body>
+</html>
+`;
+}
+
+// --- Things-to-Do collection hub -------------------------------------------
+//
+// One generated collection surface per locale:
+//   EN  things-to-do/index.html      -> https://aprasa.org/things-to-do/
+//   PT  pt/things-to-do/index.html   -> https://aprasa.org/pt/things-to-do/
+//
+// It is a PROJECTION of the same canonical corpus (data/things-to-do-events.json)
+// and the same currentness state every other Things-to-Do surface consumes. It
+// creates no event record, no second factual corpus and no taxonomy of its own,
+// and its per-record strings are the existing governed event.<id>.* presentation
+// reused unchanged — nothing here retranslates event copy.
+//
+// The card carries ONE call to action, the governed hub CTA, pointing at the
+// same-locale canonical detail route. A record's own external card_action is
+// deliberately not reproduced here: the hub's job is to lead into the
+// collection's own detail pages, not to become an outbound provider index.
+
+// href targets for a page at things-to-do/ (EN, 1 level deep) or
+// pt/things-to-do/ (PT, 2 levels deep).
+function hubPageLinks() {
+  const rootPrefix = locale === 'pt' ? '../../' : '../';
+  return {
+    rootPrefix,
+    // Clean canonical directory form — see detailPageLinks() above.
+    home: locale === 'en' ? rootPrefix : `${rootPrefix}pt/`,
+    mindelo: locale === 'en' ? `${rootPrefix}mindelo-essentials/` : `${rootPrefix}pt/mindelo-essentials/`,
+    about: locale === 'en' ? `${rootPrefix}about/` : `${rootPrefix}pt/about/`,
+    enHref: `${rootPrefix}things-to-do/`,
+    ptHref: `${rootPrefix}pt/things-to-do/`,
+  };
+}
+
+// A hub card links to its own locale's detail route. The hub lives at
+// things-to-do/ (EN) or pt/things-to-do/ (PT) and each detail page is a direct
+// child of it, so the relative href is the bare slug in BOTH locales — it must
+// not be prefixed with "pt/" (that would produce pt/things-to-do/pt/...).
+function hubDetailHref(record) {
+  return record.detail_page.replace(/^things-to-do\//, '');
+}
+
+function renderHubCard(record, loc, links) {
+  const media = record.media
+    ? `\n        <div class="card-media"><img src="${links.rootPrefix}${escapeHtml(record.media.asset)}" alt="${escapeHtml(loc.mediaAlt)}" loading="lazy" width="${record.media.width}" height="${record.media.height}"></div>`
+    : '';
+  // Same day-precision rule as Home: only a verified exact end is published.
+  const endAttribute = record.end_date ? ` data-event-end="${record.end_date}"` : '';
+
+  return `      <article class="resource-card" data-event-id="${escapeHtml(record.id)}"${endAttribute} data-checked="${escapeHtml(record.checked_at)}">${media}
+        <p class="card-status">${escapeHtml(loc.displayStatus)}</p>
+        <h3>${escapeHtml(loc.title)}</h3>
+        <p class="card-meta">${escapeHtml(loc.displayMeta)}</p>
+        <p class="provider">${escapeHtml(record.provider)}</p>
+        <p class="checked">${escapeHtml(loc.displayChecked)}</p>
+        <div class="card-actions">
+          <a class="resource-link" href="${escapeHtml(hubDetailHref(record))}">${escapeHtml(CHROME.hubCardAction)}</a>
+        </div>
+      </article>`;
+}
+
+// Collection-level structured data.
+//
+// Project 03's specific technical position on collection-level schema was not
+// supplied with this implementation packet, so this emits ORDINARY WebPage
+// semantics only. No ItemList and no CollectionPage node is invented here, and
+// the individual Event/ExhibitionEvent payloads on the detail pages remain the
+// primary — and only — event-schema surfaces: duplicating them across hub
+// cards for SEO is explicitly out of scope.
+function renderHubSchema() {
+  return JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: CHROME.hubH1,
+    description: CHROME.hubMetaDescription,
+    url: hubCanonical(locale),
+    inLanguage: locale === 'pt' ? 'pt-PT' : 'en',
+    isPartOf: { '@type': 'WebSite', name: 'A PRASA', url: 'https://aprasa.org/' },
+  }, null, 2);
+}
+
+function renderHubPage(eligible) {
+  const links = hubPageLinks();
+  const canonicalEn = hubCanonical('en');
+  const canonicalPt = hubCanonical('pt');
+  const canonical = locale === 'pt' ? canonicalPt : canonicalEn;
+  const social = sitewideSocialFallback;
+
+  // Empty state comes from canonical currentness output: when no record is
+  // eligible the hub says so in governed copy. An expired record is never
+  // surfaced here as filler to avoid an empty grid.
+  const body = eligible.length === 0
+    ? `\n        <p>${escapeHtml(CHROME.hubEmptyState)}</p>`
+    : '';
+  const grid = eligible.length === 0
+    ? ''
+    : `\n\n    <div class="resource-grid things-grid">\n${eligible
+        .map((record) => renderHubCard(record, localizeRecord(record), links))
+        .join('\n\n')}\n    </div>`;
+
+  return `<!DOCTYPE html>
+<html lang="${locale}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="${escapeHtml(CHROME.hubMetaDescription)}">
+<title>${escapeHtml(CHROME.hubMetaTitle)}</title>
+<link rel="canonical" href="${canonical}">
+<link rel="alternate" hreflang="en" href="${canonicalEn}">
+<link rel="alternate" hreflang="pt" href="${canonicalPt}">
+<link rel="alternate" hreflang="x-default" href="${canonicalEn}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="A PRASA">
+<meta property="og:title" content="${escapeHtml(CHROME.hubMetaTitle)}">
+<meta property="og:description" content="${escapeHtml(CHROME.hubMetaDescription)}">
+<meta property="og:url" content="${canonical}">
+<meta property="og:locale" content="${locale === 'pt' ? 'pt_PT' : 'en_US'}">
+<meta property="og:image" content="https://aprasa.org/${escapeHtml(social.asset)}">
+<meta property="og:image:type" content="${social.type}">
+<meta property="og:image:width" content="${social.width}">
+<meta property="og:image:height" content="${social.height}">
+<meta property="og:image:alt" content="${escapeHtml(social.alt)}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${escapeHtml(CHROME.hubMetaTitle)}">
+<meta name="twitter:description" content="${escapeHtml(CHROME.hubMetaDescription)}">
+<meta name="twitter:image" content="https://aprasa.org/${escapeHtml(social.asset)}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Baskerville&family=Work+Sans&display=swap">
+<link rel="stylesheet" href="${links.rootPrefix}prasa-launch.css">
+<script src="${links.rootPrefix}prasa-launch.js" defer></script>
+<!-- Privacy-friendly analytics by Plausible -->
+<script async src="https://plausible.io/js/pa-eShJ2lYHDu0B2CdpzVYvZ.js"></script>
+<script>
+  window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};
+  plausible.init()
+</script>
+<script type="application/ld+json">
+${renderHubSchema()}
+</script>
+</head>
+<body>
+<!-- Generated from data/things-to-do-events.json: things-to-do collection hub (locale: ${locale}) -->
+<a class="skip-link" href="#main">${escapeHtml(CHROME.skipToContent)}</a>
+
+<header class="site-header" aria-label="A PRASA">
+  <div class="container header-inner">
+    <a class="brand" href="${links.home}" aria-label="${escapeHtml(CHROME.brandAria)}">
+      <img src="${links.rootPrefix}assets/brand/A_PRASA_Lockup_Horizontal_v2_Primary_Green.svg" alt="" width="4959" height="725">
+    </a>
+    <div class="header-actions">
+      <nav class="site-nav" aria-label="${escapeHtml(CHROME.navAria)}">
+        <a href="${links.home}">${escapeHtml(CHROME.navHome)}</a>
+        <a href="${links.mindelo}">${escapeHtml(CHROME.navMindelo)}</a>
+        <a href="${links.about}">${escapeHtml(CHROME.navAbout)}</a>
+      </nav>
+      <nav class="lang-switch" aria-label="Language / Idioma">
+        <a href="${links.enHref}" lang="en" hreflang="en"${locale === 'en' ? ' aria-current="true" class="lang-current"' : ''}>EN</a>
+        <a href="${links.ptHref}" lang="pt" hreflang="pt"${locale === 'pt' ? ' aria-current="true" class="lang-current"' : ''}>PT</a>
+      </nav>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+  <div class="container record-page">
+    <div class="section-heading">
+      <p class="section-kicker">${escapeHtml(CHROME.thingsKicker)}</p>
+      <h1>${escapeHtml(CHROME.hubH1)}</h1>
+      <p>${escapeHtml(CHROME.hubIntro)}</p>
+      <p>${escapeHtml(CHROME.hubBoundary)}</p>${body}
+    </div>${grid}
   </div>
 </main>
 
@@ -452,8 +676,15 @@ function replaceGeneratedEvent(homeHtml, record, loc) {
   }
 
   const contentStart = beginIndex + beginMarker.length;
-  // Only EXPIRED empties a slot. CURRENT and REVIEW_DUE both render.
-  const body = isExpired(record) ? '' : `\n${renderHomeArticle(record, loc)}\n        `;
+  // A slot renders only for a record in the approved Home preview. Two
+  // distinct reasons empty a slot, and they are not interchangeable:
+  //   EXPIRED           the record has left the collection entirely and is
+  //                     absent from Home AND from the hub.
+  //   not in preview    the record is eligible and IS on the hub; Home simply
+  //                     shows the first three. Nothing about the record's
+  //                     currentness state changes, and the hub CTA leads to it.
+  // CURRENT and REVIEW_DUE are both eligible; only EXPIRED is not.
+  const body = homePreview.has(record.id) ? `\n${renderHomeArticle(record, loc)}\n        ` : '';
   return homeHtml.slice(0, contentStart) + body + homeHtml.slice(endIndex);
 }
 
@@ -505,4 +736,27 @@ for (const record of selected) {
 if (write && homeExists) {
   fs.writeFileSync(homePath, homeHtml);
   console.log(`Wrote ${path.relative(root, homePath)} as of ${asOf}`);
+}
+
+// --- Collection hub -------------------------------------------------------
+// The hub is a WHOLE-COLLECTION projection, so it is produced only by a
+// whole-collection run. A --id run is a bounded single-record operation
+// (Phase 2B currentness remediation drives the generator that way, under a
+// bounded write set that does not include this file), and rewriting the hub
+// from inside one would take that run outside its authorized scope. The hub
+// is reconciled by the next full run — scripts/build-all.mjs, the Things-to-Do
+// CI workflow, and the guarded event-publication write path all invoke the
+// generator without --id — and a hub left stale by a bounded repair is caught
+// by CI's "committed surfaces match canonical generation" gate rather than
+// shipping unnoticed.
+const hubRelativePath = hubOutputPath(locale);
+if (requestedId) {
+  console.log(`Skipped ${hubRelativePath}: --id runs are single-record and do not rewrite the whole-collection hub.`);
+} else if (write) {
+  const hubTarget = path.join(root, hubRelativePath);
+  fs.mkdirSync(path.dirname(hubTarget), { recursive: true });
+  fs.writeFileSync(hubTarget, renderHubPage(hubRecords));
+  console.log(`Wrote ${hubRelativePath} — ${hubRecords.length} eligible record(s), ${Math.min(hubRecords.length, HOME_PREVIEW_LIMIT)} on the Home preview, as of ${asOf}`);
+} else {
+  console.log(`Prepared ${hubRelativePath}: ${hubRecords.length} eligible record(s), ${Math.min(hubRecords.length, HOME_PREVIEW_LIMIT)} on the Home preview, as of ${asOf}`);
 }

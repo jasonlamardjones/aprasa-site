@@ -21,6 +21,55 @@
     return new URL(relativePath, assetBase).pathname;
   }
 
+  // Governed runtime strings.
+  //
+  // A live audit found the runtime-injected editorial fallback labels below
+  // rendering in English on the Portuguese Home surface. They are injected by
+  // this script rather than baked into the page, so the static-page localizer
+  // never sees them.
+  //
+  // The fix follows the incumbent pattern Mindelo Essentials already uses for
+  // runtime copy: the builder writes the governed values for the page's own
+  // locale into a <script type="application/json" id="i18n-strings"> block,
+  // and this script reads them from there. Every value falls back to the exact
+  // English string this file used before, so any page without the block --
+  // every EN page included -- behaves byte-for-byte as it did.
+  //
+  // This module never translates. A key absent from the block is a key with no
+  // approved Portuguese value yet, and it deliberately keeps its English
+  // default rather than acquiring an invented one.
+  const RUNTIME_STRINGS_DEFAULTS = {
+    mediaFallbackLabel: "Things to Do",
+    mediaFallbackNote: "A PRASA editorial thumbnail — not an image of this specific activity.",
+    trainingsSectionLabel: "Trainings, Tools & Opportunities",
+    organizationsSectionLabel: "Organizations & Ways to Help",
+    // BLOCKED_ON_PROJECT_09_STRING_APPROVAL: the governed overlay carries no
+    // approved Portuguese value for this note, so the builder emits no PT
+    // override for it and this English default still renders on PT. Do not
+    // supply a translation here; it must arrive as an approved Project 09
+    // string through the overlay, like every other governed value.
+    sectionThumbnailNote: "A PRASA section thumbnail — not provider-specific imagery.",
+  };
+
+  function readRuntimeStrings() {
+    const node = document.getElementById("i18n-strings");
+    if (!node) return { ...RUNTIME_STRINGS_DEFAULTS };
+    let supplied = null;
+    try {
+      supplied = JSON.parse(node.textContent || "{}");
+    } catch {
+      return { ...RUNTIME_STRINGS_DEFAULTS };
+    }
+    const resolved = { ...RUNTIME_STRINGS_DEFAULTS };
+    for (const key of Object.keys(RUNTIME_STRINGS_DEFAULTS)) {
+      const value = supplied?.[key];
+      if (typeof value === "string" && value.length > 0) resolved[key] = value;
+    }
+    return resolved;
+  }
+
+  const STRINGS = readRuntimeStrings();
+
   function applyMultilingualSequenceMetadata() {
     const sequences = document.querySelectorAll(".lang-forms");
     if (!sequences.length) return;
@@ -108,7 +157,7 @@
     document.head.append(style);
   }
 
-  function createEditorialFallback(className, label = "Things to Do", note = "A PRASA editorial thumbnail — not an image of this specific activity.") {
+  function createEditorialFallback(className, label = STRINGS.mediaFallbackLabel, note = STRINGS.mediaFallbackNote) {
     const media = document.createElement("div");
     media.className = `${className} media-fallback`;
     media.setAttribute("aria-hidden", "true");
@@ -396,18 +445,18 @@
 
     ensureSectionMediaSlots(
       "things-to-do",
-      "Things to Do",
-      "A PRASA editorial thumbnail — not an image of this specific activity."
+      STRINGS.mediaFallbackLabel,
+      STRINGS.mediaFallbackNote
     );
     ensureSectionMediaSlots(
       "trainings-tools",
-      "Trainings, Tools & Opportunities",
-      "A PRASA section thumbnail — not provider-specific imagery."
+      STRINGS.trainingsSectionLabel,
+      STRINGS.sectionThumbnailNote
     );
     ensureSectionMediaSlots(
       "organizations-help",
-      "Organizations & Ways to Help",
-      "A PRASA section thumbnail — not provider-specific imagery."
+      STRINGS.organizationsSectionLabel,
+      STRINGS.sectionThumbnailNote
     );
 
     applyLocalSpotlight();
