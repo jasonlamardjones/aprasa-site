@@ -1,0 +1,262 @@
+// Stage A: source evidence -> normalized Things-to-Do candidate facts.
+//
+// The normalizer never invents a favorable default. A predicate is KNOWN only
+// when an admissible, provenance-backed assertion establishes it. Everything
+// else is UNKNOWN and is preserved as UNKNOWN.
+//
+// The single conservative absent-value rule is standards_boundary_unresolved,
+// which is derived from an explicit standards classification and fails closed
+// to true (HOLD under TTD-GOV-002) on omission, ambiguity, low confidence, or
+// any unresolved standards dimension.
+//
+// Free text (rationale, notes, titles) is carried as audit data only. It is
+// never parsed for meaning and can never create, clear, or alter a fact.
+
+import fs from 'node:fs';
+import path from 'node:path';
+import { assertNoDangerousKeys, canonicalize, emptyMap } from './ttd-canonical-json.mjs';
+
+const REGISTRY_PATH = path.join('automation', 'control-plane', 'normalization', 'ttd-fact-registry.json');
+
+export function loadFactRegistry(root = process.cwd()) {
+  const registry = JSON.parse(fs.readFileSync(path.join(root, REGISTRY_PATH), 'utf8'));
+  assertNoDangerousKeys(registry, '$registry');
+  return registry;
+}
+
+function indexPredicates(registry) {
+  const byName = emptyMap();
+  for (const predicate of registry.predicates) byName[predicate.name] = predicate;
+  return byName;
+}
+
+function unknownFact(reason, detail) {
+  return { state: 'UNKNOWN', value: null, reason, evidence_refs: [], rationale: detail ?? null };
+}
+
+function knownFact(value, evidenceRefs, rationale, reason) {
+  return { state: 'KNOWN', value, reason: reason ?? 'ADMISSIBLE_ASSERTION', evidence_refs: [...evidenceRefs].sort(), rationale: rationale ?? null };
+}
+
+function validateSourceRefs(evidence, registry, errors) {
+  const refs = emptyMap();
+  const list = Array.isArray(evidence.source_refs) ? evidence.source_refs : [];
+  if (!Array.isArray(evidence.source_refs)) {
+    errors.push({ code: 'MALFORMED_SOURCE_REFS', detail: 'source_refs must be an array' });
+    return refs;
+  }
+  for (const [index, ref] of list.entries()) {
+    const at = `source_refs[${index}]`;
+    if (ref === null || typeof ref !== 'object' || Array.isArray(ref)) {
+      errors.push({ code: 'MALFORMED_SOURCE_REF', detail: at });
+      continue;
+    }
+    if (typeof ref.ref_id !== 'string' || ref.ref_id.length === 0) {
+      errors.push({ code: 'MALFORMED_SOURCE_REF', detail: `${at}.ref_id must be a non-empty string` });
+      continue;
+    }
+    if (Object.hasOwn(refs, ref.ref_id)) {
+      errors.push({ code: 'DUPLICATE_SOURCE_REF_ID', detail: ref.ref_id });
+      continue;
+    }
+    if (typeof ref.url !== 'string') {
+      errors.push({ code: 'MALFORMED_SOURCE_REF', detail: `${at}.url must be a string` });
+      continue;
+    }
+    let parsed = null;
+    try {
+      parsed = new URL(ref.url);
+    } catch {
+      errors.push({ code: 'INVALID_SOURCE_URL', detail: `${at}.url is not a valid URL` });
+      continue;
+    }
+    if (!registry.allowed_url_schemes.includes(parsed.protocol)) {
+      errors.push({ code: 'NON_HTTP_SOURCE_URL', detail: `${at}.url scheme ${parsed.protocol} is not permitted` });
+      continue;
+    }
+    if (!registry.source_classes.includes(ref.source_class)) {
+      errors.push({ code: 'UNKNOWN_SOURCE_CLASS', detail: `${at}.source_class ${String(ref.source_class)}` });
+      continue;
+    }
+    refs[ref.ref_id] = { ref_id: ref.ref_id, url: ref.url, source_class: ref.source_class, retrieved_at: ref.retrieved_at ?? null };
+  }
+  return refs;
+}
+
+function valueTypeValid(predicate, value) {
+  if (predicate.type === 'boolean') return typeof value === 'boolean';
+  if (predicate.type === 'enum') return typeof value === 'string' && predicate.enum.includes(value);
+  return false;
+}
+
+function collectAssertions(evidence, predicatesByName, registry, sourceRefs, errors) {
+  const grouped = emptyMap();
+  const list = Array.isArray(evidence.assertions) ? evidence.assertions : [];
+  if (!Array.isArray(evidence.assertions)) {
+    errors.push({ code: 'MALFORMED_ASSERTIONS', detail: 'assertions must be an array' });
+    return grouped;
+  }
+  for (const [index, assertion] of list.entries()) {
+    const at = `assertions[${index}]`;
+    if (assertion === null || typeof assertion !== 'object' || Array.isArray(assertion)) {
+      errors.push({ code: 'MALFORMED_ASSERTION', detail: at });
+      continue;
+    }
+    const name = assertion.predicate;
+    if (typeof name !== 'string' || !Object.hasOwn(predicatesByName, name)) {
+      errors.push({ code: 'UNSUPPORTED_PREDICATE', detail: `${at}.predicate ${String(name)}` });
+      continue;
+    }
+    const predicate = predicatesByName[name];
+    if (predicate.directly_assertable !== true) {
+      errors.push({ code: 'PREDICATE_NOT_DIRECTLY_ASSERTABLE', detail: `${at}.predicate ${name} is derived, not asserted` });
+      continue;
+    }
+    if (!valueTypeValid(predicate, assertion.value)) {
+      errors.push({ code: 'INVALID_ASSERTION_VALUE', detail: `${at}.value ${canonicalize(assertion.value ?? null)} is not a valid ${predicate.type} for ${name}` });
+      continue;
+    }
+    if (!registry.confidence_levels.includes(assertion.confidence)) {
+      errors.push({ code: 'INVALID_CONFIDENCE', detail: `${at}.confidence ${String(assertion.confidence)}` });
+      continue;
+    }
+    const refs = Array.isArray(assertion.evidence_refs) ? assertion.evidence_refs : null;
+    if (refs === null || refs.length === 0) {
+      errors.push({ code: 'MISSING_EVIDENCE_REFS', detail: `${at} must cite at least one source ref` });
+      continue;
+    }
+    const dangling = refs.filter((ref) => typeof ref !== 'string' || !Object.hasOwn(sourceRefs, ref));
+    if (dangling.length > 0) {
+      errors.push({ code: 'DANGLING_EVIDENCE_REF', detail: `${at} cites unresolved refs ${canonicalize(dangling)}` });
+      continue;
+    }
+    if (!Object.hasOwn(grouped, name)) grouped[name] = [];
+    grouped[name].push({
+      value: assertion.value,
+      confidence: assertion.confidence,
+      evidence_refs: refs,
+      rationale: typeof assertion.rationale === 'string' ? assertion.rationale : null
+    });
+  }
+  return grouped;
+}
+
+function reduceAssertions(grouped, registry) {
+  const facts = emptyMap();
+  for (const name of Object.keys(grouped)) {
+    const entries = grouped[name];
+    const distinct = new Set(entries.map((entry) => canonicalize(entry.value)));
+    if (distinct.size > 1) {
+      facts[name] = unknownFact('CONTRADICTORY_ASSERTIONS', `${entries.length} assertions disagree on ${name}`);
+      continue;
+    }
+    const admissible = entries.filter((entry) => registry.admissible_confidence.includes(entry.confidence));
+    if (admissible.length === 0) {
+      facts[name] = unknownFact('LOW_CONFIDENCE_CLASSIFICATION', `no HIGH-confidence assertion for ${name}`);
+      continue;
+    }
+    const evidenceRefs = new Set();
+    for (const entry of admissible) for (const ref of entry.evidence_refs) evidenceRefs.add(ref);
+    facts[name] = knownFact(admissible[0].value, evidenceRefs, admissible[0].rationale);
+  }
+  return facts;
+}
+
+// TTD-GOV-002 boundary. Only an explicit, HIGH-confidence, provenance-backed
+// classification asserting affirmative ordinary-scope evidence with no
+// unresolved dimension may clear the standards boundary.
+function deriveStandardsBoundary(evidence, sourceRefs) {
+  const classification = evidence.standards_classification;
+  if (classification === undefined || classification === null) {
+    return knownFact(true, [], null, 'STANDARDS_CLASSIFICATION_OMITTED');
+  }
+  if (typeof classification !== 'object' || Array.isArray(classification)) {
+    return knownFact(true, [], null, 'STANDARDS_CLASSIFICATION_MALFORMED');
+  }
+  if (classification.affirmative_ordinary_scope_evidence !== true) {
+    return knownFact(true, [], null, 'NO_AFFIRMATIVE_ORDINARY_SCOPE_EVIDENCE');
+  }
+  if (classification.confidence !== 'HIGH') {
+    return knownFact(true, [], null, 'LOW_CONFIDENCE_STANDARDS_CLASSIFICATION');
+  }
+  const refs = Array.isArray(classification.evidence_refs) ? classification.evidence_refs : [];
+  if (refs.length === 0 || refs.some((ref) => typeof ref !== 'string' || !Object.hasOwn(sourceRefs, ref))) {
+    return knownFact(true, [], null, 'UNSUPPORTED_STANDARDS_CLASSIFICATION');
+  }
+  const unresolved = Array.isArray(classification.unresolved_dimensions) ? classification.unresolved_dimensions : [];
+  if (unresolved.length > 0) {
+    return knownFact(true, refs, null, 'UNRESOLVED_STANDARDS_DIMENSION');
+  }
+  if (classification.mixed_purpose === true) {
+    return knownFact(true, refs, null, 'MIXED_PURPOSE_CANDIDATE');
+  }
+  return knownFact(false, refs, typeof classification.rationale === 'string' ? classification.rationale : null, 'AFFIRMATIVE_ORDINARY_SCOPE_EVIDENCE');
+}
+
+export function normalizeCandidate(evidence, options = {}) {
+  const registry = options.registry ?? loadFactRegistry(options.root);
+  const errors = [];
+
+  try {
+    assertNoDangerousKeys(evidence, '$evidence');
+  } catch (error) {
+    return {
+      ok: false,
+      candidate_id: null,
+      registry_version: registry.version,
+      facts: emptyMap(),
+      source_refs: [],
+      claimed_authority_resolution: null,
+      normalization_errors: [{ code: 'UNSAFE_INPUT_KEY', detail: error.message }]
+    };
+  }
+
+  if (evidence === null || typeof evidence !== 'object' || Array.isArray(evidence)) {
+    return {
+      ok: false,
+      candidate_id: null,
+      registry_version: registry.version,
+      facts: emptyMap(),
+      source_refs: [],
+      claimed_authority_resolution: null,
+      normalization_errors: [{ code: 'MALFORMED_EVIDENCE_RECORD', detail: 'evidence record must be an object' }]
+    };
+  }
+
+  const candidateId = typeof evidence.candidate_id === 'string' && evidence.candidate_id.length > 0 ? evidence.candidate_id : null;
+  if (candidateId === null) errors.push({ code: 'MISSING_CANDIDATE_ID', detail: 'candidate_id must be a non-empty string' });
+
+  const predicatesByName = indexPredicates(registry);
+  const sourceRefs = validateSourceRefs(evidence, registry, errors);
+  const grouped = collectAssertions(evidence, predicatesByName, registry, sourceRefs, errors);
+  const facts = reduceAssertions(grouped, registry);
+
+  facts.standards_boundary_unresolved = deriveStandardsBoundary(evidence, sourceRefs);
+
+  // Candidate-supplied authority claims are recorded for audit only. They are
+  // never authorizing and are never promoted into the evaluated fact set.
+  const claims = evidence.candidate_claims;
+  const claimedResolution = claims !== null && typeof claims === 'object' && !Array.isArray(claims) && typeof claims.authority_resolution === 'string'
+    ? claims.authority_resolution
+    : null;
+
+  const ok = errors.length === 0;
+  return {
+    ok,
+    candidate_id: candidateId,
+    registry_version: registry.version,
+    facts: ok ? facts : emptyMap(),
+    source_refs: Object.keys(sourceRefs).sort().map((key) => sourceRefs[key]),
+    claimed_authority_resolution: claimedResolution,
+    normalization_errors: errors
+  };
+}
+
+export function factSummary(normalized) {
+  const summary = {};
+  for (const name of Object.keys(normalized.facts).sort()) {
+    const fact = normalized.facts[name];
+    summary[name] = fact.state === 'KNOWN' ? { state: 'KNOWN', value: fact.value } : { state: 'UNKNOWN' };
+  }
+  return summary;
+}
