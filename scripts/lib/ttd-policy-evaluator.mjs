@@ -10,7 +10,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { assertNoDangerousKeys, canonicalize, deepEqual, digest, emptyMap } from './ttd-canonical-json.mjs';
+import { assertAdmissibleStructure, canonicalize, deepEqual, denseStringList, digest, emptyMap, isAdmissibleDenseArray } from './ttd-canonical-json.mjs';
 
 const POLICY_PATH = path.join('automation', 'control-plane', 'policies', 'things-to-do-v1.json');
 const ANCHOR_PATH = path.join('automation', 'control-plane', 'trust', 'things-to-do-v1.trust-anchor.json');
@@ -28,13 +28,131 @@ export const REQUIRED_COMPOSITION = {
 
 export function loadPolicy(root = process.cwd()) {
   const policy = JSON.parse(fs.readFileSync(path.join(root, POLICY_PATH), 'utf8'));
-  assertNoDangerousKeys(policy, '$policy');
+  assertAdmissibleStructure(policy, '$policy');
   return policy;
+}
+
+// Trusted fact-policy configuration, pinned in code alongside REQUIRED_COMPOSITION.
+//
+// These are not new policy. They restate the configuration already declared by
+// the committed fact registry, so that a caller-supplied registry, constraint
+// set or material predicate set cannot narrow, empty or reclassify it at run
+// time. validate-ttd-trust-anchor.mjs is the drift gate: a registry edit that
+// is not accompanied by a matching, separately reviewed change here fails in CI
+// and fails closed at run time.
+export const REQUIRED_MATERIAL_ELIGIBILITY_PREDICATES = [
+  'activity_scope',
+  'broader_source_conflicts_with_specific_scope',
+  'candidate_already_ended',
+  'commercial_primary_proposition',
+  'evidence_sufficient',
+  'geography_in_scope',
+  'material_source_conflict',
+  'materially_current',
+  'primary_proposition',
+  'proposed_copy_strengthens_unknown_fact',
+  'required_authority_missing',
+  'standards_boundary_unresolved'
+];
+
+export const REQUIRED_FACT_CONSISTENCY_CONSTRAINTS = [
+  {
+    constraint_id: 'TTD-FACT-CONSISTENCY-001',
+    kind: 'FORBIDDEN_COMBINATION',
+    reason_code: 'CONTRADICTORY_MATERIAL_FACTS',
+    forbidden_combination: { candidate_already_ended: true, materially_current: true }
+  }
+];
+
+const KNOWN_MATERIALITIES = new Set(['MATERIAL_ELIGIBILITY', 'OPERATIONAL']);
+
+// Semantic identity of one declared constraint. Free-text members such as
+// `note` are audit data and are deliberately excluded, so an editorial note can
+// be reworded without weakening enforcement. Everything that decides whether a
+// combination is forbidden is included and type-checked.
+function constraintIdentity(constraint) {
+  if (constraint === null || typeof constraint !== 'object' || Array.isArray(constraint)) return null;
+  const prototype = Object.getPrototypeOf(constraint);
+  if (prototype !== Object.prototype && prototype !== null) return null;
+  const id = constraint.constraint_id;
+  const kind = constraint.kind;
+  const reasonCode = constraint.reason_code;
+  const combination = constraint.forbidden_combination;
+  if (typeof id !== 'string' || id.length === 0) return null;
+  if (typeof kind !== 'string' || kind.length === 0) return null;
+  if (typeof reasonCode !== 'string' || reasonCode.length === 0) return null;
+  if (combination === null || typeof combination !== 'object' || Array.isArray(combination)) return null;
+  const combinationPrototype = Object.getPrototypeOf(combination);
+  if (combinationPrototype !== Object.prototype && combinationPrototype !== null) return null;
+  const names = Object.keys(combination).sort();
+  if (names.length < 2) return null;
+  const forbidden = {};
+  for (const name of names) {
+    const value = combination[name];
+    if (typeof value !== 'boolean' && typeof value !== 'string') return null;
+    forbidden[name] = value;
+  }
+  return { constraint_id: id, kind, reason_code: reasonCode, forbidden_combination: forbidden };
+}
+
+// Order-independent normalized form of a constraint set, or null if the set is
+// not a dense array of well-formed, uniquely identified constraints. Object key
+// order inside a forbidden combination is not semantic; a missing, narrowed,
+// fabricated or malformed constraint is.
+export function normalizeFactConsistencyConstraints(value) {
+  if (!isAdmissibleDenseArray(value)) return null;
+  const normalized = [];
+  const seen = new Set();
+  for (let index = 0; index < value.length; index += 1) {
+    const identity = constraintIdentity(value[index]);
+    if (identity === null) return null;
+    if (seen.has(identity.constraint_id)) return null;
+    seen.add(identity.constraint_id);
+    normalized.push(identity);
+  }
+  return normalized.sort((left, right) =>
+    (left.constraint_id < right.constraint_id ? -1 : left.constraint_id > right.constraint_id ? 1 : 0));
+}
+
+const REQUIRED_CONSTRAINT_IDENTITY = normalizeFactConsistencyConstraints(REQUIRED_FACT_CONSISTENCY_CONSTRAINTS);
+
+// Derives the trusted fact-policy configuration from the validated registry,
+// never from a caller. Throws rather than degrading: a registry that has been
+// narrowed, reclassified or forged cannot be used to adjudicate anything.
+export function deriveTrustedFactPolicy(registry) {
+  if (registry === null || typeof registry !== 'object' || Array.isArray(registry)) {
+    throw new Error('fact registry is missing or malformed');
+  }
+  if (!isAdmissibleDenseArray(registry.predicates)) {
+    throw new Error('fact registry predicates must be a dense array');
+  }
+  const materialPredicates = [];
+  for (const predicate of registry.predicates) {
+    if (predicate === null || typeof predicate !== 'object' || Array.isArray(predicate)) {
+      throw new Error('fact registry declares a malformed predicate');
+    }
+    if (typeof predicate.name !== 'string' || predicate.name.length === 0) {
+      throw new Error('fact registry declares a predicate without a name');
+    }
+    if (!KNOWN_MATERIALITIES.has(predicate.materiality)) {
+      throw new Error(`fact registry declares an unknown materiality for ${predicate.name}`);
+    }
+    if (predicate.materiality === 'MATERIAL_ELIGIBILITY') materialPredicates.push(predicate.name);
+  }
+  materialPredicates.sort();
+  if (!deepEqual(materialPredicates, REQUIRED_MATERIAL_ELIGIBILITY_PREDICATES)) {
+    throw new Error('fact registry MATERIAL_ELIGIBILITY predicate set does not match the trusted configuration');
+  }
+  const constraints = normalizeFactConsistencyConstraints(registry.fact_consistency_constraints);
+  if (constraints === null || !deepEqual(constraints, REQUIRED_CONSTRAINT_IDENTITY)) {
+    throw new Error('fact registry fact-consistency constraints do not match the trusted configuration');
+  }
+  return { materialPredicates, factConsistencyConstraints: constraints };
 }
 
 export function loadTrustAnchor(root = process.cwd()) {
   const anchor = JSON.parse(fs.readFileSync(path.join(root, ANCHOR_PATH), 'utf8'));
-  assertNoDangerousKeys(anchor, '$anchor');
+  assertAdmissibleStructure(anchor, '$anchor');
   return anchor;
 }
 
@@ -267,6 +385,51 @@ function mergeFieldActions(matchedRules, composition) {
   return { field_actions: plain, provenance: plainProvenance, conflicts };
 }
 
+// Enforcement-time verification of the supplied fact-policy configuration.
+//
+// evaluateNormalizedFacts keeps these as parameters so the adversarial suites
+// can probe them directly, but a supplied set is never trusted on its own: it
+// must be semantically identical to the pinned trusted configuration, and the
+// pinned normalized form is what enforcement then uses. There is no empty or
+// permissive default. adjudicateCandidate, the production entrypoint, derives
+// both from the validated registry and never forwards a caller-supplied set.
+function verifyTrustedFactPolicy(materialPredicates, factConsistencyConstraints) {
+  const messages = [];
+  const reasonCodes = new Set();
+  const unresolved = new Set();
+
+  const suppliedPredicates = denseStringList(materialPredicates);
+  if (suppliedPredicates === null) {
+    messages.push('material eligibility predicates were not supplied as a dense set of predicate names');
+    reasonCodes.add('MATERIAL_PREDICATE_SET_NOT_SUPPLIED');
+    unresolved.add('TRUSTED_MATERIAL_PREDICATE_CONFIGURATION');
+  } else if (!deepEqual([...suppliedPredicates].sort(), REQUIRED_MATERIAL_ELIGIBILITY_PREDICATES)) {
+    messages.push('supplied material eligibility predicates are not identical to the trusted registry MATERIAL_ELIGIBILITY set');
+    reasonCodes.add('MATERIAL_PREDICATE_SET_UNTRUSTED');
+    unresolved.add('TRUSTED_MATERIAL_PREDICATE_CONFIGURATION');
+  }
+
+  const suppliedConstraints = normalizeFactConsistencyConstraints(factConsistencyConstraints);
+  if (suppliedConstraints === null) {
+    messages.push('fact-consistency constraints were not supplied as a dense set of well-formed constraints; contradiction enforcement cannot be skipped');
+    reasonCodes.add('FACT_CONSISTENCY_CONSTRAINTS_NOT_SUPPLIED');
+    unresolved.add('TRUSTED_FACT_CONSISTENCY_CONFIGURATION');
+  } else if (!deepEqual(suppliedConstraints, REQUIRED_CONSTRAINT_IDENTITY)) {
+    messages.push('supplied fact-consistency constraints are not identical to the trusted configured constraints');
+    reasonCodes.add('FACT_CONSISTENCY_CONSTRAINTS_UNTRUSTED');
+    unresolved.add('TRUSTED_FACT_CONSISTENCY_CONFIGURATION');
+  }
+
+  if (reasonCodes.size > 0) {
+    return { ok: false, messages, reasonCodes, unresolved: [...unresolved].sort() };
+  }
+  return {
+    ok: true,
+    materialPredicates: [...REQUIRED_MATERIAL_ELIGIBILITY_PREDICATES],
+    constraints: REQUIRED_CONSTRAINT_IDENTITY
+  };
+}
+
 export function evaluateNormalizedFacts(input) {
   const {
     policy,
@@ -294,9 +457,10 @@ export function evaluateNormalizedFacts(input) {
     });
   }
 
-  if (!Array.isArray(factConsistencyConstraints)) {
-    return failClosed('VALIDATION_FAILURE', new Set(['FACT_CONSISTENCY_CONSTRAINTS_NOT_SUPPLIED']), {
-      messages: ['fact-consistency constraints were not supplied; contradiction enforcement cannot be skipped'],
+  const factPolicy = verifyTrustedFactPolicy(materialPredicates, factConsistencyConstraints);
+  if (!factPolicy.ok) {
+    return failClosed('VALIDATION_FAILURE', factPolicy.reasonCodes, {
+      messages: factPolicy.messages,
       candidate_id: candidateId,
       policy_id: policy.policy_id,
       policy_version: policy.version,
@@ -304,9 +468,10 @@ export function evaluateNormalizedFacts(input) {
       policy_content_sha256: trust.contentSha,
       authority_resolution: authorityResolution.resolution,
       evaluated_at: evaluatedAt,
-      unresolved_dependencies: ['FACT_CONSISTENCY_CONSTRAINTS']
+      unresolved_dependencies: factPolicy.unresolved
     });
   }
+  const trustedConstraints = factPolicy.constraints;
 
   if (normalized === null || typeof normalized !== 'object' || normalized.ok !== true) {
     const detail = Array.isArray(normalized?.normalization_errors)
@@ -405,7 +570,7 @@ export function evaluateNormalizedFacts(input) {
   for (const rule of policy.rules) {
     for (const [name, declared] of Object.entries(rule.when)) declaredTypeByPredicate.set(name, typeof declared);
   }
-  const materialNames = materialPredicates === null ? [...declaredTypeByPredicate.keys()].sort() : [...materialPredicates].sort();
+  const materialNames = [...factPolicy.materialPredicates].sort();
   const unresolvedDependencies = new Set();
   for (const name of materialNames) {
     const fact = Object.hasOwn(facts, name) ? facts[name] : undefined;
@@ -427,10 +592,9 @@ export function evaluateNormalizedFacts(input) {
   // Declared fact-consistency constraints. A contradiction between normalized
   // facts fails closed; neither side is silently preferred over the other.
   const violatedConstraints = [];
-  for (const constraint of factConsistencyConstraints) {
-    const combination = constraint.forbidden_combination ?? {};
+  for (const constraint of trustedConstraints) {
+    const combination = constraint.forbidden_combination;
     const names = Object.keys(combination);
-    if (names.length === 0) continue;
     const violated = names.every((name) => {
       const fact = Object.hasOwn(facts, name) ? facts[name] : undefined;
       return fact !== undefined && fact !== null && typeof fact === 'object' && !Array.isArray(fact)
@@ -444,7 +608,7 @@ export function evaluateNormalizedFacts(input) {
     publicationBlocked = true;
     humanReview = true;
     fieldActions = {};
-    for (const constraint of violatedConstraints) reasonCodes.add(constraint.reason_code ?? 'CONTRADICTORY_MATERIAL_FACTS');
+    for (const constraint of violatedConstraints) reasonCodes.add(constraint.reason_code);
     composition.push({
       step: 'FAIL_CLOSED',
       outcome: 'FACT_CONSISTENCY_VIOLATION',
@@ -509,8 +673,8 @@ export function evaluateNormalizedFacts(input) {
         .filter((evaluation) => !evaluation.matched && evaluation.missing_material_inputs.length > 0)
         .map((evaluation) => ({ rule_id: evaluation.rule_id, missing: evaluation.missing_material_inputs })),
       material_predicates_evaluated: materialNames,
-      fact_consistency_constraints_evaluated: factConsistencyConstraints.map((constraint) => constraint.constraint_id ?? null),
-      fact_consistency_violations: violatedConstraints.map((constraint) => constraint.constraint_id ?? null),
+      fact_consistency_constraints_evaluated: trustedConstraints.map((constraint) => constraint.constraint_id),
+      fact_consistency_violations: violatedConstraints.map((constraint) => constraint.constraint_id),
       composition,
       failures: []
     }

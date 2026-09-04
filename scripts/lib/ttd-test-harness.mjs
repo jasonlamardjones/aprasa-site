@@ -7,10 +7,22 @@ export function createHarness(suiteName) {
   const failures = [];
   let checks = 0;
 
+  // Canonical serialization now refuses inadmissible structures outright, so a
+  // failing case that produced one must still report legibly rather than
+  // aborting the run with the serializer's own error.
+  const describeValue = (value) => {
+    if (value === undefined) return 'null';
+    try {
+      return canonicalize(value);
+    } catch (error) {
+      return `<not canonically serializable: ${error.message}>`;
+    }
+  };
+
   const equal = (label, actual, expected) => {
     checks += 1;
-    const actualText = canonicalize(actual === undefined ? null : actual);
-    const expectedText = canonicalize(expected === undefined ? null : expected);
+    const actualText = describeValue(actual);
+    const expectedText = describeValue(expected);
     if (actualText !== expectedText) {
       failures.push(`${label}\n    expected: ${expectedText}\n    actual:   ${actualText}`);
     }

@@ -137,9 +137,27 @@ The worker layer is split into three independently testable stages. Nothing in i
 - Compatible `field_actions` merge; conflicting ones fail closed to HOLD rather than being silently reconciled.
 - Governing-rule selection, matched-rule ordering, and the semantic fingerprint are order-independent, so neither JSON key order nor rule declaration order can change meaning.
 
+### Reference provenance
+
+Every cited reference set is read densely and by index through one shared gate. Array methods such as `.some()`, `.filter()` and `.every()` skip holes, so a sparse array can pass a per-element check that never runs; array length alone can therefore never establish that a reference exists. A reference set that is not a real, untampered, dense array of non-empty identifiers, or that cites an identifier `source_refs` does not resolve, yields no references at all rather than a shorter apparently valid set. Holes, `undefined` and `null` are never normalized into evidence provenance.
+
+### Trusted fact-policy configuration
+
+The material eligibility predicate set and the declared fact-consistency constraints are trusted configuration, not caller input. `adjudicateCandidate` is the production entrypoint and derives both from the validated fact registry on every adjudication; any constraint set or material predicate set present on the caller-supplied context is ignored. There is no empty default: a missing, empty, malformed, narrowed, reordered-into-a-different-set, or fabricated configuration fails closed rather than degrading to `[]`.
+
+`evaluateNormalizedFacts` keeps both as parameters so the adversarial suites can probe them directly, but a supplied set is never trusted on its own. It must be semantically identical to the configuration pinned in `scripts/lib/ttd-policy-evaluator.mjs` (`REQUIRED_MATERIAL_ELIGIBILITY_PREDICATES`, `REQUIRED_FACT_CONSISTENCY_CONSTRAINTS`, alongside `REQUIRED_COMPOSITION`), and the pinned normalized form is what enforcement then uses. Object key order inside a forbidden combination is not semantic; a changed predicate, value, reason code, or constraint identity is. A registry that reclassifies a predicate's materiality, restates a constraint, or drops one cannot be used to adjudicate anything: context construction and adjudication both refuse it, and `scripts/validate-ttd-trust-anchor.mjs` fails in CI.
+
+### Canonical JSON contract
+
+Canonical serialization validates as it emits. It never depends on an earlier normalization pass having rejected a tampered structure, and it never coerces one into valid-looking JSON. Admitted values are plain JSON-compatible objects, dense arrays, finite numbers, strings, booleans and `null`, with deterministic key ordering; output always parses with `JSON.parse`. Refused at any depth: sparse arrays (never `[,]`), tampered object or array prototypes (never a coerced `{}` or `[]`), accessor properties, non-enumerable own properties, symbol keys and values, `undefined`, functions, bigints, and non-finite numbers. Own-key inspection uses `Reflect.ownKeys` and property descriptors, so dangerous own keys (`__proto__`, `constructor`, `prototype`) are refused on objects and arrays alike whether or not they are enumerable, and no getter is ever invoked during the traversal.
+
+### Evidence identity
+
+If a canonical evidence digest cannot be produced for the admitted candidate input, the candidate does not advance. A `SELECT` without a stable canonical evidence identity cannot participate in the auditable provenance model, so digest failure yields `HOLD`, publication blocked, no advancing route, and an explicit technical diagnostic. This is a technical integrity requirement, not an editorial rule.
+
 ### Input safety and audit completion
 
-Canonical serialization refuses both prototype-pollution vectors: a dangerous own key (`__proto__`, `constructor`, `prototype`, as produced by `JSON.parse` of hostile input) and a tampered object or array prototype (as produced by merging that input with `Object.assign`, where the key no longer appears in `Object.keys`). Refusal rejects the candidate but never aborts the pipeline: the evidence digest degrades to `null` with the error recorded, and a bounded audit record is still produced showing the validation failure, `HOLD`, publication blocked, no matched rules, and `downstream_execution: NOT_EXECUTED`. No downstream progression is ever fabricated.
+Refusal rejects the candidate but never aborts the pipeline. Candidate identity is captured before adjudication using accessor-free descriptor reads, so the bounded failure path never re-reads attacker-controlled input that has already thrown, and a hostile getter is never invoked at all. On any refusal or unexpected input exception the evidence digest is `null` with the error recorded, and a bounded audit record is still produced showing the failure, `HOLD`, publication blocked, human review required, no matched rules, no advancing route, and `downstream_execution: NOT_EXECUTED`. The bounded audit is always canonically serializable. No downstream progression is ever fabricated.
 
 ### Trust and authority
 
@@ -152,6 +170,9 @@ Before any rule may match, the evaluator verifies the policy identity, version, 
 Run:
 
 ```
+node scripts/validate-control-plane-contracts.mjs
+node scripts/validate-control-plane-hardening.mjs
+node scripts/validate-orchestration-contract.mjs
 node scripts/validate-ttd-trust-anchor.mjs
 node scripts/test-ttd-normalization.mjs
 node scripts/test-ttd-policy-evaluator.mjs

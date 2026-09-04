@@ -6,7 +6,7 @@
 
 import fs from 'node:fs';
 import { createHarness, normalizedFromOracle, TRUSTED_AUTHORITY_RESOLUTION, FIXED_EVALUATION_TIMESTAMP } from './lib/ttd-test-harness.mjs';
-import { loadPolicy, loadTrustAnchor, evaluateNormalizedFacts, semanticFingerprint } from './lib/ttd-policy-evaluator.mjs';
+import { loadPolicy, loadTrustAnchor, evaluateNormalizedFacts, semanticFingerprint, deriveTrustedFactPolicy } from './lib/ttd-policy-evaluator.mjs';
 import { loadFactRegistry } from './lib/ttd-normalizer.mjs';
 import { digest } from './lib/ttd-canonical-json.mjs';
 
@@ -15,10 +15,10 @@ const oracle = JSON.parse(fs.readFileSync('automation/control-plane/fixtures/ttd
 const policy = loadPolicy();
 const trustAnchor = loadTrustAnchor();
 const registry = loadFactRegistry();
-const materialPredicates = registry.predicates
-  .filter((predicate) => predicate.materiality === 'MATERIAL_ELIGIBILITY')
-  .map((predicate) => predicate.name)
-  .sort();
+// Derived from the validated registry, never defaulted: there is no empty
+// fallback for the trusted fact-policy configuration.
+const trustedFactPolicy = deriveTrustedFactPolicy(registry);
+const materialPredicates = trustedFactPolicy.materialPredicates;
 
 // The committed trust anchor must describe the committed policy exactly.
 harness.equal('trust anchor binds the approved policy identity', trustAnchor.policy_id, policy.policy_id);
@@ -33,7 +33,7 @@ const evaluate = (normalized) => evaluateNormalizedFacts({
   authorityResolution: TRUSTED_AUTHORITY_RESOLUTION,
   evaluatedAt: FIXED_EVALUATION_TIMESTAMP,
   materialPredicates,
-  factConsistencyConstraints: registry.fact_consistency_constraints ?? []
+  factConsistencyConstraints: trustedFactPolicy.factConsistencyConstraints
 });
 
 for (const fixture of oracle.fixtures) {

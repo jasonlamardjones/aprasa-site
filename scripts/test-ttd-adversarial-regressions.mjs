@@ -8,11 +8,11 @@
 
 import fs from 'node:fs';
 import { createHarness, normalizedFromOracle, factsFromOracle, TRUSTED_AUTHORITY_RESOLUTION, FIXED_EVALUATION_TIMESTAMP } from './lib/ttd-test-harness.mjs';
-import { loadPolicy, loadTrustAnchor, evaluateNormalizedFacts, semanticFingerprint } from './lib/ttd-policy-evaluator.mjs';
-import { loadFactRegistry, normalizeCandidate, factSummary } from './lib/ttd-normalizer.mjs';
+import { loadPolicy, loadTrustAnchor, evaluateNormalizedFacts, semanticFingerprint, deriveTrustedFactPolicy, normalizeFactConsistencyConstraints, REQUIRED_FACT_CONSISTENCY_CONSTRAINTS, REQUIRED_MATERIAL_ELIGIBILITY_PREDICATES } from './lib/ttd-policy-evaluator.mjs';
+import { loadFactRegistry, normalizeCandidate, factSummary, resolveEvidenceRefs } from './lib/ttd-normalizer.mjs';
 import { loadAdjudicationContext, adjudicateCandidate } from './lib/ttd-adjudication.mjs';
 import { routeEvaluation } from './lib/ttd-adjudication-routing.mjs';
-import { digest, canonicalize } from './lib/ttd-canonical-json.mjs';
+import { digest, canonicalize, assertAdmissibleStructure, isAdmissibleDenseArray, denseStringList } from './lib/ttd-canonical-json.mjs';
 
 const harness = createHarness('TTD_ADVERSARIAL_REGRESSIONS');
 const oracle = JSON.parse(fs.readFileSync('automation/control-plane/fixtures/ttd-adjudication-oracle.json', 'utf8'));
@@ -46,7 +46,7 @@ function evaluate(facts, options = {}) {
     },
     authorityResolution: supplied(options, 'authorityResolution', TRUSTED_AUTHORITY_RESOLUTION),
     evaluatedAt: FIXED_EVALUATION_TIMESTAMP,
-    materialPredicates,
+    materialPredicates: supplied(options, 'materialPredicates', materialPredicates),
     factConsistencyConstraints: supplied(options, 'factConsistencyConstraints', context.factConsistencyConstraints)
   });
 }
@@ -790,6 +790,673 @@ for (const url of ['javascript:alert(1)', 'file:///etc/passwd', 'data:text/html,
   harness.ok('[REVIEW-4] Object.prototype is unpolluted', ({}).polluted === undefined);
   harness.ok('[REVIEW-4] Object.prototype has no injected default disposition', ({}).default_disposition === undefined);
   harness.throws('[REVIEW-4] canonical serialization stays strict', () => digest(JSON.parse('{"__proto__":{"a":1}}')));
+}
+
+// =====================================================================
+// Second-review findings B1-B4, canonical JSON, and digest degradation.
+// Each case below is an independent attempt to obtain SELECT, an advancing
+// route, or an unserializable audit from input the trusted configuration does
+// not authorize. All must fail closed.
+// =====================================================================
+
+// A sparse array cannot be written as a literal without relying on elision, so
+// it is built explicitly. Holes are what array methods skip.
+function sparseArray(length, entries = {}) {
+  const array = new Array(length);
+  for (const [index, value] of Object.entries(entries)) array[Number(index)] = value;
+  return array;
+}
+
+function auditOf(evidence, adjudicationContext = context) {
+  let composed = null;
+  let threw = null;
+  try {
+    composed = adjudicateCandidate({
+      evidence,
+      context: adjudicationContext,
+      authorityResolution: TRUSTED_AUTHORITY_RESOLUTION,
+      evaluatedAt: FIXED_EVALUATION_TIMESTAMP
+    });
+  } catch (error) {
+    threw = error;
+  }
+  return { composed, threw };
+}
+
+// No candidate may advance, and the audit must still serialize.
+function assertNoAdvance(label, evidence, adjudicationContext = context) {
+  const { composed, threw } = auditOf(evidence, adjudicationContext);
+  harness.equal(label + ': adjudication does not throw', threw, null);
+  harness.ok(label + ': an audit record is produced', composed !== null && composed.audit !== undefined);
+  if (composed === null || composed.audit === undefined) return null;
+  const audit = composed.audit;
+  harness.ok(label + ': never SELECT', audit.evaluation.disposition !== 'SELECT');
+  harness.equal(label + ': publication is blocked', audit.evaluation.publication_blocked, true);
+  harness.ok(label + ': no advancing route', audit.routing.automatic_route?.next_status !== 'SELECTED');
+  harness.equal(label + ': no downstream execution is claimed', audit.routing.downstream_execution, { attempted: false, status: 'NOT_EXECUTED' });
+  harness.equal(label + ': the audit serializes', typeof canonicalize(audit), 'string');
+  harness.ok(label + ': the serialized audit parses', JSON.parse(canonicalize(audit)) !== undefined);
+  return audit;
+}
+
+// The stricter bounded-failure contract for technical integrity failures.
+function assertBoundedTechnicalFailure(label, evidence, adjudicationContext = context) {
+  const audit = assertNoAdvance(label, evidence, adjudicationContext);
+  if (audit === null) return null;
+  harness.equal(label + ': disposition holds', audit.evaluation.disposition, 'HOLD');
+  harness.equal(label + ': human review is required', audit.evaluation.human_review, true);
+  harness.equal(label + ': no advancing rules are claimed as matched', audit.evaluation.matched_rule_ids, []);
+  harness.equal(label + ': no field actions are emitted', audit.evaluation.field_actions, {});
+  harness.ok(label + ': an explicit technical diagnostic is preserved',
+    audit.normalization.errors.length > 0 || audit.evaluation.failures.length > 0);
+  return audit;
+}
+
+// [B1] Sparse and malformed reference arrays never establish provenance.
+{
+  // The reusable array-integrity helper is the shared implementation, so it is
+  // asserted directly as well as through the pipeline.
+  harness.equal('[B1] a dense array is admissible', isAdmissibleDenseArray(['S1', 'S2']), true);
+  harness.equal('[B1] an empty array is dense', isAdmissibleDenseArray([]), true);
+  harness.equal('[B1] a one-hole array is not admissible', isAdmissibleDenseArray(sparseArray(1)), false);
+  harness.equal('[B1] a multi-hole array is not admissible', isAdmissibleDenseArray(sparseArray(4)), false);
+  harness.equal('[B1] a partly filled sparse array is not admissible', isAdmissibleDenseArray(sparseArray(3, { 0: 'S1' })), false);
+  harness.equal('[B1] a non-array is not admissible', isAdmissibleDenseArray('S1'), false);
+  harness.equal('[B1] a tampered array prototype is not admissible',
+    isAdmissibleDenseArray(Object.setPrototypeOf(['S1'], { injected: true })), false);
+  harness.equal('[B1] a dense list of identifiers is accepted', denseStringList(['S1', 'S2']), ['S1', 'S2']);
+  harness.equal('[B1] a sparse list yields no references', denseStringList(sparseArray(1)), null);
+  harness.equal('[B1] a null entry yields no references', denseStringList([null]), null);
+  harness.equal('[B1] an empty-string entry yields no references', denseStringList(['']), null);
+  harness.equal('[B1] a non-string entry yields no references', denseStringList([1]), null);
+  harness.equal('[B1] array length alone never establishes a reference', denseStringList(sparseArray(3)), null);
+
+  const standardsRefCases = [
+    { label: 'one-hole standards evidence_refs', refs: sparseArray(1) },
+    { label: 'multi-hole standards evidence_refs', refs: sparseArray(3) },
+    { label: 'partly filled sparse standards evidence_refs', refs: sparseArray(2, { 0: 'S1' }) },
+    { label: 'trailing-hole standards evidence_refs', refs: sparseArray(2, { 0: 'S1' }) },
+    { label: 'null standards evidence_ref', refs: [null] },
+    { label: 'empty-string standards evidence_ref', refs: [''] },
+    { label: 'non-string standards evidence_ref', refs: [1] },
+    { label: 'unresolved dense standards evidence_ref', refs: ['GHOST'] },
+    { label: 'partly unresolved dense standards evidence_refs', refs: ['S1', 'GHOST'] }
+  ];
+  for (const attempt of standardsRefCases) {
+    const evidence = baseEvidence();
+    evidence.standards_classification.evidence_refs = attempt.refs;
+    const normalized = normalizeCandidate(evidence, { registry });
+    if (normalized.ok) {
+      harness.equal('[B1] ' + attempt.label + ': the standards boundary stays unresolved',
+        normalized.facts.standards_boundary_unresolved.value, true);
+      harness.ok('[B1] ' + attempt.label + ': a normalization reason is recorded',
+        typeof normalized.facts.standards_boundary_unresolved.reason === 'string'
+        && normalized.facts.standards_boundary_unresolved.reason !== 'AFFIRMATIVE_ORDINARY_SCOPE_EVIDENCE');
+      harness.equal('[B1] ' + attempt.label + ': no reference is normalized into provenance',
+        normalized.facts.standards_boundary_unresolved.evidence_refs, []);
+    } else {
+      harness.ok('[B1] ' + attempt.label + ': a normalization diagnostic is recorded',
+        normalized.normalization_errors.length > 0);
+    }
+    const result = evaluate(null, { normalized });
+    harness.ok('[B1] ' + attempt.label + ': evaluation never selects', result.disposition !== 'SELECT');
+    harness.equal('[B1] ' + attempt.label + ': evaluation blocks publication', result.publication_blocked, true);
+    assertNoAdvance('[B1] ' + attempt.label, evidence);
+  }
+
+  const assertionRefCases = [
+    { label: 'one-hole assertion evidence_refs', refs: sparseArray(1) },
+    { label: 'multi-hole assertion evidence_refs', refs: sparseArray(3) },
+    { label: 'partly filled sparse assertion evidence_refs', refs: sparseArray(2, { 0: 'S1' }) },
+    { label: 'null assertion evidence_ref', refs: [null] },
+    { label: 'empty-string assertion evidence_ref', refs: [''] },
+    { label: 'non-string assertion evidence_ref', refs: [{}] },
+    { label: 'empty assertion evidence_refs', refs: [] },
+    { label: 'unresolved dense assertion evidence_ref', refs: ['GHOST'] },
+    { label: 'partly unresolved dense assertion evidence_refs', refs: ['S1', 'GHOST'] }
+  ];
+  for (const attempt of assertionRefCases) {
+    const evidence = baseEvidence();
+    evidence.assertions.find((item) => item.predicate === 'geography_in_scope').evidence_refs = attempt.refs;
+    const normalized = normalizeCandidate(evidence, { registry });
+    harness.equal('[B1] ' + attempt.label + ': normalization is rejected', normalized.ok, false);
+    harness.ok('[B1] ' + attempt.label + ': a provenance diagnostic is recorded',
+      normalized.normalization_errors.some((error) => ['MALFORMED_EVIDENCE_REFS', 'MISSING_EVIDENCE_REFS', 'DANGLING_EVIDENCE_REF', 'UNSAFE_INPUT_KEY'].includes(error.code)));
+    harness.equal('[B1] ' + attempt.label + ': no fact survives rejection', normalized.facts, {});
+    assertFailedClosed('[B1] ' + attempt.label, evaluate(null, { normalized }));
+    assertNoAdvance('[B1] ' + attempt.label, evidence);
+  }
+
+  // Sparse source_refs and sparse assertion lists are refused the same way.
+  for (const attempt of [
+    { label: 'sparse source_refs', apply: (evidence) => { evidence.source_refs = sparseArray(2, { 0: evidence.source_refs[0] }); } },
+    { label: 'wholly sparse source_refs', apply: (evidence) => { evidence.source_refs = sparseArray(1); } },
+    { label: 'sparse assertions', apply: (evidence) => { evidence.assertions = sparseArray(evidence.assertions.length + 1, { ...evidence.assertions }); } },
+    { label: 'sparse unresolved_dimensions', apply: (evidence) => { evidence.standards_classification.unresolved_dimensions = sparseArray(1); } }
+  ]) {
+    const evidence = baseEvidence();
+    attempt.apply(evidence);
+    const normalized = normalizeCandidate(evidence, { registry });
+    harness.ok('[B1] ' + attempt.label + ': a normalization diagnostic is recorded',
+      normalized.ok === false || normalized.facts.standards_boundary_unresolved?.value === true);
+    assertNoAdvance('[B1] ' + attempt.label, evidence);
+  }
+
+  // The audit for a rejected sparse candidate still serializes to valid JSON.
+  {
+    const evidence = baseEvidence();
+    evidence.standards_classification.evidence_refs = sparseArray(1);
+    const audit = assertBoundedTechnicalFailure('[B1] canonical audit after sparse rejection', evidence);
+    harness.ok('[B1] the rejected audit carries no evidence digest', audit === null || audit.evidence_digest === null);
+    harness.ok('[B1] the serialized audit contains no invalid array literal',
+      audit === null || !canonicalize(audit).includes('[,'));
+  }
+}
+
+// [B2] Constraint and materiality enforcement is not caller-bypassable.
+{
+  const contradictory = () => {
+    const facts = eligibleFacts();
+    facts.candidate_already_ended = { state: 'KNOWN', value: true, reason: 'PROBE', evidence_refs: ['S1'], rationale: null };
+    return facts;
+  };
+  const trusted = deriveTrustedFactPolicy(registry);
+  harness.equal('[B2] the trusted material predicate set is the pinned set',
+    trusted.materialPredicates, REQUIRED_MATERIAL_ELIGIBILITY_PREDICATES);
+  harness.equal('[B2] the trusted constraint set is the pinned set',
+    trusted.factConsistencyConstraints, normalizeFactConsistencyConstraints(REQUIRED_FACT_CONSISTENCY_CONSTRAINTS));
+
+  // Control: with the trusted configuration the contradiction is enforced.
+  {
+    const result = evaluate(contradictory());
+    harness.equal('[B2] control: the contradiction holds', result.disposition, 'HOLD');
+    harness.ok('[B2] control: the contradiction is named',
+      result.reason_codes.includes('CONTRADICTORY_MATERIAL_FACTS'));
+  }
+
+  // An equivalent representation with reordered members is still the trusted
+  // set: object key order is not semantic, so enforcement must not change.
+  {
+    const reordered = [{
+      reason_code: 'CONTRADICTORY_MATERIAL_FACTS',
+      forbidden_combination: { materially_current: true, candidate_already_ended: true },
+      kind: 'FORBIDDEN_COMBINATION',
+      constraint_id: 'TTD-FACT-CONSISTENCY-001'
+    }];
+    const result = evaluate(contradictory(), { factConsistencyConstraints: reordered });
+    harness.equal('[B2] reordered-but-equivalent constraints still evaluate', result.ok, true);
+    harness.equal('[B2] reordered-but-equivalent constraints still hold', result.disposition, 'HOLD');
+    harness.ok('[B2] reordered-but-equivalent constraints still name the contradiction',
+      result.reason_codes.includes('CONTRADICTORY_MATERIAL_FACTS'));
+    harness.equal('[B2] reordered-but-equivalent constraints still block', result.publication_blocked, true);
+  }
+
+  const trustedConstraint = clone(registry.fact_consistency_constraints[0]);
+  const constraintAttacks = [
+    { label: 'omitted constraint set', value: undefined },
+    { label: 'null constraint set', value: null },
+    { label: 'empty constraint set', value: [] },
+    { label: 'malformed constraint [{}]', value: [{}] },
+    { label: 'sparse constraint set', value: sparseArray(1) },
+    { label: 'partly sparse constraint set', value: sparseArray(2, { 0: trustedConstraint }) },
+    { label: 'narrowed forbidden combination', value: [{ ...trustedConstraint, forbidden_combination: { materially_current: true, candidate_already_ended: true, geography_in_scope: false } }] },
+    { label: 'weakened forbidden combination', value: [{ ...trustedConstraint, forbidden_combination: { materially_current: true, candidate_already_ended: false } }] },
+    { label: 'single-predicate forbidden combination', value: [{ ...trustedConstraint, forbidden_combination: { candidate_already_ended: true } }] },
+    { label: 'renamed constraint id', value: [{ ...trustedConstraint, constraint_id: 'TTD-FACT-CONSISTENCY-999' }] },
+    { label: 'downgraded reason code', value: [{ ...trustedConstraint, reason_code: 'NO_CHANGE' }] },
+    { label: 'removed trusted constraint', value: [{ constraint_id: 'TTD-FACT-CONSISTENCY-002', kind: 'FORBIDDEN_COMBINATION', reason_code: 'CONTRADICTORY_MATERIAL_FACTS', forbidden_combination: { geography_in_scope: true, evidence_sufficient: true } }] },
+    { label: 'extra fabricated constraint', value: [trustedConstraint, { constraint_id: 'TTD-FACT-CONSISTENCY-002', kind: 'FORBIDDEN_COMBINATION', reason_code: 'CONTRADICTORY_MATERIAL_FACTS', forbidden_combination: { geography_in_scope: true, evidence_sufficient: true } }] },
+    { label: 'duplicated trusted constraint', value: [trustedConstraint, clone(trustedConstraint)] },
+    { label: 'constraint set as an object', value: { 'TTD-FACT-CONSISTENCY-001': trustedConstraint } }
+  ];
+  for (const attack of constraintAttacks) {
+    const result = evaluate(contradictory(), { factConsistencyConstraints: attack.value });
+    assertFailedClosed('[B2] ' + attack.label, result);
+    harness.ok('[B2] ' + attack.label + ': the untrusted configuration is named',
+      result.reason_codes.some((code) => code.startsWith('FACT_CONSISTENCY_CONSTRAINTS_')));
+    harness.ok('[B2] ' + attack.label + ': the trusted dependency is recorded',
+      result.unresolved_dependencies.includes('TRUSTED_FACT_CONSISTENCY_CONFIGURATION'));
+    const routed = routeEvaluation(result, { policy, vocabulary: context.vocabulary });
+    harness.ok('[B2] ' + attack.label + ': no advancing route', routed.automatic_route?.next_status !== 'SELECTED');
+    harness.equal('[B2] ' + attack.label + ': routes to a technical blocker', routed.escalation_class, 'TECHNICAL_BLOCKER');
+  }
+
+  const predicateAttacks = [
+    { label: 'omitted material predicate set', value: undefined },
+    { label: 'null material predicate set', value: null },
+    { label: 'empty material predicate set', value: [] },
+    { label: 'sparse material predicate set', value: sparseArray(REQUIRED_MATERIAL_ELIGIBILITY_PREDICATES.length) },
+    { label: 'material predicate omitted', value: REQUIRED_MATERIAL_ELIGIBILITY_PREDICATES.filter((name) => name !== 'primary_proposition') },
+    { label: 'material predicate renamed', value: REQUIRED_MATERIAL_ELIGIBILITY_PREDICATES.map((name) => (name === 'primary_proposition' ? 'primary_proposition_x' : name)) },
+    { label: 'fabricated extra material predicate', value: [...REQUIRED_MATERIAL_ELIGIBILITY_PREDICATES, 'admission_verified'] },
+    { label: 'material predicate set as an object', value: { 0: 'primary_proposition' } },
+    { label: 'non-string material predicate', value: [...REQUIRED_MATERIAL_ELIGIBILITY_PREDICATES.slice(1), 1] }
+  ];
+  for (const attack of predicateAttacks) {
+    const facts = eligibleFacts();
+    facts.primary_proposition = { state: 'UNKNOWN', value: null, reason: 'PROBE', evidence_refs: [], rationale: null };
+    const result = evaluate(facts, { materialPredicates: attack.value });
+    assertFailedClosed('[B2] ' + attack.label, result);
+    harness.ok('[B2] ' + attack.label + ': the untrusted configuration is named',
+      result.reason_codes.some((code) => code.startsWith('MATERIAL_PREDICATE_SET_')));
+    harness.ok('[B2] ' + attack.label + ': the trusted dependency is recorded',
+      result.unresolved_dependencies.includes('TRUSTED_MATERIAL_PREDICATE_CONFIGURATION'));
+    const routed = routeEvaluation(result, { policy, vocabulary: context.vocabulary });
+    harness.ok('[B2] ' + attack.label + ': no advancing route', routed.automatic_route?.next_status !== 'SELECTED');
+  }
+
+  // A reordered trusted predicate set is the same set and must still evaluate.
+  {
+    const facts = eligibleFacts();
+    const reordered = [...REQUIRED_MATERIAL_ELIGIBILITY_PREDICATES].reverse();
+    const result = evaluate(facts, { materialPredicates: reordered });
+    harness.equal('[B2] a reordered trusted predicate set still evaluates', result.ok, true);
+    harness.equal('[B2] a reordered trusted predicate set still selects', result.disposition, 'SELECT');
+  }
+
+  // Production adjudication ignores caller-supplied fact-policy configuration
+  // entirely: the same bypasses attempted through the context must fail closed.
+  const contradictoryEvidence = () => {
+    const evidence = baseEvidence();
+    evidence.assertions.find((item) => item.predicate === 'candidate_already_ended').value = true;
+    return evidence;
+  };
+  {
+    const composed = adjudicateCandidate({
+      evidence: contradictoryEvidence(),
+      context,
+      authorityResolution: TRUSTED_AUTHORITY_RESOLUTION,
+      evaluatedAt: FIXED_EVALUATION_TIMESTAMP
+    });
+    harness.equal('[B2] control: production adjudication enforces the contradiction',
+      composed.audit.evaluation.disposition, 'HOLD');
+    harness.ok('[B2] control: production adjudication names the contradiction',
+      composed.audit.evaluation.reason_codes.includes('CONTRADICTORY_MATERIAL_FACTS'));
+  }
+  for (const attack of [
+    { label: 'context constraint set omitted', build: () => { const c = { ...context }; delete c.factConsistencyConstraints; return c; } },
+    { label: 'context constraint set emptied', build: () => ({ ...context, factConsistencyConstraints: [] }) },
+    { label: 'context constraint set malformed', build: () => ({ ...context, factConsistencyConstraints: [{}] }) },
+    { label: 'context constraint set narrowed', build: () => ({ ...context, factConsistencyConstraints: [{ ...trustedConstraint, forbidden_combination: { materially_current: true, candidate_already_ended: true, geography_in_scope: false } }] }) },
+    { label: 'context material predicates emptied', build: () => ({ ...context, materialPredicates: [] }) },
+    { label: 'context material predicates omitted', build: () => { const c = { ...context }; delete c.materialPredicates; return c; } }
+  ]) {
+    const composed = adjudicateCandidate({
+      evidence: contradictoryEvidence(),
+      context: attack.build(),
+      authorityResolution: TRUSTED_AUTHORITY_RESOLUTION,
+      evaluatedAt: FIXED_EVALUATION_TIMESTAMP
+    });
+    harness.ok('[B2] ' + attack.label + ': never SELECT', composed.audit.evaluation.disposition !== 'SELECT');
+    harness.equal('[B2] ' + attack.label + ': holds', composed.audit.evaluation.disposition, 'HOLD');
+    harness.equal('[B2] ' + attack.label + ': publication blocked', composed.audit.evaluation.publication_blocked, true);
+    harness.equal('[B2] ' + attack.label + ': human review required', composed.audit.evaluation.human_review, true);
+    harness.ok('[B2] ' + attack.label + ': the contradiction is still enforced',
+      composed.audit.evaluation.reason_codes.includes('CONTRADICTORY_MATERIAL_FACTS'));
+    harness.ok('[B2] ' + attack.label + ': no advancing route',
+      composed.audit.routing.automatic_route?.next_status !== 'SELECTED');
+  }
+
+  // A forged registry cannot reclassify materiality or restate constraints.
+  const registryAttacks = [
+    {
+      label: 'materiality downgrade to OPERATIONAL',
+      build: () => { const forged = clone(registry); forged.predicates.find((item) => item.name === 'primary_proposition').materiality = 'OPERATIONAL'; return forged; }
+    },
+    {
+      label: 'blanket materiality downgrade',
+      build: () => { const forged = clone(registry); for (const item of forged.predicates) if (item.materiality === 'MATERIAL_ELIGIBILITY') item.materiality = 'OPERATIONAL'; return forged; }
+    },
+    {
+      label: 'materiality upgrade to MATERIAL_ELIGIBILITY',
+      build: () => { const forged = clone(registry); forged.predicates.find((item) => item.name === 'admission_verified').materiality = 'MATERIAL_ELIGIBILITY'; return forged; }
+    },
+    {
+      label: 'unknown materiality',
+      build: () => { const forged = clone(registry); forged.predicates.find((item) => item.name === 'primary_proposition').materiality = 'ADVISORY'; return forged; }
+    },
+    {
+      label: 'forged registry with no constraints',
+      build: () => { const forged = clone(registry); forged.fact_consistency_constraints = []; return forged; }
+    },
+    {
+      label: 'forged registry with a narrowed constraint',
+      build: () => { const forged = clone(registry); forged.fact_consistency_constraints[0].forbidden_combination.geography_in_scope = false; return forged; }
+    },
+    {
+      label: 'forged registry with a fabricated constraint',
+      build: () => { const forged = clone(registry); forged.fact_consistency_constraints.push({ constraint_id: 'TTD-FACT-CONSISTENCY-002', kind: 'FORBIDDEN_COMBINATION', reason_code: 'NO_CHANGE', forbidden_combination: { geography_in_scope: true, evidence_sufficient: true } }); return forged; }
+    },
+    { label: 'forged registry with no predicates', build: () => { const forged = clone(registry); forged.predicates = []; return forged; } },
+    { label: 'missing registry', build: () => null }
+  ];
+  for (const attack of registryAttacks) {
+    harness.throws('[B2] ' + attack.label + ': trusted derivation refuses the registry',
+      () => deriveTrustedFactPolicy(attack.build()));
+    const forgedContext = { ...context, registry: attack.build() };
+    assertBoundedTechnicalFailure('[B2] ' + attack.label, baseEvidence(), forgedContext);
+  }
+}
+
+// [B3] Unsafe own-key detection covers arrays and non-enumerable keys, and
+// canonical serialization refuses tampered structures on its own.
+{
+  const define = (target, key, value, enumerable) => {
+    Object.defineProperty(target, key, { value, enumerable, configurable: true, writable: true });
+    return target;
+  };
+  const tamperings = [];
+  for (const key of ['__proto__', 'constructor', 'prototype']) {
+    tamperings.push({ label: 'dangerous enumerable own key ' + key + ' on an object', build: () => define({ ok: 1 }, key, { polluted: true }, true) });
+    tamperings.push({ label: 'dangerous non-enumerable own key ' + key + ' on an object', build: () => define({ ok: 1 }, key, { polluted: true }, false) });
+    tamperings.push({ label: 'dangerous enumerable own key ' + key + ' on an array', build: () => define(['S1'], key, { polluted: true }, true) });
+    tamperings.push({ label: 'dangerous non-enumerable own key ' + key + ' on an array', build: () => define(['S1'], key, { polluted: true }, false) });
+    tamperings.push({ label: 'dangerous own key ' + key + ' parsed from hostile JSON', build: () => JSON.parse('{"ok":1,"' + key + '":{"polluted":true}}') });
+  }
+  tamperings.push({ label: 'changed object prototype', build: () => Object.assign(Object.create({ injected: true }), { ok: 1 }) });
+  tamperings.push({ label: 'null-prototype object carrying a dangerous key', build: () => define(Object.create(null), 'constructor', { polluted: true }, true) });
+  tamperings.push({ label: 'changed array prototype', build: () => Object.setPrototypeOf(['S1'], { injected: true }) });
+  tamperings.push({ label: 'sparse array', build: () => sparseArray(2, { 0: 'S1' }) });
+  tamperings.push({ label: 'wholly sparse array', build: () => sparseArray(3) });
+  tamperings.push({ label: 'enumerable accessor property', build: () => { const value = {}; Object.defineProperty(value, 'x', { get() { return 1; }, enumerable: true, configurable: true }); return value; } });
+  tamperings.push({ label: 'non-enumerable accessor property', build: () => { const value = { ok: 1 }; Object.defineProperty(value, 'x', { get() { return 1; }, enumerable: false, configurable: true }); return value; } });
+  tamperings.push({ label: 'accessor property on an array', build: () => { const value = ['S1']; Object.defineProperty(value, '1', { get() { return 'S2'; }, enumerable: true, configurable: true }); return value; } });
+  tamperings.push({ label: 'symbol own property', build: () => { const value = { ok: 1 }; value[Symbol('smuggled')] = { polluted: true }; return value; } });
+  tamperings.push({ label: 'symbol own property on an array', build: () => { const value = ['S1']; value[Symbol('smuggled')] = 1; return value; } });
+  tamperings.push({ label: 'non-enumerable data property', build: () => define({ ok: 1 }, 'hidden', 2, false) });
+  tamperings.push({ label: 'non-index own property on an array', build: () => define(['S1'], 'hidden', 2, true) });
+  tamperings.push({ label: 'nested dangerous non-enumerable key under an array', build: () => [define({ ok: 1 }, 'constructor', { polluted: true }, false)] });
+  tamperings.push({ label: 'nested sparse array under an object', build: () => ({ ok: 1, nested: sparseArray(2, { 0: 'S1' }) }) });
+  tamperings.push({ label: 'nested changed prototype under an array', build: () => [Object.assign(Object.create({ injected: true }), { ok: 1 })] });
+  tamperings.push({ label: 'nested accessor under two containers', build: () => { const leaf = {}; Object.defineProperty(leaf, 'x', { get() { return 1; }, enumerable: true, configurable: true }); return { outer: [leaf] }; } });
+
+  for (const tampering of tamperings) {
+    harness.throws('[B3] ' + tampering.label + ': structural admission refuses it', () => assertAdmissibleStructure(tampering.build()));
+    harness.throws('[B3] ' + tampering.label + ': canonical serialization refuses it', () => canonicalize(tampering.build()));
+    harness.throws('[B3] ' + tampering.label + ': digesting refuses it', () => digest(tampering.build()));
+    harness.throws('[B3] ' + tampering.label + ': it is refused nested in a record', () => canonicalize({ record: { payload: tampering.build() } }));
+
+    // The same structure smuggled into a candidate at four different depths.
+    const placements = [
+      { label: 'top-level payload', apply: (evidence, value) => { evidence.payload = value; } },
+      { label: 'source ref', apply: (evidence, value) => { evidence.source_refs[0].payload = value; } },
+      { label: 'assertion', apply: (evidence, value) => { evidence.assertions[0].payload = value; } },
+      { label: 'standards classification', apply: (evidence, value) => { evidence.standards_classification.payload = value; } }
+    ];
+    for (const placement of placements) {
+      const evidence = baseEvidence();
+      placement.apply(evidence, tampering.build());
+      const label = '[B3] ' + tampering.label + ' in ' + placement.label;
+      const normalized = normalizeCandidate(evidence, { registry });
+      harness.equal(label + ': normalization is rejected', normalized.ok, false);
+      harness.equal(label + ': no fact survives rejection', normalized.facts, {});
+      harness.ok(label + ': the structural failure is named',
+        normalized.normalization_errors.some((error) => error.code === 'UNSAFE_INPUT_KEY'));
+      assertBoundedTechnicalFailure(label, evidence);
+    }
+  }
+
+  // Canonical output is always parseable JSON, never "[,]" or a coerced "{}".
+  harness.equal('[B3] a dense array serializes to valid JSON', canonicalize(['S1', 'S2']), '["S1","S2"]');
+  harness.equal('[B3] an empty array serializes to valid JSON', canonicalize([]), '[]');
+  harness.ok('[B3] canonical output always parses',
+    JSON.parse(canonicalize({ b: [1, 2], a: { c: null }, d: 'x' })) !== undefined);
+  harness.equal('[B3] key ordering is deterministic',
+    canonicalize({ b: 1, a: 2 }), canonicalize({ a: 2, b: 1 }));
+  harness.throws('[B3] undefined is refused rather than dropped', () => canonicalize({ a: undefined }));
+  harness.throws('[B3] a function is refused', () => canonicalize({ a() { return 1; } }));
+  harness.throws('[B3] a bigint is refused', () => canonicalize({ a: BigInt(1) }));
+  harness.throws('[B3] a symbol value is refused', () => canonicalize({ a: Symbol('s') }));
+  harness.throws('[B3] Infinity is refused', () => canonicalize({ a: Infinity }));
+  harness.throws('[B3] NaN is refused', () => canonicalize({ a: Number.NaN }));
+  harness.ok('[B3] Object.prototype is unpolluted', ({}).polluted === undefined);
+  harness.ok('[B3] Object.prototype carries no injected marker', ({}).injected === undefined);
+  harness.ok('[B3] Array.prototype carries no injected marker', [].injected === undefined);
+  harness.ok('[B3] Object.prototype has no injected disposition', ({}).default_disposition === undefined);
+}
+
+// [B4] The bounded failure audit never re-reads attacker-controlled input.
+{
+  const throwingGetter = (target, key, enumerable) => {
+    const probe = { calls: 0 };
+    delete target[key];
+    Object.defineProperty(target, key, {
+      get() { probe.calls += 1; throw new Error('hostile accessor on ' + key); },
+      enumerable,
+      configurable: true
+    });
+    return probe;
+  };
+
+  const placements = [
+    { label: 'candidate_id', apply: (evidence, enumerable) => throwingGetter(evidence, 'candidate_id', enumerable) },
+    { label: 'source_refs', apply: (evidence, enumerable) => throwingGetter(evidence, 'source_refs', enumerable) },
+    { label: 'assertions', apply: (evidence, enumerable) => throwingGetter(evidence, 'assertions', enumerable) },
+    { label: 'standards_classification', apply: (evidence, enumerable) => throwingGetter(evidence, 'standards_classification', enumerable) },
+    { label: 'nested source ref url', apply: (evidence, enumerable) => throwingGetter(evidence.source_refs[0], 'url', enumerable) },
+    { label: 'nested assertion value', apply: (evidence, enumerable) => throwingGetter(evidence.assertions[0], 'value', enumerable) },
+    { label: 'nested standards affirmation', apply: (evidence, enumerable) => throwingGetter(evidence.standards_classification, 'affirmative_ordinary_scope_evidence', enumerable) },
+    { label: 'doubly nested evidence ref', apply: (evidence, enumerable) => throwingGetter(evidence.assertions[0].evidence_refs, '0', enumerable) }
+  ];
+
+  for (const placement of placements) {
+    for (const enumerable of [false, true]) {
+      const label = '[B4] throwing ' + placement.label + ' getter (enumerable=' + enumerable + ')';
+      const evidence = baseEvidence();
+      const probe = placement.apply(evidence, enumerable);
+
+      let composed = null;
+      let threw = null;
+      try {
+        composed = adjudicateCandidate({ evidence, context, authorityResolution: TRUSTED_AUTHORITY_RESOLUTION, evaluatedAt: FIXED_EVALUATION_TIMESTAMP });
+      } catch (error) {
+        threw = error;
+      }
+      harness.equal(label + ': adjudication does not throw', threw, null);
+      harness.ok(label + ': an audit record is produced', composed !== null && composed.audit !== undefined);
+      if (composed === null || composed.audit === undefined) continue;
+
+      const audit = composed.audit;
+      harness.equal(label + ': the accessor is never invoked', probe.calls, 0);
+      harness.equal(label + ': disposition holds', audit.evaluation.disposition, 'HOLD');
+      harness.ok(label + ': never SELECT', audit.evaluation.disposition !== 'SELECT');
+      harness.equal(label + ': publication blocked', audit.evaluation.publication_blocked, true);
+      harness.equal(label + ': human review required', audit.evaluation.human_review, true);
+      harness.equal(label + ': no advancing rules matched', audit.evaluation.matched_rule_ids, []);
+      harness.equal(label + ': no deferred rules claimed', audit.evaluation.matched_deferred_rule_ids, []);
+      harness.equal(label + ': no field actions', audit.evaluation.field_actions, {});
+      harness.equal(label + ': downstream execution is NOT_EXECUTED', audit.routing.downstream_execution, { attempted: false, status: 'NOT_EXECUTED' });
+      harness.ok(label + ': no advancing route', audit.routing.automatic_route?.next_status !== 'SELECTED');
+      harness.equal(label + ': routing holds', audit.routing.disposition, 'HOLD');
+      harness.ok(label + ': an explicit technical diagnostic is preserved',
+        audit.evaluation.failures.length > 0 && audit.normalization.errors.length > 0);
+      harness.equal(label + ': the fallback audit serializes', typeof canonicalize(audit), 'string');
+      harness.ok(label + ': the serialized fallback audit parses', JSON.parse(canonicalize(audit)) !== undefined);
+      harness.equal(label + ': the accessor is still never invoked after auditing', probe.calls, 0);
+      if (placement.label === 'candidate_id') {
+        harness.equal(label + ': no candidate identity is fabricated', audit.candidate_id, null);
+      }
+    }
+  }
+
+  // An input object whose own properties all throw must still produce an audit.
+  {
+    const evidence = {};
+    for (const key of ['candidate_id', 'source_refs', 'assertions', 'standards_classification', 'candidate_claims']) {
+      Object.defineProperty(evidence, key, { get() { throw new Error('hostile ' + key); }, enumerable: true, configurable: true });
+    }
+    let composed = null;
+    let threw = null;
+    try {
+      composed = adjudicateCandidate({ evidence, context, authorityResolution: TRUSTED_AUTHORITY_RESOLUTION, evaluatedAt: FIXED_EVALUATION_TIMESTAMP });
+    } catch (error) {
+      threw = error;
+    }
+    harness.equal('[B4] a wholly hostile record does not throw', threw, null);
+    harness.equal('[B4] a wholly hostile record holds', composed?.audit.evaluation.disposition, 'HOLD');
+    harness.equal('[B4] a wholly hostile record is blocked', composed?.audit.evaluation.publication_blocked, true);
+    harness.equal('[B4] a wholly hostile record requires human review', composed?.audit.evaluation.human_review, true);
+    harness.equal('[B4] a wholly hostile record names no candidate', composed?.audit.candidate_id, null);
+    harness.equal('[B4] a wholly hostile record serializes', typeof canonicalize(composed?.audit), 'string');
+  }
+
+  harness.ok('[B4] Object.prototype is unpolluted', ({}).polluted === undefined);
+  harness.ok('[B4] Object.prototype has no injected disposition', ({}).default_disposition === undefined);
+  harness.ok('[B4] Object.prototype has no injected route', ({}).automatic_route === undefined);
+}
+
+// [DIGEST] No canonical evidence identity, no SELECT.
+{
+  const digestAttacks = [
+    { label: 'Infinity', apply: (evidence) => { evidence.extra = Infinity; } },
+    { label: 'NaN', apply: (evidence) => { evidence.extra = Number.NaN; } },
+    { label: '-Infinity', apply: (evidence) => { evidence.extra = -Infinity; } },
+    { label: 'undefined', apply: (evidence) => { evidence.extra = undefined; } },
+    { label: 'function', apply: (evidence) => { evidence.extra = function extra() { return 1; }; } },
+    { label: 'bigint', apply: (evidence) => { evidence.extra = BigInt(10); } },
+    { label: 'symbol value', apply: (evidence) => { evidence.extra = Symbol('extra'); } },
+    { label: 'symbol key', apply: (evidence) => { evidence[Symbol('extra')] = 1; } },
+    { label: 'sparse array', apply: (evidence) => { evidence.extra = sparseArray(2, { 0: 1 }); } },
+    { label: 'accessor', apply: (evidence) => { Object.defineProperty(evidence, 'extra', { get() { return 1; }, enumerable: true, configurable: true }); } },
+    { label: 'non-enumerable data property', apply: (evidence) => { Object.defineProperty(evidence, 'extra', { value: 1, enumerable: false, configurable: true }); } },
+    { label: 'tampered prototype', apply: null, build: () => Object.assign(Object.create({ injected: true }), baseEvidence()) },
+    { label: 'nested Infinity', apply: (evidence) => { evidence.source_refs[0].extra = Infinity; } },
+    { label: 'nested sparse array', apply: (evidence) => { evidence.standards_classification.extra = sparseArray(1); } }
+  ];
+
+  for (const attack of digestAttacks) {
+    const evidence = attack.build ? attack.build() : baseEvidence();
+    if (attack.apply) attack.apply(evidence);
+    const label = '[DIGEST] ' + attack.label;
+
+    harness.throws(label + ': the candidate cannot be canonically digested', () => digest(evidence));
+    const audit = assertBoundedTechnicalFailure(label, evidence);
+    if (audit === null) continue;
+    harness.equal(label + ': no evidence digest is recorded', audit.evidence_digest, null);
+    harness.ok(label + ': the digest failure is recorded', typeof audit.evidence_digest_error === 'string');
+    harness.ok(label + ': the digest failure is named in the reason codes',
+      audit.evaluation.reason_codes.includes('EVIDENCE_DIGEST_UNAVAILABLE'));
+    harness.equal(label + ': no semantic fingerprint is claimed', audit.semantic_fingerprint, null);
+    harness.equal(label + ': routes to a technical blocker', audit.routing.escalation_class, 'TECHNICAL_BLOCKER');
+  }
+
+  // The otherwise eligible baseline still selects, so the digest gate is the
+  // only thing that changed for these candidates.
+  {
+    const composed = adjudicateCandidate({ evidence: baseEvidence(), context, authorityResolution: TRUSTED_AUTHORITY_RESOLUTION, evaluatedAt: FIXED_EVALUATION_TIMESTAMP });
+    harness.equal('[DIGEST] the digestible baseline still selects', composed.audit.evaluation.disposition, 'SELECT');
+    harness.ok('[DIGEST] the digestible baseline carries a canonical identity', typeof composed.audit.evidence_digest === 'string');
+    harness.equal('[DIGEST] the digestible baseline records no digest error', composed.audit.evidence_digest_error, null);
+  }
+}
+
+// [B1] The provenance gate itself, exercised directly. The structural admission
+// gate refuses sparse input earlier in the pipeline, so this proves the second
+// layer independently rather than relying on the first having run.
+{
+  const knownRefs = Object.create(null);
+  knownRefs.S1 = { ref_id: 'S1' };
+  knownRefs.S2 = { ref_id: 'S2' };
+
+  harness.equal('[B1] gate: a dense resolvable set yields its references',
+    resolveEvidenceRefs(['S1', 'S2'], knownRefs).refs, ['S1', 'S2']);
+  harness.equal('[B1] gate: a dense resolvable set reports no failure',
+    resolveEvidenceRefs(['S1'], knownRefs).code, null);
+
+  const gateRejections = [
+    { label: 'one-hole array', value: sparseArray(1), code: 'MALFORMED_EVIDENCE_REFS' },
+    { label: 'multi-hole array', value: sparseArray(4), code: 'MALFORMED_EVIDENCE_REFS' },
+    { label: 'sparse array with a resolvable ref present', value: sparseArray(2, { 0: 'S1' }), code: 'MALFORMED_EVIDENCE_REFS' },
+    { label: 'sparse array with a leading hole', value: sparseArray(2, { 1: 'S1' }), code: 'MALFORMED_EVIDENCE_REFS' },
+    { label: 'null ref', value: [null], code: 'MALFORMED_EVIDENCE_REFS' },
+    { label: 'null ref beside a resolvable ref', value: ['S1', null], code: 'MALFORMED_EVIDENCE_REFS' },
+    { label: 'empty-string ref', value: [''], code: 'MALFORMED_EVIDENCE_REFS' },
+    { label: 'non-string ref', value: [1], code: 'MALFORMED_EVIDENCE_REFS' },
+    { label: 'object ref', value: [{ ref_id: 'S1' }], code: 'MALFORMED_EVIDENCE_REFS' },
+    { label: 'non-array provenance', value: 'S1', code: 'MALFORMED_EVIDENCE_REFS' },
+    { label: 'omitted provenance', value: undefined, code: 'MALFORMED_EVIDENCE_REFS' },
+    { label: 'tampered array prototype', value: Object.setPrototypeOf(['S1'], { injected: true }), code: 'MALFORMED_EVIDENCE_REFS' },
+    { label: 'empty provenance', value: [], code: 'MISSING_EVIDENCE_REFS' },
+    { label: 'unresolved dense ref', value: ['GHOST'], code: 'DANGLING_EVIDENCE_REF' },
+    { label: 'partly unresolved dense refs', value: ['S1', 'GHOST'], code: 'DANGLING_EVIDENCE_REF' }
+  ];
+  for (const attempt of gateRejections) {
+    const outcome = resolveEvidenceRefs(attempt.value, knownRefs);
+    harness.equal('[B1] gate: ' + attempt.label + ' yields no references', outcome.refs, null);
+    harness.equal('[B1] gate: ' + attempt.label + ' names the failure', outcome.code, attempt.code);
+  }
+
+  // Length alone never establishes that a reference exists.
+  for (const length of [1, 2, 5]) {
+    harness.equal('[B1] gate: an array of ' + length + ' holes yields no references',
+      resolveEvidenceRefs(sparseArray(length), knownRefs).refs, null);
+  }
+}
+
+// [B4] The bounded failure path is reached and must not re-read hostile input.
+// The digest gate returns rather than throwing, so a case that actually enters
+// the catch block is constructed: an unusable registry raises before the digest
+// gate runs, while the candidate still carries throwing accessors.
+{
+  const hostileEvidence = (probe) => {
+    const evidence = baseEvidence();
+    for (const key of ['candidate_id', 'source_refs', 'assertions', 'standards_classification']) {
+      delete evidence[key];
+      Object.defineProperty(evidence, key, {
+        get() { probe.calls += 1; throw new Error('hostile accessor on ' + key); },
+        enumerable: key !== 'candidate_id',
+        configurable: true
+      });
+    }
+    return evidence;
+  };
+
+  const unusableContexts = [
+    { label: 'missing registry', build: () => ({ ...context, registry: null }) },
+    { label: 'forged registry', build: () => { const forged = clone(registry); forged.fact_consistency_constraints = []; return { ...context, registry: forged }; } },
+    { label: 'absent context', build: () => ({}) }
+  ];
+
+  for (const unusable of unusableContexts) {
+    const label = '[B4] bounded failure path with an ' + unusable.label;
+    const probe = { calls: 0 };
+    const evidence = hostileEvidence(probe);
+    let composed = null;
+    let threw = null;
+    try {
+      composed = adjudicateCandidate({ evidence, context: unusable.build(), authorityResolution: TRUSTED_AUTHORITY_RESOLUTION, evaluatedAt: FIXED_EVALUATION_TIMESTAMP });
+    } catch (error) {
+      threw = error;
+    }
+    harness.equal(label + ': adjudication does not throw', threw, null);
+    harness.ok(label + ': an audit record is produced', composed !== null && composed.audit !== undefined);
+    if (composed === null || composed.audit === undefined) continue;
+    const audit = composed.audit;
+    harness.equal(label + ': the failure path enters the bounded audit', audit.evaluation.reason_codes, ['ADJUDICATION_ABORTED']);
+    harness.equal(label + ': no hostile accessor is invoked', probe.calls, 0);
+    harness.equal(label + ': no candidate identity is fabricated', audit.candidate_id, null);
+    harness.equal(label + ': disposition holds', audit.evaluation.disposition, 'HOLD');
+    harness.equal(label + ': publication blocked', audit.evaluation.publication_blocked, true);
+    harness.equal(label + ': human review required', audit.evaluation.human_review, true);
+    harness.equal(label + ': no advancing rules matched', audit.evaluation.matched_rule_ids, []);
+    harness.ok(label + ': no advancing route', audit.routing.automatic_route?.next_status !== 'SELECTED');
+    harness.equal(label + ': downstream execution is NOT_EXECUTED', audit.routing.downstream_execution, { attempted: false, status: 'NOT_EXECUTED' });
+    harness.ok(label + ': an explicit technical failure diagnostic is preserved', audit.evaluation.failures.length > 0);
+    harness.equal(label + ': the fallback audit serializes', typeof canonicalize(audit), 'string');
+    harness.ok(label + ': the serialized fallback audit parses', JSON.parse(canonicalize(audit)) !== undefined);
+  }
+
+  // A well-formed candidate on an unusable context is still bounded, and its
+  // identity is captured safely rather than re-read after the failure.
+  {
+    const forged = clone(registry);
+    forged.fact_consistency_constraints = [];
+    const composed = adjudicateCandidate({ evidence: baseEvidence(), context: { ...context, registry: forged }, authorityResolution: TRUSTED_AUTHORITY_RESOLUTION, evaluatedAt: FIXED_EVALUATION_TIMESTAMP });
+    harness.equal('[B4] a safe candidate identity is preserved on the failure path', composed.audit.candidate_id, 'F01');
+    harness.equal('[B4] the failure path still holds', composed.audit.evaluation.disposition, 'HOLD');
+  }
+
+  harness.ok('[B4] Object.prototype is unpolluted after the failure path', ({}).polluted === undefined);
 }
 
 harness.finish([`eligibility_predicates=${ELIGIBILITY_PREDICATES.length}`, `material_predicates=${materialPredicates.length}`, `fixtures=${oracle.fixtures.length}`]);

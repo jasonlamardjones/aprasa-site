@@ -14,13 +14,13 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { assertNoDangerousKeys, canonicalize, emptyMap } from './ttd-canonical-json.mjs';
+import { assertAdmissibleStructure, canonicalize, denseStringList, emptyMap, isAdmissibleDenseArray } from './ttd-canonical-json.mjs';
 
 const REGISTRY_PATH = path.join('automation', 'control-plane', 'normalization', 'ttd-fact-registry.json');
 
 export function loadFactRegistry(root = process.cwd()) {
   const registry = JSON.parse(fs.readFileSync(path.join(root, REGISTRY_PATH), 'utf8'));
-  assertNoDangerousKeys(registry, '$registry');
+  assertAdmissibleStructure(registry, '$registry');
   return registry;
 }
 
@@ -40,11 +40,11 @@ function knownFact(value, evidenceRefs, rationale, reason) {
 
 function validateSourceRefs(evidence, registry, errors) {
   const refs = emptyMap();
-  const list = Array.isArray(evidence.source_refs) ? evidence.source_refs : [];
-  if (!Array.isArray(evidence.source_refs)) {
-    errors.push({ code: 'MALFORMED_SOURCE_REFS', detail: 'source_refs must be an array' });
+  if (!isAdmissibleDenseArray(evidence.source_refs)) {
+    errors.push({ code: 'MALFORMED_SOURCE_REFS', detail: 'source_refs must be a dense array' });
     return refs;
   }
+  const list = evidence.source_refs;
   for (const [index, ref] of list.entries()) {
     const at = `source_refs[${index}]`;
     if (ref === null || typeof ref !== 'object' || Array.isArray(ref)) {
@@ -83,6 +83,21 @@ function validateSourceRefs(evidence, registry, errors) {
   return refs;
 }
 
+// The single provenance gate for every cited reference set. Exported so the
+// dense-array requirement can be regression-tested directly, independently of
+// the structural admission gate that also refuses sparse input earlier in the
+// pipeline: array length must never stand in for a present reference, and a
+// hole, a null, an empty identifier or an unresolved identifier must all yield
+// no references at all rather than a shorter apparently valid set.
+export function resolveEvidenceRefs(value, sourceRefs) {
+  const refs = denseStringList(value);
+  if (refs === null) return { refs: null, code: 'MALFORMED_EVIDENCE_REFS', dangling: [] };
+  if (refs.length === 0) return { refs: null, code: 'MISSING_EVIDENCE_REFS', dangling: [] };
+  const dangling = refs.filter((ref) => !Object.hasOwn(sourceRefs, ref));
+  if (dangling.length > 0) return { refs: null, code: 'DANGLING_EVIDENCE_REF', dangling };
+  return { refs, code: null, dangling: [] };
+}
+
 function valueTypeValid(predicate, value) {
   if (predicate.type === 'boolean') return typeof value === 'boolean';
   if (predicate.type === 'enum') return typeof value === 'string' && predicate.enum.includes(value);
@@ -91,11 +106,11 @@ function valueTypeValid(predicate, value) {
 
 function collectAssertions(evidence, predicatesByName, registry, sourceRefs, errors) {
   const grouped = emptyMap();
-  const list = Array.isArray(evidence.assertions) ? evidence.assertions : [];
-  if (!Array.isArray(evidence.assertions)) {
-    errors.push({ code: 'MALFORMED_ASSERTIONS', detail: 'assertions must be an array' });
+  if (!isAdmissibleDenseArray(evidence.assertions)) {
+    errors.push({ code: 'MALFORMED_ASSERTIONS', detail: 'assertions must be a dense array' });
     return grouped;
   }
+  const list = evidence.assertions;
   for (const [index, assertion] of list.entries()) {
     const at = `assertions[${index}]`;
     if (assertion === null || typeof assertion !== 'object' || Array.isArray(assertion)) {
@@ -120,16 +135,20 @@ function collectAssertions(evidence, predicatesByName, registry, sourceRefs, err
       errors.push({ code: 'INVALID_CONFIDENCE', detail: `${at}.confidence ${String(assertion.confidence)}` });
       continue;
     }
-    const refs = Array.isArray(assertion.evidence_refs) ? assertion.evidence_refs : null;
-    if (refs === null || refs.length === 0) {
+    const provenance = resolveEvidenceRefs(assertion.evidence_refs, sourceRefs);
+    if (provenance.code === 'MALFORMED_EVIDENCE_REFS') {
+      errors.push({ code: 'MALFORMED_EVIDENCE_REFS', detail: `${at}.evidence_refs must be a dense array of non-empty reference identifiers` });
+      continue;
+    }
+    if (provenance.code === 'MISSING_EVIDENCE_REFS') {
       errors.push({ code: 'MISSING_EVIDENCE_REFS', detail: `${at} must cite at least one source ref` });
       continue;
     }
-    const dangling = refs.filter((ref) => typeof ref !== 'string' || !Object.hasOwn(sourceRefs, ref));
-    if (dangling.length > 0) {
-      errors.push({ code: 'DANGLING_EVIDENCE_REF', detail: `${at} cites unresolved refs ${canonicalize(dangling)}` });
+    if (provenance.code === 'DANGLING_EVIDENCE_REF') {
+      errors.push({ code: 'DANGLING_EVIDENCE_REF', detail: `${at} cites unresolved refs ${canonicalize(provenance.dangling)}` });
       continue;
     }
+    const refs = provenance.refs;
     if (!Object.hasOwn(grouped, name)) grouped[name] = [];
     grouped[name].push({
       value: assertion.value,
@@ -186,7 +205,7 @@ const STANDARDS_MEMBER_CONTRACT = [
   },
   {
     member: 'unresolved_dimensions',
-    valid: (value) => Array.isArray(value) && value.every((item) => typeof item === 'string'),
+    valid: (value) => isAdmissibleDenseArray(value) && value.every((item) => typeof item === 'string'),
     cleared: (value) => value.length === 0,
     malformed_reason: 'MALFORMED_STANDARDS_DIMENSIONS',
     unmet_reason: 'UNRESOLVED_STANDARDS_DIMENSION'
@@ -222,13 +241,14 @@ function deriveStandardsBoundary(evidence, sourceRefs) {
   if (!Object.hasOwn(classification, 'evidence_refs')) {
     return knownFact(true, [], null, 'INCOMPLETE_STANDARDS_CLASSIFICATION');
   }
-  const refs = classification.evidence_refs;
-  if (!Array.isArray(refs) || refs.length === 0) {
-    return knownFact(true, [], null, 'MALFORMED_STANDARDS_EVIDENCE_REFS');
-  }
-  if (refs.some((ref) => typeof ref !== 'string' || !Object.hasOwn(sourceRefs, ref))) {
+  const provenance = resolveEvidenceRefs(classification.evidence_refs, sourceRefs);
+  if (provenance.code === 'DANGLING_EVIDENCE_REF') {
     return knownFact(true, [], null, 'UNSUPPORTED_STANDARDS_CLASSIFICATION');
   }
+  if (provenance.code !== null) {
+    return knownFact(true, [], null, 'MALFORMED_STANDARDS_EVIDENCE_REFS');
+  }
+  const refs = provenance.refs;
 
   return knownFact(false, refs, typeof classification.rationale === 'string' ? classification.rationale : null, 'AFFIRMATIVE_ORDINARY_SCOPE_EVIDENCE');
 }
@@ -237,30 +257,27 @@ export function normalizeCandidate(evidence, options = {}) {
   const registry = options.registry ?? loadFactRegistry(options.root);
   const errors = [];
 
-  try {
-    assertNoDangerousKeys(evidence, '$evidence');
-  } catch (error) {
-    return {
-      ok: false,
-      candidate_id: null,
-      registry_version: registry.version,
-      facts: emptyMap(),
-      source_refs: [],
-      claimed_authority_resolution: null,
-      normalization_errors: [{ code: 'UNSAFE_INPUT_KEY', detail: error.message }]
-    };
-  }
+  const rejected = (code, detail) => ({
+    ok: false,
+    candidate_id: null,
+    registry_version: registry.version,
+    facts: emptyMap(),
+    source_refs: [],
+    claimed_authority_resolution: null,
+    normalization_errors: [{ code, detail }]
+  });
 
   if (evidence === null || typeof evidence !== 'object' || Array.isArray(evidence)) {
-    return {
-      ok: false,
-      candidate_id: null,
-      registry_version: registry.version,
-      facts: emptyMap(),
-      source_refs: [],
-      claimed_authority_resolution: null,
-      normalization_errors: [{ code: 'MALFORMED_EVIDENCE_RECORD', detail: 'evidence record must be an object' }]
-    };
+    return rejected('MALFORMED_EVIDENCE_RECORD', 'evidence record must be an object');
+  }
+
+  // Structural admission gate. Dangerous own keys (enumerable or not), tampered
+  // prototypes, accessors, symbols, sparse arrays and unsupported value types
+  // are refused here, before any property of the record is read for meaning.
+  try {
+    assertAdmissibleStructure(evidence, '$evidence');
+  } catch (error) {
+    return rejected('UNSAFE_INPUT_KEY', error.message);
   }
 
   const candidateId = typeof evidence.candidate_id === 'string' && evidence.candidate_id.length > 0 ? evidence.candidate_id : null;
