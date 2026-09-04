@@ -32,7 +32,8 @@ const evaluate = (normalized) => evaluateNormalizedFacts({
   normalized,
   authorityResolution: TRUSTED_AUTHORITY_RESOLUTION,
   evaluatedAt: FIXED_EVALUATION_TIMESTAMP,
-  materialPredicates
+  materialPredicates,
+  factConsistencyConstraints: registry.fact_consistency_constraints ?? []
 });
 
 for (const fixture of oracle.fixtures) {

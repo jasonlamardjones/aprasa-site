@@ -5577,7 +5577,7 @@
       "covers": [
         "TTD-GOV-002"
       ],
-      "notes": "No assertions and no standards classification. Absence of adverse signal is not affirmative ordinary-scope evidence.",
+      "notes": "No assertions and no standards classification. Absence of adverse signal is not affirmative ordinary-scope evidence. Every material eligibility dependency is outstanding and is named; only the derived standards boundary is KNOWN.",
       "evidence": {
         "candidate_id": "F25",
         "captured_at": "2026-09-04T00:00:00-01:00",
@@ -5607,8 +5607,12 @@
         ],
         "field_actions": {},
         "unresolved_dependencies": [
+          "activity_scope",
           "broader_source_conflicts_with_specific_scope",
           "candidate_already_ended",
+          "commercial_primary_proposition",
+          "evidence_sufficient",
+          "geography_in_scope",
           "material_source_conflict",
           "materially_current",
           "primary_proposition",

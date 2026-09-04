@@ -65,6 +65,28 @@ add(standards !== undefined, 'the fact registry must declare standards_boundary_
 add(standards?.directly_assertable === false, 'standards_boundary_unresolved must not be directly assertable');
 add(standards?.conservative_absent_value === true, 'an absent standards classification must fail closed to true');
 
+// Declared fact-consistency constraints must reference real predicates with
+// type-correct values, so contradiction enforcement cannot silently no-op.
+const constraints = registry.fact_consistency_constraints;
+add(Array.isArray(constraints) && constraints.length > 0, 'the fact registry must declare at least one fact-consistency constraint');
+for (const constraint of Array.isArray(constraints) ? constraints : []) {
+  add(typeof constraint.constraint_id === 'string' && constraint.constraint_id.length > 0, 'every fact-consistency constraint needs a constraint_id');
+  add(typeof constraint.reason_code === 'string' && constraint.reason_code.length > 0, `${constraint.constraint_id}: needs a reason_code`);
+  const combination = constraint.forbidden_combination;
+  add(combination !== null && typeof combination === 'object' && !Array.isArray(combination) && Object.keys(combination).length >= 2,
+    `${constraint.constraint_id}: forbidden_combination must name at least two predicates`);
+  for (const [name, value] of Object.entries(combination ?? {})) {
+    const predicate = registryByName.get(name);
+    add(predicate !== undefined, `${constraint.constraint_id}: references unknown predicate ${name}`);
+    if (predicate === undefined) continue;
+    if (predicate.type === 'boolean') add(typeof value === 'boolean', `${constraint.constraint_id}: ${name} must be compared to a boolean`);
+    else add(Array.isArray(predicate.enum) && predicate.enum.includes(value), `${constraint.constraint_id}: ${name} must be compared to a declared enum value`);
+  }
+}
+add(Array.isArray(constraints) && constraints.some((constraint) =>
+  constraint.forbidden_combination?.materially_current === true && constraint.forbidden_combination?.candidate_already_ended === true),
+  'the registry must forbid materially_current=true alongside candidate_already_ended=true');
+
 if (errors.length > 0) {
   for (const error of errors) console.error(`TTD_TRUST_ANCHOR_VALIDATION_FAILED: ${error}`);
   process.exit(1);
@@ -75,3 +97,4 @@ console.log(`policy=${policy.policy_id}@${policy.version}`);
 console.log(`content_sha256=${computed}`);
 console.log(`rules=${policyRuleIds.length}`);
 console.log(`registry_predicates=${registry.predicates.length}`);
+console.log(`fact_consistency_constraints=${registry.fact_consistency_constraints.length}`);

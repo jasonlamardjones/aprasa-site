@@ -274,7 +274,8 @@ export function evaluateNormalizedFacts(input) {
     normalized,
     authorityResolution,
     evaluatedAt = null,
-    materialPredicates = null
+    materialPredicates = null,
+    factConsistencyConstraints = null
   } = input;
 
   const candidateId = normalized?.candidate_id ?? null;
@@ -290,6 +291,20 @@ export function evaluateNormalizedFacts(input) {
       authority_resolution: authorityResolution?.resolution ?? null,
       evaluated_at: evaluatedAt,
       unresolved_dependencies: ['TRUSTED_POLICY_AUTHORITY']
+    });
+  }
+
+  if (!Array.isArray(factConsistencyConstraints)) {
+    return failClosed('VALIDATION_FAILURE', new Set(['FACT_CONSISTENCY_CONSTRAINTS_NOT_SUPPLIED']), {
+      messages: ['fact-consistency constraints were not supplied; contradiction enforcement cannot be skipped'],
+      candidate_id: candidateId,
+      policy_id: policy.policy_id,
+      policy_version: policy.version,
+      approval_reference: policy.authority.approval_reference,
+      policy_content_sha256: trust.contentSha,
+      authority_resolution: authorityResolution.resolution,
+      evaluated_at: evaluatedAt,
+      unresolved_dependencies: ['FACT_CONSISTENCY_CONSTRAINTS']
     });
   }
 
@@ -382,6 +397,79 @@ export function evaluateNormalizedFacts(input) {
 
   if (substantive.length === 0) reasonCodes.add('DEFAULT_HOLD_NO_AUTHORIZING_RULE');
 
+  // A material eligibility dependency is unresolved whenever it is not KNOWN:
+  // missing, UNKNOWN, contradictory, or malformed all count. Absence is never
+  // read as a favourable value, and a rule that failed on a known mismatch does
+  // not hide a dependency that is still outstanding elsewhere.
+  const declaredTypeByPredicate = new Map();
+  for (const rule of policy.rules) {
+    for (const [name, declared] of Object.entries(rule.when)) declaredTypeByPredicate.set(name, typeof declared);
+  }
+  const materialNames = materialPredicates === null ? [...declaredTypeByPredicate.keys()].sort() : [...materialPredicates].sort();
+  const unresolvedDependencies = new Set();
+  for (const name of materialNames) {
+    const fact = Object.hasOwn(facts, name) ? facts[name] : undefined;
+    if (fact === undefined || fact === null || typeof fact !== 'object' || Array.isArray(fact) || fact.state !== 'KNOWN') {
+      unresolvedDependencies.add(name);
+      continue;
+    }
+    // A KNOWN fact carrying a value the policy could never compare against is
+    // malformed, not resolved.
+    const declaredType = declaredTypeByPredicate.get(name);
+    if (declaredType !== undefined && typeof fact.value !== declaredType) unresolvedDependencies.add(name);
+  }
+  composition.push({
+    step: 'MATERIAL_DEPENDENCIES',
+    outcome: unresolvedDependencies.size === 0 ? 'ALL_KNOWN' : 'UNRESOLVED',
+    detail: { evaluated: materialNames.length, unresolved: [...unresolvedDependencies].sort() }
+  });
+
+  // Declared fact-consistency constraints. A contradiction between normalized
+  // facts fails closed; neither side is silently preferred over the other.
+  const violatedConstraints = [];
+  for (const constraint of factConsistencyConstraints) {
+    const combination = constraint.forbidden_combination ?? {};
+    const names = Object.keys(combination);
+    if (names.length === 0) continue;
+    const violated = names.every((name) => {
+      const fact = Object.hasOwn(facts, name) ? facts[name] : undefined;
+      return fact !== undefined && fact !== null && typeof fact === 'object' && !Array.isArray(fact)
+        && fact.state === 'KNOWN' && fact.value === combination[name];
+    });
+    if (violated) violatedConstraints.push(constraint);
+  }
+  if (violatedConstraints.length > 0) {
+    disposition = 'HOLD';
+    governingRuleId = null;
+    publicationBlocked = true;
+    humanReview = true;
+    fieldActions = {};
+    for (const constraint of violatedConstraints) reasonCodes.add(constraint.reason_code ?? 'CONTRADICTORY_MATERIAL_FACTS');
+    composition.push({
+      step: 'FAIL_CLOSED',
+      outcome: 'FACT_CONSISTENCY_VIOLATION',
+      detail: violatedConstraints.map((constraint) => ({
+        constraint_id: constraint.constraint_id,
+        forbidden_combination: constraint.forbidden_combination
+      }))
+    });
+  }
+
+  // A SELECT may stand only when every material eligibility dependency is KNOWN.
+  // The approved composition declares unknown material input as HOLD, so an
+  // outstanding material dependency cannot be carried into a selection.
+  if (disposition === 'SELECT' && unresolvedDependencies.size > 0) {
+    disposition = 'HOLD';
+    governingRuleId = null;
+    publicationBlocked = true;
+    reasonCodes.add('UNKNOWN_MATERIAL_DEPENDENCY');
+    composition.push({
+      step: 'FAIL_CLOSED',
+      outcome: 'UNKNOWN_MATERIAL_DEPENDENCY',
+      detail: [...unresolvedDependencies].sort()
+    });
+  }
+
   // Defensive invariant: a blocked candidate can never stand as SELECT.
   if (disposition === 'SELECT' && publicationBlocked) {
     disposition = 'HOLD';
@@ -389,24 +477,6 @@ export function evaluateNormalizedFacts(input) {
     humanReview = true;
     reasonCodes.add('SELECT_BLOCKED_INVARIANT_VIOLATION');
     composition.push({ step: 'FAIL_CLOSED', outcome: 'SELECT_BLOCKED_INVARIANT_VIOLATION', detail: 'blocked candidate downgraded to HOLD' });
-  }
-
-  // Unresolved dependencies are material inputs whose absence alone prevented a
-  // rule from applying. A rule that also failed on a known, mismatched value was
-  // not waiting on evidence, so it contributes nothing here.
-  const isMaterial = materialPredicates === null
-    ? () => true
-    : (name) => materialPredicates.includes(name);
-  const unresolvedDependencies = new Set();
-  for (const evaluation of ruleEvaluations) {
-    if (evaluation.matched) continue;
-    const decidedAgainst = evaluation.predicates.some(
-      (item) => item.reason === 'VALUE_MISMATCH' || item.reason === 'TYPE_MISMATCH' || item.reason === 'MALFORMED_FACT'
-    );
-    if (decidedAgainst) continue;
-    for (const predicate of evaluation.missing_material_inputs) {
-      if (isMaterial(predicate)) unresolvedDependencies.add(predicate);
-    }
   }
 
   return {
@@ -438,6 +508,9 @@ export function evaluateNormalizedFacts(input) {
       nonmatches_from_missing_inputs: ruleEvaluations
         .filter((evaluation) => !evaluation.matched && evaluation.missing_material_inputs.length > 0)
         .map((evaluation) => ({ rule_id: evaluation.rule_id, missing: evaluation.missing_material_inputs })),
+      material_predicates_evaluated: materialNames,
+      fact_consistency_constraints_evaluated: factConsistencyConstraints.map((constraint) => constraint.constraint_id ?? null),
+      fact_consistency_violations: violatedConstraints.map((constraint) => constraint.constraint_id ?? null),
       composition,
       failures: []
     }

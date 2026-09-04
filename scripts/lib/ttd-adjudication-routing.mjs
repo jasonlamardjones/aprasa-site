@@ -30,6 +30,16 @@ const GOVERNANCE_ESCALATION_CLASS_BY_REASON = {
   MEDIA_FALLBACK_UNAVAILABLE: 'MEDIA_RIGHTS_UNRESOLVED'
 };
 
+// Composition-level fail-closed outcomes carry their own escalation class,
+// independent of which policy rule matched.
+const ESCALATION_CLASS_BY_COMPOSITION_REASON = {
+  CONTRADICTORY_MATERIAL_FACTS: 'HIGH_QUALITY_SOURCE_CONFLICT'
+};
+
+const HOLD_REMEDIATION_REASON_BY_COMPOSITION = {
+  UNKNOWN_MATERIAL_DEPENDENCY: { next_role: 'EVIDENCE_VERIFIER', next_status: 'HOLD' }
+};
+
 const HOLD_REMEDIATION_ROUTE_BY_REASON = {
   UNRESOLVED_SOURCE_CONFLICT: { next_role: 'EVIDENCE_VERIFIER', next_status: 'HOLD' },
   SPECIFIC_SCOPE_CONFLICT: { next_role: 'EVIDENCE_VERIFIER', next_status: 'HOLD' },
@@ -84,11 +94,16 @@ export function routeEvaluation(result, options = {}) {
     const reason = governingReasonCode(result, policy);
 
     if (result.human_review === true) {
+      const compositionReason = result.reason_codes.find((code) => Object.hasOwn(ESCALATION_CLASS_BY_COMPOSITION_REASON, code));
       return {
         automatic_route: { next_role: 'HUMAN_ESCALATION', next_status: 'ESCALATED' },
         authority_target: 'OWNING_GOVERNANCE_AUTHORITY',
-        escalation_class: GOVERNANCE_ESCALATION_CLASS_BY_REASON[reason] ?? 'AUTHORITY_CONFLICT',
-        rationale: 'human_review stops autonomous progression and routes to the declared authority'
+        escalation_class: compositionReason !== undefined
+          ? ESCALATION_CLASS_BY_COMPOSITION_REASON[compositionReason]
+          : GOVERNANCE_ESCALATION_CLASS_BY_REASON[reason] ?? 'AUTHORITY_CONFLICT',
+        rationale: compositionReason !== undefined
+          ? 'contradictory normalized facts stop autonomous progression pending evidence resolution'
+          : 'human_review stops autonomous progression and routes to the declared authority'
       };
     }
 
@@ -107,6 +122,16 @@ export function routeEvaluation(result, options = {}) {
         authority_target: null,
         escalation_class: null,
         rationale: 'policy rejected the candidate as no longer current'
+      };
+    }
+
+    const compositionRemediationReason = result.reason_codes.find((code) => Object.hasOwn(HOLD_REMEDIATION_REASON_BY_COMPOSITION, code));
+    if (compositionRemediationReason !== undefined) {
+      return {
+        automatic_route: HOLD_REMEDIATION_REASON_BY_COMPOSITION[compositionRemediationReason],
+        authority_target: null,
+        escalation_class: null,
+        rationale: 'an outstanding material eligibility dependency routes to evidence verification'
       };
     }
 
