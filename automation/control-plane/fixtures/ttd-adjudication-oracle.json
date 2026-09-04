@@ -1,0 +1,5862 @@
+{
+  "oracle_id": "APRASA_TTD_ADJUDICATION_ORACLE_V1",
+  "schema_version": "1.0.0",
+  "policy_ref": "APRASA_TTD_EDITORIAL_V1@1.0.0",
+  "registry_ref": "APRASA_TTD_NORMALIZED_FACT_REGISTRY@1.0.0",
+  "provenance": "Project 04 acceptance oracle. Expected dispositions, blocking, human-review flags, matched rule sets, reason codes, field actions and routing were derived by hand from the approved policy document. Expected normalized facts were produced by an independent builder implementing the normalization contract. No expectation in this file was generated from the production evaluator, normalizer or routing implementation.",
+  "reconciliation_note": "The Project 03 / Codex test-oracle specification referenced by the tranche brief was not present in the repository, the tranche brief, or issues and pull requests #77/#78 at the time of implementation. Fixture identifiers and scenario assignments here are Project 04 reconstructions and require reconciliation against that document before independent exact-SHA sign-off.",
+  "synthetic_only": "All records are synthetic. None describes a real event and none may be published.",
+  "fixture_count": 27,
+  "fixtures": [
+    {
+      "fixture_id": "F01",
+      "title": "Minimal fully governed ordinary activity selects",
+      "covers": [
+        "TTD-ELIG-001"
+      ],
+      "notes": "Every declared eligibility predicate is present and equal. No operational rule applies.",
+      "evidence": {
+        "candidate_id": "F01",
+        "captured_at": "2026-09-04T00:00:00-01:00",
+        "source_refs": [
+          {
+            "ref_id": "S1",
+            "url": "https://organizer.example.org/events/synthetic",
+            "source_class": "FIRST_PARTY_ORGANIZER",
+            "retrieved_at": "2026-09-04T00:00:00-01:00"
+          }
+        ],
+        "assertions": [
+          {
+            "predicate": "activity_scope",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "geography_in_scope",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "materially_current",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "evidence_sufficient",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "material_source_conflict",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "required_authority_missing",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "commercial_primary_proposition",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "broader_source_conflicts_with_specific_scope",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "proposed_copy_strengthens_unknown_fact",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "primary_proposition",
+            "value": "ORDINARY_EDITORIAL_EVENT",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "candidate_already_ended",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          }
+        ],
+        "standards_classification": {
+          "affirmative_ordinary_scope_evidence": true,
+          "confidence": "HIGH",
+          "evidence_refs": [
+            "S1"
+          ],
+          "unresolved_dimensions": [],
+          "mixed_purpose": false,
+          "rationale": "First-party organizer description establishes an ordinary, already-governed cultural programme."
+        }
+      },
+      "expected_normalized": {
+        "ok": true,
+        "facts": {
+          "activity_scope": {
+            "state": "KNOWN",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE"
+          },
+          "broader_source_conflicts_with_specific_scope": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "candidate_already_ended": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "commercial_primary_proposition": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "evidence_sufficient": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "geography_in_scope": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "material_source_conflict": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "materially_current": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "primary_proposition": {
+            "state": "KNOWN",
+            "value": "ORDINARY_EDITORIAL_EVENT"
+          },
+          "proposed_copy_strengthens_unknown_fact": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "required_authority_missing": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "standards_boundary_unresolved": {
+            "state": "KNOWN",
+            "value": false
+          }
+        }
+      },
+      "expected_evaluation": {
+        "result_type": "EVALUATION",
+        "disposition": "SELECT",
+        "publication_blocked": false,
+        "human_review": false,
+        "governing_rule_id": "TTD-ELIG-001",
+        "matched_rule_ids": [
+          "TTD-ELIG-001"
+        ],
+        "reason_codes": [
+          "ELIGIBLE_ORDINARY_ACTIVITY"
+        ],
+        "field_actions": {},
+        "unresolved_dependencies": []
+      },
+      "expected_routing": {
+        "automatic_route": {
+          "next_role": "LOCALIZATION_WORKER",
+          "next_status": "SELECTED"
+        },
+        "authority_target": null,
+        "escalation_class": null
+      }
+    },
+    {
+      "fixture_id": "F02",
+      "title": "First-party source preference does not itself select",
+      "covers": [
+        "TTD-ELIG-001",
+        "TTD-EVID-002"
+      ],
+      "notes": "TTD-EVID-002 is evidence weighting only; the SELECT comes from TTD-ELIG-001.",
+      "evidence": {
+        "candidate_id": "F02",
+        "captured_at": "2026-09-04T00:00:00-01:00",
+        "source_refs": [
+          {
+            "ref_id": "S1",
+            "url": "https://organizer.example.org/events/synthetic",
+            "source_class": "FIRST_PARTY_ORGANIZER",
+            "retrieved_at": "2026-09-04T00:00:00-01:00"
+          }
+        ],
+        "assertions": [
+          {
+            "predicate": "activity_scope",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "geography_in_scope",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "materially_current",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "evidence_sufficient",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "material_source_conflict",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "required_authority_missing",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "commercial_primary_proposition",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "broader_source_conflicts_with_specific_scope",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "proposed_copy_strengthens_unknown_fact",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "primary_proposition",
+            "value": "ORDINARY_EDITORIAL_EVENT",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "candidate_already_ended",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "first_party_source_accessible",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          }
+        ],
+        "standards_classification": {
+          "affirmative_ordinary_scope_evidence": true,
+          "confidence": "HIGH",
+          "evidence_refs": [
+            "S1"
+          ],
+          "unresolved_dimensions": [],
+          "mixed_purpose": false,
+          "rationale": "First-party organizer description establishes an ordinary, already-governed cultural programme."
+        }
+      },
+      "expected_normalized": {
+        "ok": true,
+        "facts": {
+          "activity_scope": {
+            "state": "KNOWN",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE"
+          },
+          "broader_source_conflicts_with_specific_scope": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "candidate_already_ended": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "commercial_primary_proposition": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "evidence_sufficient": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "first_party_source_accessible": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "geography_in_scope": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "material_source_conflict": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "materially_current": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "primary_proposition": {
+            "state": "KNOWN",
+            "value": "ORDINARY_EDITORIAL_EVENT"
+          },
+          "proposed_copy_strengthens_unknown_fact": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "required_authority_missing": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "standards_boundary_unresolved": {
+            "state": "KNOWN",
+            "value": false
+          }
+        }
+      },
+      "expected_evaluation": {
+        "result_type": "EVALUATION",
+        "disposition": "SELECT",
+        "publication_blocked": false,
+        "human_review": false,
+        "governing_rule_id": "TTD-ELIG-001",
+        "matched_rule_ids": [
+          "TTD-ELIG-001",
+          "TTD-EVID-002"
+        ],
+        "reason_codes": [
+          "ELIGIBLE_ORDINARY_ACTIVITY",
+          "PREFER_FIRST_PARTY_SOURCE"
+        ],
+        "field_actions": {},
+        "unresolved_dependencies": []
+      },
+      "expected_routing": {
+        "automatic_route": {
+          "next_role": "LOCALIZATION_WORKER",
+          "next_status": "SELECTED"
+        },
+        "authority_target": null,
+        "escalation_class": null
+      }
+    },
+    {
+      "fixture_id": "F03",
+      "title": "Unverified admission is omitted and never inferred as free",
+      "covers": [
+        "TTD-ELIG-001",
+        "TTD-FACT-001"
+      ],
+      "notes": "",
+      "evidence": {
+        "candidate_id": "F03",
+        "captured_at": "2026-09-04T00:00:00-01:00",
+        "source_refs": [
+          {
+            "ref_id": "S1",
+            "url": "https://organizer.example.org/events/synthetic",
+            "source_class": "FIRST_PARTY_ORGANIZER",
+            "retrieved_at": "2026-09-04T00:00:00-01:00"
+          }
+        ],
+        "assertions": [
+          {
+            "predicate": "activity_scope",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "geography_in_scope",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "materially_current",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "evidence_sufficient",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "material_source_conflict",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "required_authority_missing",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "commercial_primary_proposition",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "broader_source_conflicts_with_specific_scope",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "proposed_copy_strengthens_unknown_fact",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "primary_proposition",
+            "value": "ORDINARY_EDITORIAL_EVENT",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "candidate_already_ended",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "admission_verified",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          }
+        ],
+        "standards_classification": {
+          "affirmative_ordinary_scope_evidence": true,
+          "confidence": "HIGH",
+          "evidence_refs": [
+            "S1"
+          ],
+          "unresolved_dimensions": [],
+          "mixed_purpose": false,
+          "rationale": "First-party organizer description establishes an ordinary, already-governed cultural programme."
+        }
+      },
+      "expected_normalized": {
+        "ok": true,
+        "facts": {
+          "activity_scope": {
+            "state": "KNOWN",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE"
+          },
+          "admission_verified": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "broader_source_conflicts_with_specific_scope": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "candidate_already_ended": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "commercial_primary_proposition": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "evidence_sufficient": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "geography_in_scope": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "material_source_conflict": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "materially_current": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "primary_proposition": {
+            "state": "KNOWN",
+            "value": "ORDINARY_EDITORIAL_EVENT"
+          },
+          "proposed_copy_strengthens_unknown_fact": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "required_authority_missing": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "standards_boundary_unresolved": {
+            "state": "KNOWN",
+            "value": false
+          }
+        }
+      },
+      "expected_evaluation": {
+        "result_type": "EVALUATION",
+        "disposition": "SELECT",
+        "publication_blocked": false,
+        "human_review": false,
+        "governing_rule_id": "TTD-ELIG-001",
+        "matched_rule_ids": [
+          "TTD-ELIG-001",
+          "TTD-FACT-001"
+        ],
+        "reason_codes": [
+          "ADMISSION_UNKNOWN_OMIT",
+          "ELIGIBLE_ORDINARY_ACTIVITY"
+        ],
+        "field_actions": {
+          "admission": "OMIT",
+          "free_admission": null,
+          "caveat": "ADMISSION_NOT_CONFIRMED"
+        },
+        "unresolved_dependencies": []
+      },
+      "expected_routing": {
+        "automatic_route": {
+          "next_role": "LOCALIZATION_WORKER",
+          "next_status": "SELECTED"
+        },
+        "authority_target": null,
+        "escalation_class": null
+      }
+    },
+    {
+      "fixture_id": "F04",
+      "title": "Unverified secondary detail is omitted, not blocking",
+      "covers": [
+        "TTD-ELIG-001",
+        "TTD-FACT-002"
+      ],
+      "notes": "",
+      "evidence": {
+        "candidate_id": "F04",
+        "captured_at": "2026-09-04T00:00:00-01:00",
+        "source_refs": [
+          {
+            "ref_id": "S1",
+            "url": "https://organizer.example.org/events/synthetic",
+            "source_class": "FIRST_PARTY_ORGANIZER",
+            "retrieved_at": "2026-09-04T00:00:00-01:00"
+          }
+        ],
+        "assertions": [
+          {
+            "predicate": "activity_scope",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "geography_in_scope",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "materially_current",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "evidence_sufficient",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "material_source_conflict",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "required_authority_missing",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "commercial_primary_proposition",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "broader_source_conflicts_with_specific_scope",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "proposed_copy_strengthens_unknown_fact",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "primary_proposition",
+            "value": "ORDINARY_EDITORIAL_EVENT",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "candidate_already_ended",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "secondary_detail_verified",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "event_identity_date_venue_sufficient",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          }
+        ],
+        "standards_classification": {
+          "affirmative_ordinary_scope_evidence": true,
+          "confidence": "HIGH",
+          "evidence_refs": [
+            "S1"
+          ],
+          "unresolved_dimensions": [],
+          "mixed_purpose": false,
+          "rationale": "First-party organizer description establishes an ordinary, already-governed cultural programme."
+        }
+      },
+      "expected_normalized": {
+        "ok": true,
+        "facts": {
+          "activity_scope": {
+            "state": "KNOWN",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE"
+          },
+          "broader_source_conflicts_with_specific_scope": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "candidate_already_ended": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "commercial_primary_proposition": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "event_identity_date_venue_sufficient": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "evidence_sufficient": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "geography_in_scope": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "material_source_conflict": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "materially_current": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "primary_proposition": {
+            "state": "KNOWN",
+            "value": "ORDINARY_EDITORIAL_EVENT"
+          },
+          "proposed_copy_strengthens_unknown_fact": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "required_authority_missing": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "secondary_detail_verified": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "standards_boundary_unresolved": {
+            "state": "KNOWN",
+            "value": false
+          }
+        }
+      },
+      "expected_evaluation": {
+        "result_type": "EVALUATION",
+        "disposition": "SELECT",
+        "publication_blocked": false,
+        "human_review": false,
+        "governing_rule_id": "TTD-ELIG-001",
+        "matched_rule_ids": [
+          "TTD-ELIG-001",
+          "TTD-FACT-002"
+        ],
+        "reason_codes": [
+          "ELIGIBLE_ORDINARY_ACTIVITY",
+          "UNVERIFIED_SECONDARY_DETAIL_OMIT"
+        ],
+        "field_actions": {
+          "unsupported_secondary_detail": "OMIT"
+        },
+        "unresolved_dependencies": []
+      },
+      "expected_routing": {
+        "automatic_route": {
+          "next_role": "LOCALIZATION_WORKER",
+          "next_status": "SELECTED"
+        },
+        "authority_target": null,
+        "escalation_class": null
+      }
+    },
+    {
+      "fixture_id": "F05",
+      "title": "Month-level end precision is preserved, never invented into a day",
+      "covers": [
+        "TTD-ELIG-001",
+        "TTD-DATE-001"
+      ],
+      "notes": "",
+      "evidence": {
+        "candidate_id": "F05",
+        "captured_at": "2026-09-04T00:00:00-01:00",
+        "source_refs": [
+          {
+            "ref_id": "S1",
+            "url": "https://organizer.example.org/events/synthetic",
+            "source_class": "FIRST_PARTY_ORGANIZER",
+            "retrieved_at": "2026-09-04T00:00:00-01:00"
+          }
+        ],
+        "assertions": [
+          {
+            "predicate": "activity_scope",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "geography_in_scope",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "materially_current",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "evidence_sufficient",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "material_source_conflict",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "required_authority_missing",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "commercial_primary_proposition",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "broader_source_conflicts_with_specific_scope",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "proposed_copy_strengthens_unknown_fact",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "primary_proposition",
+            "value": "ORDINARY_EDITORIAL_EVENT",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "candidate_already_ended",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "authoritative_end_precision",
+            "value": "MONTH",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          }
+        ],
+        "standards_classification": {
+          "affirmative_ordinary_scope_evidence": true,
+          "confidence": "HIGH",
+          "evidence_refs": [
+            "S1"
+          ],
+          "unresolved_dimensions": [],
+          "mixed_purpose": false,
+          "rationale": "First-party organizer description establishes an ordinary, already-governed cultural programme."
+        }
+      },
+      "expected_normalized": {
+        "ok": true,
+        "facts": {
+          "activity_scope": {
+            "state": "KNOWN",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE"
+          },
+          "authoritative_end_precision": {
+            "state": "KNOWN",
+            "value": "MONTH"
+          },
+          "broader_source_conflicts_with_specific_scope": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "candidate_already_ended": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "commercial_primary_proposition": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "evidence_sufficient": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "geography_in_scope": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "material_source_conflict": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "materially_current": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "primary_proposition": {
+            "state": "KNOWN",
+            "value": "ORDINARY_EDITORIAL_EVENT"
+          },
+          "proposed_copy_strengthens_unknown_fact": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "required_authority_missing": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "standards_boundary_unresolved": {
+            "state": "KNOWN",
+            "value": false
+          }
+        }
+      },
+      "expected_evaluation": {
+        "result_type": "EVALUATION",
+        "disposition": "SELECT",
+        "publication_blocked": false,
+        "human_review": false,
+        "governing_rule_id": "TTD-ELIG-001",
+        "matched_rule_ids": [
+          "TTD-DATE-001",
+          "TTD-ELIG-001"
+        ],
+        "reason_codes": [
+          "ELIGIBLE_ORDINARY_ACTIVITY",
+          "PRESERVE_DATE_PRECISION"
+        ],
+        "field_actions": {
+          "end_date_precision": "PRESERVE_MONTH",
+          "invent_exact_day": false,
+          "month_boundary_state": "REVIEW_DUE"
+        },
+        "unresolved_dependencies": []
+      },
+      "expected_routing": {
+        "automatic_route": {
+          "next_role": "LOCALIZATION_WORKER",
+          "next_status": "SELECTED"
+        },
+        "authority_target": null,
+        "escalation_class": null
+      }
+    },
+    {
+      "fixture_id": "F06",
+      "title": "Unclear media rights use the governed editorial fallback",
+      "covers": [
+        "TTD-ELIG-001",
+        "TTD-MEDIA-001"
+      ],
+      "notes": "",
+      "evidence": {
+        "candidate_id": "F06",
+        "captured_at": "2026-09-04T00:00:00-01:00",
+        "source_refs": [
+          {
+            "ref_id": "S1",
+            "url": "https://organizer.example.org/events/synthetic",
+            "source_class": "FIRST_PARTY_ORGANIZER",
+            "retrieved_at": "2026-09-04T00:00:00-01:00"
+          }
+        ],
+        "assertions": [
+          {
+            "predicate": "activity_scope",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "geography_in_scope",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "materially_current",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "evidence_sufficient",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "material_source_conflict",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "required_authority_missing",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "commercial_primary_proposition",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "broader_source_conflicts_with_specific_scope",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "proposed_copy_strengthens_unknown_fact",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "primary_proposition",
+            "value": "ORDINARY_EDITORIAL_EVENT",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "candidate_already_ended",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "authentic_media_rights_unclear",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "governed_editorial_fallback_available",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          }
+        ],
+        "standards_classification": {
+          "affirmative_ordinary_scope_evidence": true,
+          "confidence": "HIGH",
+          "evidence_refs": [
+            "S1"
+          ],
+          "unresolved_dimensions": [],
+          "mixed_purpose": false,
+          "rationale": "First-party organizer description establishes an ordinary, already-governed cultural programme."
+        }
+      },
+      "expected_normalized": {
+        "ok": true,
+        "facts": {
+          "activity_scope": {
+            "state": "KNOWN",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE"
+          },
+          "authentic_media_rights_unclear": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "broader_source_conflicts_with_specific_scope": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "candidate_already_ended": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "commercial_primary_proposition": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "evidence_sufficient": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "geography_in_scope": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "governed_editorial_fallback_available": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "material_source_conflict": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "materially_current": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "primary_proposition": {
+            "state": "KNOWN",
+            "value": "ORDINARY_EDITORIAL_EVENT"
+          },
+          "proposed_copy_strengthens_unknown_fact": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "required_authority_missing": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "standards_boundary_unresolved": {
+            "state": "KNOWN",
+            "value": false
+          }
+        }
+      },
+      "expected_evaluation": {
+        "result_type": "EVALUATION",
+        "disposition": "SELECT",
+        "publication_blocked": false,
+        "human_review": false,
+        "governing_rule_id": "TTD-ELIG-001",
+        "matched_rule_ids": [
+          "TTD-ELIG-001",
+          "TTD-MEDIA-001"
+        ],
+        "reason_codes": [
+          "ELIGIBLE_ORDINARY_ACTIVITY",
+          "MEDIA_FALLBACK_AVAILABLE"
+        ],
+        "field_actions": {
+          "media": "USE_GOVERNED_EDITORIAL_FALLBACK"
+        },
+        "unresolved_dependencies": []
+      },
+      "expected_routing": {
+        "automatic_route": {
+          "next_role": "LOCALIZATION_WORKER",
+          "next_status": "SELECTED"
+        },
+        "authority_target": null,
+        "escalation_class": null
+      }
+    },
+    {
+      "fixture_id": "F07",
+      "title": "Ticketing and commercial venue do not disqualify",
+      "covers": [
+        "TTD-ELIG-001",
+        "TTD-COMM-001"
+      ],
+      "notes": "",
+      "evidence": {
+        "candidate_id": "F07",
+        "captured_at": "2026-09-04T00:00:00-01:00",
+        "source_refs": [
+          {
+            "ref_id": "S1",
+            "url": "https://organizer.example.org/events/synthetic",
+            "source_class": "FIRST_PARTY_ORGANIZER",
+            "retrieved_at": "2026-09-04T00:00:00-01:00"
+          }
+        ],
+        "assertions": [
+          {
+            "predicate": "activity_scope",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "geography_in_scope",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "materially_current",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "evidence_sufficient",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "material_source_conflict",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "required_authority_missing",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "commercial_primary_proposition",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "broader_source_conflicts_with_specific_scope",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "proposed_copy_strengthens_unknown_fact",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "primary_proposition",
+            "value": "ORDINARY_EDITORIAL_EVENT",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "candidate_already_ended",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "ordinary_editorial_event",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "ticketed_or_commercial_venue",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          }
+        ],
+        "standards_classification": {
+          "affirmative_ordinary_scope_evidence": true,
+          "confidence": "HIGH",
+          "evidence_refs": [
+            "S1"
+          ],
+          "unresolved_dimensions": [],
+          "mixed_purpose": false,
+          "rationale": "First-party organizer description establishes an ordinary, already-governed cultural programme."
+        }
+      },
+      "expected_normalized": {
+        "ok": true,
+        "facts": {
+          "activity_scope": {
+            "state": "KNOWN",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE"
+          },
+          "broader_source_conflicts_with_specific_scope": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "candidate_already_ended": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "commercial_primary_proposition": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "evidence_sufficient": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "geography_in_scope": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "material_source_conflict": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "materially_current": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "ordinary_editorial_event": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "primary_proposition": {
+            "state": "KNOWN",
+            "value": "ORDINARY_EDITORIAL_EVENT"
+          },
+          "proposed_copy_strengthens_unknown_fact": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "required_authority_missing": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "standards_boundary_unresolved": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "ticketed_or_commercial_venue": {
+            "state": "KNOWN",
+            "value": true
+          }
+        }
+      },
+      "expected_evaluation": {
+        "result_type": "EVALUATION",
+        "disposition": "SELECT",
+        "publication_blocked": false,
+        "human_review": false,
+        "governing_rule_id": "TTD-ELIG-001",
+        "matched_rule_ids": [
+          "TTD-COMM-001",
+          "TTD-ELIG-001"
+        ],
+        "reason_codes": [
+          "ELIGIBLE_ORDINARY_ACTIVITY",
+          "TICKETING_NOT_EDITORIAL_DISQUALIFIER"
+        ],
+        "field_actions": {},
+        "unresolved_dependencies": []
+      },
+      "expected_routing": {
+        "automatic_route": {
+          "next_role": "LOCALIZATION_WORKER",
+          "next_status": "SELECTED"
+        },
+        "authority_target": null,
+        "escalation_class": null
+      }
+    },
+    {
+      "fixture_id": "F08",
+      "title": "Payment relationship neither buys nor blocks inclusion",
+      "covers": [
+        "TTD-ELIG-001",
+        "TTD-COMM-002"
+      ],
+      "notes": "",
+      "evidence": {
+        "candidate_id": "F08",
+        "captured_at": "2026-09-04T00:00:00-01:00",
+        "source_refs": [
+          {
+            "ref_id": "S1",
+            "url": "https://organizer.example.org/events/synthetic",
+            "source_class": "FIRST_PARTY_ORGANIZER",
+            "retrieved_at": "2026-09-04T00:00:00-01:00"
+          }
+        ],
+        "assertions": [
+          {
+            "predicate": "activity_scope",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "geography_in_scope",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "materially_current",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "evidence_sufficient",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "material_source_conflict",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "required_authority_missing",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "commercial_primary_proposition",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "broader_source_conflicts_with_specific_scope",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "proposed_copy_strengthens_unknown_fact",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "primary_proposition",
+            "value": "ORDINARY_EDITORIAL_EVENT",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "candidate_already_ended",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "payment_or_commercial_relationship",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          }
+        ],
+        "standards_classification": {
+          "affirmative_ordinary_scope_evidence": true,
+          "confidence": "HIGH",
+          "evidence_refs": [
+            "S1"
+          ],
+          "unresolved_dimensions": [],
+          "mixed_purpose": false,
+          "rationale": "First-party organizer description establishes an ordinary, already-governed cultural programme."
+        }
+      },
+      "expected_normalized": {
+        "ok": true,
+        "facts": {
+          "activity_scope": {
+            "state": "KNOWN",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE"
+          },
+          "broader_source_conflicts_with_specific_scope": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "candidate_already_ended": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "commercial_primary_proposition": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "evidence_sufficient": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "geography_in_scope": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "material_source_conflict": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "materially_current": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "payment_or_commercial_relationship": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "primary_proposition": {
+            "state": "KNOWN",
+            "value": "ORDINARY_EDITORIAL_EVENT"
+          },
+          "proposed_copy_strengthens_unknown_fact": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "required_authority_missing": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "standards_boundary_unresolved": {
+            "state": "KNOWN",
+            "value": false
+          }
+        }
+      },
+      "expected_evaluation": {
+        "result_type": "EVALUATION",
+        "disposition": "SELECT",
+        "publication_blocked": false,
+        "human_review": false,
+        "governing_rule_id": "TTD-ELIG-001",
+        "matched_rule_ids": [
+          "TTD-COMM-002",
+          "TTD-ELIG-001"
+        ],
+        "reason_codes": [
+          "EDITORIAL_INDEPENDENCE",
+          "ELIGIBLE_ORDINARY_ACTIVITY"
+        ],
+        "field_actions": {},
+        "unresolved_dependencies": []
+      },
+      "expected_routing": {
+        "automatic_route": {
+          "next_role": "LOCALIZATION_WORKER",
+          "next_status": "SELECTED"
+        },
+        "authority_target": null,
+        "escalation_class": null
+      }
+    },
+    {
+      "fixture_id": "F09",
+      "title": "Compatible field actions from five operational rules merge",
+      "covers": [
+        "TTD-ELIG-001",
+        "TTD-EVID-002",
+        "TTD-FACT-001",
+        "TTD-FACT-002",
+        "TTD-DATE-001",
+        "TTD-MEDIA-001"
+      ],
+      "notes": "Merged field actions must be the union of all compatible rule actions with no reconciliation.",
+      "evidence": {
+        "candidate_id": "F09",
+        "captured_at": "2026-09-04T00:00:00-01:00",
+        "source_refs": [
+          {
+            "ref_id": "S1",
+            "url": "https://organizer.example.org/events/synthetic",
+            "source_class": "FIRST_PARTY_ORGANIZER",
+            "retrieved_at": "2026-09-04T00:00:00-01:00"
+          }
+        ],
+        "assertions": [
+          {
+            "predicate": "activity_scope",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "geography_in_scope",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "materially_current",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "evidence_sufficient",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "material_source_conflict",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "required_authority_missing",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "commercial_primary_proposition",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "broader_source_conflicts_with_specific_scope",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "proposed_copy_strengthens_unknown_fact",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "primary_proposition",
+            "value": "ORDINARY_EDITORIAL_EVENT",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "candidate_already_ended",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "first_party_source_accessible",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "admission_verified",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "secondary_detail_verified",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "event_identity_date_venue_sufficient",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "authoritative_end_precision",
+            "value": "MONTH",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "authentic_media_rights_unclear",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "governed_editorial_fallback_available",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          }
+        ],
+        "standards_classification": {
+          "affirmative_ordinary_scope_evidence": true,
+          "confidence": "HIGH",
+          "evidence_refs": [
+            "S1"
+          ],
+          "unresolved_dimensions": [],
+          "mixed_purpose": false,
+          "rationale": "First-party organizer description establishes an ordinary, already-governed cultural programme."
+        }
+      },
+      "expected_normalized": {
+        "ok": true,
+        "facts": {
+          "activity_scope": {
+            "state": "KNOWN",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE"
+          },
+          "admission_verified": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "authentic_media_rights_unclear": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "authoritative_end_precision": {
+            "state": "KNOWN",
+            "value": "MONTH"
+          },
+          "broader_source_conflicts_with_specific_scope": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "candidate_already_ended": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "commercial_primary_proposition": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "event_identity_date_venue_sufficient": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "evidence_sufficient": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "first_party_source_accessible": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "geography_in_scope": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "governed_editorial_fallback_available": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "material_source_conflict": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "materially_current": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "primary_proposition": {
+            "state": "KNOWN",
+            "value": "ORDINARY_EDITORIAL_EVENT"
+          },
+          "proposed_copy_strengthens_unknown_fact": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "required_authority_missing": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "secondary_detail_verified": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "standards_boundary_unresolved": {
+            "state": "KNOWN",
+            "value": false
+          }
+        }
+      },
+      "expected_evaluation": {
+        "result_type": "EVALUATION",
+        "disposition": "SELECT",
+        "publication_blocked": false,
+        "human_review": false,
+        "governing_rule_id": "TTD-ELIG-001",
+        "matched_rule_ids": [
+          "TTD-DATE-001",
+          "TTD-ELIG-001",
+          "TTD-EVID-002",
+          "TTD-FACT-001",
+          "TTD-FACT-002",
+          "TTD-MEDIA-001"
+        ],
+        "reason_codes": [
+          "ADMISSION_UNKNOWN_OMIT",
+          "ELIGIBLE_ORDINARY_ACTIVITY",
+          "MEDIA_FALLBACK_AVAILABLE",
+          "PREFER_FIRST_PARTY_SOURCE",
+          "PRESERVE_DATE_PRECISION",
+          "UNVERIFIED_SECONDARY_DETAIL_OMIT"
+        ],
+        "field_actions": {
+          "admission": "OMIT",
+          "free_admission": null,
+          "caveat": "ADMISSION_NOT_CONFIRMED",
+          "unsupported_secondary_detail": "OMIT",
+          "end_date_precision": "PRESERVE_MONTH",
+          "invent_exact_day": false,
+          "month_boundary_state": "REVIEW_DUE",
+          "media": "USE_GOVERNED_EDITORIAL_FALLBACK"
+        },
+        "unresolved_dependencies": []
+      },
+      "expected_routing": {
+        "automatic_route": {
+          "next_role": "LOCALIZATION_WORKER",
+          "next_status": "SELECTED"
+        },
+        "authority_target": null,
+        "escalation_class": null
+      }
+    },
+    {
+      "fixture_id": "F10",
+      "title": "Unresolved material source conflict holds for verification",
+      "covers": [
+        "TTD-EVID-001"
+      ],
+      "notes": "",
+      "evidence": {
+        "candidate_id": "F10",
+        "captured_at": "2026-09-04T00:00:00-01:00",
+        "source_refs": [
+          {
+            "ref_id": "S1",
+            "url": "https://organizer.example.org/events/synthetic",
+            "source_class": "FIRST_PARTY_ORGANIZER",
+            "retrieved_at": "2026-09-04T00:00:00-01:00"
+          }
+        ],
+        "assertions": [
+          {
+            "predicate": "activity_scope",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "geography_in_scope",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "materially_current",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "evidence_sufficient",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "material_source_conflict",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "required_authority_missing",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "commercial_primary_proposition",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "broader_source_conflicts_with_specific_scope",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "proposed_copy_strengthens_unknown_fact",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "primary_proposition",
+            "value": "ORDINARY_EDITORIAL_EVENT",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "candidate_already_ended",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "conflict_resolved",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          }
+        ],
+        "standards_classification": {
+          "affirmative_ordinary_scope_evidence": true,
+          "confidence": "HIGH",
+          "evidence_refs": [
+            "S1"
+          ],
+          "unresolved_dimensions": [],
+          "mixed_purpose": false,
+          "rationale": "First-party organizer description establishes an ordinary, already-governed cultural programme."
+        }
+      },
+      "expected_normalized": {
+        "ok": true,
+        "facts": {
+          "activity_scope": {
+            "state": "KNOWN",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE"
+          },
+          "broader_source_conflicts_with_specific_scope": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "candidate_already_ended": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "commercial_primary_proposition": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "conflict_resolved": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "evidence_sufficient": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "geography_in_scope": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "material_source_conflict": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "materially_current": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "primary_proposition": {
+            "state": "KNOWN",
+            "value": "ORDINARY_EDITORIAL_EVENT"
+          },
+          "proposed_copy_strengthens_unknown_fact": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "required_authority_missing": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "standards_boundary_unresolved": {
+            "state": "KNOWN",
+            "value": false
+          }
+        }
+      },
+      "expected_evaluation": {
+        "result_type": "EVALUATION",
+        "disposition": "HOLD",
+        "publication_blocked": true,
+        "human_review": false,
+        "governing_rule_id": "TTD-EVID-001",
+        "matched_rule_ids": [
+          "TTD-EVID-001"
+        ],
+        "reason_codes": [
+          "UNRESOLVED_SOURCE_CONFLICT"
+        ],
+        "field_actions": {},
+        "unresolved_dependencies": []
+      },
+      "expected_routing": {
+        "automatic_route": {
+          "next_role": "EVIDENCE_VERIFIER",
+          "next_status": "HOLD"
+        },
+        "authority_target": null,
+        "escalation_class": null
+      }
+    },
+    {
+      "fixture_id": "F11",
+      "title": "Resolved conflict does not by itself authorize selection",
+      "covers": [],
+      "notes": "TTD-EVID-001 no longer matches, but TTD-ELIG-001 still requires material_source_conflict=false. Default HOLD.",
+      "evidence": {
+        "candidate_id": "F11",
+        "captured_at": "2026-09-04T00:00:00-01:00",
+        "source_refs": [
+          {
+            "ref_id": "S1",
+            "url": "https://organizer.example.org/events/synthetic",
+            "source_class": "FIRST_PARTY_ORGANIZER",
+            "retrieved_at": "2026-09-04T00:00:00-01:00"
+          }
+        ],
+        "assertions": [
+          {
+            "predicate": "activity_scope",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "geography_in_scope",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "materially_current",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "evidence_sufficient",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "material_source_conflict",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "required_authority_missing",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "commercial_primary_proposition",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "broader_source_conflicts_with_specific_scope",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "proposed_copy_strengthens_unknown_fact",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "primary_proposition",
+            "value": "ORDINARY_EDITORIAL_EVENT",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "candidate_already_ended",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "conflict_resolved",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          }
+        ],
+        "standards_classification": {
+          "affirmative_ordinary_scope_evidence": true,
+          "confidence": "HIGH",
+          "evidence_refs": [
+            "S1"
+          ],
+          "unresolved_dimensions": [],
+          "mixed_purpose": false,
+          "rationale": "First-party organizer description establishes an ordinary, already-governed cultural programme."
+        }
+      },
+      "expected_normalized": {
+        "ok": true,
+        "facts": {
+          "activity_scope": {
+            "state": "KNOWN",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE"
+          },
+          "broader_source_conflicts_with_specific_scope": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "candidate_already_ended": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "commercial_primary_proposition": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "conflict_resolved": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "evidence_sufficient": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "geography_in_scope": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "material_source_conflict": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "materially_current": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "primary_proposition": {
+            "state": "KNOWN",
+            "value": "ORDINARY_EDITORIAL_EVENT"
+          },
+          "proposed_copy_strengthens_unknown_fact": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "required_authority_missing": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "standards_boundary_unresolved": {
+            "state": "KNOWN",
+            "value": false
+          }
+        }
+      },
+      "expected_evaluation": {
+        "result_type": "EVALUATION",
+        "disposition": "HOLD",
+        "publication_blocked": true,
+        "human_review": false,
+        "governing_rule_id": null,
+        "matched_rule_ids": [],
+        "reason_codes": [
+          "DEFAULT_HOLD_NO_AUTHORIZING_RULE"
+        ],
+        "field_actions": {},
+        "unresolved_dependencies": []
+      },
+      "expected_routing": {
+        "automatic_route": null,
+        "authority_target": "OWNING_GOVERNANCE_AUTHORITY",
+        "escalation_class": null
+      }
+    },
+    {
+      "fixture_id": "F12",
+      "title": "Broader-source scope conflict holds over an otherwise eligible candidate",
+      "covers": [
+        "TTD-ELIG-001",
+        "TTD-SOURCE-001"
+      ],
+      "notes": "SELECT and HOLD both match; HOLD takes precedence and SELECT cannot clear it.",
+      "evidence": {
+        "candidate_id": "F12",
+        "captured_at": "2026-09-04T00:00:00-01:00",
+        "source_refs": [
+          {
+            "ref_id": "S1",
+            "url": "https://organizer.example.org/events/synthetic",
+            "source_class": "FIRST_PARTY_ORGANIZER",
+            "retrieved_at": "2026-09-04T00:00:00-01:00"
+          }
+        ],
+        "assertions": [
+          {
+            "predicate": "activity_scope",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "geography_in_scope",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "materially_current",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "evidence_sufficient",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "material_source_conflict",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "required_authority_missing",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "commercial_primary_proposition",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "broader_source_conflicts_with_specific_scope",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "proposed_copy_strengthens_unknown_fact",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "primary_proposition",
+            "value": "ORDINARY_EDITORIAL_EVENT",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "candidate_already_ended",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          }
+        ],
+        "standards_classification": {
+          "affirmative_ordinary_scope_evidence": true,
+          "confidence": "HIGH",
+          "evidence_refs": [
+            "S1"
+          ],
+          "unresolved_dimensions": [],
+          "mixed_purpose": false,
+          "rationale": "First-party organizer description establishes an ordinary, already-governed cultural programme."
+        }
+      },
+      "expected_normalized": {
+        "ok": true,
+        "facts": {
+          "activity_scope": {
+            "state": "KNOWN",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE"
+          },
+          "broader_source_conflicts_with_specific_scope": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "candidate_already_ended": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "commercial_primary_proposition": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "evidence_sufficient": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "geography_in_scope": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "material_source_conflict": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "materially_current": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "primary_proposition": {
+            "state": "KNOWN",
+            "value": "ORDINARY_EDITORIAL_EVENT"
+          },
+          "proposed_copy_strengthens_unknown_fact": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "required_authority_missing": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "standards_boundary_unresolved": {
+            "state": "KNOWN",
+            "value": false
+          }
+        }
+      },
+      "expected_evaluation": {
+        "result_type": "EVALUATION",
+        "disposition": "HOLD",
+        "publication_blocked": true,
+        "human_review": false,
+        "governing_rule_id": "TTD-SOURCE-001",
+        "matched_rule_ids": [
+          "TTD-ELIG-001",
+          "TTD-SOURCE-001"
+        ],
+        "reason_codes": [
+          "ELIGIBLE_ORDINARY_ACTIVITY",
+          "SPECIFIC_SCOPE_CONFLICT"
+        ],
+        "field_actions": {},
+        "unresolved_dependencies": []
+      },
+      "expected_routing": {
+        "automatic_route": {
+          "next_role": "EVIDENCE_VERIFIER",
+          "next_status": "HOLD"
+        },
+        "authority_target": null,
+        "escalation_class": null
+      }
+    },
+    {
+      "fixture_id": "F13",
+      "title": "Copy that strengthens an unknown fact holds for revision",
+      "covers": [
+        "TTD-ELIG-001",
+        "TTD-COPY-001"
+      ],
+      "notes": "",
+      "evidence": {
+        "candidate_id": "F13",
+        "captured_at": "2026-09-04T00:00:00-01:00",
+        "source_refs": [
+          {
+            "ref_id": "S1",
+            "url": "https://organizer.example.org/events/synthetic",
+            "source_class": "FIRST_PARTY_ORGANIZER",
+            "retrieved_at": "2026-09-04T00:00:00-01:00"
+          }
+        ],
+        "assertions": [
+          {
+            "predicate": "activity_scope",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "geography_in_scope",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "materially_current",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "evidence_sufficient",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "material_source_conflict",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "required_authority_missing",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "commercial_primary_proposition",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "broader_source_conflicts_with_specific_scope",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "proposed_copy_strengthens_unknown_fact",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "primary_proposition",
+            "value": "ORDINARY_EDITORIAL_EVENT",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "candidate_already_ended",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          }
+        ],
+        "standards_classification": {
+          "affirmative_ordinary_scope_evidence": true,
+          "confidence": "HIGH",
+          "evidence_refs": [
+            "S1"
+          ],
+          "unresolved_dimensions": [],
+          "mixed_purpose": false,
+          "rationale": "First-party organizer description establishes an ordinary, already-governed cultural programme."
+        }
+      },
+      "expected_normalized": {
+        "ok": true,
+        "facts": {
+          "activity_scope": {
+            "state": "KNOWN",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE"
+          },
+          "broader_source_conflicts_with_specific_scope": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "candidate_already_ended": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "commercial_primary_proposition": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "evidence_sufficient": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "geography_in_scope": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "material_source_conflict": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "materially_current": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "primary_proposition": {
+            "state": "KNOWN",
+            "value": "ORDINARY_EDITORIAL_EVENT"
+          },
+          "proposed_copy_strengthens_unknown_fact": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "required_authority_missing": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "standards_boundary_unresolved": {
+            "state": "KNOWN",
+            "value": false
+          }
+        }
+      },
+      "expected_evaluation": {
+        "result_type": "EVALUATION",
+        "disposition": "HOLD",
+        "publication_blocked": true,
+        "human_review": false,
+        "governing_rule_id": "TTD-COPY-001",
+        "matched_rule_ids": [
+          "TTD-COPY-001",
+          "TTD-ELIG-001"
+        ],
+        "reason_codes": [
+          "COPY_OVERSTATES_EVIDENCE",
+          "ELIGIBLE_ORDINARY_ACTIVITY"
+        ],
+        "field_actions": {
+          "copy": "REVISE_TO_OMIT_OR_GOVERNED_CAVEAT"
+        },
+        "unresolved_dependencies": []
+      },
+      "expected_routing": {
+        "automatic_route": {
+          "next_role": "PUBLICATION_WRITER",
+          "next_status": "HOLD"
+        },
+        "authority_target": null,
+        "escalation_class": null
+      }
+    },
+    {
+      "fixture_id": "F14",
+      "title": "Missing governing authority holds with no automatic route",
+      "covers": [
+        "TTD-GOV-001"
+      ],
+      "notes": "",
+      "evidence": {
+        "candidate_id": "F14",
+        "captured_at": "2026-09-04T00:00:00-01:00",
+        "source_refs": [
+          {
+            "ref_id": "S1",
+            "url": "https://organizer.example.org/events/synthetic",
+            "source_class": "FIRST_PARTY_ORGANIZER",
+            "retrieved_at": "2026-09-04T00:00:00-01:00"
+          }
+        ],
+        "assertions": [
+          {
+            "predicate": "activity_scope",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "geography_in_scope",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "materially_current",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "evidence_sufficient",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "material_source_conflict",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "required_authority_missing",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "commercial_primary_proposition",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "broader_source_conflicts_with_specific_scope",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "proposed_copy_strengthens_unknown_fact",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "primary_proposition",
+            "value": "ORDINARY_EDITORIAL_EVENT",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "candidate_already_ended",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          }
+        ],
+        "standards_classification": {
+          "affirmative_ordinary_scope_evidence": true,
+          "confidence": "HIGH",
+          "evidence_refs": [
+            "S1"
+          ],
+          "unresolved_dimensions": [],
+          "mixed_purpose": false,
+          "rationale": "First-party organizer description establishes an ordinary, already-governed cultural programme."
+        }
+      },
+      "expected_normalized": {
+        "ok": true,
+        "facts": {
+          "activity_scope": {
+            "state": "KNOWN",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE"
+          },
+          "broader_source_conflicts_with_specific_scope": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "candidate_already_ended": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "commercial_primary_proposition": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "evidence_sufficient": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "geography_in_scope": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "material_source_conflict": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "materially_current": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "primary_proposition": {
+            "state": "KNOWN",
+            "value": "ORDINARY_EDITORIAL_EVENT"
+          },
+          "proposed_copy_strengthens_unknown_fact": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "required_authority_missing": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "standards_boundary_unresolved": {
+            "state": "KNOWN",
+            "value": false
+          }
+        }
+      },
+      "expected_evaluation": {
+        "result_type": "EVALUATION",
+        "disposition": "HOLD",
+        "publication_blocked": true,
+        "human_review": false,
+        "governing_rule_id": "TTD-GOV-001",
+        "matched_rule_ids": [
+          "TTD-GOV-001"
+        ],
+        "reason_codes": [
+          "MISSING_GOVERNING_AUTHORITY"
+        ],
+        "field_actions": {},
+        "unresolved_dependencies": []
+      },
+      "expected_routing": {
+        "automatic_route": null,
+        "authority_target": "OWNING_GOVERNANCE_AUTHORITY",
+        "escalation_class": null
+      }
+    },
+    {
+      "fixture_id": "F15",
+      "title": "Unresolved standards boundary holds and requires human review",
+      "covers": [
+        "TTD-GOV-002"
+      ],
+      "notes": "TTD-GOV-002 never produces a machine REJECT. It holds and routes to the governing standards authority.",
+      "evidence": {
+        "candidate_id": "F15",
+        "captured_at": "2026-09-04T00:00:00-01:00",
+        "source_refs": [
+          {
+            "ref_id": "S1",
+            "url": "https://organizer.example.org/events/synthetic",
+            "source_class": "FIRST_PARTY_ORGANIZER",
+            "retrieved_at": "2026-09-04T00:00:00-01:00"
+          }
+        ],
+        "assertions": [
+          {
+            "predicate": "activity_scope",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "geography_in_scope",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "materially_current",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "evidence_sufficient",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "material_source_conflict",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "required_authority_missing",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "commercial_primary_proposition",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "broader_source_conflicts_with_specific_scope",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "proposed_copy_strengthens_unknown_fact",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "primary_proposition",
+            "value": "ORDINARY_EDITORIAL_EVENT",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "candidate_already_ended",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          }
+        ],
+        "standards_classification": {
+          "affirmative_ordinary_scope_evidence": true,
+          "confidence": "HIGH",
+          "evidence_refs": [
+            "S1"
+          ],
+          "unresolved_dimensions": [
+            "COMMUNITY_STANDARDS_CATEGORY_NOT_APPROVED_FOR_MACHINE_ENFORCEMENT"
+          ],
+          "mixed_purpose": false,
+          "rationale": "A standards dimension remains unresolved and is not machine-authorized in v1."
+        }
+      },
+      "expected_normalized": {
+        "ok": true,
+        "facts": {
+          "activity_scope": {
+            "state": "KNOWN",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE"
+          },
+          "broader_source_conflicts_with_specific_scope": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "candidate_already_ended": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "commercial_primary_proposition": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "evidence_sufficient": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "geography_in_scope": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "material_source_conflict": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "materially_current": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "primary_proposition": {
+            "state": "KNOWN",
+            "value": "ORDINARY_EDITORIAL_EVENT"
+          },
+          "proposed_copy_strengthens_unknown_fact": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "required_authority_missing": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "standards_boundary_unresolved": {
+            "state": "KNOWN",
+            "value": true
+          }
+        }
+      },
+      "expected_evaluation": {
+        "result_type": "EVALUATION",
+        "disposition": "HOLD",
+        "publication_blocked": true,
+        "human_review": true,
+        "governing_rule_id": "TTD-GOV-002",
+        "matched_rule_ids": [
+          "TTD-GOV-002"
+        ],
+        "reason_codes": [
+          "STANDARDS_AUTHORITY_REQUIRED"
+        ],
+        "field_actions": {},
+        "unresolved_dependencies": []
+      },
+      "expected_routing": {
+        "automatic_route": {
+          "next_role": "HUMAN_ESCALATION",
+          "next_status": "ESCALATED"
+        },
+        "authority_target": "OWNING_GOVERNANCE_AUTHORITY",
+        "escalation_class": "NOVEL_POLICY_QUESTION"
+      }
+    },
+    {
+      "fixture_id": "F16",
+      "title": "Ongoing commercial proposition matches the DEFERRED rule and holds",
+      "covers": [
+        "TTD-COMM-003"
+      ],
+      "notes": "DEFERRED rules are evaluated, never skipped, and always HOLD and block when matched.",
+      "evidence": {
+        "candidate_id": "F16",
+        "captured_at": "2026-09-04T00:00:00-01:00",
+        "source_refs": [
+          {
+            "ref_id": "S1",
+            "url": "https://organizer.example.org/events/synthetic",
+            "source_class": "FIRST_PARTY_ORGANIZER",
+            "retrieved_at": "2026-09-04T00:00:00-01:00"
+          }
+        ],
+        "assertions": [
+          {
+            "predicate": "activity_scope",
+            "value": "ONGOING_COMMERCIAL_TOUR_EXCURSION_CLASS_EXPERIENCE_PACKAGE_OR_SERVICE",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "geography_in_scope",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "materially_current",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "evidence_sufficient",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "material_source_conflict",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "required_authority_missing",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "commercial_primary_proposition",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "broader_source_conflicts_with_specific_scope",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "proposed_copy_strengthens_unknown_fact",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "primary_proposition",
+            "value": "ONGOING_COMMERCIAL_TOUR_EXCURSION_CLASS_EXPERIENCE_PACKAGE_OR_SERVICE",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "candidate_already_ended",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          }
+        ],
+        "standards_classification": {
+          "affirmative_ordinary_scope_evidence": true,
+          "confidence": "HIGH",
+          "evidence_refs": [
+            "S1"
+          ],
+          "unresolved_dimensions": [],
+          "mixed_purpose": false,
+          "rationale": "First-party organizer description establishes an ordinary, already-governed cultural programme."
+        }
+      },
+      "expected_normalized": {
+        "ok": true,
+        "facts": {
+          "activity_scope": {
+            "state": "KNOWN",
+            "value": "ONGOING_COMMERCIAL_TOUR_EXCURSION_CLASS_EXPERIENCE_PACKAGE_OR_SERVICE"
+          },
+          "broader_source_conflicts_with_specific_scope": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "candidate_already_ended": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "commercial_primary_proposition": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "evidence_sufficient": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "geography_in_scope": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "material_source_conflict": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "materially_current": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "primary_proposition": {
+            "state": "KNOWN",
+            "value": "ONGOING_COMMERCIAL_TOUR_EXCURSION_CLASS_EXPERIENCE_PACKAGE_OR_SERVICE"
+          },
+          "proposed_copy_strengthens_unknown_fact": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "required_authority_missing": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "standards_boundary_unresolved": {
+            "state": "KNOWN",
+            "value": false
+          }
+        }
+      },
+      "expected_evaluation": {
+        "result_type": "EVALUATION",
+        "disposition": "HOLD",
+        "publication_blocked": true,
+        "human_review": true,
+        "governing_rule_id": "TTD-COMM-003",
+        "matched_rule_ids": [
+          "TTD-COMM-003"
+        ],
+        "reason_codes": [
+          "COMMERCIAL_TREATMENT_REQUIRED"
+        ],
+        "field_actions": {},
+        "unresolved_dependencies": []
+      },
+      "expected_routing": {
+        "automatic_route": {
+          "next_role": "HUMAN_ESCALATION",
+          "next_status": "ESCALATED"
+        },
+        "authority_target": "OWNING_GOVERNANCE_AUTHORITY",
+        "escalation_class": "COMMERCIAL_POLICY_UNRESOLVED"
+      }
+    },
+    {
+      "fixture_id": "F17",
+      "title": "A candidate that has fully ended is rejected",
+      "covers": [
+        "TTD-CURRENT-001"
+      ],
+      "notes": "",
+      "evidence": {
+        "candidate_id": "F17",
+        "captured_at": "2026-09-04T00:00:00-01:00",
+        "source_refs": [
+          {
+            "ref_id": "S1",
+            "url": "https://organizer.example.org/events/synthetic",
+            "source_class": "FIRST_PARTY_ORGANIZER",
+            "retrieved_at": "2026-09-04T00:00:00-01:00"
+          }
+        ],
+        "assertions": [
+          {
+            "predicate": "activity_scope",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "geography_in_scope",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "materially_current",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "evidence_sufficient",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "material_source_conflict",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "required_authority_missing",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "commercial_primary_proposition",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "broader_source_conflicts_with_specific_scope",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "proposed_copy_strengthens_unknown_fact",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "primary_proposition",
+            "value": "ORDINARY_EDITORIAL_EVENT",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "candidate_already_ended",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          }
+        ],
+        "standards_classification": {
+          "affirmative_ordinary_scope_evidence": true,
+          "confidence": "HIGH",
+          "evidence_refs": [
+            "S1"
+          ],
+          "unresolved_dimensions": [],
+          "mixed_purpose": false,
+          "rationale": "First-party organizer description establishes an ordinary, already-governed cultural programme."
+        }
+      },
+      "expected_normalized": {
+        "ok": true,
+        "facts": {
+          "activity_scope": {
+            "state": "KNOWN",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE"
+          },
+          "broader_source_conflicts_with_specific_scope": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "candidate_already_ended": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "commercial_primary_proposition": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "evidence_sufficient": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "geography_in_scope": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "material_source_conflict": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "materially_current": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "primary_proposition": {
+            "state": "KNOWN",
+            "value": "ORDINARY_EDITORIAL_EVENT"
+          },
+          "proposed_copy_strengthens_unknown_fact": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "required_authority_missing": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "standards_boundary_unresolved": {
+            "state": "KNOWN",
+            "value": false
+          }
+        }
+      },
+      "expected_evaluation": {
+        "result_type": "EVALUATION",
+        "disposition": "REJECT",
+        "publication_blocked": true,
+        "human_review": false,
+        "governing_rule_id": "TTD-CURRENT-001",
+        "matched_rule_ids": [
+          "TTD-CURRENT-001"
+        ],
+        "reason_codes": [
+          "NO_LONGER_CURRENT"
+        ],
+        "field_actions": {},
+        "unresolved_dependencies": []
+      },
+      "expected_routing": {
+        "automatic_route": {
+          "next_role": "LIFECYCLE_MONITOR",
+          "next_status": "REJECTED"
+        },
+        "authority_target": null,
+        "escalation_class": null
+      }
+    },
+    {
+      "fixture_id": "F18",
+      "title": "Standards HOLD takes precedence over currentness REJECT",
+      "covers": [
+        "TTD-CURRENT-001",
+        "TTD-GOV-002"
+      ],
+      "notes": "Precedence is HOLD > REJECT. The ended candidate is not machine-rejected while a standards question is open.",
+      "evidence": {
+        "candidate_id": "F18",
+        "captured_at": "2026-09-04T00:00:00-01:00",
+        "source_refs": [
+          {
+            "ref_id": "S1",
+            "url": "https://organizer.example.org/events/synthetic",
+            "source_class": "FIRST_PARTY_ORGANIZER",
+            "retrieved_at": "2026-09-04T00:00:00-01:00"
+          }
+        ],
+        "assertions": [
+          {
+            "predicate": "activity_scope",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "geography_in_scope",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "materially_current",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "evidence_sufficient",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "material_source_conflict",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "required_authority_missing",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "commercial_primary_proposition",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "broader_source_conflicts_with_specific_scope",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "proposed_copy_strengthens_unknown_fact",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "primary_proposition",
+            "value": "ORDINARY_EDITORIAL_EVENT",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "candidate_already_ended",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          }
+        ],
+        "standards_classification": {
+          "affirmative_ordinary_scope_evidence": true,
+          "confidence": "HIGH",
+          "evidence_refs": [
+            "S1"
+          ],
+          "unresolved_dimensions": [
+            "COMMUNITY_STANDARDS_CATEGORY_NOT_APPROVED_FOR_MACHINE_ENFORCEMENT"
+          ],
+          "mixed_purpose": false,
+          "rationale": "A standards dimension remains unresolved and is not machine-authorized in v1."
+        }
+      },
+      "expected_normalized": {
+        "ok": true,
+        "facts": {
+          "activity_scope": {
+            "state": "KNOWN",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE"
+          },
+          "broader_source_conflicts_with_specific_scope": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "candidate_already_ended": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "commercial_primary_proposition": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "evidence_sufficient": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "geography_in_scope": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "material_source_conflict": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "materially_current": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "primary_proposition": {
+            "state": "KNOWN",
+            "value": "ORDINARY_EDITORIAL_EVENT"
+          },
+          "proposed_copy_strengthens_unknown_fact": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "required_authority_missing": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "standards_boundary_unresolved": {
+            "state": "KNOWN",
+            "value": true
+          }
+        }
+      },
+      "expected_evaluation": {
+        "result_type": "EVALUATION",
+        "disposition": "HOLD",
+        "publication_blocked": true,
+        "human_review": true,
+        "governing_rule_id": "TTD-GOV-002",
+        "matched_rule_ids": [
+          "TTD-CURRENT-001",
+          "TTD-GOV-002"
+        ],
+        "reason_codes": [
+          "NO_LONGER_CURRENT",
+          "STANDARDS_AUTHORITY_REQUIRED"
+        ],
+        "field_actions": {},
+        "unresolved_dependencies": []
+      },
+      "expected_routing": {
+        "automatic_route": {
+          "next_role": "HUMAN_ESCALATION",
+          "next_status": "ESCALATED"
+        },
+        "authority_target": "OWNING_GOVERNANCE_AUTHORITY",
+        "escalation_class": "NOVEL_POLICY_QUESTION"
+      }
+    },
+    {
+      "fixture_id": "F19A",
+      "title": "Client status does not entitle: independently eligible client selects",
+      "covers": [
+        "TTD-ELIG-001",
+        "TTD-COMM-004"
+      ],
+      "notes": "",
+      "evidence": {
+        "candidate_id": "F19A",
+        "captured_at": "2026-09-04T00:00:00-01:00",
+        "source_refs": [
+          {
+            "ref_id": "S1",
+            "url": "https://organizer.example.org/events/synthetic",
+            "source_class": "FIRST_PARTY_ORGANIZER",
+            "retrieved_at": "2026-09-04T00:00:00-01:00"
+          }
+        ],
+        "assertions": [
+          {
+            "predicate": "activity_scope",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "geography_in_scope",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "materially_current",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "evidence_sufficient",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "material_source_conflict",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "required_authority_missing",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "commercial_primary_proposition",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "broader_source_conflicts_with_specific_scope",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "proposed_copy_strengthens_unknown_fact",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "primary_proposition",
+            "value": "ORDINARY_EDITORIAL_EVENT",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "candidate_already_ended",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "current_or_former_client",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          }
+        ],
+        "standards_classification": {
+          "affirmative_ordinary_scope_evidence": true,
+          "confidence": "HIGH",
+          "evidence_refs": [
+            "S1"
+          ],
+          "unresolved_dimensions": [],
+          "mixed_purpose": false,
+          "rationale": "First-party organizer description establishes an ordinary, already-governed cultural programme."
+        }
+      },
+      "expected_normalized": {
+        "ok": true,
+        "facts": {
+          "activity_scope": {
+            "state": "KNOWN",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE"
+          },
+          "broader_source_conflicts_with_specific_scope": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "candidate_already_ended": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "commercial_primary_proposition": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "current_or_former_client": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "evidence_sufficient": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "geography_in_scope": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "material_source_conflict": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "materially_current": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "primary_proposition": {
+            "state": "KNOWN",
+            "value": "ORDINARY_EDITORIAL_EVENT"
+          },
+          "proposed_copy_strengthens_unknown_fact": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "required_authority_missing": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "standards_boundary_unresolved": {
+            "state": "KNOWN",
+            "value": false
+          }
+        }
+      },
+      "expected_evaluation": {
+        "result_type": "EVALUATION",
+        "disposition": "SELECT",
+        "publication_blocked": false,
+        "human_review": false,
+        "governing_rule_id": "TTD-ELIG-001",
+        "matched_rule_ids": [
+          "TTD-COMM-004",
+          "TTD-ELIG-001"
+        ],
+        "reason_codes": [
+          "CLIENT_STATUS_DOES_NOT_CONTROL_EDITORIAL_ELIGIBILITY",
+          "ELIGIBLE_ORDINARY_ACTIVITY"
+        ],
+        "field_actions": {},
+        "unresolved_dependencies": []
+      },
+      "expected_routing": {
+        "automatic_route": {
+          "next_role": "LOCALIZATION_WORKER",
+          "next_status": "SELECTED"
+        },
+        "authority_target": null,
+        "escalation_class": null
+      }
+    },
+    {
+      "fixture_id": "F19B",
+      "title": "Client status does not penalize or rescue: ineligible client holds",
+      "covers": [
+        "TTD-COMM-004"
+      ],
+      "notes": "Only a NO_CHANGE rule matches. NO_CHANGE cannot authorize an outcome, so the default HOLD applies.",
+      "evidence": {
+        "candidate_id": "F19B",
+        "captured_at": "2026-09-04T00:00:00-01:00",
+        "source_refs": [
+          {
+            "ref_id": "S1",
+            "url": "https://organizer.example.org/events/synthetic",
+            "source_class": "FIRST_PARTY_ORGANIZER",
+            "retrieved_at": "2026-09-04T00:00:00-01:00"
+          }
+        ],
+        "assertions": [
+          {
+            "predicate": "activity_scope",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "geography_in_scope",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "materially_current",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "evidence_sufficient",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "material_source_conflict",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "required_authority_missing",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "commercial_primary_proposition",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "broader_source_conflicts_with_specific_scope",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "proposed_copy_strengthens_unknown_fact",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "primary_proposition",
+            "value": "ORDINARY_EDITORIAL_EVENT",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "candidate_already_ended",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "current_or_former_client",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          }
+        ],
+        "standards_classification": {
+          "affirmative_ordinary_scope_evidence": true,
+          "confidence": "HIGH",
+          "evidence_refs": [
+            "S1"
+          ],
+          "unresolved_dimensions": [],
+          "mixed_purpose": false,
+          "rationale": "First-party organizer description establishes an ordinary, already-governed cultural programme."
+        }
+      },
+      "expected_normalized": {
+        "ok": true,
+        "facts": {
+          "activity_scope": {
+            "state": "KNOWN",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE"
+          },
+          "broader_source_conflicts_with_specific_scope": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "candidate_already_ended": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "commercial_primary_proposition": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "current_or_former_client": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "evidence_sufficient": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "geography_in_scope": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "material_source_conflict": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "materially_current": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "primary_proposition": {
+            "state": "KNOWN",
+            "value": "ORDINARY_EDITORIAL_EVENT"
+          },
+          "proposed_copy_strengthens_unknown_fact": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "required_authority_missing": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "standards_boundary_unresolved": {
+            "state": "KNOWN",
+            "value": false
+          }
+        }
+      },
+      "expected_evaluation": {
+        "result_type": "EVALUATION",
+        "disposition": "HOLD",
+        "publication_blocked": true,
+        "human_review": false,
+        "governing_rule_id": null,
+        "matched_rule_ids": [
+          "TTD-COMM-004"
+        ],
+        "reason_codes": [
+          "CLIENT_STATUS_DOES_NOT_CONTROL_EDITORIAL_ELIGIBILITY",
+          "DEFAULT_HOLD_NO_AUTHORIZING_RULE"
+        ],
+        "field_actions": {},
+        "unresolved_dependencies": []
+      },
+      "expected_routing": {
+        "automatic_route": null,
+        "authority_target": "OWNING_GOVERNANCE_AUTHORITY",
+        "escalation_class": null
+      }
+    },
+    {
+      "fixture_id": "F20",
+      "title": "An unknown material eligibility input holds and is named as a dependency",
+      "covers": [],
+      "notes": "evidence_sufficient is absent. Absence must not be read as a favorable false.",
+      "evidence": {
+        "candidate_id": "F20",
+        "captured_at": "2026-09-04T00:00:00-01:00",
+        "source_refs": [
+          {
+            "ref_id": "S1",
+            "url": "https://organizer.example.org/events/synthetic",
+            "source_class": "FIRST_PARTY_ORGANIZER",
+            "retrieved_at": "2026-09-04T00:00:00-01:00"
+          }
+        ],
+        "assertions": [
+          {
+            "predicate": "activity_scope",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "geography_in_scope",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "materially_current",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "material_source_conflict",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "required_authority_missing",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "commercial_primary_proposition",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "broader_source_conflicts_with_specific_scope",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "proposed_copy_strengthens_unknown_fact",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "primary_proposition",
+            "value": "ORDINARY_EDITORIAL_EVENT",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "candidate_already_ended",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          }
+        ],
+        "standards_classification": {
+          "affirmative_ordinary_scope_evidence": true,
+          "confidence": "HIGH",
+          "evidence_refs": [
+            "S1"
+          ],
+          "unresolved_dimensions": [],
+          "mixed_purpose": false,
+          "rationale": "First-party organizer description establishes an ordinary, already-governed cultural programme."
+        }
+      },
+      "expected_normalized": {
+        "ok": true,
+        "facts": {
+          "activity_scope": {
+            "state": "KNOWN",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE"
+          },
+          "broader_source_conflicts_with_specific_scope": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "candidate_already_ended": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "commercial_primary_proposition": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "geography_in_scope": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "material_source_conflict": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "materially_current": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "primary_proposition": {
+            "state": "KNOWN",
+            "value": "ORDINARY_EDITORIAL_EVENT"
+          },
+          "proposed_copy_strengthens_unknown_fact": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "required_authority_missing": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "standards_boundary_unresolved": {
+            "state": "KNOWN",
+            "value": false
+          }
+        }
+      },
+      "expected_evaluation": {
+        "result_type": "EVALUATION",
+        "disposition": "HOLD",
+        "publication_blocked": true,
+        "human_review": false,
+        "governing_rule_id": null,
+        "matched_rule_ids": [],
+        "reason_codes": [
+          "DEFAULT_HOLD_NO_AUTHORIZING_RULE"
+        ],
+        "field_actions": {},
+        "unresolved_dependencies": [
+          "evidence_sufficient"
+        ]
+      },
+      "expected_routing": {
+        "automatic_route": null,
+        "authority_target": "OWNING_GOVERNANCE_AUTHORITY",
+        "escalation_class": null
+      }
+    },
+    {
+      "fixture_id": "F21",
+      "title": "Unknown admission verification state produces no admission field action",
+      "covers": [
+        "TTD-ELIG-001"
+      ],
+      "notes": "admission_verified is UNKNOWN, which does not satisfy the declared false. No free-admission inference is possible.",
+      "evidence": {
+        "candidate_id": "F21",
+        "captured_at": "2026-09-04T00:00:00-01:00",
+        "source_refs": [
+          {
+            "ref_id": "S1",
+            "url": "https://organizer.example.org/events/synthetic",
+            "source_class": "FIRST_PARTY_ORGANIZER",
+            "retrieved_at": "2026-09-04T00:00:00-01:00"
+          }
+        ],
+        "assertions": [
+          {
+            "predicate": "activity_scope",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "geography_in_scope",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "materially_current",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "evidence_sufficient",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "material_source_conflict",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "required_authority_missing",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "commercial_primary_proposition",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "broader_source_conflicts_with_specific_scope",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "proposed_copy_strengthens_unknown_fact",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "primary_proposition",
+            "value": "ORDINARY_EDITORIAL_EVENT",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "candidate_already_ended",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "admission_verified",
+            "value": false,
+            "confidence": "LOW",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          }
+        ],
+        "standards_classification": {
+          "affirmative_ordinary_scope_evidence": true,
+          "confidence": "HIGH",
+          "evidence_refs": [
+            "S1"
+          ],
+          "unresolved_dimensions": [],
+          "mixed_purpose": false,
+          "rationale": "First-party organizer description establishes an ordinary, already-governed cultural programme."
+        }
+      },
+      "expected_normalized": {
+        "ok": true,
+        "facts": {
+          "activity_scope": {
+            "state": "KNOWN",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE"
+          },
+          "admission_verified": {
+            "state": "UNKNOWN"
+          },
+          "broader_source_conflicts_with_specific_scope": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "candidate_already_ended": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "commercial_primary_proposition": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "evidence_sufficient": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "geography_in_scope": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "material_source_conflict": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "materially_current": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "primary_proposition": {
+            "state": "KNOWN",
+            "value": "ORDINARY_EDITORIAL_EVENT"
+          },
+          "proposed_copy_strengthens_unknown_fact": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "required_authority_missing": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "standards_boundary_unresolved": {
+            "state": "KNOWN",
+            "value": false
+          }
+        }
+      },
+      "expected_evaluation": {
+        "result_type": "EVALUATION",
+        "disposition": "SELECT",
+        "publication_blocked": false,
+        "human_review": false,
+        "governing_rule_id": "TTD-ELIG-001",
+        "matched_rule_ids": [
+          "TTD-ELIG-001"
+        ],
+        "reason_codes": [
+          "ELIGIBLE_ORDINARY_ACTIVITY"
+        ],
+        "field_actions": {},
+        "unresolved_dependencies": []
+      },
+      "expected_routing": {
+        "automatic_route": {
+          "next_role": "LOCALIZATION_WORKER",
+          "next_status": "SELECTED"
+        },
+        "authority_target": null,
+        "escalation_class": null
+      }
+    },
+    {
+      "fixture_id": "F22",
+      "title": "Ticketing, payment and client status together remain non-disqualifying",
+      "covers": [
+        "TTD-ELIG-001",
+        "TTD-COMM-001",
+        "TTD-COMM-002",
+        "TTD-COMM-004"
+      ],
+      "notes": "",
+      "evidence": {
+        "candidate_id": "F22",
+        "captured_at": "2026-09-04T00:00:00-01:00",
+        "source_refs": [
+          {
+            "ref_id": "S1",
+            "url": "https://organizer.example.org/events/synthetic",
+            "source_class": "FIRST_PARTY_ORGANIZER",
+            "retrieved_at": "2026-09-04T00:00:00-01:00"
+          }
+        ],
+        "assertions": [
+          {
+            "predicate": "activity_scope",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "geography_in_scope",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "materially_current",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "evidence_sufficient",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "material_source_conflict",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "required_authority_missing",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "commercial_primary_proposition",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "broader_source_conflicts_with_specific_scope",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "proposed_copy_strengthens_unknown_fact",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "primary_proposition",
+            "value": "ORDINARY_EDITORIAL_EVENT",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "candidate_already_ended",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "ordinary_editorial_event",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "ticketed_or_commercial_venue",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "payment_or_commercial_relationship",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "current_or_former_client",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          }
+        ],
+        "standards_classification": {
+          "affirmative_ordinary_scope_evidence": true,
+          "confidence": "HIGH",
+          "evidence_refs": [
+            "S1"
+          ],
+          "unresolved_dimensions": [],
+          "mixed_purpose": false,
+          "rationale": "First-party organizer description establishes an ordinary, already-governed cultural programme."
+        }
+      },
+      "expected_normalized": {
+        "ok": true,
+        "facts": {
+          "activity_scope": {
+            "state": "KNOWN",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE"
+          },
+          "broader_source_conflicts_with_specific_scope": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "candidate_already_ended": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "commercial_primary_proposition": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "current_or_former_client": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "evidence_sufficient": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "geography_in_scope": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "material_source_conflict": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "materially_current": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "ordinary_editorial_event": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "payment_or_commercial_relationship": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "primary_proposition": {
+            "state": "KNOWN",
+            "value": "ORDINARY_EDITORIAL_EVENT"
+          },
+          "proposed_copy_strengthens_unknown_fact": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "required_authority_missing": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "standards_boundary_unresolved": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "ticketed_or_commercial_venue": {
+            "state": "KNOWN",
+            "value": true
+          }
+        }
+      },
+      "expected_evaluation": {
+        "result_type": "EVALUATION",
+        "disposition": "SELECT",
+        "publication_blocked": false,
+        "human_review": false,
+        "governing_rule_id": "TTD-ELIG-001",
+        "matched_rule_ids": [
+          "TTD-COMM-001",
+          "TTD-COMM-002",
+          "TTD-COMM-004",
+          "TTD-ELIG-001"
+        ],
+        "reason_codes": [
+          "CLIENT_STATUS_DOES_NOT_CONTROL_EDITORIAL_ELIGIBILITY",
+          "EDITORIAL_INDEPENDENCE",
+          "ELIGIBLE_ORDINARY_ACTIVITY",
+          "TICKETING_NOT_EDITORIAL_DISQUALIFIER"
+        ],
+        "field_actions": {},
+        "unresolved_dependencies": []
+      },
+      "expected_routing": {
+        "automatic_route": {
+          "next_role": "LOCALIZATION_WORKER",
+          "next_status": "SELECTED"
+        },
+        "authority_target": null,
+        "escalation_class": null
+      }
+    },
+    {
+      "fixture_id": "F23",
+      "title": "NO_CHANGE field actions survive a default HOLD without authorizing it",
+      "covers": [
+        "TTD-DATE-001"
+      ],
+      "notes": "Currentness is unknown, so no substantive rule applies. The date-precision field actions are still recorded.",
+      "evidence": {
+        "candidate_id": "F23",
+        "captured_at": "2026-09-04T00:00:00-01:00",
+        "source_refs": [
+          {
+            "ref_id": "S1",
+            "url": "https://organizer.example.org/events/synthetic",
+            "source_class": "FIRST_PARTY_ORGANIZER",
+            "retrieved_at": "2026-09-04T00:00:00-01:00"
+          }
+        ],
+        "assertions": [
+          {
+            "predicate": "activity_scope",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "geography_in_scope",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "evidence_sufficient",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "material_source_conflict",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "required_authority_missing",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "commercial_primary_proposition",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "broader_source_conflicts_with_specific_scope",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "proposed_copy_strengthens_unknown_fact",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "primary_proposition",
+            "value": "ORDINARY_EDITORIAL_EVENT",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "candidate_already_ended",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "authoritative_end_precision",
+            "value": "MONTH",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          }
+        ],
+        "standards_classification": {
+          "affirmative_ordinary_scope_evidence": true,
+          "confidence": "HIGH",
+          "evidence_refs": [
+            "S1"
+          ],
+          "unresolved_dimensions": [],
+          "mixed_purpose": false,
+          "rationale": "First-party organizer description establishes an ordinary, already-governed cultural programme."
+        }
+      },
+      "expected_normalized": {
+        "ok": true,
+        "facts": {
+          "activity_scope": {
+            "state": "KNOWN",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE"
+          },
+          "authoritative_end_precision": {
+            "state": "KNOWN",
+            "value": "MONTH"
+          },
+          "broader_source_conflicts_with_specific_scope": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "candidate_already_ended": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "commercial_primary_proposition": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "evidence_sufficient": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "geography_in_scope": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "material_source_conflict": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "primary_proposition": {
+            "state": "KNOWN",
+            "value": "ORDINARY_EDITORIAL_EVENT"
+          },
+          "proposed_copy_strengthens_unknown_fact": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "required_authority_missing": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "standards_boundary_unresolved": {
+            "state": "KNOWN",
+            "value": false
+          }
+        }
+      },
+      "expected_evaluation": {
+        "result_type": "EVALUATION",
+        "disposition": "HOLD",
+        "publication_blocked": true,
+        "human_review": false,
+        "governing_rule_id": null,
+        "matched_rule_ids": [
+          "TTD-DATE-001"
+        ],
+        "reason_codes": [
+          "DEFAULT_HOLD_NO_AUTHORIZING_RULE",
+          "PRESERVE_DATE_PRECISION"
+        ],
+        "field_actions": {
+          "end_date_precision": "PRESERVE_MONTH",
+          "invent_exact_day": false,
+          "month_boundary_state": "REVIEW_DUE"
+        },
+        "unresolved_dependencies": [
+          "materially_current"
+        ]
+      },
+      "expected_routing": {
+        "automatic_route": null,
+        "authority_target": "OWNING_GOVERNANCE_AUTHORITY",
+        "escalation_class": null
+      }
+    },
+    {
+      "fixture_id": "F24",
+      "title": "Out-of-scope geography holds by default rather than rejecting",
+      "covers": [],
+      "notes": "No approved v1 rule rejects out-of-scope geography. It fails closed to HOLD.",
+      "evidence": {
+        "candidate_id": "F24",
+        "captured_at": "2026-09-04T00:00:00-01:00",
+        "source_refs": [
+          {
+            "ref_id": "S1",
+            "url": "https://organizer.example.org/events/synthetic",
+            "source_class": "FIRST_PARTY_ORGANIZER",
+            "retrieved_at": "2026-09-04T00:00:00-01:00"
+          }
+        ],
+        "assertions": [
+          {
+            "predicate": "activity_scope",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "geography_in_scope",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "materially_current",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "evidence_sufficient",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "material_source_conflict",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "required_authority_missing",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "commercial_primary_proposition",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "broader_source_conflicts_with_specific_scope",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "proposed_copy_strengthens_unknown_fact",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "primary_proposition",
+            "value": "ORDINARY_EDITORIAL_EVENT",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "candidate_already_ended",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          }
+        ],
+        "standards_classification": {
+          "affirmative_ordinary_scope_evidence": true,
+          "confidence": "HIGH",
+          "evidence_refs": [
+            "S1"
+          ],
+          "unresolved_dimensions": [],
+          "mixed_purpose": false,
+          "rationale": "First-party organizer description establishes an ordinary, already-governed cultural programme."
+        }
+      },
+      "expected_normalized": {
+        "ok": true,
+        "facts": {
+          "activity_scope": {
+            "state": "KNOWN",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE"
+          },
+          "broader_source_conflicts_with_specific_scope": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "candidate_already_ended": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "commercial_primary_proposition": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "evidence_sufficient": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "geography_in_scope": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "material_source_conflict": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "materially_current": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "primary_proposition": {
+            "state": "KNOWN",
+            "value": "ORDINARY_EDITORIAL_EVENT"
+          },
+          "proposed_copy_strengthens_unknown_fact": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "required_authority_missing": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "standards_boundary_unresolved": {
+            "state": "KNOWN",
+            "value": false
+          }
+        }
+      },
+      "expected_evaluation": {
+        "result_type": "EVALUATION",
+        "disposition": "HOLD",
+        "publication_blocked": true,
+        "human_review": false,
+        "governing_rule_id": null,
+        "matched_rule_ids": [],
+        "reason_codes": [
+          "DEFAULT_HOLD_NO_AUTHORIZING_RULE"
+        ],
+        "field_actions": {},
+        "unresolved_dependencies": []
+      },
+      "expected_routing": {
+        "automatic_route": null,
+        "authority_target": "OWNING_GOVERNANCE_AUTHORITY",
+        "escalation_class": null
+      }
+    },
+    {
+      "fixture_id": "F25",
+      "title": "An empty evidence record fails closed to the standards authority",
+      "covers": [
+        "TTD-GOV-002"
+      ],
+      "notes": "No assertions and no standards classification. Absence of adverse signal is not affirmative ordinary-scope evidence.",
+      "evidence": {
+        "candidate_id": "F25",
+        "captured_at": "2026-09-04T00:00:00-01:00",
+        "source_refs": [],
+        "assertions": []
+      },
+      "expected_normalized": {
+        "ok": true,
+        "facts": {
+          "standards_boundary_unresolved": {
+            "state": "KNOWN",
+            "value": true
+          }
+        }
+      },
+      "expected_evaluation": {
+        "result_type": "EVALUATION",
+        "disposition": "HOLD",
+        "publication_blocked": true,
+        "human_review": true,
+        "governing_rule_id": "TTD-GOV-002",
+        "matched_rule_ids": [
+          "TTD-GOV-002"
+        ],
+        "reason_codes": [
+          "STANDARDS_AUTHORITY_REQUIRED"
+        ],
+        "field_actions": {},
+        "unresolved_dependencies": [
+          "broader_source_conflicts_with_specific_scope",
+          "candidate_already_ended",
+          "material_source_conflict",
+          "materially_current",
+          "primary_proposition",
+          "proposed_copy_strengthens_unknown_fact",
+          "required_authority_missing"
+        ]
+      },
+      "expected_routing": {
+        "automatic_route": {
+          "next_role": "HUMAN_ESCALATION",
+          "next_status": "ESCALATED"
+        },
+        "authority_target": "OWNING_GOVERNANCE_AUTHORITY",
+        "escalation_class": "NOVEL_POLICY_QUESTION"
+      }
+    },
+    {
+      "fixture_id": "F-MEDIA-FALLBACK-01",
+      "title": "Unclear media rights with no governed fallback available",
+      "covers": [
+        "TTD-ELIG-001"
+      ],
+      "notes": "TTD-MEDIA-001 requires both predicates true, so it does not match and no media field action is produced. The v1 policy declares no rule that blocks selection in this state; the gap is recorded for Project 03 rather than closed by Project 04 invention.",
+      "evidence": {
+        "candidate_id": "F-MEDIA-FALLBACK-01",
+        "captured_at": "2026-09-04T00:00:00-01:00",
+        "source_refs": [
+          {
+            "ref_id": "S1",
+            "url": "https://organizer.example.org/events/synthetic",
+            "source_class": "FIRST_PARTY_ORGANIZER",
+            "retrieved_at": "2026-09-04T00:00:00-01:00"
+          }
+        ],
+        "assertions": [
+          {
+            "predicate": "activity_scope",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "geography_in_scope",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "materially_current",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "evidence_sufficient",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "material_source_conflict",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "required_authority_missing",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "commercial_primary_proposition",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "broader_source_conflicts_with_specific_scope",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "proposed_copy_strengthens_unknown_fact",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "primary_proposition",
+            "value": "ORDINARY_EDITORIAL_EVENT",
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "candidate_already_ended",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "authentic_media_rights_unclear",
+            "value": true,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          },
+          {
+            "predicate": "governed_editorial_fallback_available",
+            "value": false,
+            "confidence": "HIGH",
+            "evidence_refs": [
+              "S1"
+            ],
+            "rationale": "Synthetic fixture evidence."
+          }
+        ],
+        "standards_classification": {
+          "affirmative_ordinary_scope_evidence": true,
+          "confidence": "HIGH",
+          "evidence_refs": [
+            "S1"
+          ],
+          "unresolved_dimensions": [],
+          "mixed_purpose": false,
+          "rationale": "First-party organizer description establishes an ordinary, already-governed cultural programme."
+        }
+      },
+      "expected_normalized": {
+        "ok": true,
+        "facts": {
+          "activity_scope": {
+            "state": "KNOWN",
+            "value": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE"
+          },
+          "authentic_media_rights_unclear": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "broader_source_conflicts_with_specific_scope": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "candidate_already_ended": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "commercial_primary_proposition": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "evidence_sufficient": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "geography_in_scope": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "governed_editorial_fallback_available": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "material_source_conflict": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "materially_current": {
+            "state": "KNOWN",
+            "value": true
+          },
+          "primary_proposition": {
+            "state": "KNOWN",
+            "value": "ORDINARY_EDITORIAL_EVENT"
+          },
+          "proposed_copy_strengthens_unknown_fact": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "required_authority_missing": {
+            "state": "KNOWN",
+            "value": false
+          },
+          "standards_boundary_unresolved": {
+            "state": "KNOWN",
+            "value": false
+          }
+        }
+      },
+      "expected_evaluation": {
+        "result_type": "EVALUATION",
+        "disposition": "SELECT",
+        "publication_blocked": false,
+        "human_review": false,
+        "governing_rule_id": "TTD-ELIG-001",
+        "matched_rule_ids": [
+          "TTD-ELIG-001"
+        ],
+        "reason_codes": [
+          "ELIGIBLE_ORDINARY_ACTIVITY"
+        ],
+        "field_actions": {},
+        "unresolved_dependencies": []
+      },
+      "expected_routing": {
+        "automatic_route": {
+          "next_role": "LOCALIZATION_WORKER",
+          "next_status": "SELECTED"
+        },
+        "authority_target": null,
+        "escalation_class": null
+      }
+    }
+  ]
+}
