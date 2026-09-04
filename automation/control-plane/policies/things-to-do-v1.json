@@ -5,20 +5,33 @@
   "authority": {
     "owner": "PROJECT_03",
     "technical_interpreter": "PROJECT_04",
-    "notes": "Conservative machine-readable baseline derived only from already-approved A PRASA editorial/community standards and established publication precedents. Project 04 may implement and validate this specification but may not create new editorial policy. Default HOLD is intentional for unrepresented or ambiguous cases."
+    "approval_reference": "PROJECT_03_POLICY_FIDELITY_REVIEW_2026-09-04",
+    "notes": "Machine-readable baseline limited to Project 03-approved Things to Do semantics. Project 04 may implement and validate this specification but may not create new editorial policy. Unrepresented or authority-deficient cases fail closed to HOLD."
   },
   "default_disposition": "HOLD",
+  "composition": {
+    "predicate_semantics": "ALL_DECLARED_PREDICATES_MUST_BE_PRESENT_AND_EQUAL",
+    "unknown_material_input": "HOLD",
+    "deferred_match": "HOLD_AND_BLOCK",
+    "blocking_is_monotonic": true,
+    "no_change_is_non_clearing": true,
+    "disposition_precedence": ["HOLD", "REJECT", "SELECT", "NO_CHANGE"],
+    "human_review_semantics": "STOP_AUTONOMOUS_PROGRESSION_AND_ROUTE_TO_DECLARED_AUTHORITY"
+  },
   "rules": [
     {
       "rule_id": "TTD-ELIG-001",
       "status": "ACTIVE",
-      "description": "Ordinary cultural, community, public-interest or general-audience activity may be editorially selected when the activity is within geographic scope, materially current, sufficiently evidenced, and no exclusion rule applies.",
+      "description": "Ordinary cultural, community, public-interest or general-audience activity may be editorially selected when geography is in scope, the event is materially current, evidence is sufficient, no material source conflict remains, no required authority is missing, no unresolved standards boundary is present, and the primary proposition is not an ongoing commercial experience or service.",
       "when": {
         "activity_scope": "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE",
         "geography_in_scope": true,
         "materially_current": true,
         "evidence_sufficient": true,
-        "excluded_category": false
+        "material_source_conflict": false,
+        "required_authority_missing": false,
+        "standards_boundary_unresolved": false,
+        "commercial_primary_proposition": false
       },
       "result": {
         "disposition": "SELECT",
@@ -26,76 +39,49 @@
         "reason_code": "ELIGIBLE_ORDINARY_ACTIVITY"
       },
       "human_review": false,
-      "authority_note": "Eligibility is activity-based and viewpoint-neutral; organizer identity alone is not an exclusion basis."
-    },
-    {
-      "rule_id": "TTD-EXCL-001",
-      "status": "ACTIVE",
-      "description": "Worship or proselytizing activity is outside the ordinary A PRASA Things to Do editorial scope.",
-      "when": { "category": "WORSHIP_OR_PROSELYTIZING" },
-      "result": { "disposition": "REJECT", "publication_blocked": true, "reason_code": "EXCLUDED_NONSECTARIAN_SCOPE" },
-      "human_review": false,
-      "authority_note": "A PRASA is general-audience and nonsectarian."
-    },
-    {
-      "rule_id": "TTD-EXCL-002",
-      "status": "ACTIVE",
-      "description": "Partisan campaigns or ideological rallies are outside the ordinary A PRASA Things to Do editorial scope.",
-      "when": { "category": "PARTISAN_CAMPAIGN_OR_IDEOLOGICAL_RALLY" },
-      "result": { "disposition": "REJECT", "publication_blocked": true, "reason_code": "EXCLUDED_NONPARTISAN_SCOPE" },
-      "human_review": false,
-      "authority_note": "A PRASA is nonpartisan and not an advocacy platform."
-    },
-    {
-      "rule_id": "TTD-EXCL-003",
-      "status": "ACTIVE",
-      "description": "Explicit adult entertainment is outside the ordinary A PRASA Things to Do editorial scope.",
-      "when": { "category": "EXPLICIT_ADULT_ENTERTAINMENT" },
-      "result": { "disposition": "REJECT", "publication_blocked": true, "reason_code": "EXCLUDED_ADULT_CONTENT" },
-      "human_review": false,
-      "authority_note": "A PRASA's ordinary public square is general-audience."
-    },
-    {
-      "rule_id": "TTD-EXCL-004",
-      "status": "ACTIVE",
-      "description": "Hate or extremist activity is outside the ordinary A PRASA Things to Do editorial scope.",
-      "when": { "category": "HATE_OR_EXTREMIST_ACTIVITY" },
-      "result": { "disposition": "REJECT", "publication_blocked": true, "reason_code": "EXCLUDED_HATE_EXTREMISM" },
-      "human_review": false,
-      "authority_note": "Payment or organizer identity cannot override this exclusion."
-    },
-    {
-      "rule_id": "TTD-EXCL-005",
-      "status": "ACTIVE",
-      "description": "Unlawful or materially unsafe activity is outside the ordinary A PRASA Things to Do editorial scope.",
-      "when": { "category": "UNLAWFUL_OR_MATERIALLY_UNSAFE_ACTIVITY" },
-      "result": { "disposition": "REJECT", "publication_blocked": true, "reason_code": "EXCLUDED_UNLAWFUL_UNSAFE" },
-      "human_review": false,
-      "authority_note": "Where legality or safety is genuinely uncertain rather than established, use HOLD instead of guessing."
+      "authority_refs": ["PROJECT_03_POLICY_FIDELITY_REVIEW_2026-09-04"],
+      "authority_note": "Commercial venue/provider identity alone does not disqualify an otherwise eligible cultural, community or public-interest event. This rule does not establish universal organizer-identity neutrality across unapproved standards categories."
     },
     {
       "rule_id": "TTD-EVID-001",
       "status": "ACTIVE",
       "description": "A material unresolved conflict between credible sources blocks selection until the conflict is resolved or governed.",
-      "when": { "material_source_conflict": true, "conflict_resolved": false },
-      "result": { "disposition": "HOLD", "publication_blocked": true, "reason_code": "UNRESOLVED_SOURCE_CONFLICT" },
+      "when": {
+        "material_source_conflict": true,
+        "conflict_resolved": false
+      },
+      "result": {
+        "disposition": "HOLD",
+        "publication_blocked": true,
+        "reason_code": "UNRESOLVED_SOURCE_CONFLICT"
+      },
       "human_review": false,
-      "authority_note": "First route to evidence verification. Escalate only if the conflict remains unresolved or creates a novel policy question."
+      "authority_refs": ["PROJECT_03_POLICY_FIDELITY_REVIEW_2026-09-04"],
+      "authority_note": "Route first to evidence verification. Escalate only if the conflict remains unresolved or creates a novel policy question."
     },
     {
       "rule_id": "TTD-EVID-002",
       "status": "ACTIVE",
-      "description": "First-party organizer, venue or provider sources are preferred for event availability and material details when accessible; corroborating sources may support but do not authorize invention.",
-      "when": { "first_party_source_accessible": true },
-      "result": { "disposition": "NO_CHANGE", "publication_blocked": false, "reason_code": "PREFER_FIRST_PARTY_SOURCE" },
+      "description": "When accessible, first-party organizer, venue or provider sources are preferred for availability and material event details; corroborating sources may support but do not authorize invention.",
+      "when": {
+        "first_party_source_accessible": true
+      },
+      "result": {
+        "disposition": "NO_CHANGE",
+        "publication_blocked": false,
+        "reason_code": "PREFER_FIRST_PARTY_SOURCE"
+      },
       "human_review": false,
-      "authority_note": "This is an evidence-handling rule, not an automatic selection rule."
+      "authority_refs": ["PROJECT_03_POLICY_FIDELITY_REVIEW_2026-09-04"],
+      "authority_note": "Evidence weighting only; never an automatic selection rule."
     },
     {
       "rule_id": "TTD-FACT-001",
       "status": "ACTIVE",
       "description": "Missing admission information does not make an otherwise eligible event unpublishable and must never be inferred as free.",
-      "when": { "admission_verified": false },
+      "when": {
+        "admission_verified": false
+      },
       "result": {
         "disposition": "NO_CHANGE",
         "publication_blocked": false,
@@ -107,52 +93,218 @@
         "reason_code": "ADMISSION_UNKNOWN_OMIT"
       },
       "human_review": false,
+      "authority_refs": ["PROJECT_03_POLICY_FIDELITY_REVIEW_2026-09-04"],
       "authority_note": "Do not infer free admission, ticket price, booking requirement, reservation requirement or access procedure."
+    },
+    {
+      "rule_id": "TTD-FACT-002",
+      "status": "ACTIVE",
+      "description": "Missing or unverified session/start time or secondary detail does not necessarily block an otherwise sufficiently verified event; unsupported details are omitted rather than invented.",
+      "when": {
+        "secondary_detail_verified": false,
+        "event_identity_date_venue_sufficient": true
+      },
+      "result": {
+        "disposition": "NO_CHANGE",
+        "publication_blocked": false,
+        "field_actions": {
+          "unsupported_secondary_detail": "OMIT"
+        },
+        "reason_code": "UNVERIFIED_SECONDARY_DETAIL_OMIT"
+      },
+      "human_review": false,
+      "authority_refs": ["PROJECT_03_POLICY_FIDELITY_REVIEW_2026-09-04"],
+      "authority_note": "Factual restraint is preferred to blocking when the omitted detail is not material to event identity/currentness."
+    },
+    {
+      "rule_id": "TTD-DATE-001",
+      "status": "ACTIVE",
+      "description": "Date precision must be preserved; month-level evidence must not be converted into an invented exact day.",
+      "when": {
+        "authoritative_end_precision": "MONTH"
+      },
+      "result": {
+        "disposition": "NO_CHANGE",
+        "publication_blocked": false,
+        "field_actions": {
+          "end_date_precision": "PRESERVE_MONTH",
+          "invent_exact_day": false,
+          "month_boundary_state": "REVIEW_DUE"
+        },
+        "reason_code": "PRESERVE_DATE_PRECISION"
+      },
+      "human_review": false,
+      "authority_refs": ["PROJECT_03_POLICY_FIDELITY_REVIEW_2026-09-04"],
+      "authority_note": "Preserve supported precision and use REVIEW-DUE at unresolved month boundaries rather than fabricating an exact expiry date."
+    },
+    {
+      "rule_id": "TTD-MEDIA-001",
+      "status": "ACTIVE",
+      "description": "Use the governed media hierarchy: direct organizer/provider artwork, then verified provider-owned media, then standardized A PRASA editorial fallback when authentic media cannot be validly used.",
+      "when": {
+        "authentic_media_rights_unclear": true,
+        "governed_editorial_fallback_available": true
+      },
+      "result": {
+        "disposition": "NO_CHANGE",
+        "publication_blocked": false,
+        "field_actions": {
+          "media": "USE_GOVERNED_EDITORIAL_FALLBACK"
+        },
+        "reason_code": "MEDIA_FALLBACK_AVAILABLE"
+      },
+      "human_review": false,
+      "authority_refs": ["PROJECT_03_POLICY_FIDELITY_REVIEW_2026-09-04"],
+      "authority_note": "Fallback must remain generic and must not falsely present itself as authentic event imagery. Escalate media rights only when fallback cannot validly satisfy the record or a specific authentic asset is required."
+    },
+    {
+      "rule_id": "TTD-SOURCE-001",
+      "status": "ACTIVE",
+      "description": "A broader or general listing must not expand a dedicated event record beyond what more specific evidence supports.",
+      "when": {
+        "broader_source_conflicts_with_specific_scope": true
+      },
+      "result": {
+        "disposition": "HOLD",
+        "publication_blocked": true,
+        "reason_code": "SPECIFIC_SCOPE_CONFLICT"
+      },
+      "human_review": false,
+      "authority_refs": ["PROJECT_03_POLICY_FIDELITY_REVIEW_2026-09-04"],
+      "authority_note": "Do not infer across conflicting date or scope evidence; resolve through evidence verification."
+    },
+    {
+      "rule_id": "TTD-COPY-001",
+      "status": "ACTIVE",
+      "description": "Public copy must not strengthen unknown or unverified facts into present claims.",
+      "when": {
+        "proposed_copy_strengthens_unknown_fact": true
+      },
+      "result": {
+        "disposition": "HOLD",
+        "publication_blocked": true,
+        "field_actions": {
+          "copy": "REVISE_TO_OMIT_OR_GOVERNED_CAVEAT"
+        },
+        "reason_code": "COPY_OVERSTATES_EVIDENCE"
+      },
+      "human_review": false,
+      "authority_refs": ["PROJECT_03_POLICY_FIDELITY_REVIEW_2026-09-04"],
+      "authority_note": "Use omission or specifically governed caveats rather than speculative wording."
     },
     {
       "rule_id": "TTD-COMM-001",
       "status": "ACTIVE",
       "description": "A cultural, community or public-interest event does not become ineligible merely because it is ticketed or hosted by a commercial venue.",
-      "when": { "ordinary_editorial_event": true, "ticketed_or_commercial_venue": true },
-      "result": { "disposition": "NO_CHANGE", "publication_blocked": false, "reason_code": "TICKETING_NOT_EDITORIAL_DISQUALIFIER" },
+      "when": {
+        "ordinary_editorial_event": true,
+        "ticketed_or_commercial_venue": true
+      },
+      "result": {
+        "disposition": "NO_CHANGE",
+        "publication_blocked": false,
+        "reason_code": "TICKETING_NOT_EDITORIAL_DISQUALIFIER"
+      },
       "human_review": false,
-      "authority_note": "Editorial eligibility remains independent of commercial relationships."
+      "authority_refs": ["PROJECT_03_POLICY_FIDELITY_REVIEW_2026-09-04"],
+      "authority_note": "Editorial eligibility remains independent of ticketing or commercial venue status."
     },
     {
       "rule_id": "TTD-COMM-002",
       "status": "ACTIVE",
       "description": "Payment or a commercial relationship cannot buy ordinary editorial inclusion, ranking, verification, endorsement, favorable treatment or exemption from standards.",
-      "when": { "payment_or_commercial_relationship": true },
-      "result": { "disposition": "NO_CHANGE", "publication_blocked": false, "reason_code": "EDITORIAL_INDEPENDENCE" },
+      "when": {
+        "payment_or_commercial_relationship": true
+      },
+      "result": {
+        "disposition": "NO_CHANGE",
+        "publication_blocked": false,
+        "reason_code": "EDITORIAL_INDEPENDENCE"
+      },
       "human_review": false,
-      "authority_note": "Apply the same eligibility and evidence rules regardless of client or sponsor status."
+      "authority_refs": ["PROJECT_03_POLICY_FIDELITY_REVIEW_2026-09-04"],
+      "authority_note": "Apply the same editorial eligibility/evidence standards regardless of client or sponsor status."
     },
     {
       "rule_id": "TTD-COMM-003",
       "status": "DEFERRED",
-      "description": "A primary proposition that is an ongoing tour, excursion, class, experience or service belongs to commercial-promotion classification rather than ordinary editorial Things to Do processing.",
-      "when": { "primary_proposition": "ONGOING_COMMERCIAL_EXPERIENCE_OR_SERVICE" },
-      "result": { "disposition": "HOLD", "publication_blocked": true, "reason_code": "COMMERCIAL_CLASSIFICATION_REQUIRED" },
+      "description": "A listing whose primary proposition is the purchase of an ongoing commercial tour, excursion, class, experience, package or service is not eligible for autonomous ordinary Things-to-Do SELECT.",
+      "when": {
+        "primary_proposition": "ONGOING_COMMERCIAL_TOUR_EXCURSION_CLASS_EXPERIENCE_PACKAGE_OR_SERVICE"
+      },
+      "result": {
+        "disposition": "HOLD",
+        "publication_blocked": true,
+        "reason_code": "COMMERCIAL_TREATMENT_REQUIRED"
+      },
       "human_review": true,
-      "authority_note": "The editorial/commercial boundary is approved, but Sponsored Spotlight pricing and complete automated commercial-publication treatment remain unresolved. Do not automate paid-placement decisions from this rule."
+      "authority_refs": ["PROJECT_03_POLICY_FIDELITY_REVIEW_2026-09-04"],
+      "authority_note": "Hold for the applicable governed commercial/editorial treatment. This rule does not create paid-placement eligibility, Sponsored Spotlight eligibility or pricing."
+    },
+    {
+      "rule_id": "TTD-COMM-004",
+      "status": "ACTIVE",
+      "description": "A current or former professional-services client may appear only when independently eligible under the same editorial standards; commercial relationships must not pressure or punish editorial treatment.",
+      "when": {
+        "current_or_former_client": true
+      },
+      "result": {
+        "disposition": "NO_CHANGE",
+        "publication_blocked": false,
+        "reason_code": "CLIENT_STATUS_DOES_NOT_CONTROL_EDITORIAL_ELIGIBILITY"
+      },
+      "human_review": false,
+      "authority_refs": ["PROJECT_03_POLICY_FIDELITY_REVIEW_2026-09-04"],
+      "authority_note": "Client status is not an editorial entitlement or penalty."
     },
     {
       "rule_id": "TTD-CURRENT-001",
       "status": "ACTIVE",
       "description": "A candidate that has fully ended before publication must not be introduced as current Things to Do content.",
-      "when": { "materially_current": false, "candidate_already_ended": true },
-      "result": { "disposition": "REJECT", "publication_blocked": true, "reason_code": "NO_LONGER_CURRENT" },
+      "when": {
+        "materially_current": false,
+        "candidate_already_ended": true
+      },
+      "result": {
+        "disposition": "REJECT",
+        "publication_blocked": true,
+        "reason_code": "NO_LONGER_CURRENT"
+      },
       "human_review": false,
+      "authority_refs": ["PROJECT_03_POLICY_FIDELITY_REVIEW_2026-09-04"],
       "authority_note": "Currentness is evaluated from governed event dates; checked_at age alone is not an expiry signal."
     },
     {
       "rule_id": "TTD-GOV-001",
       "status": "ACTIVE",
       "description": "Project 04 automation may not invent facts, editorial rules, localization, media rights, commercial policy or governance to complete a candidate.",
-      "when": { "required_authority_missing": true },
-      "result": { "disposition": "HOLD", "publication_blocked": true, "reason_code": "MISSING_GOVERNING_AUTHORITY" },
+      "when": {
+        "required_authority_missing": true
+      },
+      "result": {
+        "disposition": "HOLD",
+        "publication_blocked": true,
+        "reason_code": "MISSING_GOVERNING_AUTHORITY"
+      },
       "human_review": false,
+      "authority_refs": ["PROJECT_03_POLICY_FIDELITY_REVIEW_2026-09-04"],
       "authority_note": "Route to the owning authority or evidence/localization/media worker first; founder escalation is reserved for genuine unresolved governance exceptions."
+    },
+    {
+      "rule_id": "TTD-GOV-002",
+      "status": "ACTIVE",
+      "description": "Candidates touching an editorial standards boundary not yet approved for machine enforcement must not be automatically rejected or selected.",
+      "when": {
+        "standards_boundary_unresolved": true
+      },
+      "result": {
+        "disposition": "HOLD",
+        "publication_blocked": true,
+        "reason_code": "STANDARDS_AUTHORITY_REQUIRED"
+      },
+      "human_review": true,
+      "authority_refs": ["PROJECT_03_POLICY_FIDELITY_REVIEW_2026-09-04"],
+      "authority_note": "Religious, political/advocacy, adult/sexualized, hateful/extremist, unsafe, fraudulent, unlawful and similar detailed standards categories are not machine-authorized rejection classes in this v1 policy. Route to the governed Community & Editorial Standards authority once approved."
     }
   ],
   "escalation_classes": [
