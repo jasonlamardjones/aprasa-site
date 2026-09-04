@@ -164,7 +164,42 @@ function reduceAssertions(grouped, registry) {
 
 // TTD-GOV-002 boundary. Only an explicit, HIGH-confidence, provenance-backed
 // classification asserting affirmative ordinary-scope evidence with no
-// unresolved dimension may clear the standards boundary.
+// unresolved dimension and no mixed purpose may clear the standards boundary.
+//
+// Every declared member must be present and of the exact declared type. A
+// missing, malformed, wrong-typed, or shape-substituted member is not evidence
+// of ordinary scope, so it fails closed to true rather than being ignored.
+const STANDARDS_MEMBER_CONTRACT = [
+  {
+    member: 'affirmative_ordinary_scope_evidence',
+    valid: (value) => typeof value === 'boolean',
+    cleared: (value) => value === true,
+    malformed_reason: 'MALFORMED_STANDARDS_AFFIRMATION',
+    unmet_reason: 'NO_AFFIRMATIVE_ORDINARY_SCOPE_EVIDENCE'
+  },
+  {
+    member: 'confidence',
+    valid: (value) => typeof value === 'string',
+    cleared: (value) => value === 'HIGH',
+    malformed_reason: 'MALFORMED_STANDARDS_CONFIDENCE',
+    unmet_reason: 'LOW_CONFIDENCE_STANDARDS_CLASSIFICATION'
+  },
+  {
+    member: 'unresolved_dimensions',
+    valid: (value) => Array.isArray(value) && value.every((item) => typeof item === 'string'),
+    cleared: (value) => value.length === 0,
+    malformed_reason: 'MALFORMED_STANDARDS_DIMENSIONS',
+    unmet_reason: 'UNRESOLVED_STANDARDS_DIMENSION'
+  },
+  {
+    member: 'mixed_purpose',
+    valid: (value) => typeof value === 'boolean',
+    cleared: (value) => value === false,
+    malformed_reason: 'MALFORMED_STANDARDS_MIXED_PURPOSE',
+    unmet_reason: 'MIXED_PURPOSE_CANDIDATE'
+  }
+];
+
 function deriveStandardsBoundary(evidence, sourceRefs) {
   const classification = evidence.standards_classification;
   if (classification === undefined || classification === null) {
@@ -173,23 +208,28 @@ function deriveStandardsBoundary(evidence, sourceRefs) {
   if (typeof classification !== 'object' || Array.isArray(classification)) {
     return knownFact(true, [], null, 'STANDARDS_CLASSIFICATION_MALFORMED');
   }
-  if (classification.affirmative_ordinary_scope_evidence !== true) {
-    return knownFact(true, [], null, 'NO_AFFIRMATIVE_ORDINARY_SCOPE_EVIDENCE');
+
+  for (const rule of STANDARDS_MEMBER_CONTRACT) {
+    if (!Object.hasOwn(classification, rule.member)) {
+      return knownFact(true, [], null, 'INCOMPLETE_STANDARDS_CLASSIFICATION');
+    }
+    const value = classification[rule.member];
+    if (!rule.valid(value)) return knownFact(true, [], null, rule.malformed_reason);
+    if (!rule.cleared(value)) return knownFact(true, [], null, rule.unmet_reason);
   }
-  if (classification.confidence !== 'HIGH') {
-    return knownFact(true, [], null, 'LOW_CONFIDENCE_STANDARDS_CLASSIFICATION');
+
+  // Provenance must be an array of resolvable source-ref identifiers.
+  if (!Object.hasOwn(classification, 'evidence_refs')) {
+    return knownFact(true, [], null, 'INCOMPLETE_STANDARDS_CLASSIFICATION');
   }
-  const refs = Array.isArray(classification.evidence_refs) ? classification.evidence_refs : [];
-  if (refs.length === 0 || refs.some((ref) => typeof ref !== 'string' || !Object.hasOwn(sourceRefs, ref))) {
+  const refs = classification.evidence_refs;
+  if (!Array.isArray(refs) || refs.length === 0) {
+    return knownFact(true, [], null, 'MALFORMED_STANDARDS_EVIDENCE_REFS');
+  }
+  if (refs.some((ref) => typeof ref !== 'string' || !Object.hasOwn(sourceRefs, ref))) {
     return knownFact(true, [], null, 'UNSUPPORTED_STANDARDS_CLASSIFICATION');
   }
-  const unresolved = Array.isArray(classification.unresolved_dimensions) ? classification.unresolved_dimensions : [];
-  if (unresolved.length > 0) {
-    return knownFact(true, refs, null, 'UNRESOLVED_STANDARDS_DIMENSION');
-  }
-  if (classification.mixed_purpose === true) {
-    return knownFact(true, refs, null, 'MIXED_PURPOSE_CANDIDATE');
-  }
+
   return knownFact(false, refs, typeof classification.rationale === 'string' ? classification.rationale : null, 'AFFIRMATIVE_ORDINARY_SCOPE_EVIDENCE');
 }
 
