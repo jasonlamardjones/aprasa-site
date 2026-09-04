@@ -7,6 +7,9 @@ on:
       - 'scripts/validate-control-plane-contracts.mjs'
       - 'scripts/validate-control-plane-hardening.mjs'
       - 'scripts/validate-orchestration-contract.mjs'
+      - 'scripts/validate-ttd-trust-anchor.mjs'
+      - 'scripts/lib/ttd-*.mjs'
+      - 'scripts/test-ttd-*.mjs'
       - '.github/workflows/validate-control-plane.yml'
   push:
     branches: [main]
@@ -15,6 +18,9 @@ on:
       - 'scripts/validate-control-plane-contracts.mjs'
       - 'scripts/validate-control-plane-hardening.mjs'
       - 'scripts/validate-orchestration-contract.mjs'
+      - 'scripts/validate-ttd-trust-anchor.mjs'
+      - 'scripts/lib/ttd-*.mjs'
+      - 'scripts/test-ttd-*.mjs'
       - '.github/workflows/validate-control-plane.yml'
 
 permissions:
@@ -40,3 +46,18 @@ jobs:
 
       - name: Validate orchestration contract
         run: node scripts/validate-orchestration-contract.mjs
+
+      - name: Validate Things-to-Do policy trust anchor
+        run: node scripts/validate-ttd-trust-anchor.mjs
+
+      - name: Things-to-Do normalization acceptance (source evidence to facts)
+        run: node scripts/test-ttd-normalization.mjs
+
+      - name: Things-to-Do policy evaluation acceptance (facts to disposition)
+        run: node scripts/test-ttd-policy-evaluator.mjs
+
+      - name: Things-to-Do routing and audit composition
+        run: node scripts/test-ttd-adjudication-composition.mjs
+
+      - name: Things-to-Do adversarial regressions
+        run: node scripts/test-ttd-adversarial-regressions.mjs

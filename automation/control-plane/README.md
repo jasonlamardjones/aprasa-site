@@ -23,6 +23,9 @@ AI products are replaceable workers. The contracts name roles, not vendors.
 - `adjudication-policy.schema.json` — schema for versioned machine-readable adjudication policies and composition semantics.
 - `policies/things-to-do-v1.json` — conservative Things to Do baseline limited to Project 03-approved machine semantics.
 - `fixtures/things-to-do-candidate.json` — non-public synthetic task used for contract validation.
+- `normalization/ttd-fact-registry.json` — vocabulary, types, and materiality of normalized Things to Do candidate facts.
+- `trust/things-to-do-v1.trust-anchor.json` — deployment trust root binding the approved policy identity, version, approval reference, rule set, and content digest.
+- `fixtures/ttd-adjudication-oracle.json` — synthetic acceptance oracle covering normalization, evaluation, and routing.
 - `scripts/validate-control-plane-contracts.mjs` — self-contained schema/subset validator, semantic invariant validator, and negative-regression harness.
 
 ## Normal state progression
@@ -105,6 +108,52 @@ The validator performs:
 - semantic invariant checks for authority, fail-closed composition, required rules, admission handling, deferred commercial treatment, and write-authority preconditions;
 - seven in-memory negative regressions covering invalid task vocabulary/routing, broken governing-authority behavior, empty eligibility predicates, missing approved rules, reintroduced unapproved exclusions, weakened deferred commercial treatment, and duplicate rule IDs.
 
+## Things to Do normalizer and adjudication evaluator
+
+The worker layer is split into three independently testable stages. Nothing in it calls an LLM, a web search, or any external service, and no stage reads the clock: the evaluation timestamp is injected by the caller so identical frozen inputs produce identical output.
+
+1. **Normalization** (`scripts/lib/ttd-normalizer.mjs`) turns a source-evidence record into normalized facts. A fact is `KNOWN` only when a HIGH-confidence, provenance-backed assertion establishes it against a resolvable `http`/`https` source. Everything else stays `UNKNOWN` and is preserved as `UNKNOWN`. Absence never becomes a favourable value.
+2. **Evaluation** (`scripts/lib/ttd-policy-evaluator.mjs`) interprets the approved policy document. Dispositions, blocking, human review, reason codes, and field actions all come from the policy; only composition mechanics, typed matching, and trust enforcement live in code.
+3. **Routing** (`scripts/lib/ttd-adjudication-routing.mjs`) reads only the final composed result and emits a next-worker decision drawn from the committed task-envelope vocabulary.
+
+`scripts/lib/ttd-adjudication.mjs` composes the three and emits one audit record.
+
+### Standards boundary
+
+`standards_boundary_unresolved` is derived, never asserted. It is `false` only when an explicit standards classification carries affirmative ordinary-scope evidence at HIGH confidence, cites resolvable sources, declares no unresolved dimension, and is not mixed-purpose. Omission, malformation, low confidence, an unresolved dimension, or mixed purpose all yield `true`, which HOLDs and blocks under `TTD-GOV-002` with human review. Absence of adverse keywords is not affirmative ordinary-scope evidence, and this tranche introduces no automatic standards REJECT class.
+
+### Evaluator semantics
+
+- Predicate matching is exact and typed. There is no truthiness and no coercion; a missing or `UNKNOWN` value never satisfies a declared `false`.
+- Every rule is evaluated, `DEFERRED` rules included. A matching `DEFERRED` rule always HOLDs, blocks, and requires human review.
+- Precedence is `HOLD > REJECT > SELECT > NO_CHANGE`. `NO_CHANGE` cannot clear another rule and `SELECT` cannot clear a HOLD.
+- Publication blocking and human review are monotonic within one evaluation.
+- When no substantive rule authorizes an outcome, the default `HOLD` applies.
+- Compatible `field_actions` merge; conflicting ones fail closed to HOLD rather than being silently reconciled.
+- Governing-rule selection, matched-rule ordering, and the semantic fingerprint are order-independent, so neither JSON key order nor rule declaration order can change meaning.
+
+### Trust and authority
+
+Before any rule may match, the evaluator verifies the policy identity, version, domain, approval reference, approving owner, rule set, canonical content digest, and fail-closed composition constants against `trust/things-to-do-v1.trust-anchor.json`, and requires authority-resolution evidence supplied by a trusted resolver. Candidate-supplied claims are recorded for audit and are never authorizing. On any integrity or authority failure the evaluator emits no SELECT, claims no matched rules, blocks progression, and returns an authority-resolution or validation result.
+
+`scripts/validate-ttd-trust-anchor.mjs` is the drift gate: a policy edit not accompanied by a separately reviewed anchor update fails CI and makes the evaluator fail closed at runtime.
+
+### Tests
+
+Run:
+
+```
+node scripts/validate-ttd-trust-anchor.mjs
+node scripts/test-ttd-normalization.mjs
+node scripts/test-ttd-policy-evaluator.mjs
+node scripts/test-ttd-adjudication-composition.mjs
+node scripts/test-ttd-adversarial-regressions.mjs
+```
+
+The three stages are tested separately against `fixtures/ttd-adjudication-oracle.json`. Stage B consumes the oracle's hand-authored normalized facts rather than normalizer output, and stage C consumes the oracle's expected evaluation rather than evaluator output, so no suite generates its own expected results from the production implementation.
+
+All oracle records are synthetic. None describes a real event and none may be published.
+
 ## Next implementation tranche
 
-After this foundation passes exact-SHA independent review, the next tranche should add a deterministic adjudication evaluator and candidate normalization layer for Things to Do, then connect only governed `SELECTED` records to the existing event-publication preparation machinery. Existing publication validators and exact-SHA review gates remain controlling.
+After this tranche passes exact-SHA independent review, the next tranche should reconcile the oracle against the Project 03 standards owner's own test specification, then connect only governed `SELECTED` records to the existing event-publication preparation machinery. Existing publication validators and exact-SHA review gates remain controlling. No autonomous merge, deploy, publication, or governance authority is created here.
