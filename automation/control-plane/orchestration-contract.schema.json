@@ -28,16 +28,7 @@
       "properties": {
         "event_type": {
           "type": "string",
-          "enum": [
-            "MANUAL",
-            "TIME_SCHEDULE",
-            "INBOX_MESSAGE_RECEIVED",
-            "REPOSITORY_PULL_REQUEST",
-            "REPOSITORY_STATUS_CHANGED",
-            "DATA_CHANGE",
-            "WEBHOOK",
-            "MONITORING_MATCH"
-          ]
+          "enum": ["MANUAL", "TIME_SCHEDULE", "INBOX_MESSAGE_RECEIVED", "REPOSITORY_PULL_REQUEST", "REPOSITORY_STATUS_CHANGED", "DATA_CHANGE", "WEBHOOK", "MONITORING_MATCH"]
         },
         "source_adapter": { "type": "string", "minLength": 1 },
         "event_ref": { "type": "string", "minLength": 1 },
@@ -62,25 +53,13 @@
       "additionalProperties": false,
       "required": ["worker_role", "resolver", "capabilities"],
       "properties": {
-        "worker_role": { "$ref": "task-envelope.schema.json#/$defs/worker_role" },
+        "worker_role": { "$ref": "#/$defs/worker_role" },
         "resolver": { "const": "ROLE_REGISTRY" },
         "capabilities": {
           "type": "array",
           "items": {
             "type": "string",
-            "enum": [
-              "WEB_RESEARCH",
-              "BROWSER_USE",
-              "CONNECTED_APPS",
-              "CODE_WRITE",
-              "CODE_REVIEW",
-              "REPOSITORY_READ",
-              "REPOSITORY_WRITE",
-              "LOCALIZATION",
-              "MEDIA_REVIEW",
-              "POLICY_REASONING",
-              "PRODUCTION_QA"
-            ]
+            "enum": ["WEB_RESEARCH", "BROWSER_USE", "CONNECTED_APPS", "CODE_WRITE", "CODE_REVIEW", "REPOSITORY_READ", "REPOSITORY_WRITE", "LOCALIZATION", "MEDIA_REVIEW", "POLICY_REASONING", "PRODUCTION_QA"]
           },
           "uniqueItems": true
         },
@@ -96,10 +75,7 @@
         "strategy": { "type": "string", "enum": ["NONE", "FIXED", "EXPONENTIAL"] },
         "retryable_classes": {
           "type": "array",
-          "items": {
-            "type": "string",
-            "enum": ["TRANSIENT_TOOL_ERROR", "RATE_LIMIT", "NETWORK_ERROR", "DEPENDENCY_NOT_READY"]
-          },
+          "items": { "type": "string", "enum": ["TRANSIENT_TOOL_ERROR", "RATE_LIMIT", "NETWORK_ERROR", "DEPENDENCY_NOT_READY"] },
           "uniqueItems": true
         }
       }
@@ -124,16 +100,7 @@
           "type": "array",
           "items": {
             "type": "string",
-            "enum": [
-              "NOVEL_POLICY_QUESTION",
-              "HIGH_QUALITY_SOURCE_CONFLICT",
-              "COMMERCIAL_POLICY_UNRESOLVED",
-              "MEDIA_RIGHTS_UNRESOLVED",
-              "LEGAL_OR_REPUTATIONAL_RISK",
-              "AUTHORITY_CONFLICT",
-              "AUTOMATION_CONFIDENCE_BELOW_THRESHOLD",
-              "TECHNICAL_BLOCKER"
-            ]
+            "enum": ["NOVEL_POLICY_QUESTION", "HIGH_QUALITY_SOURCE_CONFLICT", "COMMERCIAL_POLICY_UNRESOLVED", "MEDIA_RIGHTS_UNRESOLVED", "LEGAL_OR_REPUTATIONAL_RISK", "AUTHORITY_CONFLICT", "AUTOMATION_CONFIDENCE_BELOW_THRESHOLD", "TECHNICAL_BLOCKER"]
           },
           "uniqueItems": true
         },
@@ -161,6 +128,18 @@
     }
   },
   "$defs": {
+    "task_type": {
+      "type": "string",
+      "enum": ["CONTENT_CANDIDATE", "EVIDENCE_REVIEW", "POLICY_ADJUDICATION", "LOCALIZATION", "MEDIA_VALIDATION", "PUBLICATION_PREPARATION", "REPOSITORY_IMPLEMENTATION", "INDEPENDENT_REVIEW", "PRODUCTION_QA", "LIFECYCLE_REVIEW", "HUMAN_ESCALATION"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["DISCOVERED", "NORMALIZED", "EVIDENCE_CHECKED", "ADJUDICATED", "SELECTED", "HOLD", "REJECTED", "LOCALIZED", "MEDIA_VALIDATED", "PUBLICATION_READY", "IMPLEMENTED", "REVIEWED", "DEPLOYMENT_READY", "PUBLISHED", "PRODUCTION_VERIFIED", "MONITORED", "EXPIRED", "WITHDRAWN", "SUPERSEDED", "ESCALATED", "BLOCKED"]
+    },
+    "worker_role": {
+      "type": "string",
+      "enum": ["DISCOVERY_WORKER", "EVIDENCE_VERIFIER", "POLICY_ADJUDICATOR", "LOCALIZATION_WORKER", "MEDIA_VALIDATOR", "PUBLICATION_WRITER", "INDEPENDENT_REVIEWER", "PRODUCTION_QA", "LIFECYCLE_MONITOR", "HUMAN_ESCALATION"]
+    },
     "callback": {
       "oneOf": [
         { "type": "null" },
@@ -169,9 +148,9 @@
           "additionalProperties": false,
           "required": ["next_role", "next_task_type", "next_status"],
           "properties": {
-            "next_role": { "$ref": "task-envelope.schema.json#/$defs/worker_role" },
-            "next_task_type": { "$ref": "task-envelope.schema.json#/$defs/task_type" },
-            "next_status": { "$ref": "task-envelope.schema.json#/$defs/status" }
+            "next_role": { "$ref": "#/$defs/worker_role" },
+            "next_task_type": { "$ref": "#/$defs/task_type" },
+            "next_status": { "$ref": "#/$defs/status" }
           }
         }
       ]
