@@ -8,6 +8,14 @@ on:
       - 'scripts/validate-control-plane-hardening.mjs'
       - 'scripts/validate-orchestration-contract.mjs'
       - '.github/workflows/validate-control-plane.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'automation/control-plane/**'
+      - 'scripts/validate-control-plane-contracts.mjs'
+      - 'scripts/validate-control-plane-hardening.mjs'
+      - 'scripts/validate-orchestration-contract.mjs'
+      - '.github/workflows/validate-control-plane.yml'
 
 permissions:
   contents: read
@@ -16,7 +24,7 @@ jobs:
   validate-control-plane:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out PR
+      - name: Check out commit
         uses: actions/checkout@v4
 
       - name: Set up Node
