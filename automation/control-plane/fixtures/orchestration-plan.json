@@ -1,0 +1,82 @@
+{
+  "schema_version": "1.0.0",
+  "orchestration_id": "ORCH-TTD-EXAMPLE-001",
+  "task_ref": "TTD-2026-EXAMPLE-001",
+  "trigger": {
+    "event_type": "MONITORING_MATCH",
+    "source_adapter": "PUBLIC_WEB_MONITOR",
+    "event_ref": "synthetic:event:001",
+    "occurred_at": "2026-09-04T09:00:00-01:00"
+  },
+  "prerequisites": [
+    {
+      "kind": "AUTHORITY",
+      "ref": "APRASA_TTD_EDITORIAL_V1@1.0.0",
+      "required_state": "TRUSTED_RESOLVED"
+    }
+  ],
+  "worker_resolution": {
+    "worker_role": "EVIDENCE_VERIFIER",
+    "resolver": "ROLE_REGISTRY",
+    "capabilities": ["WEB_RESEARCH", "POLICY_REASONING"],
+    "provider_binding_ref": null
+  },
+  "retry_policy": {
+    "max_attempts": 2,
+    "strategy": "FIXED",
+    "retryable_classes": ["TRANSIENT_TOOL_ERROR", "NETWORK_ERROR"]
+  },
+  "callbacks": {
+    "on_success": {
+      "next_role": "POLICY_ADJUDICATOR",
+      "next_task_type": "POLICY_ADJUDICATION",
+      "next_status": "EVIDENCE_CHECKED"
+    },
+    "on_failure": {
+      "next_role": "EVIDENCE_VERIFIER",
+      "next_task_type": "EVIDENCE_REVIEW",
+      "next_status": "BLOCKED"
+    },
+    "on_blocked": {
+      "next_role": "EVIDENCE_VERIFIER",
+      "next_task_type": "EVIDENCE_REVIEW",
+      "next_status": "HOLD"
+    },
+    "on_exception": {
+      "next_role": "HUMAN_ESCALATION",
+      "next_task_type": "HUMAN_ESCALATION",
+      "next_status": "ESCALATED"
+    }
+  },
+  "escalation_policy": {
+    "allowed_classes": [
+      "NOVEL_POLICY_QUESTION",
+      "HIGH_QUALITY_SOURCE_CONFLICT",
+      "AUTHORITY_CONFLICT",
+      "AUTOMATION_CONFIDENCE_BELOW_THRESHOLD",
+      "TECHNICAL_BLOCKER"
+    ],
+    "default_target": "PROJECT_04_CONTROL_TOWER"
+  },
+  "artifacts": {
+    "inputs": [
+      {
+        "kind": "TASK_RESULT",
+        "ref": "candidate:synthetic:event:001",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "kind": "TASK_RESULT",
+        "ref": "evidence-review:TTD-2026-EXAMPLE-001",
+        "required": true
+      }
+    ]
+  },
+  "audit": {
+    "event_log_ref": "audit:ORCH-TTD-EXAMPLE-001",
+    "created_at": "2026-09-04T09:00:00-01:00",
+    "last_transition_at": null
+  }
+}

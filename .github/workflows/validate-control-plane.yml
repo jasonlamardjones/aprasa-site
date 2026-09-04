@@ -1,0 +1,42 @@
+name: Validate control plane
+
+on:
+  pull_request:
+    paths:
+      - 'automation/control-plane/**'
+      - 'scripts/validate-control-plane-contracts.mjs'
+      - 'scripts/validate-control-plane-hardening.mjs'
+      - 'scripts/validate-orchestration-contract.mjs'
+      - '.github/workflows/validate-control-plane.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'automation/control-plane/**'
+      - 'scripts/validate-control-plane-contracts.mjs'
+      - 'scripts/validate-control-plane-hardening.mjs'
+      - 'scripts/validate-orchestration-contract.mjs'
+      - '.github/workflows/validate-control-plane.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-control-plane:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out commit
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Validate control-plane contracts
+        run: node scripts/validate-control-plane-contracts.mjs
+
+      - name: Validate control-plane hardening invariants
+        run: node scripts/validate-control-plane-hardening.mjs
+
+      - name: Validate orchestration contract
+        run: node scripts/validate-orchestration-contract.mjs
