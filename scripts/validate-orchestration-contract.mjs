@@ -44,13 +44,8 @@ function validateSchema(value, schema, rootSchema, at = '$') {
     return errors;
   }
 
-  if (Object.hasOwn(schema, 'const') && JSON.stringify(value) !== JSON.stringify(schema.const)) {
-    errors.push(`${at}: must equal const ${JSON.stringify(schema.const)}`);
-  }
-
-  if (schema.enum && !schema.enum.some((item) => JSON.stringify(item) === JSON.stringify(value))) {
-    errors.push(`${at}: value ${JSON.stringify(value)} not in enum`);
-  }
+  if (Object.hasOwn(schema, 'const') && JSON.stringify(value) !== JSON.stringify(schema.const)) errors.push(`${at}: must equal const ${JSON.stringify(schema.const)}`);
+  if (schema.enum && !schema.enum.some((item) => JSON.stringify(item) === JSON.stringify(value))) errors.push(`${at}: value ${JSON.stringify(value)} not in enum`);
 
   if (schema.type) {
     const types = Array.isArray(schema.type) ? schema.type : [schema.type];
@@ -72,6 +67,7 @@ function validateSchema(value, schema, rootSchema, at = '$') {
   }
 
   if (Array.isArray(value)) {
+    if (schema.minItems !== undefined && value.length < schema.minItems) errors.push(`${at}: must contain at least ${schema.minItems} item(s)`);
     if (schema.uniqueItems) {
       const encoded = value.map((item) => JSON.stringify(item));
       if (new Set(encoded).size !== encoded.length) errors.push(`${at}: duplicate array item`);
@@ -93,6 +89,39 @@ function validateSchema(value, schema, rootSchema, at = '$') {
   return errors;
 }
 
+function validateSemantics(fixture) {
+  const errors = [];
+  if (fixture.worker_resolution?.resolver !== 'ROLE_REGISTRY') errors.push('$orchestration.worker_resolution.resolver must be ROLE_REGISTRY');
+  if (fixture.worker_resolution?.provider_binding_ref !== null) errors.push('$orchestration must remain provider-neutral in the synthetic fixture');
+  if (fixture.task_ref !== 'TTD-2026-EXAMPLE-001') errors.push('$orchestration.task_ref must match the synthetic task fixture');
+
+  const authorityPrereq = (fixture.prerequisites || []).find((item) => item.kind === 'AUTHORITY');
+  if (!authorityPrereq) errors.push('$orchestration requires an AUTHORITY prerequisite');
+  if (authorityPrereq && authorityPrereq.ref !== 'APRASA_TTD_EDITORIAL_V1@1.0.0') errors.push('$orchestration authority prerequisite must reference APRASA_TTD_EDITORIAL_V1@1.0.0');
+  if (authorityPrereq && authorityPrereq.required_state !== 'TRUSTED_RESOLVED') errors.push('$orchestration authority prerequisite must be TRUSTED_RESOLVED');
+
+  if (fixture.callbacks?.on_success?.next_role !== 'POLICY_ADJUDICATOR') errors.push('$orchestration success callback must route to POLICY_ADJUDICATOR');
+  if (fixture.callbacks?.on_success?.next_task_type !== 'POLICY_ADJUDICATION') errors.push('$orchestration success callback must route to POLICY_ADJUDICATION task type');
+  if (fixture.callbacks?.on_failure?.next_status !== 'BLOCKED') errors.push('$orchestration failure callback must remain BLOCKED in the synthetic fixture');
+  if (fixture.callbacks?.on_blocked?.next_status !== 'HOLD') errors.push('$orchestration blocked callback must remain HOLD in the synthetic fixture');
+  if (fixture.callbacks?.on_exception?.next_role !== 'HUMAN_ESCALATION') errors.push('$orchestration exception callback must route to HUMAN_ESCALATION');
+  if (fixture.callbacks?.on_exception?.next_task_type !== 'HUMAN_ESCALATION') errors.push('$orchestration exception callback must use HUMAN_ESCALATION task type');
+  if (fixture.callbacks?.on_exception?.next_status !== 'ESCALATED') errors.push('$orchestration exception callback must remain ESCALATED in the synthetic fixture');
+
+  if (fixture.retry_policy?.max_attempts > 5) errors.push('$orchestration retry max_attempts exceeds safety ceiling');
+
+  const capabilities = fixture.worker_resolution?.capabilities || [];
+  if (fixture.worker_resolution?.worker_role !== 'PUBLICATION_WRITER' && capabilities.some((capability) => ['CODE_WRITE', 'REPOSITORY_WRITE'].includes(capability))) {
+    errors.push('$orchestration non-writer role cannot receive write capabilities');
+  }
+
+  if (!['PROJECT_04_CONTROL_TOWER', 'OWNING_GOVERNANCE_AUTHORITY', 'FOUNDER_APPROVAL_GATE'].includes(fixture.escalation_policy?.default_target)) {
+    errors.push('$orchestration escalation default_target is outside approved control targets');
+  }
+
+  return errors;
+}
+
 if (!fs.existsSync(schemaPath) || !fs.existsSync(fixturePath)) {
   console.error('ORCHESTRATION_CONTRACT_VALIDATION_FAILED: missing schema or fixture');
   process.exit(1);
@@ -108,14 +137,10 @@ try {
   process.exit(1);
 }
 
-const errors = validateSchema(fixture, schema, schema, '$orchestration');
-
-if (fixture.worker_resolution?.resolver !== 'ROLE_REGISTRY') errors.push('$orchestration.worker_resolution.resolver must be ROLE_REGISTRY');
-if (fixture.worker_resolution?.provider_binding_ref !== null) errors.push('$orchestration must remain provider-neutral in the synthetic fixture');
-if (fixture.task_ref !== 'TTD-2026-EXAMPLE-001') errors.push('$orchestration.task_ref must match the synthetic task fixture');
-if (fixture.callbacks?.on_success?.next_role !== 'POLICY_ADJUDICATOR') errors.push('$orchestration success callback must route to POLICY_ADJUDICATOR');
-if (fixture.callbacks?.on_exception?.next_role !== 'HUMAN_ESCALATION') errors.push('$orchestration exception callback must route to HUMAN_ESCALATION');
-if (fixture.retry_policy?.max_attempts > 5) errors.push('$orchestration retry max_attempts exceeds safety ceiling');
+const errors = [
+  ...validateSchema(fixture, schema, schema, '$orchestration'),
+  ...validateSemantics(fixture)
+];
 
 if (errors.length) {
   for (const error of errors) console.error(`ORCHESTRATION_CONTRACT_VALIDATION_FAILED: ${error}`);
