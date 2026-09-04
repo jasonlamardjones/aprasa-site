@@ -6,6 +6,7 @@ on:
       - 'automation/control-plane/**'
       - 'scripts/validate-control-plane-contracts.mjs'
       - 'scripts/validate-control-plane-hardening.mjs'
+      - 'scripts/validate-orchestration-contract.mjs'
       - '.github/workflows/validate-control-plane.yml'
 
 permissions:
@@ -28,3 +29,6 @@ jobs:
 
       - name: Validate control-plane hardening invariants
         run: node scripts/validate-control-plane-hardening.mjs
+
+      - name: Validate orchestration contract
+        run: node scripts/validate-orchestration-contract.mjs
