@@ -8,12 +8,19 @@ import { createHash } from 'node:crypto';
 
 const DANGEROUS_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 
+// Rejects both pollution vectors: a dangerous own key (what JSON.parse of
+// hostile input produces) and a tampered prototype (what merging that input
+// into an object with Object.assign produces, where the key disappears from
+// Object.keys but the inherited properties remain readable).
 export function assertNoDangerousKeys(value, at = '$') {
   if (Array.isArray(value)) {
+    if (Object.getPrototypeOf(value) !== Array.prototype) throw new Error(`tampered array prototype at ${at}`);
     value.forEach((item, index) => assertNoDangerousKeys(item, `${at}[${index}]`));
     return;
   }
   if (value === null || typeof value !== 'object') return;
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) throw new Error(`tampered object prototype at ${at}`);
   for (const key of Object.keys(value)) {
     if (DANGEROUS_KEYS.has(key)) throw new Error(`unsafe object key ${key} at ${at}`);
     assertNoDangerousKeys(value[key], `${at}.${key}`);
