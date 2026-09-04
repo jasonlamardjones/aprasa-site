@@ -1,0 +1,188 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aprasa.org/schemas/control-plane/task-envelope.schema.json",
+  "title": "A PRASA Autonomous Content Operations Task Envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "task_id",
+    "task_type",
+    "domain",
+    "status",
+    "authority",
+    "source",
+    "payload",
+    "required_worker_role",
+    "allowed_actions",
+    "prohibited_actions",
+    "routing"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "task_id": { "type": "string", "pattern": "^[A-Z0-9][A-Z0-9._:-]{5,127}$" },
+    "task_type": { "$ref": "#/$defs/task_type" },
+    "domain": {
+      "type": "string",
+      "enum": [
+        "THINGS_TO_DO",
+        "TRAINING_OPPORTUNITIES",
+        "ORGANIZATIONS_WAYS_TO_HELP",
+        "ESSENTIALS",
+        "LOCATION_INTELLIGENCE"
+      ]
+    },
+    "status": { "$ref": "#/$defs/status" },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["policy_scope", "policy_version", "technical_scope", "authority_resolution"],
+      "properties": {
+        "policy_scope": { "type": "string", "minLength": 1 },
+        "policy_version": { "type": "string", "minLength": 1 },
+        "localization_scope": { "type": ["string", "null"] },
+        "technical_scope": { "type": "string", "minLength": 1 },
+        "authority_resolution": {
+          "type": "string",
+          "enum": ["TRUSTED_RESOLVED", "UNRESOLVED"]
+        },
+        "expected_main_sha": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "string", "pattern": "^[0-9a-f]{40}$" }
+          ]
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["intake_method", "checked_at", "urls"],
+      "properties": {
+        "intake_method": {
+          "type": "string",
+          "enum": ["MONITORING", "FOUNDER_SUBMISSION", "COMMUNITY_FORM", "PARTNER_FEED", "SYSTEM_GENERATED"]
+        },
+        "checked_at": { "type": "string", "format": "date-time" },
+        "urls": {
+          "type": "array",
+          "items": { "type": "string", "format": "uri" },
+          "uniqueItems": true
+        },
+        "submitted_by": { "type": ["string", "null"] }
+      }
+    },
+    "payload": { "type": "object" },
+    "required_worker_role": { "$ref": "#/$defs/worker_role" },
+    "allowed_actions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["READ", "RESEARCH", "CLASSIFY", "TRANSLATE", "VALIDATE", "WRITE_BRANCH", "COMMIT", "PUSH", "OPEN_DRAFT_PR", "QA"]
+      },
+      "uniqueItems": true
+    },
+    "prohibited_actions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["INVENT_FACTS", "INVENT_POLICY", "MERGE", "DEPLOY", "DELETE_BRANCH", "PUBLISH_EXTERNAL_MESSAGE", "CHANGE_GOVERNANCE"]
+      },
+      "uniqueItems": true
+    },
+    "routing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["on_success", "on_hold", "on_failure", "on_exception"],
+      "properties": {
+        "on_success": { "$ref": "#/$defs/route" },
+        "on_hold": { "$ref": "#/$defs/route" },
+        "on_failure": { "$ref": "#/$defs/route" },
+        "on_exception": { "$ref": "#/$defs/route" }
+      }
+    },
+    "audit": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" },
+        "parent_task_id": { "type": ["string", "null"] },
+        "artifacts": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  },
+  "$defs": {
+    "task_type": {
+      "type": "string",
+      "enum": [
+        "CONTENT_CANDIDATE",
+        "EVIDENCE_REVIEW",
+        "POLICY_ADJUDICATION",
+        "LOCALIZATION",
+        "MEDIA_VALIDATION",
+        "PUBLICATION_PREPARATION",
+        "REPOSITORY_IMPLEMENTATION",
+        "INDEPENDENT_REVIEW",
+        "PRODUCTION_QA",
+        "LIFECYCLE_REVIEW",
+        "HUMAN_ESCALATION"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "DISCOVERED",
+        "NORMALIZED",
+        "EVIDENCE_CHECKED",
+        "ADJUDICATED",
+        "SELECTED",
+        "HOLD",
+        "REJECTED",
+        "LOCALIZED",
+        "MEDIA_VALIDATED",
+        "PUBLICATION_READY",
+        "IMPLEMENTED",
+        "REVIEWED",
+        "DEPLOYMENT_READY",
+        "PUBLISHED",
+        "PRODUCTION_VERIFIED",
+        "MONITORED",
+        "EXPIRED",
+        "WITHDRAWN",
+        "SUPERSEDED",
+        "ESCALATED",
+        "BLOCKED"
+      ]
+    },
+    "worker_role": {
+      "type": "string",
+      "enum": [
+        "DISCOVERY_WORKER",
+        "EVIDENCE_VERIFIER",
+        "POLICY_ADJUDICATOR",
+        "LOCALIZATION_WORKER",
+        "MEDIA_VALIDATOR",
+        "PUBLICATION_WRITER",
+        "INDEPENDENT_REVIEWER",
+        "PRODUCTION_QA",
+        "LIFECYCLE_MONITOR",
+        "HUMAN_ESCALATION"
+      ]
+    },
+    "route": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["next_role", "next_status"],
+          "properties": {
+            "next_role": { "$ref": "#/$defs/worker_role" },
+            "next_status": { "$ref": "#/$defs/status" }
+          }
+        }
+      ]
+    }
+  }
+}

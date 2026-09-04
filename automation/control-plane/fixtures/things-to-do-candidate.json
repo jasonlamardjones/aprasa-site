@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0.0",
+  "task_id": "TTD-2026-EXAMPLE-001",
+  "task_type": "CONTENT_CANDIDATE",
+  "domain": "THINGS_TO_DO",
+  "status": "DISCOVERED",
+  "authority": {
+    "policy_scope": "PROJECT_03",
+    "policy_version": "APRASA_TTD_EDITORIAL_V1@1.0.0",
+    "localization_scope": "PROJECT_09",
+    "technical_scope": "PROJECT_04",
+    "authority_resolution": "TRUSTED_RESOLVED",
+    "expected_main_sha": null
+  },
+  "source": {
+    "intake_method": "MONITORING",
+    "checked_at": "2026-09-04T00:00:00-01:00",
+    "urls": ["https://example.org/event"],
+    "submitted_by": null
+  },
+  "payload": {
+    "title": "Synthetic event candidate",
+    "location": "Mindelo, São Vicente",
+    "event_date": "2026-09-05",
+    "admission_verified": false,
+    "notes": "Synthetic fixture only. Never publish."
+  },
+  "required_worker_role": "EVIDENCE_VERIFIER",
+  "allowed_actions": ["READ", "RESEARCH"],
+  "prohibited_actions": [
+    "INVENT_FACTS",
+    "INVENT_POLICY",
+    "MERGE",
+    "DEPLOY",
+    "DELETE_BRANCH",
+    "PUBLISH_EXTERNAL_MESSAGE",
+    "CHANGE_GOVERNANCE"
+  ],
+  "routing": {
+    "on_success": {
+      "next_role": "POLICY_ADJUDICATOR",
+      "next_status": "EVIDENCE_CHECKED"
+    },
+    "on_hold": {
+      "next_role": "EVIDENCE_VERIFIER",
+      "next_status": "HOLD"
+    },
+    "on_failure": {
+      "next_role": "EVIDENCE_VERIFIER",
+      "next_status": "BLOCKED"
+    },
+    "on_exception": {
+      "next_role": "HUMAN_ESCALATION",
+      "next_status": "ESCALATED"
+    }
+  },
+  "audit": {
+    "created_at": "2026-09-04T00:00:00-01:00",
+    "updated_at": "2026-09-04T00:00:00-01:00",
+    "parent_task_id": null,
+    "artifacts": []
+  }
+}
