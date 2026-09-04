@@ -120,7 +120,11 @@ The worker layer is split into three independently testable stages. Nothing in i
 
 ### Standards boundary
 
-`standards_boundary_unresolved` is derived, never asserted. It is `false` only when an explicit standards classification carries affirmative ordinary-scope evidence at HIGH confidence, cites resolvable sources, declares no unresolved dimension, and is not mixed-purpose. Omission, malformation, low confidence, an unresolved dimension, or mixed purpose all yield `true`, which HOLDs and blocks under `TTD-GOV-002` with human review. Absence of adverse keywords is not affirmative ordinary-scope evidence, and this tranche introduces no automatic standards REJECT class.
+`standards_boundary_unresolved` is derived, never asserted. Clearing it requires a complete standards classification: `affirmative_ordinary_scope_evidence` exactly `true`, `confidence` exactly `HIGH`, `unresolved_dimensions` an empty array of strings, `mixed_purpose` exactly `false`, and `evidence_refs` a non-empty array of resolvable source-ref identifiers. Every one of those members must be **present and of the exact declared type**. A missing member, a wrong-typed member, a substituted object or array shape, an unresolved dimension, a mixed purpose, or an unresolvable reference all yield `true`, which HOLDs and blocks under `TTD-GOV-002` with human review. Absence of adverse keywords is not affirmative ordinary-scope evidence, and this tranche introduces no automatic standards REJECT class.
+
+### Fact consistency
+
+`normalization/ttd-fact-registry.json` declares `fact_consistency_constraints`: combinations of normalized facts that cannot hold together. `TTD-FACT-CONSISTENCY-001` forbids `materially_current: true` alongside `candidate_already_ended: true`. A violated constraint fails closed to HOLD with publication blocked and human review required; neither side of the contradiction is silently preferred, and no field actions are derived from contradictory facts. The constraint set is a **required** evaluator input — a caller that omits it gets a validation failure rather than silently losing the check. These constraints enforce internal contradictions only; they create no editorial rule and change no approved policy semantics.
 
 ### Evaluator semantics
 
@@ -129,8 +133,13 @@ The worker layer is split into three independently testable stages. Nothing in i
 - Precedence is `HOLD > REJECT > SELECT > NO_CHANGE`. `NO_CHANGE` cannot clear another rule and `SELECT` cannot clear a HOLD.
 - Publication blocking and human review are monotonic within one evaluation.
 - When no substantive rule authorizes an outcome, the default `HOLD` applies.
+- A `SELECT` may stand only when **every** material eligibility dependency in the fact registry is KNOWN and well-formed. A dependency that is missing, `UNKNOWN`, contradictory, or carrying a value the policy could never compare against is named in `unresolved_dependencies` and downgrades the outcome to HOLD with publication blocked, routed to evidence verification. `UNKNOWN` is never converted into a favourable `false`.
 - Compatible `field_actions` merge; conflicting ones fail closed to HOLD rather than being silently reconciled.
 - Governing-rule selection, matched-rule ordering, and the semantic fingerprint are order-independent, so neither JSON key order nor rule declaration order can change meaning.
+
+### Input safety and audit completion
+
+Canonical serialization refuses both prototype-pollution vectors: a dangerous own key (`__proto__`, `constructor`, `prototype`, as produced by `JSON.parse` of hostile input) and a tampered object or array prototype (as produced by merging that input with `Object.assign`, where the key no longer appears in `Object.keys`). Refusal rejects the candidate but never aborts the pipeline: the evidence digest degrades to `null` with the error recorded, and a bounded audit record is still produced showing the validation failure, `HOLD`, publication blocked, no matched rules, and `downstream_execution: NOT_EXECUTED`. No downstream progression is ever fabricated.
 
 ### Trust and authority
 
