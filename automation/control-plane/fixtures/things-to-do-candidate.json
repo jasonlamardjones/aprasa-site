@@ -9,14 +9,13 @@
     "policy_version": "APRASA_TTD_EDITORIAL_V1@1.0.0",
     "localization_scope": "PROJECT_09",
     "technical_scope": "PROJECT_04",
+    "authority_resolution": "TRUSTED_RESOLVED",
     "expected_main_sha": null
   },
   "source": {
     "intake_method": "MONITORING",
     "checked_at": "2026-09-04T00:00:00-01:00",
-    "urls": [
-      "https://example.org/event"
-    ],
+    "urls": ["https://example.org/event"],
     "submitted_by": null
   },
   "payload": {
@@ -27,10 +26,7 @@
     "notes": "Synthetic fixture only. Never publish."
   },
   "required_worker_role": "EVIDENCE_VERIFIER",
-  "allowed_actions": [
-    "READ",
-    "RESEARCH"
-  ],
+  "allowed_actions": ["READ", "RESEARCH"],
   "prohibited_actions": [
     "INVENT_FACTS",
     "INVENT_POLICY",
@@ -50,7 +46,7 @@
       "next_status": "HOLD"
     },
     "on_failure": {
-      "next_role": "HUMAN_ESCALATION",
+      "next_role": "EVIDENCE_VERIFIER",
       "next_status": "BLOCKED"
     },
     "on_exception": {
