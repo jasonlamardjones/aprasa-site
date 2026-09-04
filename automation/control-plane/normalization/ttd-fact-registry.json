@@ -1,0 +1,77 @@
+{
+  "registry_id": "APRASA_TTD_NORMALIZED_FACT_REGISTRY",
+  "version": "1.0.0",
+  "domain": "THINGS_TO_DO",
+  "policy_ref": "APRASA_TTD_EDITORIAL_V1@1.0.0",
+  "notes": "Vocabulary of normalized Things-to-Do candidate facts. This registry declares the shape of facts consumed by the deterministic evaluator. It does not create editorial policy. Absence of an affirmative assertion yields UNKNOWN, never a favorable value. The single conservative absent-value rule is standards_boundary_unresolved, which fails closed to true under TTD-GOV-002.",
+  "source_classes": [
+    "FIRST_PARTY_ORGANIZER",
+    "FIRST_PARTY_VENUE",
+    "FIRST_PARTY_PROVIDER",
+    "CORROBORATING_MEDIA",
+    "AGGREGATOR",
+    "OTHER"
+  ],
+  "allowed_url_schemes": ["http:", "https:"],
+  "confidence_levels": ["HIGH", "MEDIUM", "LOW"],
+  "admissible_confidence": ["HIGH"],
+  "predicates": [
+    {
+      "name": "activity_scope",
+      "type": "enum",
+      "enum": [
+        "ORDINARY_CULTURAL_COMMUNITY_PUBLIC_INTEREST_OR_GENERAL_AUDIENCE",
+        "ONGOING_COMMERCIAL_TOUR_EXCURSION_CLASS_EXPERIENCE_PACKAGE_OR_SERVICE",
+        "OTHER_UNCLASSIFIED"
+      ],
+      "materiality": "MATERIAL_ELIGIBILITY",
+      "directly_assertable": true
+    },
+    { "name": "geography_in_scope", "type": "boolean", "materiality": "MATERIAL_ELIGIBILITY", "directly_assertable": true },
+    { "name": "materially_current", "type": "boolean", "materiality": "MATERIAL_ELIGIBILITY", "directly_assertable": true },
+    { "name": "evidence_sufficient", "type": "boolean", "materiality": "MATERIAL_ELIGIBILITY", "directly_assertable": true },
+    { "name": "material_source_conflict", "type": "boolean", "materiality": "MATERIAL_ELIGIBILITY", "directly_assertable": true },
+    { "name": "conflict_resolved", "type": "boolean", "materiality": "OPERATIONAL", "directly_assertable": true },
+    { "name": "required_authority_missing", "type": "boolean", "materiality": "MATERIAL_ELIGIBILITY", "directly_assertable": true },
+    {
+      "name": "standards_boundary_unresolved",
+      "type": "boolean",
+      "materiality": "MATERIAL_ELIGIBILITY",
+      "directly_assertable": false,
+      "derived_from": "standards_classification",
+      "conservative_absent_value": true,
+      "note": "Derived only from an explicit standards classification. Absence of adverse keywords is not affirmative ordinary-scope evidence. Any omission, ambiguity, low-confidence classification, or unresolved standards dimension yields true, which HOLDs under TTD-GOV-002."
+    },
+    { "name": "commercial_primary_proposition", "type": "boolean", "materiality": "MATERIAL_ELIGIBILITY", "directly_assertable": true },
+    { "name": "first_party_source_accessible", "type": "boolean", "materiality": "OPERATIONAL", "directly_assertable": true },
+    { "name": "admission_verified", "type": "boolean", "materiality": "OPERATIONAL", "directly_assertable": true },
+    { "name": "secondary_detail_verified", "type": "boolean", "materiality": "OPERATIONAL", "directly_assertable": true },
+    { "name": "event_identity_date_venue_sufficient", "type": "boolean", "materiality": "OPERATIONAL", "directly_assertable": true },
+    {
+      "name": "authoritative_end_precision",
+      "type": "enum",
+      "enum": ["DAY", "MONTH"],
+      "materiality": "OPERATIONAL",
+      "directly_assertable": true
+    },
+    { "name": "authentic_media_rights_unclear", "type": "boolean", "materiality": "OPERATIONAL", "directly_assertable": true },
+    { "name": "governed_editorial_fallback_available", "type": "boolean", "materiality": "OPERATIONAL", "directly_assertable": true },
+    { "name": "broader_source_conflicts_with_specific_scope", "type": "boolean", "materiality": "MATERIAL_ELIGIBILITY", "directly_assertable": true },
+    { "name": "proposed_copy_strengthens_unknown_fact", "type": "boolean", "materiality": "MATERIAL_ELIGIBILITY", "directly_assertable": true },
+    { "name": "ordinary_editorial_event", "type": "boolean", "materiality": "OPERATIONAL", "directly_assertable": true },
+    { "name": "ticketed_or_commercial_venue", "type": "boolean", "materiality": "OPERATIONAL", "directly_assertable": true },
+    { "name": "payment_or_commercial_relationship", "type": "boolean", "materiality": "OPERATIONAL", "directly_assertable": true },
+    {
+      "name": "primary_proposition",
+      "type": "enum",
+      "enum": [
+        "ONGOING_COMMERCIAL_TOUR_EXCURSION_CLASS_EXPERIENCE_PACKAGE_OR_SERVICE",
+        "ORDINARY_EDITORIAL_EVENT"
+      ],
+      "materiality": "MATERIAL_ELIGIBILITY",
+      "directly_assertable": true
+    },
+    { "name": "current_or_former_client", "type": "boolean", "materiality": "OPERATIONAL", "directly_assertable": true },
+    { "name": "candidate_already_ended", "type": "boolean", "materiality": "MATERIAL_ELIGIBILITY", "directly_assertable": true }
+  ]
+}
