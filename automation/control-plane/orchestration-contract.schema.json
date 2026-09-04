@@ -1,0 +1,190 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aprasa.org/schemas/control-plane/orchestration-contract.schema.json",
+  "title": "A PRASA Agent Orchestration Contract v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "orchestration_id",
+    "task_ref",
+    "trigger",
+    "prerequisites",
+    "worker_resolution",
+    "retry_policy",
+    "callbacks",
+    "escalation_policy",
+    "artifacts",
+    "audit"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "orchestration_id": { "type": "string", "pattern": "^ORCH-[A-Z0-9._:-]{4,120}$" },
+    "task_ref": { "type": "string", "pattern": "^[A-Z0-9][A-Z0-9._:-]{5,127}$" },
+    "trigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event_type", "source_adapter", "event_ref"],
+      "properties": {
+        "event_type": {
+          "type": "string",
+          "enum": [
+            "MANUAL",
+            "TIME_SCHEDULE",
+            "INBOX_MESSAGE_RECEIVED",
+            "REPOSITORY_PULL_REQUEST",
+            "REPOSITORY_STATUS_CHANGED",
+            "DATA_CHANGE",
+            "WEBHOOK",
+            "MONITORING_MATCH"
+          ]
+        },
+        "source_adapter": { "type": "string", "minLength": 1 },
+        "event_ref": { "type": "string", "minLength": 1 },
+        "occurred_at": { "type": ["string", "null"], "format": "date-time" }
+      }
+    },
+    "prerequisites": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "ref", "required_state"],
+        "properties": {
+          "kind": { "type": "string", "enum": ["TASK", "AUTHORITY", "ARTIFACT", "REPOSITORY_STATE"] },
+          "ref": { "type": "string", "minLength": 1 },
+          "required_state": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "worker_resolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["worker_role", "resolver", "capabilities"],
+      "properties": {
+        "worker_role": { "$ref": "task-envelope.schema.json#/$defs/worker_role" },
+        "resolver": { "const": "ROLE_REGISTRY" },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "WEB_RESEARCH",
+              "BROWSER_USE",
+              "CONNECTED_APPS",
+              "CODE_WRITE",
+              "CODE_REVIEW",
+              "REPOSITORY_READ",
+              "REPOSITORY_WRITE",
+              "LOCALIZATION",
+              "MEDIA_REVIEW",
+              "POLICY_REASONING",
+              "PRODUCTION_QA"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "provider_binding_ref": { "type": ["string", "null"] }
+      }
+    },
+    "retry_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_attempts", "strategy", "retryable_classes"],
+      "properties": {
+        "max_attempts": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "strategy": { "type": "string", "enum": ["NONE", "FIXED", "EXPONENTIAL"] },
+        "retryable_classes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["TRANSIENT_TOOL_ERROR", "RATE_LIMIT", "NETWORK_ERROR", "DEPENDENCY_NOT_READY"]
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "callbacks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["on_success", "on_failure", "on_blocked", "on_exception"],
+      "properties": {
+        "on_success": { "$ref": "#/$defs/callback" },
+        "on_failure": { "$ref": "#/$defs/callback" },
+        "on_blocked": { "$ref": "#/$defs/callback" },
+        "on_exception": { "$ref": "#/$defs/callback" }
+      }
+    },
+    "escalation_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allowed_classes", "default_target"],
+      "properties": {
+        "allowed_classes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "NOVEL_POLICY_QUESTION",
+              "HIGH_QUALITY_SOURCE_CONFLICT",
+              "COMMERCIAL_POLICY_UNRESOLVED",
+              "MEDIA_RIGHTS_UNRESOLVED",
+              "LEGAL_OR_REPUTATIONAL_RISK",
+              "AUTHORITY_CONFLICT",
+              "AUTOMATION_CONFIDENCE_BELOW_THRESHOLD",
+              "TECHNICAL_BLOCKER"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "default_target": { "type": "string", "minLength": 1 }
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["inputs", "outputs"],
+      "properties": {
+        "inputs": { "type": "array", "items": { "$ref": "#/$defs/artifact_ref" } },
+        "outputs": { "type": "array", "items": { "$ref": "#/$defs/artifact_ref" } }
+      }
+    },
+    "audit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event_log_ref", "created_at"],
+      "properties": {
+        "event_log_ref": { "type": "string", "minLength": 1 },
+        "created_at": { "type": "string", "format": "date-time" },
+        "last_transition_at": { "type": ["string", "null"], "format": "date-time" }
+      }
+    }
+  },
+  "$defs": {
+    "callback": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["next_role", "next_task_type", "next_status"],
+          "properties": {
+            "next_role": { "$ref": "task-envelope.schema.json#/$defs/worker_role" },
+            "next_task_type": { "$ref": "task-envelope.schema.json#/$defs/task_type" },
+            "next_status": { "$ref": "task-envelope.schema.json#/$defs/status" }
+          }
+        }
+      ]
+    },
+    "artifact_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "ref"],
+      "properties": {
+        "kind": { "type": "string", "enum": ["FILE", "URL", "GITHUB_SHA", "PR", "DRIVE_ITEM", "TASK_RESULT", "AUDIT_RECORD"] },
+        "ref": { "type": "string", "minLength": 1 },
+        "required": { "type": "boolean" }
+      }
+    }
+  }
+}
