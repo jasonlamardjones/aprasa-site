@@ -30,21 +30,22 @@
           "type": "string",
           "enum": ["MANUAL", "TIME_SCHEDULE", "INBOX_MESSAGE_RECEIVED", "REPOSITORY_PULL_REQUEST", "REPOSITORY_STATUS_CHANGED", "DATA_CHANGE", "WEBHOOK", "MONITORING_MATCH"]
         },
-        "source_adapter": { "type": "string", "minLength": 1 },
-        "event_ref": { "type": "string", "minLength": 1 },
+        "source_adapter": { "type": "string", "pattern": ".*\\S.*" },
+        "event_ref": { "type": "string", "pattern": ".*\\S.*" },
         "occurred_at": { "type": ["string", "null"], "format": "date-time" }
       }
     },
     "prerequisites": {
       "type": "array",
+      "minItems": 1,
       "items": {
         "type": "object",
         "additionalProperties": false,
         "required": ["kind", "ref", "required_state"],
         "properties": {
           "kind": { "type": "string", "enum": ["TASK", "AUTHORITY", "ARTIFACT", "REPOSITORY_STATE"] },
-          "ref": { "type": "string", "minLength": 1 },
-          "required_state": { "type": "string", "minLength": 1 }
+          "ref": { "type": "string", "pattern": ".*\\S.*" },
+          "required_state": { "type": "string", "enum": ["COMPLETED", "TRUSTED_RESOLVED", "AVAILABLE", "MATCHED"] }
         }
       }
     },
@@ -85,10 +86,10 @@
       "additionalProperties": false,
       "required": ["on_success", "on_failure", "on_blocked", "on_exception"],
       "properties": {
-        "on_success": { "$ref": "#/$defs/callback" },
-        "on_failure": { "$ref": "#/$defs/callback" },
-        "on_blocked": { "$ref": "#/$defs/callback" },
-        "on_exception": { "$ref": "#/$defs/callback" }
+        "on_success": { "$ref": "#/$defs/success_callback" },
+        "on_failure": { "$ref": "#/$defs/failure_callback" },
+        "on_blocked": { "$ref": "#/$defs/blocked_callback" },
+        "on_exception": { "$ref": "#/$defs/exception_callback" }
       }
     },
     "escalation_policy": {
@@ -104,7 +105,7 @@
           },
           "uniqueItems": true
         },
-        "default_target": { "type": "string", "minLength": 1 }
+        "default_target": { "type": "string", "enum": ["PROJECT_04_CONTROL_TOWER", "OWNING_GOVERNANCE_AUTHORITY", "FOUNDER_APPROVAL_GATE"] }
       }
     },
     "artifacts": {
@@ -121,7 +122,7 @@
       "additionalProperties": false,
       "required": ["event_log_ref", "created_at"],
       "properties": {
-        "event_log_ref": { "type": "string", "minLength": 1 },
+        "event_log_ref": { "type": "string", "pattern": ".*\\S.*" },
         "created_at": { "type": "string", "format": "date-time" },
         "last_transition_at": { "type": ["string", "null"], "format": "date-time" }
       }
@@ -132,15 +133,27 @@
       "type": "string",
       "enum": ["CONTENT_CANDIDATE", "EVIDENCE_REVIEW", "POLICY_ADJUDICATION", "LOCALIZATION", "MEDIA_VALIDATION", "PUBLICATION_PREPARATION", "REPOSITORY_IMPLEMENTATION", "INDEPENDENT_REVIEW", "PRODUCTION_QA", "LIFECYCLE_REVIEW", "HUMAN_ESCALATION"]
     },
-    "status": {
-      "type": "string",
-      "enum": ["DISCOVERED", "NORMALIZED", "EVIDENCE_CHECKED", "ADJUDICATED", "SELECTED", "HOLD", "REJECTED", "LOCALIZED", "MEDIA_VALIDATED", "PUBLICATION_READY", "IMPLEMENTED", "REVIEWED", "DEPLOYMENT_READY", "PUBLISHED", "PRODUCTION_VERIFIED", "MONITORED", "EXPIRED", "WITHDRAWN", "SUPERSEDED", "ESCALATED", "BLOCKED"]
-    },
     "worker_role": {
       "type": "string",
       "enum": ["DISCOVERY_WORKER", "EVIDENCE_VERIFIER", "POLICY_ADJUDICATOR", "LOCALIZATION_WORKER", "MEDIA_VALIDATOR", "PUBLICATION_WRITER", "INDEPENDENT_REVIEWER", "PRODUCTION_QA", "LIFECYCLE_MONITOR", "HUMAN_ESCALATION"]
     },
-    "callback": {
+    "success_status": {
+      "type": "string",
+      "enum": ["NORMALIZED", "EVIDENCE_CHECKED", "ADJUDICATED", "SELECTED", "LOCALIZED", "MEDIA_VALIDATED", "PUBLICATION_READY", "IMPLEMENTED", "REVIEWED", "DEPLOYMENT_READY", "PUBLISHED", "PRODUCTION_VERIFIED", "MONITORED"]
+    },
+    "failure_status": {
+      "type": "string",
+      "enum": ["BLOCKED", "HOLD", "ESCALATED", "REJECTED"]
+    },
+    "blocked_status": {
+      "type": "string",
+      "enum": ["BLOCKED", "HOLD", "ESCALATED"]
+    },
+    "exception_status": {
+      "type": "string",
+      "enum": ["ESCALATED", "BLOCKED", "HOLD"]
+    },
+    "success_callback": {
       "oneOf": [
         { "type": "null" },
         {
@@ -150,7 +163,52 @@
           "properties": {
             "next_role": { "$ref": "#/$defs/worker_role" },
             "next_task_type": { "$ref": "#/$defs/task_type" },
-            "next_status": { "$ref": "#/$defs/status" }
+            "next_status": { "$ref": "#/$defs/success_status" }
+          }
+        }
+      ]
+    },
+    "failure_callback": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["next_role", "next_task_type", "next_status"],
+          "properties": {
+            "next_role": { "$ref": "#/$defs/worker_role" },
+            "next_task_type": { "$ref": "#/$defs/task_type" },
+            "next_status": { "$ref": "#/$defs/failure_status" }
+          }
+        }
+      ]
+    },
+    "blocked_callback": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["next_role", "next_task_type", "next_status"],
+          "properties": {
+            "next_role": { "$ref": "#/$defs/worker_role" },
+            "next_task_type": { "$ref": "#/$defs/task_type" },
+            "next_status": { "$ref": "#/$defs/blocked_status" }
+          }
+        }
+      ]
+    },
+    "exception_callback": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["next_role", "next_task_type", "next_status"],
+          "properties": {
+            "next_role": { "$ref": "#/$defs/worker_role" },
+            "next_task_type": { "$ref": "#/$defs/task_type" },
+            "next_status": { "$ref": "#/$defs/exception_status" }
           }
         }
       ]
@@ -161,7 +219,7 @@
       "required": ["kind", "ref"],
       "properties": {
         "kind": { "type": "string", "enum": ["FILE", "URL", "GITHUB_SHA", "PR", "DRIVE_ITEM", "TASK_RESULT", "AUDIT_RECORD"] },
-        "ref": { "type": "string", "minLength": 1 },
+        "ref": { "type": "string", "pattern": ".*\\S.*" },
         "required": { "type": "boolean" }
       }
     }
