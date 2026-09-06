@@ -10,7 +10,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { assertAdmissibleStructure, canonicalize, deepEqual, denseStringList, digest, emptyMap, isAdmissibleDenseArray } from './ttd-canonical-json.mjs';
+import { admitSnapshot, assertAdmissibleStructure, canonicalize, deepEqual, denseStringList, digest, emptyMap, isAdmissibleDenseArray } from './ttd-canonical-json.mjs';
 
 const POLICY_PATH = path.join('automation', 'control-plane', 'policies', 'things-to-do-v1.json');
 const ANCHOR_PATH = path.join('automation', 'control-plane', 'trust', 'things-to-do-v1.trust-anchor.json');
@@ -40,6 +40,41 @@ export function loadPolicy(root = process.cwd()) {
 // time. validate-ttd-trust-anchor.mjs is the drift gate: a registry edit that
 // is not accompanied by a matching, separately reviewed change here fails in CI
 // and fails closed at run time.
+// Complete content identity of the trusted fact registry.
+//
+// Pinning individual fields cannot be made safe by enumeration: every registry
+// property the normalizer or evaluator consults is decision-relevant, and a
+// list of the ones discovered so far will always lag the next one found.
+// admissible_confidence, allowed_url_schemes, source_classes and
+// confidence_levels each gate admission directly; predicate declarations gate
+// interpretation. So the whole document is bound by one canonical digest, and
+// any supplied registry must be byte-for-byte semantically identical to the
+// committed one before it may influence adjudication. Canonical digesting is
+// key-order independent, so reformatting is not drift, while any change to a
+// value, an array's order, or the set of keys is.
+//
+// A legitimate registry change therefore fails closed everywhere until this
+// value is deliberately updated and independently reviewed, exactly as a policy
+// change fails closed until the trust anchor is updated.
+export const REQUIRED_FACT_REGISTRY_SHA256 = 'bc7d558cb4576b85aca90258b178a1f848db58ec5f7f139a3cb98f30817a6b2f';
+
+// The admission vocabularies the digest binds, restated so a mismatch reports
+// which decision surface moved rather than only that the document changed.
+// These are the committed registry's own values; no semantics are introduced.
+export const REQUIRED_REGISTRY_ADMISSION = {
+  source_classes: [
+    'FIRST_PARTY_ORGANIZER',
+    'FIRST_PARTY_VENUE',
+    'FIRST_PARTY_PROVIDER',
+    'CORROBORATING_MEDIA',
+    'AGGREGATOR',
+    'OTHER'
+  ],
+  allowed_url_schemes: ['http:', 'https:'],
+  confidence_levels: ['HIGH', 'MEDIUM', 'LOW'],
+  admissible_confidence: ['HIGH']
+};
+
 export const REQUIRED_MATERIAL_ELIGIBILITY_PREDICATES = [
   'activity_scope',
   'broader_source_conflicts_with_specific_scope',
@@ -123,6 +158,31 @@ export function deriveTrustedFactPolicy(registry) {
   if (registry === null || typeof registry !== 'object' || Array.isArray(registry)) {
     throw new Error('fact registry is missing or malformed');
   }
+
+  // Complete content identity first. The registry is admitted through the
+  // single-read snapshot boundary so a hostile view cannot present one document
+  // to the digest and another to the checks below, and the snapshot is what the
+  // rest of this function reads.
+  let admitted;
+  try {
+    admitted = admitSnapshot(registry, '$registry');
+  } catch (error) {
+    throw new Error(`fact registry could not be admitted: ${error.message}`);
+  }
+  const registrySha = digest(admitted);
+  if (registrySha !== REQUIRED_FACT_REGISTRY_SHA256) {
+    throw new Error(`fact registry content digest ${registrySha} does not match the trusted registry identity ${REQUIRED_FACT_REGISTRY_SHA256}`);
+  }
+
+  // Restated admission vocabularies. The digest above already refuses any
+  // change to these; checking them separately names the moved decision surface.
+  for (const [field, expected] of Object.entries(REQUIRED_REGISTRY_ADMISSION)) {
+    if (!deepEqual(admitted[field], expected)) {
+      throw new Error(`fact registry ${field} does not match the trusted admission vocabulary`);
+    }
+  }
+
+  registry = admitted;
   if (!isAdmissibleDenseArray(registry.predicates)) {
     throw new Error('fact registry predicates must be a dense array');
   }
@@ -147,7 +207,10 @@ export function deriveTrustedFactPolicy(registry) {
   if (constraints === null || !deepEqual(constraints, REQUIRED_CONSTRAINT_IDENTITY)) {
     throw new Error('fact registry fact-consistency constraints do not match the trusted configuration');
   }
-  return { materialPredicates, factConsistencyConstraints: constraints };
+  // The admitted snapshot is returned alongside the derived configuration so
+  // every later consumer reads the same proven-identical registry rather than
+  // the caller's original object.
+  return { registry, materialPredicates, factConsistencyConstraints: constraints };
 }
 
 export function loadTrustAnchor(root = process.cwd()) {

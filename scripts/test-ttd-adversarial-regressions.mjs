@@ -8,11 +8,11 @@
 
 import fs from 'node:fs';
 import { createHarness, normalizedFromOracle, factsFromOracle, TRUSTED_AUTHORITY_RESOLUTION, FIXED_EVALUATION_TIMESTAMP } from './lib/ttd-test-harness.mjs';
-import { loadPolicy, loadTrustAnchor, evaluateNormalizedFacts, semanticFingerprint, deriveTrustedFactPolicy, normalizeFactConsistencyConstraints, REQUIRED_FACT_CONSISTENCY_CONSTRAINTS, REQUIRED_MATERIAL_ELIGIBILITY_PREDICATES } from './lib/ttd-policy-evaluator.mjs';
+import { loadPolicy, loadTrustAnchor, evaluateNormalizedFacts, semanticFingerprint, deriveTrustedFactPolicy, normalizeFactConsistencyConstraints, REQUIRED_FACT_CONSISTENCY_CONSTRAINTS, REQUIRED_FACT_REGISTRY_SHA256, REQUIRED_MATERIAL_ELIGIBILITY_PREDICATES, REQUIRED_REGISTRY_ADMISSION } from './lib/ttd-policy-evaluator.mjs';
 import { loadFactRegistry, normalizeCandidate, factSummary, resolveEvidenceRefs } from './lib/ttd-normalizer.mjs';
 import { loadAdjudicationContext, adjudicateCandidate } from './lib/ttd-adjudication.mjs';
 import { routeEvaluation } from './lib/ttd-adjudication-routing.mjs';
-import { digest, canonicalize, assertAdmissibleStructure, isAdmissibleDenseArray, denseStringList } from './lib/ttd-canonical-json.mjs';
+import { digest, canonicalize, assertAdmissibleStructure, isAdmissibleDenseArray, denseStringList, admitSnapshot } from './lib/ttd-canonical-json.mjs';
 
 const harness = createHarness('TTD_ADVERSARIAL_REGRESSIONS');
 const oracle = JSON.parse(fs.readFileSync('automation/control-plane/fixtures/ttd-adjudication-oracle.json', 'utf8'));
@@ -783,7 +783,7 @@ for (const url of ['javascript:alert(1)', 'file:///etc/passwd', 'data:text/html,
       harness.ok(`[REVIEW-4] ${key} in ${placement.label}: the failure is recorded in the audit`,
         composed.audit.normalization.errors.length > 0 || composed.audit.evaluation.failures.length > 0);
       harness.ok(`[REVIEW-4] ${key} in ${placement.label}: the audit is serializable`,
-        typeof canonicalize(composed.audit) === 'string');
+        typeof canonicalText(composed.audit) === 'string');
     }
   }
 
@@ -801,6 +801,28 @@ for (const url of ['javascript:alert(1)', 'file:///etc/passwd', 'data:text/html,
 
 // A sparse array cannot be written as a literal without relying on elision, so
 // it is built explicitly. Holes are what array methods skip.
+// Canonical serialization of a failing case must not abort the run: a case that
+// produced an unrepresentable audit has to be reported as a failed check, not
+// as the serializer's own exception.
+function canonicalText(value) {
+  try {
+    return canonicalize(value);
+  } catch {
+    return null;
+  }
+}
+
+function parsesCanonically(value) {
+  const text = canonicalText(value);
+  if (text === null) return false;
+  try {
+    JSON.parse(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function sparseArray(length, entries = {}) {
   const array = new Array(length);
   for (const [index, value] of Object.entries(entries)) array[Number(index)] = value;
@@ -834,8 +856,8 @@ function assertNoAdvance(label, evidence, adjudicationContext = context) {
   harness.equal(label + ': publication is blocked', audit.evaluation.publication_blocked, true);
   harness.ok(label + ': no advancing route', audit.routing.automatic_route?.next_status !== 'SELECTED');
   harness.equal(label + ': no downstream execution is claimed', audit.routing.downstream_execution, { attempted: false, status: 'NOT_EXECUTED' });
-  harness.equal(label + ': the audit serializes', typeof canonicalize(audit), 'string');
-  harness.ok(label + ': the serialized audit parses', JSON.parse(canonicalize(audit)) !== undefined);
+  harness.equal(label + ': the audit serializes', typeof canonicalText(audit), 'string');
+  harness.ok(label + ': the serialized audit parses', parsesCanonically(audit));
   return audit;
 }
 
@@ -949,7 +971,7 @@ function assertBoundedTechnicalFailure(label, evidence, adjudicationContext = co
     const audit = assertBoundedTechnicalFailure('[B1] canonical audit after sparse rejection', evidence);
     harness.ok('[B1] the rejected audit carries no evidence digest', audit === null || audit.evidence_digest === null);
     harness.ok('[B1] the serialized audit contains no invalid array literal',
-      audit === null || !canonicalize(audit).includes('[,'));
+      audit === null || !(canonicalText(audit) ?? '').includes('[,'));
   }
 }
 
@@ -1270,8 +1292,8 @@ function assertBoundedTechnicalFailure(label, evidence, adjudicationContext = co
       harness.equal(label + ': routing holds', audit.routing.disposition, 'HOLD');
       harness.ok(label + ': an explicit technical diagnostic is preserved',
         audit.evaluation.failures.length > 0 && audit.normalization.errors.length > 0);
-      harness.equal(label + ': the fallback audit serializes', typeof canonicalize(audit), 'string');
-      harness.ok(label + ': the serialized fallback audit parses', JSON.parse(canonicalize(audit)) !== undefined);
+      harness.equal(label + ': the fallback audit serializes', typeof canonicalText(audit), 'string');
+      harness.ok(label + ': the serialized fallback audit parses', parsesCanonically(audit));
       harness.equal(label + ': the accessor is still never invoked after auditing', probe.calls, 0);
       if (placement.label === 'candidate_id') {
         harness.equal(label + ': no candidate identity is fabricated', audit.candidate_id, null);
@@ -1297,7 +1319,7 @@ function assertBoundedTechnicalFailure(label, evidence, adjudicationContext = co
     harness.equal('[B4] a wholly hostile record is blocked', composed?.audit.evaluation.publication_blocked, true);
     harness.equal('[B4] a wholly hostile record requires human review', composed?.audit.evaluation.human_review, true);
     harness.equal('[B4] a wholly hostile record names no candidate', composed?.audit.candidate_id, null);
-    harness.equal('[B4] a wholly hostile record serializes', typeof canonicalize(composed?.audit), 'string');
+    harness.equal('[B4] a wholly hostile record serializes', typeof canonicalText(composed?.audit), 'string');
   }
 
   harness.ok('[B4] Object.prototype is unpolluted', ({}).polluted === undefined);
@@ -1442,8 +1464,8 @@ function assertBoundedTechnicalFailure(label, evidence, adjudicationContext = co
     harness.ok(label + ': no advancing route', audit.routing.automatic_route?.next_status !== 'SELECTED');
     harness.equal(label + ': downstream execution is NOT_EXECUTED', audit.routing.downstream_execution, { attempted: false, status: 'NOT_EXECUTED' });
     harness.ok(label + ': an explicit technical failure diagnostic is preserved', audit.evaluation.failures.length > 0);
-    harness.equal(label + ': the fallback audit serializes', typeof canonicalize(audit), 'string');
-    harness.ok(label + ': the serialized fallback audit parses', JSON.parse(canonicalize(audit)) !== undefined);
+    harness.equal(label + ': the fallback audit serializes', typeof canonicalText(audit), 'string');
+    harness.ok(label + ': the serialized fallback audit parses', parsesCanonically(audit));
   }
 
   // A well-formed candidate on an unusable context is still bounded, and its
@@ -1457,6 +1479,490 @@ function assertBoundedTechnicalFailure(label, evidence, adjudicationContext = co
   }
 
   harness.ok('[B4] Object.prototype is unpolluted after the failure path', ({}).polluted === undefined);
+}
+
+// =====================================================================
+// Third-review findings F1-F3. Each case is an attempt to obtain SELECT, an
+// advancing route, or an unserializable audit by mutating trusted registry
+// semantics, by presenting a mutable view of the candidate, or by smuggling an
+// inadmissible control value into the audit. All must fail closed.
+// =====================================================================
+
+// [F1] Production adjudication trusts one canonical registry identity only.
+{
+  harness.equal('[F1] the committed registry matches the trusted identity',
+    digest(registry), REQUIRED_FACT_REGISTRY_SHA256);
+  harness.ok('[F1] the exact trusted registry is accepted',
+    deriveTrustedFactPolicy(clone(registry)).materialPredicates.length === REQUIRED_MATERIAL_ELIGIBILITY_PREDICATES.length);
+  for (const [field, expected] of Object.entries(REQUIRED_REGISTRY_ADMISSION)) {
+    harness.equal('[F1] the committed registry ' + field + ' matches the trusted vocabulary', registry[field], expected);
+  }
+
+  // Key order is not semantic; a canonically identical document is accepted.
+  {
+    const reordered = {};
+    for (const key of Object.keys(clone(registry)).sort().reverse()) reordered[key] = clone(registry)[key];
+    harness.equal('[F1] a reordered but canonically identical registry is accepted',
+      digest(reordered), REQUIRED_FACT_REGISTRY_SHA256);
+    harness.ok('[F1] a reordered but canonically identical registry still derives',
+      deriveTrustedFactPolicy(reordered).materialPredicates.length > 0);
+  }
+
+  // Each mutation is attempted both against the trusted-derivation gate and
+  // through production adjudication with evidence built to exploit it.
+  const registryAttacks = [
+    {
+      label: 'admissible_confidence widened to LOW',
+      forge: (forged) => { forged.admissible_confidence = ['LOW']; },
+      evidence: () => { const e = baseEvidence(); for (const a of e.assertions) a.confidence = 'LOW'; return e; }
+    },
+    {
+      label: 'admissible_confidence widened to every level',
+      forge: (forged) => { forged.admissible_confidence = ['HIGH', 'MEDIUM', 'LOW']; },
+      evidence: () => { const e = baseEvidence(); for (const a of e.assertions) a.confidence = 'MEDIUM'; return e; }
+    },
+    {
+      label: 'admissible_confidence emptied',
+      forge: (forged) => { forged.admissible_confidence = []; },
+      evidence: () => baseEvidence()
+    },
+    {
+      label: 'allowed_url_schemes extended with data:',
+      forge: (forged) => { forged.allowed_url_schemes.push('data:'); },
+      evidence: () => { const e = baseEvidence(); e.source_refs[0].url = 'data:text/plain,smuggled'; return e; }
+    },
+    {
+      label: 'allowed_url_schemes extended with javascript:',
+      forge: (forged) => { forged.allowed_url_schemes.push('javascript:'); },
+      evidence: () => { const e = baseEvidence(); e.source_refs[0].url = 'javascript:alert(1)'; return e; }
+    },
+    {
+      label: 'allowed_url_schemes extended with file:',
+      forge: (forged) => { forged.allowed_url_schemes.push('file:'); },
+      evidence: () => { const e = baseEvidence(); e.source_refs[0].url = 'file:///etc/passwd'; return e; }
+    },
+    {
+      label: 'allowed_url_schemes reordered',
+      forge: (forged) => { forged.allowed_url_schemes.reverse(); },
+      evidence: () => baseEvidence()
+    },
+    {
+      label: 'source_classes extended with a forged class',
+      forge: (forged) => { forged.source_classes.push('FORGED_CLASS'); },
+      evidence: () => { const e = baseEvidence(); e.source_refs[0].source_class = 'FORGED_CLASS'; return e; }
+    },
+    {
+      label: 'source_classes narrowed',
+      forge: (forged) => { forged.source_classes = ['OTHER']; },
+      evidence: () => baseEvidence()
+    },
+    {
+      label: 'confidence_levels extended',
+      forge: (forged) => { forged.confidence_levels.push('CERTAIN'); forged.admissible_confidence = ['CERTAIN']; },
+      evidence: () => { const e = baseEvidence(); for (const a of e.assertions) a.confidence = 'CERTAIN'; return e; }
+    },
+    {
+      label: 'confidence_levels emptied',
+      forge: (forged) => { forged.confidence_levels = []; },
+      evidence: () => baseEvidence()
+    },
+    {
+      label: 'a predicate enum widened',
+      forge: (forged) => { forged.predicates.find((item) => item.name === 'primary_proposition').enum.push('FORGED_PROPOSITION'); },
+      evidence: () => baseEvidence()
+    },
+    {
+      label: 'a predicate type changed',
+      forge: (forged) => { forged.predicates.find((item) => item.name === 'geography_in_scope').type = 'enum'; },
+      evidence: () => baseEvidence()
+    },
+    {
+      label: 'a derived predicate made directly assertable',
+      forge: (forged) => { forged.predicates.find((item) => item.name === 'standards_boundary_unresolved').directly_assertable = true; },
+      evidence: () => { const e = baseEvidence(); e.assertions.push({ predicate: 'standards_boundary_unresolved', value: false, confidence: 'HIGH', evidence_refs: ['S1'] }); return e; }
+    },
+    {
+      label: 'the conservative absent value flipped',
+      forge: (forged) => { forged.predicates.find((item) => item.name === 'standards_boundary_unresolved').conservative_absent_value = false; },
+      evidence: () => baseEvidence()
+    },
+    {
+      label: 'a predicate removed',
+      forge: (forged) => { forged.predicates = forged.predicates.filter((item) => item.name !== 'admission_verified'); },
+      evidence: () => baseEvidence()
+    },
+    {
+      label: 'a predicate added',
+      forge: (forged) => { forged.predicates.push({ name: 'forged_predicate', type: 'boolean', materiality: 'OPERATIONAL', directly_assertable: true }); },
+      evidence: () => baseEvidence()
+    },
+    {
+      label: 'predicate materiality downgraded',
+      forge: (forged) => { forged.predicates.find((item) => item.name === 'primary_proposition').materiality = 'OPERATIONAL'; },
+      evidence: () => baseEvidence()
+    },
+    {
+      label: 'a fact-consistency constraint removed',
+      forge: (forged) => { forged.fact_consistency_constraints = []; },
+      evidence: () => baseEvidence()
+    },
+    {
+      label: 'a fact-consistency constraint narrowed',
+      forge: (forged) => { forged.fact_consistency_constraints[0].forbidden_combination.geography_in_scope = false; },
+      evidence: () => baseEvidence()
+    },
+    { label: 'registry version changed', forge: (forged) => { forged.version = '9.9.9'; }, evidence: () => baseEvidence() },
+    { label: 'registry policy_ref changed', forge: (forged) => { forged.policy_ref = 'FORGED@1.0.0'; }, evidence: () => baseEvidence() },
+    { label: 'registry domain changed', forge: (forged) => { forged.domain = 'FORGED_DOMAIN'; }, evidence: () => baseEvidence() },
+    { label: 'a registry key added', forge: (forged) => { forged.forged_key = true; }, evidence: () => baseEvidence() },
+    { label: 'a registry key removed', forge: (forged) => { delete forged.notes; }, evidence: () => baseEvidence() },
+    { label: 'registry notes reworded', forge: (forged) => { forged.notes = 'reworded'; }, evidence: () => baseEvidence() }
+  ];
+
+  for (const attack of registryAttacks) {
+    const forged = clone(registry);
+    attack.forge(forged);
+    harness.ok('[F1] ' + attack.label + ': the forged registry is not the trusted identity',
+      digest(forged) !== REQUIRED_FACT_REGISTRY_SHA256);
+    harness.throws('[F1] ' + attack.label + ': trusted derivation refuses the forged registry',
+      () => deriveTrustedFactPolicy(forged));
+    assertBoundedTechnicalFailure('[F1] ' + attack.label, attack.evidence(), { ...context, registry: forged });
+  }
+
+  // The same admission bypasses must also fail against the trusted registry,
+  // proving the underlying admission rules are unchanged rather than merely
+  // unreachable.
+  {
+    const lowConfidence = baseEvidence();
+    for (const assertion of lowConfidence.assertions) assertion.confidence = 'LOW';
+    const composed = adjudicateCandidate({ evidence: lowConfidence, context, authorityResolution: TRUSTED_AUTHORITY_RESOLUTION, evaluatedAt: FIXED_EVALUATION_TIMESTAMP });
+    harness.ok('[F1] LOW-confidence assertions never select under the trusted registry',
+      composed.audit.evaluation.disposition !== 'SELECT');
+    harness.equal('[F1] LOW-confidence assertions are blocked under the trusted registry',
+      composed.audit.evaluation.publication_blocked, true);
+
+    const dataUrl = baseEvidence();
+    dataUrl.source_refs[0].url = 'data:text/plain,smuggled';
+    const composedUrl = adjudicateCandidate({ evidence: dataUrl, context, authorityResolution: TRUSTED_AUTHORITY_RESOLUTION, evaluatedAt: FIXED_EVALUATION_TIMESTAMP });
+    harness.ok('[F1] a data: source URL never selects under the trusted registry',
+      composedUrl.audit.evaluation.disposition !== 'SELECT');
+    harness.ok('[F1] a data: source URL is named in the normalization errors',
+      composedUrl.audit.normalization.errors.some((error) => error.code === 'NON_HTTP_SOURCE_URL'));
+  }
+}
+
+// [F2] One admitted snapshot controls both identity and semantics.
+{
+  // The snapshot is a detached, deeply frozen plain-data copy. Once admitted,
+  // nothing the caller does to the original object can change what was digested
+  // or what is evaluated, which is the property that closes the split.
+  {
+    const original = baseEvidence();
+    const snapshot = admitSnapshot(original, '$evidence');
+    const before = canonicalize(snapshot);
+    harness.equal('[F2] the snapshot is canonically identical to admitted input', before, canonicalize(baseEvidence()));
+    harness.ok('[F2] the snapshot is frozen', Object.isFrozen(snapshot));
+    harness.ok('[F2] nested snapshot containers are frozen',
+      Object.isFrozen(snapshot.assertions) && Object.isFrozen(snapshot.assertions[0]) && Object.isFrozen(snapshot.source_refs[0]));
+    harness.ok('[F2] the snapshot does not alias the original',
+      snapshot !== original && snapshot.assertions !== original.assertions);
+    original.assertions[0].value = 'MUTATED_AFTER_ADMISSION';
+    original.source_refs.push({ ref_id: 'INJECTED', url: 'https://example.org/injected', source_class: 'OTHER' });
+    harness.equal('[F2] mutating the original after admission cannot change the snapshot', canonicalize(snapshot), before);
+    harness.equal('[F2] the digest is taken over the admitted snapshot', digest(snapshot), digest(admitSnapshot(baseEvidence())));
+  }
+
+  // Stateful views. Each trap is instrumented so the regression also records
+  // that no 'get' read ever occurs.
+  const proxyAttacks = [
+    {
+      label: 'get trap flips material_source_conflict between reads',
+      build: (probe) => {
+        const target = baseEvidence();
+        return new Proxy(target, {
+          get(item, key, receiver) {
+            probe.get += 1;
+            if (key === 'assertions') {
+              const copy = clone(item.assertions);
+              copy.find((entry) => entry.predicate === 'material_source_conflict').value = probe.get === 1;
+              return copy;
+            }
+            return Reflect.get(item, key, receiver);
+          }
+        });
+      }
+    },
+    {
+      label: 'get trap flips an eligibility predicate between reads',
+      build: (probe) => {
+        const target = baseEvidence();
+        return new Proxy(target, {
+          get(item, key, receiver) {
+            probe.get += 1;
+            if (key === 'assertions') {
+              const copy = clone(item.assertions);
+              copy.find((entry) => entry.predicate === 'geography_in_scope').value = probe.get > 1;
+              return copy;
+            }
+            return Reflect.get(item, key, receiver);
+          }
+        });
+      }
+    },
+    {
+      label: 'getOwnPropertyDescriptor trap changes the value it reports',
+      build: (probe) => {
+        const target = baseEvidence();
+        return new Proxy(target, {
+          getOwnPropertyDescriptor(item, key) {
+            probe.descriptor += 1;
+            const descriptor = Reflect.getOwnPropertyDescriptor(item, key);
+            if (key === 'candidate_id') return { ...descriptor, value: 'ROTATED-' + probe.descriptor };
+            return descriptor;
+          }
+        });
+      }
+    },
+    {
+      label: 'ownKeys trap changes the keys it reports',
+      build: (probe) => {
+        const target = baseEvidence();
+        return new Proxy(target, {
+          ownKeys(item) {
+            probe.ownKeys += 1;
+            const keys = Reflect.ownKeys(item);
+            return probe.ownKeys === 1 ? keys : keys.filter((key) => key !== 'standards_classification');
+          }
+        });
+      }
+    },
+    {
+      label: 'repeated property reads return different values',
+      build: (probe) => {
+        const target = baseEvidence();
+        return new Proxy(target, {
+          get(item, key, receiver) {
+            probe.get += 1;
+            if (key === 'candidate_id') return 'ROTATED-' + probe.get;
+            return Reflect.get(item, key, receiver);
+          }
+        });
+      }
+    },
+    {
+      label: 'a nested assertion is a stateful view',
+      build: (probe) => {
+        const target = baseEvidence();
+        target.assertions[0] = new Proxy(clone(target.assertions[0]), {
+          get(item, key, receiver) {
+            probe.get += 1;
+            if (key === 'value') return probe.get > 1;
+            return Reflect.get(item, key, receiver);
+          }
+        });
+        return target;
+      }
+    },
+    {
+      label: 'a nested source ref is a stateful view',
+      build: (probe) => {
+        const target = baseEvidence();
+        target.source_refs[0] = new Proxy(clone(target.source_refs[0]), {
+          getOwnPropertyDescriptor(item, key) {
+            probe.descriptor += 1;
+            const descriptor = Reflect.getOwnPropertyDescriptor(item, key);
+            if (key === 'url') return { ...descriptor, value: 'data:text/plain,' + probe.descriptor };
+            return descriptor;
+          }
+        });
+        return target;
+      }
+    },
+    {
+      label: 'a nested standards classification is a stateful view',
+      build: (probe) => {
+        const target = baseEvidence();
+        target.standards_classification = new Proxy(clone(target.standards_classification), {
+          get(item, key, receiver) {
+            probe.get += 1;
+            if (key === 'affirmative_ordinary_scope_evidence') return probe.get > 1;
+            return Reflect.get(item, key, receiver);
+          }
+        });
+        return target;
+      }
+    },
+    {
+      label: 'a nested evidence_refs array is a stateful view',
+      build: (probe) => {
+        const target = baseEvidence();
+        target.assertions[0].evidence_refs = new Proxy(clone(target.assertions[0].evidence_refs), {
+          get(item, key, receiver) { probe.get += 1; return Reflect.get(item, key, receiver); }
+        });
+        return target;
+      }
+    },
+    {
+      label: 'the whole record is a view over an empty target',
+      build: (probe) => new Proxy({}, {
+        ownKeys() { probe.ownKeys += 1; return Reflect.ownKeys(baseEvidence()); },
+        getOwnPropertyDescriptor(item, key) {
+          probe.descriptor += 1;
+          return { value: baseEvidence()[key], writable: true, enumerable: true, configurable: true };
+        },
+        get(item, key) { probe.get += 1; return baseEvidence()[key]; }
+      })
+    }
+  ];
+
+  for (const attack of proxyAttacks) {
+    const probe = { get: 0, descriptor: 0, ownKeys: 0 };
+    const label = '[F2] ' + attack.label;
+    const evidence = attack.build(probe);
+
+    harness.throws(label + ': the view is inadmissible', () => admitSnapshot(evidence, '$evidence'));
+    harness.throws(label + ': the view cannot be digested through admission', () => digest(admitSnapshot(evidence, '$evidence')));
+
+    const audit = assertBoundedTechnicalFailure(label, evidence);
+    if (audit === null) continue;
+    harness.equal(label + ': no evidence digest is recorded', audit.evidence_digest, null);
+    harness.equal(label + ': no semantic fingerprint is claimed', audit.semantic_fingerprint, null);
+    harness.equal(label + ': routes to a technical blocker', audit.routing.escalation_class, 'TECHNICAL_BLOCKER');
+    harness.equal(label + ': no get trap is ever consulted', probe.get, 0);
+  }
+
+  // A view supplied as the registry is refused on the same boundary.
+  {
+    const viewRegistry = new Proxy(clone(registry), { get(item, key, receiver) { return Reflect.get(item, key, receiver); } });
+    harness.throws('[F2] a registry supplied as a view is refused', () => deriveTrustedFactPolicy(viewRegistry));
+    assertBoundedTechnicalFailure('[F2] registry supplied as a view', baseEvidence(), { ...context, registry: viewRegistry });
+  }
+
+  // Cyclic input is bounded rather than exhausting the stack.
+  {
+    const cyclic = baseEvidence();
+    cyclic.self = cyclic;
+    harness.throws('[F2] a cyclic record is inadmissible', () => admitSnapshot(cyclic, '$evidence'));
+    assertBoundedTechnicalFailure('[F2] cyclic record', cyclic);
+  }
+
+  // Ordinary JSON-compatible input is unaffected.
+  {
+    const composed = adjudicateCandidate({ evidence: baseEvidence(), context, authorityResolution: TRUSTED_AUTHORITY_RESOLUTION, evaluatedAt: FIXED_EVALUATION_TIMESTAMP });
+    harness.equal('[F2] ordinary JSON-compatible input still selects', composed.audit.evaluation.disposition, 'SELECT');
+    harness.equal('[F2] ordinary input keeps its canonical evidence identity',
+      composed.audit.evidence_digest, digest(admitSnapshot(baseEvidence())));
+  }
+}
+
+// [F3] Inadmissible adjudication-control input can never carry an advancing
+// disposition, and no result leaves adjudication unless it can be written down.
+{
+  const inadmissibleTimestamps = [
+    { label: 'Symbol', value: Symbol('evaluated-at') },
+    { label: 'bigint', value: BigInt(1) },
+    { label: 'function', value: function evaluatedAt() { return 1; } },
+    { label: 'Infinity', value: Infinity },
+    { label: '-Infinity', value: -Infinity },
+    { label: 'NaN', value: Number.NaN },
+    { label: 'finite number', value: 1757116800000 },
+    { label: 'boolean', value: true },
+    { label: 'empty string', value: '' },
+    { label: 'object', value: { iso: '2026-09-04T00:00:00-01:00' } },
+    { label: 'array', value: ['2026-09-04T00:00:00-01:00'] },
+    { label: 'Date instance', value: new Date(0) },
+    { label: 'accessor-bearing object', value: (() => { const value = {}; Object.defineProperty(value, 'iso', { get() { return 'x'; }, enumerable: true }); return value; })() },
+    { label: 'hostile view', value: new Proxy({}, { get() { throw new Error('hostile evaluatedAt'); } }) }
+  ];
+
+  for (const attempt of inadmissibleTimestamps) {
+    const label = '[F3] evaluatedAt ' + attempt.label;
+    let composed = null;
+    let threw = null;
+    try {
+      composed = adjudicateCandidate({ evidence: baseEvidence(), context, authorityResolution: TRUSTED_AUTHORITY_RESOLUTION, evaluatedAt: attempt.value });
+    } catch (error) {
+      threw = error;
+    }
+    harness.equal(label + ': adjudication does not throw', threw, null);
+    harness.ok(label + ': an audit record is produced', composed !== null && composed.audit !== undefined);
+    if (composed === null || composed.audit === undefined) continue;
+
+    const audit = composed.audit;
+    harness.ok(label + ': never SELECT', audit.evaluation.disposition !== 'SELECT');
+    harness.equal(label + ': disposition holds', audit.evaluation.disposition, 'HOLD');
+    harness.equal(label + ': publication blocked', audit.evaluation.publication_blocked, true);
+    harness.equal(label + ': human review required', audit.evaluation.human_review, true);
+    harness.equal(label + ': no advancing rules matched', audit.evaluation.matched_rule_ids, []);
+    harness.ok(label + ': no advancing route', audit.routing.automatic_route?.next_status !== 'SELECTED');
+    harness.equal(label + ': downstream execution is NOT_EXECUTED', audit.routing.downstream_execution, { attempted: false, status: 'NOT_EXECUTED' });
+    harness.ok(label + ': an explicit technical diagnostic is preserved', audit.evaluation.failures.length > 0);
+    harness.equal(label + ': the audit is canonically representable', typeof canonicalText(audit), 'string');
+    harness.ok(label + ': the audit parses', parsesCanonically(audit));
+    harness.equal(label + ': no inadmissible timestamp is copied into the audit', audit.evaluated_at, null);
+  }
+
+  // The incumbent supported representation is unchanged.
+  {
+    const composed = adjudicateCandidate({ evidence: baseEvidence(), context, authorityResolution: TRUSTED_AUTHORITY_RESOLUTION, evaluatedAt: FIXED_EVALUATION_TIMESTAMP });
+    harness.equal('[F3] a supported timestamp still selects', composed.audit.evaluation.disposition, 'SELECT');
+    harness.equal('[F3] a supported timestamp is preserved verbatim', composed.audit.evaluated_at, FIXED_EVALUATION_TIMESTAMP);
+    harness.equal('[F3] a supported timestamp is preserved in the evaluation trace',
+      composed.evaluation.trace.evaluated_at, FIXED_EVALUATION_TIMESTAMP);
+    harness.equal('[F3] an advancing audit is canonically serializable', typeof canonicalText(composed.audit), 'string');
+    harness.ok('[F3] an advancing audit parses', parsesCanonically(composed.audit));
+
+    const explicitNull = adjudicateCandidate({ evidence: baseEvidence(), context, authorityResolution: TRUSTED_AUTHORITY_RESOLUTION, evaluatedAt: null });
+    harness.equal('[F3] an explicit null timestamp remains supported', explicitNull.audit.evaluated_at, null);
+    harness.equal('[F3] an explicit null timestamp still selects', explicitNull.audit.evaluation.disposition, 'SELECT');
+
+    const omitted = adjudicateCandidate({ evidence: baseEvidence(), context, authorityResolution: TRUSTED_AUTHORITY_RESOLUTION });
+    harness.equal('[F3] an omitted timestamp remains supported', omitted.audit.evaluated_at, null);
+    harness.equal('[F3] an omitted timestamp still selects', omitted.audit.evaluation.disposition, 'SELECT');
+  }
+
+  // Forced final-audit canonicalization failure. A forged in-memory policy
+  // carrying an unrepresentable identity cannot advance on its own merits, but
+  // it does drive an unserializable value into the audit; the final invariant
+  // must downgrade rather than emit it.
+  const unrepresentablePolicies = [
+    { label: 'symbol policy_id', forge: (forged) => { forged.policy_id = Symbol('forged'); } },
+    { label: 'bigint policy version', forge: (forged) => { forged.version = BigInt(1); } },
+    { label: 'function approval reference', forge: (forged) => { forged.authority = { ...forged.authority, approval_reference: () => 'forged' }; } },
+    { label: 'non-finite policy version', forge: (forged) => { forged.version = Infinity; } }
+  ];
+  for (const attempt of unrepresentablePolicies) {
+    const forged = clone(policy);
+    attempt.forge(forged);
+    const label = '[F3] final gate with a ' + attempt.label;
+    let composed = null;
+    let threw = null;
+    try {
+      composed = adjudicateCandidate({ evidence: baseEvidence(), context: { ...context, policy: forged }, authorityResolution: TRUSTED_AUTHORITY_RESOLUTION, evaluatedAt: FIXED_EVALUATION_TIMESTAMP });
+    } catch (error) {
+      threw = error;
+    }
+    harness.equal(label + ': adjudication does not throw', threw, null);
+    if (composed === null || composed.audit === undefined) continue;
+    harness.equal(label + ': disposition holds', composed.audit.evaluation.disposition, 'HOLD');
+    harness.equal(label + ': publication blocked', composed.audit.evaluation.publication_blocked, true);
+    harness.equal(label + ': human review required', composed.audit.evaluation.human_review, true);
+    harness.ok(label + ': no advancing route', composed.audit.routing.automatic_route?.next_status !== 'SELECTED');
+    harness.equal(label + ': downstream execution is NOT_EXECUTED', composed.audit.routing.downstream_execution, { attempted: false, status: 'NOT_EXECUTED' });
+    harness.equal(label + ': the downgraded audit is canonically representable', typeof canonicalText(composed.audit), 'string');
+    harness.ok(label + ': an explicit technical diagnostic is preserved', composed.audit.evaluation.failures.length > 0);
+  }
+
+  // Every audit this suite can produce from the oracle corpus is representable.
+  for (const fixture of oracle.fixtures) {
+    const composed = adjudicateCandidate({ evidence: fixture.evidence, context, authorityResolution: TRUSTED_AUTHORITY_RESOLUTION, evaluatedAt: FIXED_EVALUATION_TIMESTAMP });
+    harness.equal('[F3] ' + fixture.fixture_id + ': the emitted audit is canonically representable',
+      typeof canonicalText(composed.audit), 'string');
+    if (composed.audit.routing.automatic_route?.next_status === 'SELECTED') {
+      harness.equal('[F3] ' + fixture.fixture_id + ': an advancing audit carries a canonical evidence identity',
+        typeof composed.audit.evidence_digest, 'string');
+    }
+  }
 }
 
 harness.finish([`eligibility_predicates=${ELIGIBILITY_PREDICATES.length}`, `material_predicates=${materialPredicates.length}`, `fixtures=${oracle.fixtures.length}`]);

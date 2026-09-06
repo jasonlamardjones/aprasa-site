@@ -141,11 +141,23 @@ The worker layer is split into three independently testable stages. Nothing in i
 
 Every cited reference set is read densely and by index through one shared gate. Array methods such as `.some()`, `.filter()` and `.every()` skip holes, so a sparse array can pass a per-element check that never runs; array length alone can therefore never establish that a reference exists. A reference set that is not a real, untampered, dense array of non-empty identifiers, or that cites an identifier `source_refs` does not resolve, yields no references at all rather than a shorter apparently valid set. Holes, `undefined` and `null` are never normalized into evidence provenance.
 
+### Trusted registry identity
+
+The whole fact registry is bound by one canonical content digest, pinned as `REQUIRED_FACT_REGISTRY_SHA256` in `scripts/lib/ttd-policy-evaluator.mjs`. Every registry property the normalizer or evaluator consults is decision-relevant — `admissible_confidence` and `allowed_url_schemes` gate evidence and source admission, `source_classes` and `confidence_levels` gate the vocabularies, predicate declarations gate interpretation — so the document is bound in full rather than by a list of the fields noticed so far. Any supplied registry must be semantically identical to the committed one before it may influence adjudication; production adjudication then reads the admitted snapshot the identity check returned, never the caller's object.
+
+Canonical digesting is key-order independent, so reformatting is not drift, while any change to a value, an array's order, or the set of keys is. A legitimate registry change therefore fails closed everywhere until the pinned identity is deliberately updated and independently reviewed, exactly as a policy change fails closed until the trust anchor is updated. `scripts/validate-ttd-trust-anchor.mjs` reports the registry digest and fails on any mismatch.
+
 ### Trusted fact-policy configuration
 
 The material eligibility predicate set and the declared fact-consistency constraints are trusted configuration, not caller input. `adjudicateCandidate` is the production entrypoint and derives both from the validated fact registry on every adjudication; any constraint set or material predicate set present on the caller-supplied context is ignored. There is no empty default: a missing, empty, malformed, narrowed, reordered-into-a-different-set, or fabricated configuration fails closed rather than degrading to `[]`.
 
 `evaluateNormalizedFacts` keeps both as parameters so the adversarial suites can probe them directly, but a supplied set is never trusted on its own. It must be semantically identical to the configuration pinned in `scripts/lib/ttd-policy-evaluator.mjs` (`REQUIRED_MATERIAL_ELIGIBILITY_PREDICATES`, `REQUIRED_FACT_CONSISTENCY_CONSTRAINTS`, alongside `REQUIRED_COMPOSITION`), and the pinned normalized form is what enforcement then uses. Object key order inside a forbidden combination is not semantic; a changed predicate, value, reason code, or constraint identity is. A registry that reclassifies a predicate's materiality, restates a constraint, or drops one cannot be used to adjudicate anything: context construction and adjudication both refuse it, and `scripts/validate-ttd-trust-anchor.mjs` fails in CI.
+
+### Single-read admission boundary
+
+Descriptor inspection alone is not sufficient against a hostile view. A Proxy may answer `ownKeys`, `getOwnPropertyDescriptor` and `get` differently on each call, so validating a property and then reading it again through `value[key]` leaves a time-of-check/time-of-use split in which the digested state and the evaluated state differ.
+
+Adjudication therefore admits its input once: `INPUT -> admitted snapshot -> digest(snapshot) -> normalize(snapshot) -> evaluate(normalized snapshot)`. Every own key is enumerated once, every descriptor is taken once, and the value used is the one carried in that descriptor — there is no second read and no `get` trap is ever consulted. The result is a fresh, deeply frozen, plain-data tree that no longer references the original object, so identity and semantics are necessarily computed from the same state, and mutating the caller's object after admission cannot change either. Cyclic input is refused rather than exhausting the stack, and a Proxy is refused outright: a view is not a fixed document, and candidate input has no legitimate reason to be an exotic object. Authority-resolution evidence and the fact registry are admitted through the same boundary.
 
 ### Canonical JSON contract
 
@@ -154,6 +166,12 @@ Canonical serialization validates as it emits. It never depends on an earlier no
 ### Evidence identity
 
 If a canonical evidence digest cannot be produced for the admitted candidate input, the candidate does not advance. A `SELECT` without a stable canonical evidence identity cannot participate in the auditable provenance model, so digest failure yields `HOLD`, publication blocked, no advancing route, and an explicit technical diagnostic. This is a technical integrity requirement, not an editorial rule.
+
+### Adjudication-control input
+
+Externally supplied control values that are copied into the audit are admitted before any advancing disposition can be returned. `evaluatedAt` keeps its incumbent representation — a non-empty timestamp string, or `null` when no evaluation time is supplied — and is never parsed, formatted, or compared against a clock; no date semantics are introduced. Anything else is inadmissible and fails closed.
+
+Behind that, a final defensive invariant: an adjudication result must itself be canonically representable before it may leave `adjudicateCandidate`. If the assembled audit cannot be canonicalized for any reason, the result is downgraded to `HOLD`, publication blocked, human review required, no advancing route, `downstream_execution: NOT_EXECUTED`, with an explicit technical-integrity diagnostic. This guard is defense in depth; it does not replace admitting each control input.
 
 ### Input safety and audit completion
 

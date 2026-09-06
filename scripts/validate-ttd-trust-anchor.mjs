@@ -15,7 +15,9 @@ import {
   deriveTrustedFactPolicy,
   normalizeFactConsistencyConstraints,
   REQUIRED_FACT_CONSISTENCY_CONSTRAINTS,
-  REQUIRED_MATERIAL_ELIGIBILITY_PREDICATES
+  REQUIRED_FACT_REGISTRY_SHA256,
+  REQUIRED_MATERIAL_ELIGIBILITY_PREDICATES,
+  REQUIRED_REGISTRY_ADMISSION
 } from './lib/ttd-policy-evaluator.mjs';
 import { loadFactRegistry } from './lib/ttd-normalizer.mjs';
 
@@ -74,6 +76,26 @@ const standards = registryByName.get('standards_boundary_unresolved');
 add(standards !== undefined, 'the fact registry must declare standards_boundary_unresolved');
 add(standards?.directly_assertable === false, 'standards_boundary_unresolved must not be directly assertable');
 add(standards?.conservative_absent_value === true, 'an absent standards classification must fail closed to true');
+
+// Complete content identity of the fact registry. Every registry property the
+// normalizer or evaluator consults is decision-relevant -- admissible_confidence
+// and allowed_url_schemes gate evidence and source admission, source_classes and
+// confidence_levels gate the vocabularies, predicate declarations gate
+// interpretation -- so the whole document is bound by one canonical digest
+// rather than by a list of the fields noticed so far. A registry change that is
+// not accompanied by a separately reviewed update to the pinned identity fails
+// here and fails closed at runtime.
+const registryDigest = digest(registry);
+add(registryDigest === REQUIRED_FACT_REGISTRY_SHA256,
+  `fact registry content digest ${registryDigest} does not match the trusted registry identity ${REQUIRED_FACT_REGISTRY_SHA256}`);
+
+// Restated admission vocabularies, so a drift report names the moved decision
+// surface rather than only reporting that the document changed.
+for (const [field, expected] of Object.entries(REQUIRED_REGISTRY_ADMISSION)) {
+  add(isAdmissibleDenseArray(registry[field]), `fact registry ${field} must be a dense array`);
+  add(deepEqual(registry[field], expected),
+    `fact registry ${field} does not match the trusted admission vocabulary ${JSON.stringify(expected)}`);
+}
 
 // Exact semantic integrity of the trusted fact-policy configuration, not merely
 // its shape. The evaluator enforces the pinned MATERIAL_ELIGIBILITY set and the
@@ -138,6 +160,7 @@ console.log('TTD_TRUST_ANCHOR_VALIDATION_OK');
 console.log(`policy=${policy.policy_id}@${policy.version}`);
 console.log(`content_sha256=${computed}`);
 console.log(`rules=${policyRuleIds.length}`);
+console.log(`registry_sha256=${registryDigest}`);
 console.log(`registry_predicates=${registry.predicates.length}`);
 console.log(`material_eligibility_predicates=${REQUIRED_MATERIAL_ELIGIBILITY_PREDICATES.length}`);
 console.log(`fact_consistency_constraints=${registry.fact_consistency_constraints.length}`);

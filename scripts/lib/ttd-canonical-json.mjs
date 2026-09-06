@@ -11,11 +11,12 @@
 // a key past the traversal nor run code during it.
 
 import { createHash } from 'node:crypto';
+import { types } from 'node:util';
 
 const DANGEROUS_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 const ARRAY_INDEX = /^(?:0|[1-9][0-9]*)$/;
 
-function describe(value, key, at) {
+function describe(value, key, at, options = {}) {
   let descriptor;
   try {
     descriptor = Object.getOwnPropertyDescriptor(value, key);
@@ -24,7 +25,9 @@ function describe(value, key, at) {
   }
   if (descriptor === undefined) throw new Error(`unreadable property descriptor ${String(key)} at ${at}`);
   if (!Object.hasOwn(descriptor, 'value')) throw new Error(`accessor property ${String(key)} at ${at}`);
-  if (descriptor.enumerable !== true) throw new Error(`non-enumerable own property ${String(key)} at ${at}`);
+  if (descriptor.enumerable !== true && options.allowNonEnumerable !== true) {
+    throw new Error(`non-enumerable own property ${String(key)} at ${at}`);
+  }
   return descriptor;
 }
 
@@ -163,6 +166,98 @@ export function denseStringList(value) {
     items.push(item);
   }
   return items;
+}
+
+// Single-read admission boundary.
+//
+// Descriptor inspection alone is not sufficient against a hostile view: a Proxy
+// may answer ownKeys, getOwnPropertyDescriptor and get differently on each
+// call, so validating a property and then reading it again through value[key]
+// leaves a time-of-check/time-of-use split in which the digested state and the
+// evaluated state differ. admitSnapshot closes that split. Every own key is
+// enumerated once, every descriptor is taken once, and the value used is the
+// one carried in that descriptor -- there is no second read, and no `get` trap
+// is ever consulted. The result is a fresh, deeply frozen, plain-data tree that
+// no longer references the original object, so identity and semantics are
+// necessarily computed from the same state.
+function admitSnapshotValue(value, at, seen) {
+  if (value === null) return null;
+  const type = typeof value;
+  if (type === 'boolean' || type === 'string') return value;
+  if (type === 'number') {
+    if (!Number.isFinite(value)) throw new Error(`non-finite number at ${at}`);
+    return value;
+  }
+  if (type !== 'object') throw new Error(`unsupported value type ${type} at ${at}`);
+  // A Proxy is a view, not data. Its traps may answer differently on every
+  // consultation, so even a single-read traversal is reading something that was
+  // never a fixed document. Candidate input has no legitimate reason to be an
+  // exotic object, so a view is refused before any trap beyond this check runs.
+  if (types.isProxy(value)) throw new Error(`exotic object view at ${at}`);
+  if (seen.has(value)) throw new Error(`cyclic reference at ${at}`);
+  seen.add(value);
+
+  let snapshot;
+  if (Array.isArray(value)) {
+    if (Object.getPrototypeOf(value) !== Array.prototype) throw new Error(`tampered array prototype at ${at}`);
+    // ownKeys and each descriptor are consulted exactly once. length is read
+    // from its own descriptor rather than through value.length, so a get trap
+    // cannot report one length here and another one later.
+    const keys = ownKeysOnce(value, at);
+    const lengthDescriptor = describe(value, 'length', at, { allowNonEnumerable: true });
+    const length = lengthDescriptor.value;
+    if (typeof length !== 'number' || !Number.isInteger(length) || length < 0) {
+      throw new Error(`malformed array length at ${at}`);
+    }
+    const items = new Array(length);
+    const filled = new Set();
+    for (const key of keys) {
+      if (key === 'length') continue;
+      if (DANGEROUS_KEYS.has(key)) throw new Error(`unsafe object key ${key} at ${at}`);
+      if (!ARRAY_INDEX.test(key)) throw new Error(`unsupported own array property ${key} at ${at}`);
+      const index = Number(key);
+      if (index >= length) throw new Error(`out-of-range own array property ${key} at ${at}`);
+      if (filled.has(index)) throw new Error(`duplicated own array property ${key} at ${at}`);
+      filled.add(index);
+      const descriptor = describe(value, key, at);
+      items[index] = admitSnapshotValue(descriptor.value, `${at}[${index}]`, seen);
+    }
+    if (filled.size !== length) throw new Error(`sparse array at ${at}`);
+    snapshot = items;
+  } else {
+    const prototype = Object.getPrototypeOf(value);
+    if (prototype !== Object.prototype && prototype !== null) throw new Error(`tampered object prototype at ${at}`);
+    const keys = ownKeysOnce(value, at);
+    snapshot = {};
+    for (const key of keys) {
+      if (DANGEROUS_KEYS.has(key)) throw new Error(`unsafe object key ${key} at ${at}`);
+      const descriptor = describe(value, key, at);
+      snapshot[key] = admitSnapshotValue(descriptor.value, `${at}.${key}`, seen);
+    }
+  }
+
+  seen.delete(value);
+  return Object.freeze(snapshot);
+}
+
+// Reflect.ownKeys is consulted once and the returned list is copied, so a Proxy
+// cannot answer a later enumeration differently. Symbol keys are refused here
+// rather than silently dropped.
+function ownKeysOnce(value, at) {
+  let keys;
+  try {
+    keys = [...Reflect.ownKeys(value)];
+  } catch {
+    throw new Error(`unreadable own keys at ${at}`);
+  }
+  for (const key of keys) {
+    if (typeof key === 'symbol') throw new Error(`symbol own property at ${at}`);
+  }
+  return keys;
+}
+
+export function admitSnapshot(value, at = '$') {
+  return admitSnapshotValue(value, at, new Set());
 }
 
 // Bounded identity extraction for the failure path. Never invokes an accessor,
