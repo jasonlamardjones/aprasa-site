@@ -43,11 +43,6 @@
     mediaFallbackNote: "A PRASA editorial thumbnail — not an image of this specific activity.",
     trainingsSectionLabel: "Trainings, Tools & Opportunities",
     organizationsSectionLabel: "Organizations & Ways to Help",
-    // BLOCKED_ON_PROJECT_09_STRING_APPROVAL: the governed overlay carries no
-    // approved Portuguese value for this note, so the builder emits no PT
-    // override for it and this English default still renders on PT. Do not
-    // supply a translation here; it must arrive as an approved Project 09
-    // string through the overlay, like every other governed value.
     sectionThumbnailNote: "A PRASA section thumbnail — not provider-specific imagery.",
   };
 

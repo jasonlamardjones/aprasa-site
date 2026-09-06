@@ -189,15 +189,16 @@ function applyAboutFounderFixup(html, locale) {
 // already uses for its runtime copy; prasa-launch.js reads them from there and
 // falls back to its own English defaults when the block is absent.
 //
-// Only keys with an approved governed value are emitted. The editorial
-// "section thumbnail" note used by the Trainings and Organizations shelves has
-// NO approved Portuguese value in the governed overlay, so it is deliberately
-// omitted here rather than translated: the runtime keeps its English default
-// and the item stays BLOCKED_ON_PROJECT_09_STRING_APPROVAL. Adding the
-// approved string later is a one-line addition to RUNTIME_STRING_KEYS.
+// Only keys with an approved governed value are emitted. Every runtime string
+// the fallback layer renders now has one: the editorial "section thumbnail"
+// note used by the Trainings and Organizations shelves shipped unresolved in
+// the collection-hub tranche and was approved by Project 09 afterwards
+// (system.media_fallback.section_note, r14). A key with no approved value must
+// be left out of this map rather than translated here.
 const RUNTIME_STRING_KEYS = {
   mediaFallbackLabel: 'system.media_fallback.label',
   mediaFallbackNote: 'system.media_fallback.note',
+  sectionThumbnailNote: 'system.media_fallback.section_note',
   trainingsSectionLabel: 'home.training.title',
   organizationsSectionLabel: 'home.organizations.title',
 };

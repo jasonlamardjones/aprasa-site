@@ -22,7 +22,8 @@
       "data/locales/pt-overlay-event-50-anos-de-memoria-criacao-e-resistencia.source.json",
       "data/locales/pt-overlay-event-sinergia-da-materia.source.json",
       "data/locales/pt-overlay-r9-migration.source.json",
-      "data/locales/pt-overlay-r13-things-to-do-hub.source.json"
+      "data/locales/pt-overlay-r13-things-to-do-hub.source.json",
+      "data/locales/pt-overlay-r14-section-fallback-note.source.json"
     ],
     "base_revision": "P03-PT-SOURCE-2026-08-25-r2",
     "delta_revision": "P03-PT-SOURCE-2026-08-25-r3",
@@ -42,6 +43,10 @@
     "delta13_revision": "P03-PT-SOURCE-2026-09-04-r13",
     "delta13_revision_class": "ADDITIVE_NEW_KEYS",
     "delta13_row_count": 8,
+    "delta14_package_id": "aprasa-pt-section-fallback-note-r14-delta",
+    "delta14_revision": "P03-PT-SOURCE-2026-09-06-r14",
+    "delta14_revision_class": "ADDITIVE_NEW_KEYS",
+    "delta14_row_count": 1,
     "delta9_superseding_ruling": "P03-SINERGIA-CURRENTNESS-2026-09-01",
     "delta9_owning_project": "Project 03",
     "event_delta_packages": [
@@ -10510,6 +10515,18 @@
       "source_revision": "P03-PT-SOURCE-2026-09-04-r13",
       "context_notes": "meta description and og/twitter description of the Things-to-Do collection hub in each locale.",
       "linguistic_notes": "Protected brand string A PRASA preserved verbatim."
+    },
+    "system.media_fallback.section_note": {
+      "key": "system.media_fallback.section_note",
+      "en": "A PRASA section thumbnail — not provider-specific imagery.",
+      "pt": "Miniatura da secção A PRASA — imagem não específica do prestador.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-09-06-r14",
+      "context_notes": "Runtime generic section fallback-media explanatory label, injected by prasa-launch.js into the Trainings, Tools & Opportunities and Organizations & Ways to Help shelves for any card without governed media. Sits alongside the incumbent system.media_fallback.label / system.media_fallback.note pair, which serve the Things-to-Do shelf.",
+      "linguistic_notes": "Project 09 identity policy as supplied: \"TRANSLATE — preserve A PRASA\". The protected brand string A PRASA is carried verbatim into the Portuguese value."
     }
   }
 }

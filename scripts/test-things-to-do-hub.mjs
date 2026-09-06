@@ -15,8 +15,9 @@
 //   6. The technical-SEO audit follow-ups hold and cannot regress: internal
 //      Home links stay in canonical directory form, every Things-to-Do return
 //      control resolves to its own locale's collection route, and the governed
-//      runtime fallback strings resolve per locale without inventing copy for
-//      the one string Project 09 has not yet approved.
+//      runtime fallback strings all resolve per locale, including the section
+//      fallback note Project 09 approved after the hub tranche shipped it
+//      unresolved.
 //
 // Every case runs the SHIPPED generator and the SHIPPED validator inside a
 // throwaway copy of the repository, so what is under test is the real
@@ -298,10 +299,17 @@ const read = (dir, relative) => fs.readFileSync(path.join(dir, relative), 'utf8'
     check('PT runtime fallback label resolves to approved Portuguese', ptBlock.mediaFallbackLabel === 'O que fazer');
     check('PT runtime fallback note resolves to approved Portuguese',
       ptBlock.mediaFallbackNote === 'Miniatura editorial da A PRASA — não é uma imagem desta atividade específica.');
-    check('the unapproved section-thumbnail note is left unresolved in both locales',
-      !('sectionThumbnailNote' in enBlock) && !('sectionThumbnailNote' in ptBlock));
+    check('EN section fallback note is unchanged',
+      enBlock.sectionThumbnailNote === 'A PRASA section thumbnail — not provider-specific imagery.');
+    check('PT section fallback note resolves to approved Portuguese',
+      ptBlock.sectionThumbnailNote === 'Miniatura da secção A PRASA — imagem não específica do prestador.');
+    check('PT section fallback note preserves the protected brand string',
+      ptBlock.sectionThumbnailNote.includes('A PRASA'));
+    check('no governed runtime string is left in English on the PT block',
+      Object.entries(ptBlock).every(([key, value]) => value !== enBlock[key]));
     check('prasa-launch.js hardcodes no Portuguese fallback copy',
-      !read(dir, 'prasa-launch.js').includes('Miniatura editorial da A PRASA'));
+      !read(dir, 'prasa-launch.js').includes('Miniatura editorial da A PRASA')
+      && !read(dir, 'prasa-launch.js').includes('Miniatura da secção A PRASA'));
 
     // Locale switching / fallback rendering is deterministic: the same build
     // reproduces byte-identical governed blocks.
@@ -334,9 +342,23 @@ const read = (dir, relative) => fs.readFileSync(path.join(dir, relative), 'utf8'
       const html = read(dir, 'pt/index.html');
       fs.writeFileSync(path.join(dir, 'pt/index.html'), html.replace('"mediaFallbackLabel":"O que fazer"', '"mediaFallbackLabel":"Things to Do"'));
     }],
-    ['runtime-string gate rejects: an unapproved string written into a block', 'validate-runtime-locale-strings.mjs', (dir) => {
+    ['runtime-string gate rejects: an ungoverned string written into a block', 'validate-runtime-locale-strings.mjs', (dir) => {
       const html = read(dir, 'pt/index.html');
-      fs.writeFileSync(path.join(dir, 'pt/index.html'), html.replace('{"mediaFallbackLabel"', '{"sectionThumbnailNote":"nota inventada","mediaFallbackLabel"'));
+      fs.writeFileSync(path.join(dir, 'pt/index.html'), html.replace('{"mediaFallbackLabel"', '{"inventedNote":"nota inventada","mediaFallbackLabel"'));
+    }],
+    ['runtime-string gate rejects: a runtime default with no governed key', 'validate-runtime-locale-strings.mjs', (dir) => {
+      const js = read(dir, 'prasa-launch.js');
+      fs.writeFileSync(path.join(dir, 'prasa-launch.js'), js.replace(
+        '    mediaFallbackLabel: "Things to Do",',
+        '    mediaFallbackLabel: "Things to Do",\n    untrackedNote: "Untracked runtime copy.",'
+      ));
+    }],
+    ['runtime-string gate rejects: the newly approved PT note reverted to English', 'validate-runtime-locale-strings.mjs', (dir) => {
+      const html = read(dir, 'pt/index.html');
+      fs.writeFileSync(path.join(dir, 'pt/index.html'), html.replace(
+        '"sectionThumbnailNote":"Miniatura da secção A PRASA — imagem não específica do prestador."',
+        '"sectionThumbnailNote":"A PRASA section thumbnail — not provider-specific imagery."'
+      ));
     }],
     ['runtime-string gate rejects: the governed block removed from PT Home', 'validate-runtime-locale-strings.mjs', (dir) => {
       const html = read(dir, 'pt/index.html');

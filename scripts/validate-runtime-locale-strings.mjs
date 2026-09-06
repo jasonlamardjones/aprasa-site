@@ -18,8 +18,11 @@
 //   3. prasa-launch.js itself carries no translation — a governed value
 //      reaches it only through the block.
 //   4. A key with no approved Portuguese value is ABSENT from both blocks
-//      rather than carrying invented or English-substituted copy. The
-//      "section thumbnail" note is in that state today, pending Project 09.
+//      rather than carrying invented or English-substituted copy. That set is
+//      empty today: the "section thumbnail" note shipped unresolved with the
+//      collection hub and was approved by Project 09 afterwards, so it is now
+//      a required, verified value like every other governed runtime string.
+//      The mechanism stays in place for the next string that needs it.
 //
 // Usage: node scripts/validate-runtime-locale-strings.mjs
 
@@ -36,6 +39,7 @@ const errors = [];
 const GOVERNED = {
   mediaFallbackLabel: 'system.media_fallback.label',
   mediaFallbackNote: 'system.media_fallback.note',
+  sectionThumbnailNote: 'system.media_fallback.section_note',
   trainingsSectionLabel: 'home.training.title',
   organizationsSectionLabel: 'home.organizations.title',
 };
@@ -43,9 +47,11 @@ const GOVERNED = {
 // Runtime keys deliberately left unresolved because the governed overlay
 // carries no approved Portuguese value for them yet. Each one must stay out of
 // both blocks, and must still have an English default in prasa-launch.js.
-const BLOCKED_PENDING_APPROVAL = {
-  sectionThumbnailNote: 'A PRASA section thumbnail — not provider-specific imagery.',
-};
+//
+// Empty today. It is not dead code: it is the mechanism that keeps an
+// unapproved string out of a public surface, and the negative coverage in
+// scripts/test-things-to-do-hub.mjs proves an unknown key is still rejected.
+const BLOCKED_PENDING_APPROVAL = {};
 
 const runtime = fs.readFileSync(path.join(root, 'prasa-launch.js'), 'utf8');
 
@@ -119,6 +125,16 @@ for (const [runtimeKey, expected] of Object.entries(BLOCKED_PENDING_APPROVAL)) {
   }
 }
 
+// Every runtime string prasa-launch.js can render must be accounted for by one
+// of the two sets above. A default with no governed key and no recorded
+// blocked status would be untracked copy on a public surface.
+for (const match of runtime.matchAll(/^\s{4}([a-zA-Z][a-zA-Z0-9]*): "/gm)) {
+  const runtimeKey = match[1];
+  if (!(runtimeKey in GOVERNED) && !(runtimeKey in BLOCKED_PENDING_APPROVAL)) {
+    errors.push(`prasa-launch.js: runtime string default "${runtimeKey}" is neither governed nor recorded as pending Project 09 approval`);
+  }
+}
+
 // prasa-launch.js must not carry translated copy of its own. Any governed PT
 // value appearing in the file would mean a translation was hardcoded rather
 // than supplied through the governed block.
@@ -140,5 +156,5 @@ if (errors.length) {
 const blocked = Object.keys(BLOCKED_PENDING_APPROVAL);
 console.log(
   `[validate-runtime-locale-strings] OK — ${Object.keys(GOVERNED).length} governed runtime string(s) resolved per locale on both Home surfaces;`
-  + ` ${blocked.length} left unresolved pending Project 09 approval (${blocked.join(', ')}).`
+  + ` ${blocked.length} left unresolved pending Project 09 approval${blocked.length ? ` (${blocked.join(', ')})` : ''}.`
 );

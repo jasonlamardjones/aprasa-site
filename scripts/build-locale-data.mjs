@@ -71,6 +71,7 @@ const DELTA8_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r8-delta.sour
 const DELTA9_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r9-delta.source.json");
 const R10_MIGRATION_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r10-migration.source.json");
 const DELTA13_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r13-things-to-do-hub.source.json");
+const DELTA14_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r14-section-fallback-note.source.json");
 const LOCALE_DIR = path.join(ROOT, "data", "locales");
 const OUT_PATH = path.join(ROOT, "data", "locales", "locale-data.generated.json");
 
@@ -1084,6 +1085,125 @@ if (delta13Unchanged !== EXPECTED_DELTA13.intentionally_unchanged) {
   fail(`r13 intentionally_unchanged mismatch: got ${delta13Unchanged}, expected ${EXPECTED_DELTA13.intentionally_unchanged}`);
 }
 
+// --- r14 delta: additive merge for the runtime section fallback note --------
+// Supplies the approved Portuguese value for the generic runtime section
+// fallback-media explanatory label. The r13 collection-hub tranche deliberately
+// shipped that one string unresolved — prasa-launch.js kept its English default
+// and the item was reported BLOCKED_ON_PROJECT_09_STRING_APPROVAL — rather than
+// translate it without approval. This is that approval arriving, on the same
+// strictly additive lane as r13: it may never reopen an existing key, and its
+// English source value is the incumbent runtime string carried over unchanged.
+const EXPECTED_DELTA14 = {
+  package_id: "aprasa-pt-section-fallback-note-r14-delta",
+  revision_class: "ADDITIVE_NEW_KEYS",
+  source_revision: "P03-PT-SOURCE-2026-09-06-r14",
+  previous_revision: "P03-PT-SOURCE-2026-09-04-r13",
+  row_count: 1,
+  approved: 1,
+  required_for_pt_launch: 1,
+  intentionally_unchanged: 0,
+  review_required: 0,
+};
+
+const delta14 = JSON.parse(readFileSync(DELTA14_PATH, "utf8"));
+
+for (const field of ["package_id", "revision_class", "source_revision", "previous_revision"]) {
+  if (delta14[field] !== EXPECTED_DELTA14[field]) {
+    fail(`r14 ${field} mismatch: got ${JSON.stringify(delta14[field])}, expected ${JSON.stringify(EXPECTED_DELTA14[field])}`);
+  }
+}
+if (delta14.project_09_status !== "approved") {
+  fail(`r14 Project 09 status is not approved: ${JSON.stringify(delta14.project_09_status)}`);
+}
+if (!Array.isArray(delta14.rows) || delta14.rows.length !== EXPECTED_DELTA14.row_count) {
+  fail(`r14 row count mismatch: got ${delta14.rows?.length}, expected ${EXPECTED_DELTA14.row_count}`);
+}
+if (delta14.supplied_rows_approved !== EXPECTED_DELTA14.approved) {
+  fail(`r14 supplied_rows_approved mismatch: got ${delta14.supplied_rows_approved}`);
+}
+if (delta14.review_required !== EXPECTED_DELTA14.review_required || delta14.blocking_issue != null) {
+  fail(`r14 has unresolved localization review state`);
+}
+if (delta14.missing_or_unaccounted_row_count !== 0) {
+  fail(`r14 missing_or_unaccounted_row_count is non-zero: ${delta14.missing_or_unaccounted_row_count}`);
+}
+if ((delta14.duplicate_keys || []).length !== 0) {
+  fail(`r14 duplicate_keys is non-empty: ${JSON.stringify(delta14.duplicate_keys)}`);
+}
+if ((delta14.placeholder_mismatches || []).length !== 0) {
+  fail(`r14 placeholder_mismatches is non-empty: ${JSON.stringify(delta14.placeholder_mismatches)}`);
+}
+if ((delta14.a_prasa_to_a_praca_violations || []).length !== 0) {
+  fail(`r14 a_prasa_to_a_praca_violations is non-empty: ${JSON.stringify(delta14.a_prasa_to_a_praca_violations)}`);
+}
+if (delta14.source_english_changed !== false || delta14.change_control_status?.existing_keys_overridden !== 0) {
+  fail(`r14 declares a non-additive change (source_english_changed/existing_keys_overridden)`);
+}
+if (delta14.change_control_status?.new_keys_introduced !== EXPECTED_DELTA14.row_count) {
+  fail(`r14 new_keys_introduced mismatch: got ${delta14.change_control_status?.new_keys_introduced}`);
+}
+if (delta14.change_control_status?.lifecycle_or_publication_state_modified !== 0) {
+  fail(`r14 must not modify lifecycle or publication state`);
+}
+
+let delta14Required = 0;
+let delta14Unchanged = 0;
+for (const row of delta14.rows) {
+  if (seen.has(row.key)) {
+    fail(`r14 key "${row.key}" collides with an existing key — r14 must be strictly additive, never reopen an existing key`);
+  }
+  seen.add(row.key);
+
+  if (row.record_id != null) fail(`r14 key "${row.key}" is record-scoped; this package carries no record copy`);
+  if (!/^system\.media_fallback\./.test(row.key)) {
+    fail(`r14 key "${row.key}" is outside the authorized system.media_fallback.* namespace`);
+  }
+  if (row.source_revision !== EXPECTED_DELTA14.source_revision) fail(`r14 ${row.key} source_revision mismatch`);
+  if (row.translation_status !== "APPROVED") fail(`r14 key "${row.key}" is not APPROVED (status: ${row.translation_status})`);
+
+  if (row.scope_status === "REQUIRED_FOR_PT_LAUNCH") delta14Required += 1;
+  else if (row.scope_status === "INTENTIONALLY_UNCHANGED") delta14Unchanged += 1;
+  else fail(`r14 key "${row.key}" has invalid scope_status`);
+
+  if (row.scope_status === "REQUIRED_FOR_PT_LAUNCH" && (row.pt == null || row.pt === "")) {
+    fail(`r14 REQUIRED_FOR_PT_LAUNCH key "${row.key}" has no PT value`);
+  }
+  if (!row.source_en) fail(`r14 key "${row.key}" is missing approved English text`);
+  const enPlaceholders = (row.source_en.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+  const ptPlaceholders = (row.pt.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+  if (JSON.stringify(enPlaceholders) !== JSON.stringify(ptPlaceholders)) {
+    fail(`r14 key "${row.key}" placeholder mismatch: en=${JSON.stringify(enPlaceholders)} pt=${JSON.stringify(ptPlaceholders)}`);
+  }
+  // Project 09 identity policy for this row is "TRANSLATE — preserve A PRASA":
+  // the brand string is translated around, never translated away.
+  if ([row.source_en, row.pt].some((value) => value.includes("A PRAÇA"))) {
+    fail(`r14 key "${row.key}" violates protected A PRASA brand spelling`);
+  }
+  if (row.source_en.includes("A PRASA") && !row.pt.includes("A PRASA")) {
+    fail(`r14 key "${row.key}" drops the protected brand string A PRASA from its Portuguese value`);
+  }
+
+  keys[row.key] = {
+    key: row.key,
+    en: row.source_en,
+    pt: row.pt,
+    scope_status: row.scope_status,
+    identity_policy: row.identity_policy,
+    record_id: row.record_id,
+    translation_status: row.translation_status,
+    source_revision: row.source_revision,
+    context_notes: row.context_notes || "",
+    linguistic_notes: row.linguistic_notes || "",
+  };
+}
+
+if (delta14Required !== EXPECTED_DELTA14.required_for_pt_launch) {
+  fail(`r14 required_for_pt_launch mismatch: got ${delta14Required}, expected ${EXPECTED_DELTA14.required_for_pt_launch}`);
+}
+if (delta14Unchanged !== EXPECTED_DELTA14.intentionally_unchanged) {
+  fail(`r14 intentionally_unchanged mismatch: got ${delta14Unchanged}, expected ${EXPECTED_DELTA14.intentionally_unchanged}`);
+}
+
 // --- r10 migration: ATOMIC namespace rename, applied last -------------------
 //
 // Project 09 approved moving the governed Home training presentation keys off
@@ -1464,6 +1584,7 @@ const output = {
       ...eventDeltaPackages.map((item) => item.file),
       "data/locales/pt-overlay-r9-migration.source.json",
       "data/locales/pt-overlay-r13-things-to-do-hub.source.json",
+      "data/locales/pt-overlay-r14-section-fallback-note.source.json",
     ],
     base_revision: pkg.source_revision,
     delta_revision: delta.source_revision,
@@ -1483,6 +1604,10 @@ const output = {
     delta13_revision: delta13.source_revision,
     delta13_revision_class: delta13.revision_class,
     delta13_row_count: delta13.rows.length,
+    delta14_package_id: delta14.package_id,
+    delta14_revision: delta14.source_revision,
+    delta14_revision_class: delta14.revision_class,
+    delta14_row_count: delta14.rows.length,
     delta9_superseding_ruling: delta9.superseding_ruling,
     delta9_owning_project: delta9.owning_project,
     event_delta_packages: eventDeltaPackages,

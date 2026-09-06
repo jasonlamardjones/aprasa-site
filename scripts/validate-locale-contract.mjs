@@ -49,13 +49,14 @@ for (const fileName of eventDeltaFiles) {
 }
 
 // --- Overlay contract (counts) — combined r2 base (732) + r3 delta (21) + r4 delta (26)
-// + r5 delta (2) + r7 delta (19) + r8 delta (21) + r13 delta (8). The r6 brand-voice
-// delta overrides 42 existing PT values and adds no keys, so every count below is
-// unchanged by it; r13 adds the 8 Things-to-Do collection-hub keys, all required. ---
-if (keys.length !== 829 + eventDeltaRequired + eventDeltaUnchanged) fail(`expected ${829 + eventDeltaRequired + eventDeltaUnchanged} total keys including approved event deltas, got ${keys.length}`);
+// + r5 delta (2) + r7 delta (19) + r8 delta (21) + r13 delta (8) + r14 delta (1).
+// The r6 brand-voice delta overrides 42 existing PT values and adds no keys, so every
+// count below is unchanged by it; r13 adds the 8 Things-to-Do collection-hub keys and
+// r14 the runtime section fallback note, all required. ---
+if (keys.length !== 830 + eventDeltaRequired + eventDeltaUnchanged) fail(`expected ${830 + eventDeltaRequired + eventDeltaUnchanged} total keys including approved event deltas, got ${keys.length}`);
 const required = keys.filter((k) => k.scope_status === "REQUIRED_FOR_PT_LAUNCH");
 const unchanged = keys.filter((k) => k.scope_status === "INTENTIONALLY_UNCHANGED");
-if (required.length !== 801 + eventDeltaRequired) fail(`expected ${801 + eventDeltaRequired} REQUIRED_FOR_PT_LAUNCH keys, got ${required.length}`);
+if (required.length !== 802 + eventDeltaRequired) fail(`expected ${802 + eventDeltaRequired} REQUIRED_FOR_PT_LAUNCH keys, got ${required.length}`);
 if (unchanged.length !== 28 + eventDeltaUnchanged) fail(`expected ${28 + eventDeltaUnchanged} INTENTIONALLY_UNCHANGED keys, got ${unchanged.length}`);
 if (data.provenance.delta_revision !== "P03-PT-SOURCE-2026-08-25-r3") {
   fail(`unexpected delta_revision: ${data.provenance.delta_revision}`);
@@ -105,6 +106,37 @@ if (data.provenance.delta9_superseding_ruling !== "P03-SINERGIA-CURRENTNESS-2026
 }
 if (data.provenance.delta9_owning_project !== "Project 03") {
   fail(`unexpected delta9_owning_project: ${data.provenance.delta9_owning_project}`);
+}
+
+// --- r14 delta spot check (runtime section fallback note) ---
+// The one string the collection-hub tranche shipped unresolved, now approved.
+// Pinned here so neither locale can drift and so the protected brand string
+// survives the translation (Project 09 identity policy: TRANSLATE, preserve
+// A PRASA).
+{
+  const row = data.keys["system.media_fallback.section_note"];
+  if (!row) {
+    fail("r14 key missing from generated locale data: system.media_fallback.section_note");
+  } else {
+    if (row.en !== "A PRASA section thumbnail — not provider-specific imagery.") {
+      fail("r14 system.media_fallback.section_note EN drifted from the incumbent runtime string");
+    }
+    if (row.pt !== "Miniatura da secção A PRASA — imagem não específica do prestador.") {
+      fail("r14 system.media_fallback.section_note PT drifted from the approved value");
+    }
+    if (row.scope_status !== "REQUIRED_FOR_PT_LAUNCH") fail("r14 system.media_fallback.section_note must be REQUIRED_FOR_PT_LAUNCH");
+    if (row.source_revision !== "P03-PT-SOURCE-2026-09-06-r14") fail("r14 system.media_fallback.section_note provenance is not the r14 revision");
+    if (!row.pt.includes("A PRASA")) fail("r14 system.media_fallback.section_note drops the protected brand string from its PT value");
+  }
+  // The incumbent Things-to-Do fallback pair it sits alongside is untouched.
+  const label = data.keys["system.media_fallback.label"];
+  const note = data.keys["system.media_fallback.note"];
+  if (!label || label.en !== "Things to Do" || label.pt !== "O que fazer") {
+    fail("system.media_fallback.label changed; the runtime fallback contract depends on it");
+  }
+  if (!note || note.pt !== "Miniatura editorial da A PRASA — não é uma imagem desta atividade específica.") {
+    fail("system.media_fallback.note changed; the runtime fallback contract depends on it");
+  }
 }
 
 // --- r13 delta spot checks (Things-to-Do collection hub) ---
