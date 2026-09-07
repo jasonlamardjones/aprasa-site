@@ -439,6 +439,22 @@
       "media_asset_source_url": null,
       "media_checked_date": "2026-09-02",
       "media_alt": null
+    },
+    {
+      "section": "things-to-do",
+      "title": "KUTUMBAIA — Edição 02: Oficina Experimental Artística",
+      "provider": "Txon Ku Ceu / Liliane Ailine Reis",
+      "source_url": "https://www.instagram.com/lilianeailinereis/p/Dc6mKx9CEc_/",
+      "media_type": "editorial-fallback",
+      "media_state": "fallback-final",
+      "media_source": null,
+      "media_asset": null,
+      "fallback_category": "things-culture",
+      "fallback_reason": "Project 03 ruled that the supplied event poster is sufficient as factual evidence but that possession of it and its public Instagram publication do not establish A PRASA's right to republish the artwork. The poster is therefore evidence only and is not ingested; the standard shared A PRASA editorial fallback region renders for this card. A later explicit media-rights clearance may supersede this ruling.",
+      "media_provenance": "Shared A PRASA editorial fallback media region rendered by the incumbent front-end foundation (prasa-launch.js). No record-specific image asset is ingested for this record, and no organizer, venue or poster imagery is reused.",
+      "media_asset_source_url": null,
+      "media_checked_date": "2026-09-07",
+      "media_alt": null
     }
   ]
 }

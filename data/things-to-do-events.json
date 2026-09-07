@@ -339,6 +339,73 @@
         "title": "4.º Campeonato Nacional Sénior de Boxe | A PRASA",
         "schema_type": "SportsEvent"
       }
+    },
+    {
+      "id": "kutumbaia-edicao-02-2026-09-10",
+      "kind": "dated-event",
+      "title": "KUTUMBAIA — Edição 02: Oficina Experimental Artística",
+      "provider": "Txon Ku Ceu / Liliane Ailine Reis",
+      "summary": "KUTUMBAIA returns for its second edition with an experimental artistic workshop bringing together spoken word, music, poetry and visual arts at Kafê Djan Djan in Mindelo.",
+      "category": "culture",
+      "location": {
+        "name": "Kafê Djan Djan",
+        "locality": "Mindelo, São Vicente"
+      },
+      "source_url": "https://www.instagram.com/lilianeailinereis/p/Dc6mKx9CEc_/",
+      "source_type": "organizer-published-post",
+      "start_date": null,
+      "start_datetime": "2026-09-10T18:00:00-01:00",
+      "end_datetime": "2026-09-10T20:00:00-01:00",
+      "end_date": "2026-09-10",
+      "checked_at": "2026-09-07",
+      "publication_state": "published",
+      "media_policy": "fallback_allowed",
+      "media_manifest_title": "KUTUMBAIA — Edição 02: Oficina Experimental Artística",
+      "detail_page": "things-to-do/kutumbaia-edicao-02-2026-09-10/",
+      "free_admission": true,
+      "display": {
+        "status": "10 September 2026 · 18:00–20:00",
+        "meta": "Kafê Djan Djan · Mindelo, São Vicente",
+        "checked": "Checked 7 September 2026 against the organizer-issued Instagram post and supplied event poster."
+      },
+      "media": null,
+      "card_action": {
+        "label": "View event details",
+        "url": "https://www.instagram.com/lilianeailinereis/p/Dc6mKx9CEc_/"
+      },
+      "detail": {
+        "facts": [
+          {
+            "label": "Date",
+            "value": "10 September 2026 · 18:00–20:00"
+          },
+          {
+            "label": "Where",
+            "value": "Kafê Djan Djan, Mindelo, São Vicente"
+          },
+          {
+            "label": "Admission",
+            "value": "Free admission"
+          },
+          {
+            "label": "Provider",
+            "value": "Txon Ku Ceu / Liliane Ailine Reis"
+          },
+          {
+            "label": "Contact",
+            "value": "WhatsApp: +238 953 3419"
+          }
+        ],
+        "body": "KUTUMBAIA — Edição 02: Oficina Experimental Artística takes place at Kafê Djan Djan in Mindelo on 10 September 2026 from 18:00 to 20:00.\n\nThe activity brings together spoken word, music, poetry and visual arts. The organizer invites people to participate artistically or attend to observe and appreciate the creative activity.",
+        "good_to_know": "Attendance is free. Participants may bring musical instruments, poetic or literary work, or visual-art materials that will not damage the event space. The organizer states that the event is open to different age groups. Registration requirements, capacity and guaranteed entry have not been confirmed.",
+        "checked": "Checked 7 September 2026 against the organizer-issued Instagram post and supplied event poster.",
+        "action_label": "View event details"
+      },
+      "seo": {
+        "description": "KUTUMBAIA returns for its second edition with an experimental artistic workshop bringing together spoken word, music, poetry and visual arts at Kafê Djan Djan in Mindelo.",
+        "title": "KUTUMBAIA — Edição 02: Oficina Experimental Artística | A PRASA",
+        "schema_type": "Event"
+      }
     }
   ]
 }
