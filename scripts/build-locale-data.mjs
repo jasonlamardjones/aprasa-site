@@ -72,6 +72,7 @@ const DELTA9_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r9-delta.sour
 const R10_MIGRATION_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r10-migration.source.json");
 const DELTA13_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r13-things-to-do-hub.source.json");
 const DELTA14_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r14-section-fallback-note.source.json");
+const DELTA15_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r15-weekly-opportunity-2026-09.source.json");
 const LOCALE_DIR = path.join(ROOT, "data", "locales");
 const OUT_PATH = path.join(ROOT, "data", "locales", "locale-data.generated.json");
 
@@ -1204,6 +1205,150 @@ if (delta14Unchanged !== EXPECTED_DELTA14.intentionally_unchanged) {
   fail(`r14 intentionally_unchanged mismatch: got ${delta14Unchanged}, expected ${EXPECTED_DELTA14.intentionally_unchanged}`);
 }
 
+// --- r15 delta: additive merge for the weekly opportunity publication -------
+// Introduces the governed EN/PT presentation for the eight approved
+// fixed-window opportunity records (Uni-CV Erasmus+ x3, Uni-CV third-phase
+// admissions, Laç(z)os Artísticos, China Ambassador Scholarship, Confucius
+// Institute courses, REGEA oral communications). Same class as r3/r4/r5/r7/r8/
+// r13: strictly additive, so it may never reopen an existing key.
+//
+// Every value is transcribed verbatim from the governed Project 03 English
+// packet and the Project 09 Portuguese localization packet, including the
+// final presentation supplement that carried the per-record checked lines and
+// call-to-action labels. Nothing here is composed.
+const EXPECTED_DELTA15 = {
+  package_id: "aprasa-pt-weekly-opportunity-2026-09-r15-delta",
+  revision_class: "ADDITIVE_NEW_KEYS",
+  source_revision: "P03-PT-SOURCE-2026-09-07-r15",
+  previous_revision: "P03-PT-SOURCE-2026-09-06-r14",
+  row_count: 96,
+  approved: 96,
+  required_for_pt_launch: 96,
+  intentionally_unchanged: 0,
+  review_required: 0,
+  // The eight canonical record ids this package is authorized to carry copy
+  // for. A row outside this set means a record was smuggled into the batch.
+  records: [
+    "unicv-erasmus-viana-do-castelo-edital-027-2026",
+    "unicv-erasmus-bielefeld-edital-028-2026",
+    "unicv-erasmus-ca-foscari-edital-029-2026",
+    "unicv-undergraduate-admissions-third-phase-2026-2027",
+    "laczos-artisticos-2nd-edition-2026",
+    "unicv-china-ambassador-scholarship-2026",
+    "unicv-confucius-chinese-language-courses-2026-2027",
+    "regea-oral-communications-call-2026",
+  ],
+};
+
+const delta15 = JSON.parse(readFileSync(DELTA15_PATH, "utf8"));
+
+for (const field of ["package_id", "revision_class", "source_revision", "previous_revision"]) {
+  if (delta15[field] !== EXPECTED_DELTA15[field]) {
+    fail(`r15 ${field} mismatch: got ${JSON.stringify(delta15[field])}, expected ${JSON.stringify(EXPECTED_DELTA15[field])}`);
+  }
+}
+if (delta15.project_09_status !== "approved") {
+  fail(`r15 Project 09 status is not approved: ${JSON.stringify(delta15.project_09_status)}`);
+}
+if (!Array.isArray(delta15.rows) || delta15.rows.length !== EXPECTED_DELTA15.row_count) {
+  fail(`r15 row count mismatch: got ${delta15.rows?.length}, expected ${EXPECTED_DELTA15.row_count}`);
+}
+if (delta15.supplied_rows_approved !== EXPECTED_DELTA15.approved) {
+  fail(`r15 supplied_rows_approved mismatch: got ${delta15.supplied_rows_approved}`);
+}
+if (delta15.review_required !== EXPECTED_DELTA15.review_required || delta15.blocking_issue != null) {
+  fail(`r15 has unresolved localization review state`);
+}
+if (delta15.missing_or_unaccounted_row_count !== 0) {
+  fail(`r15 missing_or_unaccounted_row_count is non-zero: ${delta15.missing_or_unaccounted_row_count}`);
+}
+for (const listField of ["duplicate_keys", "placeholder_mismatches", "a_prasa_to_a_praca_violations"]) {
+  if ((delta15[listField] || []).length !== 0) fail(`r15 ${listField} is non-empty: ${JSON.stringify(delta15[listField])}`);
+}
+if (delta15.source_english_changed !== false || delta15.change_control_status?.existing_keys_overridden !== 0) {
+  fail(`r15 declares a non-additive change (source_english_changed/existing_keys_overridden)`);
+}
+if (delta15.change_control_status?.new_keys_introduced !== EXPECTED_DELTA15.row_count) {
+  fail(`r15 new_keys_introduced mismatch: got ${delta15.change_control_status?.new_keys_introduced}`);
+}
+if (delta15.change_control_status?.lifecycle_or_publication_state_modified !== 0) {
+  fail(`r15 must not modify lifecycle or publication state`);
+}
+
+const DELTA15_RECORDS = new Set(EXPECTED_DELTA15.records);
+let delta15Required = 0;
+let delta15Unchanged = 0;
+const delta15Seen = new Map();
+for (const row of delta15.rows) {
+  if (seen.has(row.key)) {
+    fail(`r15 key "${row.key}" collides with an existing key — r15 must be strictly additive, never reopen an existing key`);
+  }
+  seen.add(row.key);
+
+  // Every row is record-scoped, and only to an authorized record.
+  if (typeof row.record_id !== "string" || !DELTA15_RECORDS.has(row.record_id)) {
+    fail(`r15 key "${row.key}" targets unauthorized record ${JSON.stringify(row.record_id)}`);
+  }
+  if (!row.key.startsWith(`training.record.${row.record_id}.`)) {
+    fail(`r15 key "${row.key}" is outside its own record namespace`);
+  }
+  if (row.source_revision !== EXPECTED_DELTA15.source_revision) fail(`r15 ${row.key} source_revision mismatch`);
+  if (row.translation_status !== "APPROVED") fail(`r15 key "${row.key}" is not APPROVED (status: ${row.translation_status})`);
+
+  if (row.scope_status === "REQUIRED_FOR_PT_LAUNCH") delta15Required += 1;
+  else if (row.scope_status === "INTENTIONALLY_UNCHANGED") delta15Unchanged += 1;
+  else fail(`r15 key "${row.key}" has invalid scope_status`);
+
+  if (row.scope_status === "REQUIRED_FOR_PT_LAUNCH" && (row.pt == null || row.pt === "")) {
+    fail(`r15 REQUIRED_FOR_PT_LAUNCH key "${row.key}" has no PT value`);
+  }
+  if (!row.source_en) fail(`r15 key "${row.key}" is missing approved English text`);
+  const enPlaceholders = (row.source_en.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+  const ptPlaceholders = (row.pt.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+  if (JSON.stringify(enPlaceholders) !== JSON.stringify(ptPlaceholders)) {
+    fail(`r15 key "${row.key}" placeholder mismatch: en=${JSON.stringify(enPlaceholders)} pt=${JSON.stringify(ptPlaceholders)}`);
+  }
+  if ([row.source_en, row.pt].some((value) => value.includes("A PRAÇA"))) {
+    fail(`r15 key "${row.key}" violates protected A PRASA brand spelling`);
+  }
+
+  // The EN->PT index the static-page localizer builds is keyed on the English
+  // string, so one English string that maps to two different Portuguese values
+  // makes that string untranslatable on every page. Caught here, at the source.
+  const priorPt = delta15Seen.get(row.source_en);
+  if (priorPt !== undefined && priorPt !== row.pt) {
+    fail(`r15 English string ${JSON.stringify(row.source_en.slice(0, 60))} maps to two different Portuguese values`);
+  }
+  delta15Seen.set(row.source_en, row.pt);
+
+  keys[row.key] = {
+    key: row.key,
+    en: row.source_en,
+    pt: row.pt,
+    scope_status: row.scope_status,
+    identity_policy: row.identity_policy,
+    record_id: row.record_id,
+    translation_status: row.translation_status,
+    source_revision: row.source_revision,
+    context_notes: row.context_notes || "",
+    linguistic_notes: row.linguistic_notes || "",
+  };
+}
+
+if (delta15Required !== EXPECTED_DELTA15.required_for_pt_launch) {
+  fail(`r15 required_for_pt_launch mismatch: got ${delta15Required}, expected ${EXPECTED_DELTA15.required_for_pt_launch}`);
+}
+if (delta15Unchanged !== EXPECTED_DELTA15.intentionally_unchanged) {
+  fail(`r15 intentionally_unchanged mismatch: got ${delta15Unchanged}, expected ${EXPECTED_DELTA15.intentionally_unchanged}`);
+}
+// Every authorized record must actually be present: a package that silently
+// drops a record would publish a partial batch.
+for (const recordId of EXPECTED_DELTA15.records) {
+  if (!delta15.rows.some((row) => row.record_id === recordId)) {
+    fail(`r15 is missing every row for authorized record "${recordId}"`);
+  }
+}
+
 // --- r10 migration: ATOMIC namespace rename, applied last -------------------
 //
 // Project 09 approved moving the governed Home training presentation keys off
@@ -1585,6 +1730,7 @@ const output = {
       "data/locales/pt-overlay-r9-migration.source.json",
       "data/locales/pt-overlay-r13-things-to-do-hub.source.json",
       "data/locales/pt-overlay-r14-section-fallback-note.source.json",
+      "data/locales/pt-overlay-r15-weekly-opportunity-2026-09.source.json",
     ],
     base_revision: pkg.source_revision,
     delta_revision: delta.source_revision,
@@ -1608,6 +1754,10 @@ const output = {
     delta14_revision: delta14.source_revision,
     delta14_revision_class: delta14.revision_class,
     delta14_row_count: delta14.rows.length,
+    delta15_package_id: delta15.package_id,
+    delta15_revision: delta15.source_revision,
+    delta15_revision_class: delta15.revision_class,
+    delta15_row_count: delta15.rows.length,
     delta9_superseding_ruling: delta9.superseding_ruling,
     delta9_owning_project: delta9.owning_project,
     event_delta_packages: eventDeltaPackages,

@@ -24,6 +24,16 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const AS_OF = '2026-09-01';
 
+// Ownership is TOTAL: the generator owns every canonical record on every run,
+// whatever its publication state. The assertions below therefore compare
+// against the canonical record count rather than a literal, so the contract
+// they encode -- "the count does not shrink when a record leaves the visible
+// states" -- keeps holding as records are published or retired, instead of
+// having to be re-hardcoded each time the corpus changes.
+const CANONICAL_RECORD_COUNT = JSON.parse(
+  fs.readFileSync(path.join(ROOT, 'data', 'training-opportunities.json'), 'utf8')
+).records.length;
+
 let passed = 0;
 const failures = [];
 
@@ -99,8 +109,10 @@ for (const removedState of ['EXPIRED', 'WITHDRAWN', 'SUPERSEDED']) {
     check(`${label}: region is exactly the marker pair`, cleared === MARKER_ONLY(id), JSON.stringify(cleared));
     check(`${label}: marker pair preserved`,
       cleared !== null && cleared.includes(`BEGIN GENERATED TRAINING: ${id}`) && cleared.includes(`END GENERATED TRAINING: ${id}`));
-    check(`${label}: all nine regions still owned`, /9 region\(s\) owned/.test(fwd.stdout), fwd.stdout.trim());
-    check(`${label}: reports one cleared region`, /8 rendered, 1 cleared/.test(fwd.stdout), fwd.stdout.trim());
+    check(`${label}: every canonical region is still owned`,
+      new RegExp(`${CANONICAL_RECORD_COUNT} region\\(s\\) owned`).test(fwd.stdout), fwd.stdout.trim());
+    check(`${label}: reports one cleared region`,
+      new RegExp(`${CANONICAL_RECORD_COUNT - 1} rendered, 1 cleared`).test(fwd.stdout), fwd.stdout.trim());
 
     // Deterministic + idempotent in the removed state.
     const again = run(dir, locale, ['--write']);
