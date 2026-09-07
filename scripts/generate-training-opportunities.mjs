@@ -95,6 +95,22 @@ function text(slot, where) {
   }
 }
 
+/**
+ * Resolve a prose slot that governance may supply as a single paragraph or as
+ * an ordered list of paragraphs. Project 09 approves each paragraph as its own
+ * governed row, so a multi-paragraph body renders as consecutive <p> elements
+ * with each one matching a governed string exactly — which is what lets
+ * scripts/lib/static-page-transform.mjs resolve them on the PT surface. A
+ * single-slot body is unchanged, so every incumbent record renders byte for
+ * byte as before.
+ */
+function paragraphs(slot, where) {
+  if (slot == null) return [];
+  const list = Array.isArray(slot) ? slot : [slot];
+  if (!list.length) fail(`${where}: paragraph list is empty`);
+  return list.map((entry, i) => text(entry, list.length > 1 ? `${where}[${i}]` : where));
+}
+
 const EXTERNAL_MARKER = '<span aria-hidden="true">↗</span>';
 const LINK_ATTRS = 'target="_blank" rel="noopener noreferrer"';
 
@@ -150,8 +166,11 @@ function renderCard(record) {
   lines.push(`${I}<h3>${esc(text(card.title, `${where} title`))}</h3>`);
   if (card.meta) lines.push(`${I}<p class="card-meta">${esc(text(card.meta, `${where} meta`))}</p>`);
   lines.push(`${I}<p class="provider">${esc(record.provider)}</p>`);
-  if (card.body) lines.push(`${I}<p>${esc(text(card.body, `${where} body`))}</p>`);
+  for (const para of paragraphs(card.body, `${where} body`)) lines.push(`${I}<p>${esc(para)}</p>`);
   lines.push(`${I}<p class="checked">${esc(text(card.checked, `${where} checked`))}</p>`);
+  if (card.spotlight_disclosure) {
+    lines.push(`${I}<p class="spotlight-disclosure">${esc(text(card.spotlight_disclosure, `${where} spotlight disclosure`))}</p>`);
+  }
 
   lines.push(`${I}<div class="card-actions">`);
   lines.push(`${I}  <button class="details-button" type="button" data-details>${esc(t('ui.details', locale))}</button>`);
@@ -194,11 +213,11 @@ function renderDetail(record) {
 
   if (d.details_body) {
     lines.push(`${I}<h3>${esc(t('ui.details', locale))}</h3>`);
-    lines.push(`${I}<p>${esc(text(d.details_body, `${where} details body`))}</p>`);
+    for (const para of paragraphs(d.details_body, `${where} details body`)) lines.push(`${I}<p>${esc(para)}</p>`);
   }
   if (d.requirements) {
     lines.push(`${I}<h3>${esc(t('ui.requirements', locale))}</h3>`);
-    lines.push(`${I}<p>${esc(text(d.requirements, `${where} requirements`))}</p>`);
+    for (const para of paragraphs(d.requirements, `${where} requirements`)) lines.push(`${I}<p>${esc(para)}</p>`);
   }
   if (d.original_posting) {
     const op = d.original_posting;
@@ -209,8 +228,11 @@ function renderDetail(record) {
   }
 
   lines.push(`${I}<h3>${esc(t('ui.good_to_know', locale))}</h3>`);
-  lines.push(`${I}<p>${esc(text(d.good_to_know, `${where} good to know`))}</p>`);
+  for (const para of paragraphs(d.good_to_know, `${where} good to know`)) lines.push(`${I}<p>${esc(para)}</p>`);
   lines.push(`${I}<p class="checked">${esc(text(d.checked, `${where} checked`))}</p>`);
+  if (d.spotlight_disclosure) {
+    lines.push(`${I}<p class="spotlight-disclosure">${esc(text(d.spotlight_disclosure, `${where} spotlight disclosure`))}</p>`);
+  }
   if (d.action) {
     const label = esc(text(d.action.label, `${where} action label`));
     lines.push(`${I}<a class="dialog-link" href="${escAttr(d.action.href)}" ${LINK_ATTRS}>${label} ${EXTERNAL_MARKER}</a>`);

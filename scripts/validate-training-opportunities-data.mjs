@@ -127,6 +127,18 @@ function checkSlot(slot, where, recordId) {
   }
 }
 
+/**
+ * A prose slot governance may supply as a single slot or as an ordered list of
+ * governed paragraphs. Each entry is checked exactly like a single slot, so a
+ * multi-paragraph body can never smuggle in an unapproved or PT-less string.
+ */
+function checkProse(slot, where, recordId) {
+  if (slot == null) return;
+  if (!Array.isArray(slot)) return checkSlot(slot, where, recordId);
+  if (slot.length === 0) return fail(`${where}: paragraph list must be null or a non-empty array`);
+  slot.forEach((entry, i) => checkSlot(entry, `${where}[${i}]`, recordId));
+}
+
 function checkAction(action, where, recordId) {
   if (action == null) return;
   if (typeof action.href !== 'string' || !/^https:\/\//.test(action.href)) {
@@ -229,7 +241,8 @@ for (const [index, record] of (data.records ?? []).entries()) {
       if (!card[required]) fail(`${cw}: ${required} is required`);
       checkSlot(card[required], `${cw} ${required}`, id);
     }
-    for (const optional of ['spotlight_label', 'meta', 'body']) checkSlot(card[optional], `${cw} ${optional}`, id);
+    for (const optional of ['spotlight_label', 'meta', 'spotlight_disclosure']) checkSlot(card[optional], `${cw} ${optional}`, id);
+    checkProse(card.body, `${cw} body`, id);
     checkTags(card.action_tags, `${cw} action_tags`, id);
     checkAction(card.action, `${cw} action`, id);
     if (card.attributes != null) {
@@ -249,12 +262,17 @@ for (const [index, record] of (data.records ?? []).entries()) {
     fail(`${where}: detail block is required`);
   } else {
     const dw = `${where} detail`;
-    for (const required of ['title', 'good_to_know', 'checked']) {
+    for (const required of ['title', 'checked']) {
       if (!detail[required]) fail(`${dw}: ${required} is required`);
       checkSlot(detail[required], `${dw} ${required}`, id);
     }
-    for (const optional of ['spotlight_label', 'details_body', 'requirements']) {
+    if (!detail.good_to_know) fail(`${dw}: good_to_know is required`);
+    checkProse(detail.good_to_know, `${dw} good_to_know`, id);
+    for (const optional of ['spotlight_label', 'spotlight_disclosure']) {
       checkSlot(detail[optional], `${dw} ${optional}`, id);
+    }
+    for (const optional of ['details_body', 'requirements']) {
+      checkProse(detail[optional], `${dw} ${optional}`, id);
     }
     checkTags(detail.action_tags, `${dw} action_tags`, id);
     checkAction(detail.action, `${dw} action`, id);
@@ -283,6 +301,46 @@ for (const [index, record] of (data.records ?? []).entries()) {
   }
 }
 
+// --- Learning Spotlight invariant -----------------------------------------
+// Spotlight status is a presentation treatment, independent of record
+// existence: rotating it withdraws the treatment from the outgoing record and
+// leaves its canonical entry in place. Exactly one visible record may carry it,
+// and it must be carried coherently — the data-learning-spotlight marker, the
+// card and detail spotlight labels, and the editorial disclosure travel
+// together, so a half-rotated record fails here rather than shipping a card
+// that is a spotlight on one surface and not the other.
+const SPOTLIGHT_ATTR = 'data-learning-spotlight';
+const VISIBLE_STATES = new Set(['CURRENT', 'REVIEW-DUE']);
+const spotlightHolders = [];
+
+for (const record of data.records ?? []) {
+  const marker = record.card?.attributes?.[SPOTLIGHT_ATTR] ?? null;
+  const parts = {
+    [`card.attributes["${SPOTLIGHT_ATTR}"]`]: marker != null,
+    'card.spotlight_label': Boolean(record.card?.spotlight_label),
+    'detail.spotlight_label': Boolean(record.detail?.spotlight_label),
+    'card.spotlight_disclosure': Boolean(record.card?.spotlight_disclosure),
+    'detail.spotlight_disclosure': Boolean(record.detail?.spotlight_disclosure),
+  };
+  const present = Object.entries(parts).filter(([, on]) => on).map(([name]) => name);
+  if (present.length === 0) continue;
+  if (present.length !== Object.keys(parts).length) {
+    const missing = Object.entries(parts).filter(([, on]) => !on).map(([name]) => name);
+    fail(`record ${record.id}: partial Learning Spotlight treatment — carries ${present.join(', ')} but is missing ${missing.join(', ')}`);
+  }
+  if (marker !== record.id) {
+    fail(`record ${record.id}: ${SPOTLIGHT_ATTR} is ${JSON.stringify(marker)}; it must equal the record's own id`);
+  }
+  if (!VISIBLE_STATES.has(record.publication_state)) {
+    fail(`record ${record.id}: holds the Learning Spotlight in publication_state ${JSON.stringify(record.publication_state)}, which is not rendered on the surface`);
+  }
+  spotlightHolders.push(record.id);
+}
+
+if (spotlightHolders.length !== 1) {
+  fail(`exactly one record must hold the Learning Spotlight; found ${spotlightHolders.length}${spotlightHolders.length ? ` (${spotlightHolders.join(', ')})` : ''}`);
+}
+
 if (errors.length) {
   console.error('Training opportunities structured-data errors:');
   for (const error of errors) console.error(`- ${error}`);
@@ -292,4 +350,4 @@ if (errors.length) {
 const byClass = {};
 for (const record of data.records) byClass[record.lifecycle_class] = (byClass[record.lifecycle_class] ?? 0) + 1;
 const summary = Object.entries(byClass).map(([k, v]) => `${k}=${v}`).join(', ');
-console.log(`Training opportunities structured-data validation passed: ${data.records.length} record(s) (${summary}).`);
+console.log(`Training opportunities structured-data validation passed: ${data.records.length} record(s) (${summary}); Learning Spotlight held by exactly one record (${spotlightHolders[0]}).`);

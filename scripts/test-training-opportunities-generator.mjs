@@ -23,6 +23,11 @@ import { spawnSync } from 'node:child_process';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const AS_OF = '2026-09-01';
+const DATA_PATH = path.join(ROOT, 'data', 'training-opportunities.json');
+// Derived, not hardcoded: the assertion is that the generator owns EVERY
+// canonical record on every run, so it must track the canonical record list
+// rather than a number that a legitimate rotation would falsify.
+const RECORD_COUNT = JSON.parse(fs.readFileSync(DATA_PATH, 'utf8')).records.length;
 
 let passed = 0;
 const failures = [];
@@ -99,8 +104,8 @@ for (const removedState of ['EXPIRED', 'WITHDRAWN', 'SUPERSEDED']) {
     check(`${label}: region is exactly the marker pair`, cleared === MARKER_ONLY(id), JSON.stringify(cleared));
     check(`${label}: marker pair preserved`,
       cleared !== null && cleared.includes(`BEGIN GENERATED TRAINING: ${id}`) && cleared.includes(`END GENERATED TRAINING: ${id}`));
-    check(`${label}: all nine regions still owned`, /9 region\(s\) owned/.test(fwd.stdout), fwd.stdout.trim());
-    check(`${label}: reports one cleared region`, /8 rendered, 1 cleared/.test(fwd.stdout), fwd.stdout.trim());
+    check(`${label}: all ${RECORD_COUNT} regions still owned`, new RegExp(`${RECORD_COUNT} region\\(s\\) owned`).test(fwd.stdout), fwd.stdout.trim());
+    check(`${label}: reports one cleared region`, new RegExp(`${RECORD_COUNT - 1} rendered, 1 cleared`).test(fwd.stdout), fwd.stdout.trim());
 
     // Deterministic + idempotent in the removed state.
     const again = run(dir, locale, ['--write']);
@@ -169,6 +174,102 @@ for (const removedState of ['EXPIRED', 'WITHDRAWN', 'SUPERSEDED']) {
   const r = run(dir, 'en');
   check('a marker region with no canonical record fails closed',
     r.status === 1 && /marker region "microsoft-learn" has no canonical record/.test(r.stderr), r.stderr.trim());
+  fs.rmSync(dir, { recursive: true, force: true });
+}
+
+// --- Learning Spotlight uniqueness invariant -------------------------------
+// Rotation must never leave two records marked as the Learning Spotlight, and
+// must never leave one half-rotated (marker without labels, or labels without
+// the marker). The invariant lives in the structured-data validator; these
+// probes prove it actually rejects those states rather than passing vacuously.
+function validate(dir) {
+  const r = spawnSync('node', [path.join(dir, 'scripts', 'validate-training-opportunities-data.mjs')], { cwd: dir, encoding: 'utf8' });
+  return { status: r.status, stdout: r.stdout || '', stderr: r.stderr || '' };
+}
+
+function editData(dir, mutate) {
+  const p = path.join(dir, 'data', 'training-opportunities.json');
+  const data = JSON.parse(fs.readFileSync(p, 'utf8'));
+  mutate(data);
+  fs.writeFileSync(p, JSON.stringify(data, null, 2) + '\n');
+}
+
+{
+  const dir = sandbox();
+  const clean = validate(dir);
+  check('committed data holds exactly one Learning Spotlight',
+    clean.status === 0 && /Learning Spotlight held by exactly one record \(start-cv\)/.test(clean.stdout), clean.stdout.trim() || clean.stderr.trim());
+  fs.rmSync(dir, { recursive: true, force: true });
+}
+{
+  // The failure the rotation exists to prevent: the incoming spotlight added
+  // while the outgoing one keeps its treatment.
+  const dir = sandbox();
+  editData(dir, (data) => {
+    const outgoing = data.records.find((r) => r.id === 'myrtle');
+    const incoming = data.records.find((r) => r.id === 'start-cv');
+    outgoing.card.attributes = { 'data-learning-spotlight': 'myrtle' };
+    outgoing.card.spotlight_label = incoming.card.spotlight_label;
+    outgoing.detail.spotlight_label = incoming.detail.spotlight_label;
+    outgoing.card.spotlight_disclosure = incoming.card.spotlight_disclosure;
+    outgoing.detail.spotlight_disclosure = incoming.detail.spotlight_disclosure;
+  });
+  const r = validate(dir);
+  check('two simultaneous Learning Spotlights are rejected',
+    r.status === 1 && /exactly one record must hold the Learning Spotlight; found 2/.test(r.stderr), r.stderr.trim());
+  fs.rmSync(dir, { recursive: true, force: true });
+}
+{
+  // A rotation that removes the marker but leaves the labels behind.
+  const dir = sandbox();
+  editData(dir, (data) => {
+    data.records.find((r) => r.id === 'start-cv').card.attributes = null;
+  });
+  const r = validate(dir);
+  check('a partial Learning Spotlight treatment is rejected',
+    r.status === 1 && /partial Learning Spotlight treatment/.test(r.stderr), r.stderr.trim());
+  fs.rmSync(dir, { recursive: true, force: true });
+}
+{
+  // No spotlight at all is equally a rotation defect, not a quiet success.
+  const dir = sandbox();
+  editData(dir, (data) => {
+    const r = data.records.find((rec) => rec.id === 'start-cv');
+    r.card.attributes = null;
+    r.card.spotlight_label = null;
+    r.detail.spotlight_label = null;
+    r.card.spotlight_disclosure = null;
+    r.detail.spotlight_disclosure = null;
+  });
+  const r = validate(dir);
+  check('a surface with no Learning Spotlight is rejected',
+    r.status === 1 && /exactly one record must hold the Learning Spotlight; found 0/.test(r.stderr), r.stderr.trim());
+  fs.rmSync(dir, { recursive: true, force: true });
+}
+{
+  // Spotlight status is presentation only, so it may never be held by a record
+  // the generator does not render onto the surface.
+  const dir = sandbox();
+  editData(dir, (data) => {
+    data.records.find((r) => r.id === 'start-cv').publication_state = 'WITHDRAWN';
+  });
+  const r = validate(dir);
+  check('a Learning Spotlight on a removed-state record is rejected',
+    r.status === 1 && /holds the Learning Spotlight in publication_state "WITHDRAWN"/.test(r.stderr), r.stderr.trim());
+  fs.rmSync(dir, { recursive: true, force: true });
+}
+{
+  // Exactly one spotlight article reaches each rendered Home surface.
+  const dir = sandbox();
+  for (const locale of ['en', 'pt']) {
+    const r = run(dir, locale);
+    const html = fs.readFileSync(homePath(dir, locale), 'utf8');
+    const marked = html.match(/<article class="resource-card" data-learning-spotlight="[^"]+">/g) || [];
+    check(`${locale.toUpperCase()} Home carries exactly one Learning Spotlight article`,
+      r.status === 0 && marked.length === 1 && marked[0].includes('"start-cv"'), JSON.stringify(marked));
+    check(`${locale.toUpperCase()} Home no longer marks Myrtle as the Learning Spotlight`,
+      !html.includes('data-learning-spotlight="myrtle"'));
+  }
   fs.rmSync(dir, { recursive: true, force: true });
 }
 

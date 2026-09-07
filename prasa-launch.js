@@ -394,48 +394,18 @@
     else record.append(dialogDisclosure);
   }
 
-  function addLearningSpotlight() {
-    const section = document.getElementById("trainings-tools");
-    const grid = section?.querySelector(".resource-grid");
-    if (!grid || grid.querySelector('[data-learning-spotlight="myrtle"]')) return;
-
-    const card = document.createElement("article");
-    card.className = "resource-card";
-    card.dataset.learningSpotlight = "myrtle";
-    card.innerHTML = `
-      <p class="spotlight-label">Learning Spotlight</p>
-      <p class="card-status">Mindelo · Learning programs</p>
-      <h3>Myrtle Atividades Educativas</h3>
-      <p class="card-meta">Language, computer, workplace-English and other learning programs</p>
-      <p class="provider">Myrtle Atividades Educativas</p>
-      <p>Explore language, computer, workplace-English and other learning programs from Myrtle Atividades Educativas in Mindelo.</p>
-      <p class="checked">Checked 17 August 2026 against the provider’s current first-party site.</p>
-      <div class="card-actions">
-        <button class="details-button" type="button" data-details>Details</button>
-        <a class="resource-link" href="https://myrtleducativas.com/" target="_blank" rel="noopener noreferrer">Explore Myrtle programs <span aria-hidden="true">↗</span></a>
-      </div>
-      <template class="details-template">
-        <div class="dialog-record">
-          <p class="spotlight-label">Learning Spotlight</p>
-          <p class="provider">Myrtle Atividades Educativas</p>
-          <h2>Myrtle Atividades Educativas</h2>
-          <h3>Details</h3>
-          <p>Explore language, computer, workplace-English and other learning programs from Myrtle Atividades Educativas in Mindelo.</p>
-          <h3>Good to know</h3>
-          <p>Programs, schedules, prices and enrollment availability can change. Check current information directly with Myrtle before acting.</p>
-          <p class="checked">Checked 17 August 2026 against the provider’s current first-party site.</p>
-          <a class="dialog-link" href="https://myrtleducativas.com/" target="_blank" rel="noopener noreferrer">Explore Myrtle programs <span aria-hidden="true">↗</span></a>
-        </div>
-      </template>
-    `;
-
-    grid.prepend(card);
-  }
-
+  // The Learning Spotlight is no longer injected here. It was a runtime
+  // fallback that rebuilt the incumbent Myrtle spotlight card from copy
+  // hardcoded in English, which (a) could only ever render English on the PT
+  // Home surface, and (b) would inject a SECOND spotlight card the moment the
+  // governed spotlight rotated to another record. The Learning Spotlight is
+  // now a governed record in data/training-opportunities.json, rendered into
+  // both Home surfaces by scripts/generate-training-opportunities.mjs from the
+  // approved Project 09 overlay, and its uniqueness is asserted by
+  // scripts/validate-training-opportunities-data.mjs.
   function prepareHomeEditorialState() {
     removeRecurringDanceRecord();
     updateMonPikeninFreshness();
-    addLearningSpotlight();
     applyProviderMedia();
 
     ensureSectionMediaSlots(

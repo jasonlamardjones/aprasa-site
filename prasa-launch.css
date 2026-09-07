@@ -329,6 +329,15 @@ html[lang="pt"] img.lang-only-pt { display: block; }
 .spotlight-label {
   margin: 0 0 .65rem !important;
 }
+/* The Learning Spotlight's governed editorial disclosure is static markup
+   generated into both Home surfaces, so it needs a stylesheet rule of its own
+   rather than relying on the runtime style block prasa-launch.js injects for
+   the Local Spotlight. Values match that block exactly. */
+.spotlight-disclosure {
+  margin: .15rem 0 .65rem;
+  font-size: .78rem;
+  line-height: 1.45;
+}
 .card-deadline {
   color: var(--ochre-text);
   font-weight: 700;

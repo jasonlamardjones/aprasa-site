@@ -11,7 +11,8 @@
     "notes": [
       "Every presentation string is a reference into the governed locale overlay. This file carries NO copy of its own: it is structure, identity, provenance and linkage only.",
       "Provider names are locale-independent identity literals, deliberately absent from the overlay (same policy as scripts/build-static-pages.mjs ALLOWED_UNTRANSLATED).",
-      "Records are emitted in array order; that order is the published Home order."
+      "Records are emitted in array order; that order is the published Home order.",
+      "Exactly one record may carry the Learning Spotlight treatment (card.attributes[\"data-learning-spotlight\"] plus the spotlight_label/spotlight_disclosure slots). Spotlight status is presentation only: rotating it withdraws the treatment from the outgoing record and never removes, expires or alters that record's canonical entry."
     ]
   },
   "lifecycle_classes": [
@@ -31,6 +32,114 @@
   },
   "records": [
     {
+      "id": "start-cv",
+      "lifecycle_class": "institutional-training-catalog",
+      "publication_state": "CURRENT",
+      "provider": "Start CV",
+      "source": {
+        "source_url": "https://startcv.cv/courses/",
+        "provenance": "The provider's official website, its current course listings, its live application form and its published contact information, with recent first-party Facebook activity used as an additional currentness signal."
+      },
+      "checked_at": "2026-09-07",
+      "media_manifest_title": "Language Courses at Start CV",
+      "card": {
+        "attributes": {
+          "data-learning-spotlight": "start-cv"
+        },
+        "spotlight_label": {
+          "locale_key": "spotlight.learning.label"
+        },
+        "action_tags": null,
+        "status": {
+          "locale_key": "training.record.start-cv.status"
+        },
+        "title": {
+          "locale_key": "training.record.start-cv.title"
+        },
+        "meta": {
+          "locale_key": "training.record.start-cv.meta"
+        },
+        "body": {
+          "locale_key": "training.record.start-cv.body"
+        },
+        "checked": {
+          "locale_key": "training.record.start-cv.checked"
+        },
+        "spotlight_disclosure": {
+          "locale_key": "training.record.start-cv.disclosure"
+        },
+        "action": {
+          "href": "https://startcv.cv/courses/",
+          "label": {
+            "locale_key": "training.record.start-cv.action"
+          }
+        }
+      },
+      "detail": {
+        "spotlight_label": {
+          "locale_key": "spotlight.learning.label"
+        },
+        "action_tags": null,
+        "title": {
+          "locale_key": "training.record.start-cv.title"
+        },
+        "facts": [
+          {
+            "label": {
+              "literal_identity": "Phone / WhatsApp"
+            },
+            "value": {
+              "literal_identity": "(+238) 970 49 62"
+            }
+          },
+          {
+            "label": {
+              "literal_identity": "Email"
+            },
+            "value": {
+              "literal_identity": "startcvschool@gmail.com"
+            }
+          }
+        ],
+        "details_body": [
+          {
+            "locale_key": "training.record.start-cv.details_1"
+          },
+          {
+            "locale_key": "training.record.start-cv.details_2"
+          },
+          {
+            "locale_key": "training.record.start-cv.details_3"
+          },
+          {
+            "locale_key": "training.record.start-cv.contact_instruction"
+          }
+        ],
+        "requirements": null,
+        "original_posting": null,
+        "good_to_know": [
+          {
+            "locale_key": "training.record.start-cv.good_1"
+          },
+          {
+            "locale_key": "training.record.start-cv.good_2"
+          }
+        ],
+        "checked": {
+          "locale_key": "training.record.start-cv.checked"
+        },
+        "spotlight_disclosure": {
+          "locale_key": "training.record.start-cv.disclosure"
+        },
+        "action": {
+          "href": "https://startcv.cv/courses/",
+          "label": {
+            "locale_key": "training.record.start-cv.action"
+          }
+        }
+      }
+    },
+    {
       "id": "myrtle",
       "lifecycle_class": "institutional-training-catalog",
       "publication_state": "CURRENT",
@@ -42,12 +151,8 @@
       "checked_at": "2026-08-17",
       "media_manifest_title": "Myrtle Atividades Educativas",
       "card": {
-        "attributes": {
-          "data-learning-spotlight": "myrtle"
-        },
-        "spotlight_label": {
-          "locale_key": "spotlight.learning.label"
-        },
+        "attributes": null,
+        "spotlight_label": null,
         "action_tags": null,
         "status": {
           "locale_key": "training.record.myrtle.status"
@@ -72,9 +177,7 @@
         }
       },
       "detail": {
-        "spotlight_label": {
-          "locale_key": "spotlight.learning.label"
-        },
+        "spotlight_label": null,
         "action_tags": null,
         "title": {
           "locale_key": "training.record.myrtle.title"

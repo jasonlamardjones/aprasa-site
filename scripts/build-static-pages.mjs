@@ -74,6 +74,15 @@ const ALLOWED_UNTRANSLATED = new Set([
   // stay byte-identical in both locales.
   'Simabo',
   'volunteers@simabo.org',
+  // Start CV (Learning Spotlight): provider identity, plus the two contact
+  // lines Project 09 froze as INTENTIONALLY_UNCHANGED for this record. They
+  // are rendered as the <dt>/<dd> halves of the governed contact block and
+  // must stay byte-identical on both Home surfaces.
+  'Start CV',
+  'Phone / WhatsApp',
+  '(+238) 970 49 62',
+  'Email',
+  'startcvschool@gmail.com',
   // Locale-matched temporary thumbnail alt text for the EMAR / Kre+ cards:
   // both the EN and PT variant of each image (and its alt) is present in
   // the shared EN source and shown/hidden per-locale by CSS (.lang-only-en

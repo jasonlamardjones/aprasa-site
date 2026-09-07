@@ -186,6 +186,22 @@
     },
     {
       "section": "trainings-tools",
+      "title": "Language Courses at Start CV",
+      "provider": "Start CV",
+      "source_url": "https://startcv.cv/courses/",
+      "media_type": "editorial-fallback",
+      "media_state": "fallback-final",
+      "media_source": null,
+      "media_asset": null,
+      "fallback_category": "opportunities-learning-general",
+      "fallback_reason": "Project 03 media ruling of 07 September 2026 for the Start CV Learning Spotlight: the governed editorial fallback is used unless first-party Start CV imagery is separately cleared for A PRASA republication. Public availability of imagery on Start CV's website or social accounts does not by itself establish republication rights, so no provider imagery was ingested, no logo was scraped, and no provider-specific media or alt text was created. Absence of cleared provider imagery does not block the Learning Spotlight selection.",
+      "media_provenance": null,
+      "media_asset_source_url": null,
+      "media_checked_date": "2026-09-07",
+      "media_alt": null
+    },
+    {
+      "section": "trainings-tools",
       "title": "Myrtle Atividades Educativas",
       "provider": "Myrtle Atividades Educativas",
       "source_url": "https://myrtleducativas.com/",

@@ -72,6 +72,7 @@ const DELTA9_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r9-delta.sour
 const R10_MIGRATION_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r10-migration.source.json");
 const DELTA13_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r13-things-to-do-hub.source.json");
 const DELTA14_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r14-section-fallback-note.source.json");
+const DELTA15_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r15-start-cv-learning-spotlight.source.json");
 const LOCALE_DIR = path.join(ROOT, "data", "locales");
 const OUT_PATH = path.join(ROOT, "data", "locales", "locale-data.generated.json");
 
@@ -1204,6 +1205,154 @@ if (delta14Unchanged !== EXPECTED_DELTA14.intentionally_unchanged) {
   fail(`r14 intentionally_unchanged mismatch: got ${delta14Unchanged}, expected ${EXPECTED_DELTA14.intentionally_unchanged}`);
 }
 
+// --- r15 delta: additive merge for the Start CV Learning Spotlight ----------
+// Supplies the governed EN/PT presentation strings for the incoming Start CV
+// Learning Spotlight record (Project 03 English source freeze of 07 September
+// 2026 plus the Project 09 Portuguese localization packet of the same date).
+//
+// Same strictly additive lane as r13/r14: every key must be new, under this
+// record's own canonical training.record.start-cv.* namespace, and the package
+// may never reopen an approved key. The outgoing Myrtle record keeps all of its
+// approved rows untouched — the rotation withdraws only its spotlight
+// presentation treatment in data/training-opportunities.json, which is not a
+// locale-overlay concern.
+//
+// Applied BEFORE the r10 rename so the post-condition below (no migrated record
+// may retain a legacy home.training.record.* key) still sees the complete key
+// table. start-cv has no legacy namespace to migrate: it is authored directly
+// on the canonical namespace, which is why it is absent from the r10 manifest.
+const EXPECTED_DELTA15 = {
+  package_id: "aprasa-pt-start-cv-learning-spotlight-r15-delta",
+  revision_class: "ADDITIVE_NEW_KEYS",
+  source_revision: "P03-PT-SOURCE-2026-09-07-r15",
+  previous_revision: "P03-PT-SOURCE-2026-09-06-r14",
+  record_id: "start-cv",
+  row_count: 13,
+  approved: 13,
+  required_for_pt_launch: 13,
+  intentionally_unchanged: 0,
+  review_required: 0,
+};
+
+const delta15 = JSON.parse(readFileSync(DELTA15_PATH, "utf8"));
+
+for (const field of ["package_id", "revision_class", "source_revision", "previous_revision"]) {
+  if (delta15[field] !== EXPECTED_DELTA15[field]) {
+    fail(`r15 ${field} mismatch: got ${JSON.stringify(delta15[field])}, expected ${JSON.stringify(EXPECTED_DELTA15[field])}`);
+  }
+}
+if (delta15.project_09_status !== "approved") {
+  fail(`r15 Project 09 status is not approved: ${JSON.stringify(delta15.project_09_status)}`);
+}
+if (JSON.stringify(delta15.affected_records) !== JSON.stringify([EXPECTED_DELTA15.record_id])) {
+  fail(`r15 affected_records must be exactly ${JSON.stringify([EXPECTED_DELTA15.record_id])}, got ${JSON.stringify(delta15.affected_records)}`);
+}
+if (!Array.isArray(delta15.rows) || delta15.rows.length !== EXPECTED_DELTA15.row_count) {
+  fail(`r15 row count mismatch: got ${delta15.rows?.length}, expected ${EXPECTED_DELTA15.row_count}`);
+}
+if (delta15.supplied_rows_approved !== EXPECTED_DELTA15.approved) {
+  fail(`r15 supplied_rows_approved mismatch: got ${delta15.supplied_rows_approved}`);
+}
+if (delta15.review_required !== EXPECTED_DELTA15.review_required || delta15.semantic_escalations_required !== 0 || delta15.blocking_issue != null) {
+  fail(`r15 has unresolved localization review state`);
+}
+if (delta15.missing_or_unaccounted_row_count !== 0) {
+  fail(`r15 missing_or_unaccounted_row_count is non-zero: ${delta15.missing_or_unaccounted_row_count}`);
+}
+if ((delta15.duplicate_keys || []).length !== 0) {
+  fail(`r15 duplicate_keys is non-empty: ${JSON.stringify(delta15.duplicate_keys)}`);
+}
+if ((delta15.placeholder_mismatches || []).length !== 0) {
+  fail(`r15 placeholder_mismatches is non-empty: ${JSON.stringify(delta15.placeholder_mismatches)}`);
+}
+if ((delta15.a_prasa_to_a_praca_violations || []).length !== 0) {
+  fail(`r15 a_prasa_to_a_praca_violations is non-empty: ${JSON.stringify(delta15.a_prasa_to_a_praca_violations)}`);
+}
+if (delta15.source_english_changed !== false || delta15.change_control_status?.existing_keys_overridden !== 0) {
+  fail(`r15 declares a non-additive change (source_english_changed/existing_keys_overridden)`);
+}
+if (delta15.change_control_status?.new_keys_introduced !== EXPECTED_DELTA15.row_count) {
+  fail(`r15 new_keys_introduced mismatch: got ${delta15.change_control_status?.new_keys_introduced}`);
+}
+if (delta15.change_control_status?.lifecycle_or_publication_state_modified !== 0) {
+  fail(`r15 must not modify lifecycle or publication state`);
+}
+if (delta15.change_control_status?.protected_identities_modified !== 0) {
+  fail(`r15 must not modify protected identities`);
+}
+
+let delta15Required = 0;
+let delta15Unchanged = 0;
+for (const row of delta15.rows) {
+  if (seen.has(row.key)) {
+    fail(`r15 key "${row.key}" collides with an existing key — r15 must be strictly additive, never reopen an existing key`);
+  }
+  seen.add(row.key);
+
+  if (row.record_id !== EXPECTED_DELTA15.record_id) {
+    fail(`r15 key "${row.key}" declares record "${row.record_id}", outside the authorized record "${EXPECTED_DELTA15.record_id}"`);
+  }
+  if (!row.key.startsWith(`training.record.${EXPECTED_DELTA15.record_id}.`)) {
+    fail(`r15 key "${row.key}" is outside the authorized training.record.${EXPECTED_DELTA15.record_id}.* namespace`);
+  }
+  if (row.key.startsWith("home.training.record.")) {
+    fail(`r15 key "${row.key}" uses the retired home.training.record.* namespace`);
+  }
+  if (row.source_revision !== EXPECTED_DELTA15.source_revision) fail(`r15 ${row.key} source_revision mismatch`);
+  if (row.translation_status !== "APPROVED") fail(`r15 key "${row.key}" is not APPROVED (status: ${row.translation_status})`);
+
+  if (row.scope_status === "REQUIRED_FOR_PT_LAUNCH") delta15Required += 1;
+  else if (row.scope_status === "INTENTIONALLY_UNCHANGED") delta15Unchanged += 1;
+  else fail(`r15 key "${row.key}" has invalid scope_status`);
+
+  if (row.scope_status === "REQUIRED_FOR_PT_LAUNCH" && (row.pt == null || row.pt === "")) {
+    fail(`r15 REQUIRED_FOR_PT_LAUNCH key "${row.key}" has no PT value`);
+  }
+  if (!row.source_en) fail(`r15 key "${row.key}" is missing approved English text`);
+  const enPlaceholders = (row.source_en.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+  const ptPlaceholders = (row.pt.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+  if (JSON.stringify(enPlaceholders) !== JSON.stringify(ptPlaceholders)) {
+    fail(`r15 key "${row.key}" placeholder mismatch: en=${JSON.stringify(enPlaceholders)} pt=${JSON.stringify(ptPlaceholders)}`);
+  }
+  if ([row.source_en, row.pt].some((value) => value.includes("A PRAÇA"))) {
+    fail(`r15 key "${row.key}" violates protected A PRASA brand spelling`);
+  }
+  if (row.source_en.includes("A PRASA") && !row.pt.includes("A PRASA")) {
+    fail(`r15 key "${row.key}" drops the protected brand string A PRASA from its Portuguese value`);
+  }
+  // Provider identity is locale-independent: it is carried verbatim, never
+  // translated away, in every row that names it.
+  if (row.source_en.includes("Start CV") && !row.pt.includes("Start CV")) {
+    fail(`r15 key "${row.key}" drops the protected provider identity "Start CV" from its Portuguese value`);
+  }
+  // Project 03 omitted every total language count because the current
+  // first-party sources conflict between eight and nine. Neither locale may
+  // reintroduce one.
+  if (/\b(eight|nine|oito|nove)\b/i.test(`${row.source_en} ${row.pt}`)) {
+    fail(`r15 key "${row.key}" states a total language count, which Project 03 intentionally omitted`);
+  }
+
+  keys[row.key] = {
+    key: row.key,
+    en: row.source_en,
+    pt: row.pt,
+    scope_status: row.scope_status,
+    identity_policy: row.identity_policy,
+    record_id: row.record_id,
+    translation_status: row.translation_status,
+    source_revision: row.source_revision,
+    context_notes: row.context_notes || "",
+    linguistic_notes: row.linguistic_notes || "",
+  };
+}
+
+if (delta15Required !== EXPECTED_DELTA15.required_for_pt_launch) {
+  fail(`r15 required_for_pt_launch mismatch: got ${delta15Required}, expected ${EXPECTED_DELTA15.required_for_pt_launch}`);
+}
+if (delta15Unchanged !== EXPECTED_DELTA15.intentionally_unchanged) {
+  fail(`r15 intentionally_unchanged mismatch: got ${delta15Unchanged}, expected ${EXPECTED_DELTA15.intentionally_unchanged}`);
+}
+
 // --- r10 migration: ATOMIC namespace rename, applied last -------------------
 //
 // Project 09 approved moving the governed Home training presentation keys off
@@ -1585,6 +1734,7 @@ const output = {
       "data/locales/pt-overlay-r9-migration.source.json",
       "data/locales/pt-overlay-r13-things-to-do-hub.source.json",
       "data/locales/pt-overlay-r14-section-fallback-note.source.json",
+      "data/locales/pt-overlay-r15-start-cv-learning-spotlight.source.json",
     ],
     base_revision: pkg.source_revision,
     delta_revision: delta.source_revision,
@@ -1608,6 +1758,11 @@ const output = {
     delta14_revision: delta14.source_revision,
     delta14_revision_class: delta14.revision_class,
     delta14_row_count: delta14.rows.length,
+    delta15_package_id: delta15.package_id,
+    delta15_revision: delta15.source_revision,
+    delta15_revision_class: delta15.revision_class,
+    delta15_row_count: delta15.rows.length,
+    delta15_affected_records: delta15.affected_records,
     delta9_superseding_ruling: delta9.superseding_ruling,
     delta9_owning_project: delta9.owning_project,
     event_delta_packages: eventDeltaPackages,
@@ -1633,6 +1788,7 @@ const output = {
     r8_delta_rows: delta8.rows.length,
     r9_source_correction_rows: delta9.rows.length,
     event_delta_rows: eventDeltaRequired + eventDeltaUnchanged,
+    r15_delta_rows: delta15.rows.length,
     r10_renamed_rows: r10Renamed.length,
     governed_override_rows: governedOverrideCount,
   },
