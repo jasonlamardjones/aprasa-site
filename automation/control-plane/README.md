@@ -23,6 +23,9 @@ AI products are replaceable workers. The contracts name roles, not vendors.
 - `adjudication-policy.schema.json` — schema for versioned machine-readable adjudication policies and composition semantics.
 - `policies/things-to-do-v1.json` — conservative Things to Do baseline limited to Project 03-approved machine semantics.
 - `fixtures/things-to-do-candidate.json` — non-public synthetic task used for contract validation.
+- `normalization/ttd-fact-registry.json` — vocabulary, types, and materiality of normalized Things to Do candidate facts.
+- `trust/things-to-do-v1.trust-anchor.json` — deployment trust root binding the approved policy identity, version, approval reference, rule set, and content digest.
+- `fixtures/ttd-adjudication-oracle.json` — synthetic acceptance oracle covering normalization, evaluation, and routing.
 - `scripts/validate-control-plane-contracts.mjs` — self-contained schema/subset validator, semantic invariant validator, and negative-regression harness.
 
 ## Normal state progression
@@ -105,6 +108,100 @@ The validator performs:
 - semantic invariant checks for authority, fail-closed composition, required rules, admission handling, deferred commercial treatment, and write-authority preconditions;
 - seven in-memory negative regressions covering invalid task vocabulary/routing, broken governing-authority behavior, empty eligibility predicates, missing approved rules, reintroduced unapproved exclusions, weakened deferred commercial treatment, and duplicate rule IDs.
 
+## Things to Do normalizer and adjudication evaluator
+
+The worker layer is split into three independently testable stages. Nothing in it calls an LLM, a web search, or any external service, and no stage reads the clock: the evaluation timestamp is injected by the caller so identical frozen inputs produce identical output.
+
+1. **Normalization** (`scripts/lib/ttd-normalizer.mjs`) turns a source-evidence record into normalized facts. A fact is `KNOWN` only when a HIGH-confidence, provenance-backed assertion establishes it against a resolvable `http`/`https` source. Everything else stays `UNKNOWN` and is preserved as `UNKNOWN`. Absence never becomes a favourable value.
+2. **Evaluation** (`scripts/lib/ttd-policy-evaluator.mjs`) interprets the approved policy document. Dispositions, blocking, human review, reason codes, and field actions all come from the policy; only composition mechanics, typed matching, and trust enforcement live in code.
+3. **Routing** (`scripts/lib/ttd-adjudication-routing.mjs`) reads only the final composed result and emits a next-worker decision drawn from the committed task-envelope vocabulary.
+
+`scripts/lib/ttd-adjudication.mjs` composes the three and emits one audit record.
+
+### Standards boundary
+
+`standards_boundary_unresolved` is derived, never asserted. Clearing it requires a complete standards classification: `affirmative_ordinary_scope_evidence` exactly `true`, `confidence` exactly `HIGH`, `unresolved_dimensions` an empty array of strings, `mixed_purpose` exactly `false`, and `evidence_refs` a non-empty array of resolvable source-ref identifiers. Every one of those members must be **present and of the exact declared type**. A missing member, a wrong-typed member, a substituted object or array shape, an unresolved dimension, a mixed purpose, or an unresolvable reference all yield `true`, which HOLDs and blocks under `TTD-GOV-002` with human review. Absence of adverse keywords is not affirmative ordinary-scope evidence, and this tranche introduces no automatic standards REJECT class.
+
+### Fact consistency
+
+`normalization/ttd-fact-registry.json` declares `fact_consistency_constraints`: combinations of normalized facts that cannot hold together. `TTD-FACT-CONSISTENCY-001` forbids `materially_current: true` alongside `candidate_already_ended: true`. A violated constraint fails closed to HOLD with publication blocked and human review required; neither side of the contradiction is silently preferred, and no field actions are derived from contradictory facts. The constraint set is a **required** evaluator input — a caller that omits it gets a validation failure rather than silently losing the check. These constraints enforce internal contradictions only; they create no editorial rule and change no approved policy semantics.
+
+### Evaluator semantics
+
+- Predicate matching is exact and typed. There is no truthiness and no coercion; a missing or `UNKNOWN` value never satisfies a declared `false`.
+- Every rule is evaluated, `DEFERRED` rules included. A matching `DEFERRED` rule always HOLDs, blocks, and requires human review.
+- Precedence is `HOLD > REJECT > SELECT > NO_CHANGE`. `NO_CHANGE` cannot clear another rule and `SELECT` cannot clear a HOLD.
+- Publication blocking and human review are monotonic within one evaluation.
+- When no substantive rule authorizes an outcome, the default `HOLD` applies.
+- A `SELECT` may stand only when **every** material eligibility dependency in the fact registry is KNOWN and well-formed. A dependency that is missing, `UNKNOWN`, contradictory, or carrying a value the policy could never compare against is named in `unresolved_dependencies` and downgrades the outcome to HOLD with publication blocked, routed to evidence verification. `UNKNOWN` is never converted into a favourable `false`.
+- Compatible `field_actions` merge; conflicting ones fail closed to HOLD rather than being silently reconciled.
+- Governing-rule selection, matched-rule ordering, and the semantic fingerprint are order-independent, so neither JSON key order nor rule declaration order can change meaning.
+
+### Reference provenance
+
+Every cited reference set is read densely and by index through one shared gate. Array methods such as `.some()`, `.filter()` and `.every()` skip holes, so a sparse array can pass a per-element check that never runs; array length alone can therefore never establish that a reference exists. A reference set that is not a real, untampered, dense array of non-empty identifiers, or that cites an identifier `source_refs` does not resolve, yields no references at all rather than a shorter apparently valid set. Holes, `undefined` and `null` are never normalized into evidence provenance.
+
+### Trusted registry identity
+
+The whole fact registry is bound by one canonical content digest, pinned as `REQUIRED_FACT_REGISTRY_SHA256` in `scripts/lib/ttd-policy-evaluator.mjs`. Every registry property the normalizer or evaluator consults is decision-relevant — `admissible_confidence` and `allowed_url_schemes` gate evidence and source admission, `source_classes` and `confidence_levels` gate the vocabularies, predicate declarations gate interpretation — so the document is bound in full rather than by a list of the fields noticed so far. Any supplied registry must be semantically identical to the committed one before it may influence adjudication; production adjudication then reads the admitted snapshot the identity check returned, never the caller's object.
+
+Canonical digesting is key-order independent, so reformatting is not drift, while any change to a value, an array's order, or the set of keys is. A legitimate registry change therefore fails closed everywhere until the pinned identity is deliberately updated and independently reviewed, exactly as a policy change fails closed until the trust anchor is updated. `scripts/validate-ttd-trust-anchor.mjs` reports the registry digest and fails on any mismatch.
+
+### Trusted fact-policy configuration
+
+The material eligibility predicate set and the declared fact-consistency constraints are trusted configuration, not caller input. `adjudicateCandidate` is the production entrypoint and derives both from the validated fact registry on every adjudication; any constraint set or material predicate set present on the caller-supplied context is ignored. There is no empty default: a missing, empty, malformed, narrowed, reordered-into-a-different-set, or fabricated configuration fails closed rather than degrading to `[]`.
+
+`evaluateNormalizedFacts` keeps both as parameters so the adversarial suites can probe them directly, but a supplied set is never trusted on its own. It must be semantically identical to the configuration pinned in `scripts/lib/ttd-policy-evaluator.mjs` (`REQUIRED_MATERIAL_ELIGIBILITY_PREDICATES`, `REQUIRED_FACT_CONSISTENCY_CONSTRAINTS`, alongside `REQUIRED_COMPOSITION`), and the pinned normalized form is what enforcement then uses. Object key order inside a forbidden combination is not semantic; a changed predicate, value, reason code, or constraint identity is. A registry that reclassifies a predicate's materiality, restates a constraint, or drops one cannot be used to adjudicate anything: context construction and adjudication both refuse it, and `scripts/validate-ttd-trust-anchor.mjs` fails in CI.
+
+### Single-read admission boundary
+
+Descriptor inspection alone is not sufficient against a hostile view. A Proxy may answer `ownKeys`, `getOwnPropertyDescriptor` and `get` differently on each call, so validating a property and then reading it again through `value[key]` leaves a time-of-check/time-of-use split in which the digested state and the evaluated state differ.
+
+Adjudication therefore admits its input once: `INPUT -> admitted snapshot -> digest(snapshot) -> normalize(snapshot) -> evaluate(normalized snapshot)`. Every own key is enumerated once, every descriptor is taken once, and the value used is the one carried in that descriptor — there is no second read and no `get` trap is ever consulted. The result is a fresh, deeply frozen, plain-data tree that no longer references the original object, so identity and semantics are necessarily computed from the same state, and mutating the caller's object after admission cannot change either. Cyclic input is refused rather than exhausting the stack, and a Proxy is refused outright: a view is not a fixed document, and candidate input has no legitimate reason to be an exotic object. Authority-resolution evidence and the fact registry are admitted through the same boundary.
+
+### Canonical JSON contract
+
+Canonical serialization validates as it emits. It never depends on an earlier normalization pass having rejected a tampered structure, and it never coerces one into valid-looking JSON. Admitted values are plain JSON-compatible objects, dense arrays, finite numbers, strings, booleans and `null`, with deterministic key ordering; output always parses with `JSON.parse`. Refused at any depth: sparse arrays (never `[,]`), tampered object or array prototypes (never a coerced `{}` or `[]`), accessor properties, non-enumerable own properties, symbol keys and values, `undefined`, functions, bigints, and non-finite numbers. Own-key inspection uses `Reflect.ownKeys` and property descriptors, so dangerous own keys (`__proto__`, `constructor`, `prototype`) are refused on objects and arrays alike whether or not they are enumerable, and no getter is ever invoked during the traversal.
+
+### Evidence identity
+
+If a canonical evidence digest cannot be produced for the admitted candidate input, the candidate does not advance. A `SELECT` without a stable canonical evidence identity cannot participate in the auditable provenance model, so digest failure yields `HOLD`, publication blocked, no advancing route, and an explicit technical diagnostic. This is a technical integrity requirement, not an editorial rule.
+
+### Adjudication-control input
+
+Externally supplied control values that are copied into the audit are admitted before any advancing disposition can be returned. `evaluatedAt` keeps its incumbent representation — a non-empty timestamp string, or `null` when no evaluation time is supplied — and is never parsed, formatted, or compared against a clock; no date semantics are introduced. Anything else is inadmissible and fails closed.
+
+Behind that, a final defensive invariant: an adjudication result must itself be canonically representable before it may leave `adjudicateCandidate`. If the assembled audit cannot be canonicalized for any reason, the result is downgraded to `HOLD`, publication blocked, human review required, no advancing route, `downstream_execution: NOT_EXECUTED`, with an explicit technical-integrity diagnostic. This guard is defense in depth; it does not replace admitting each control input.
+
+### Input safety and audit completion
+
+Refusal rejects the candidate but never aborts the pipeline. Candidate identity is captured before adjudication using accessor-free descriptor reads, so the bounded failure path never re-reads attacker-controlled input that has already thrown, and a hostile getter is never invoked at all. On any refusal or unexpected input exception the evidence digest is `null` with the error recorded, and a bounded audit record is still produced showing the failure, `HOLD`, publication blocked, human review required, no matched rules, no advancing route, and `downstream_execution: NOT_EXECUTED`. The bounded audit is always canonically serializable. No downstream progression is ever fabricated.
+
+### Trust and authority
+
+Before any rule may match, the evaluator verifies the policy identity, version, domain, approval reference, approving owner, rule set, canonical content digest, and fail-closed composition constants against `trust/things-to-do-v1.trust-anchor.json`, and requires authority-resolution evidence supplied by a trusted resolver. Candidate-supplied claims are recorded for audit and are never authorizing. On any integrity or authority failure the evaluator emits no SELECT, claims no matched rules, blocks progression, and returns an authority-resolution or validation result.
+
+`scripts/validate-ttd-trust-anchor.mjs` is the drift gate: a policy edit not accompanied by a separately reviewed anchor update fails CI and makes the evaluator fail closed at runtime.
+
+### Tests
+
+Run:
+
+```
+node scripts/validate-control-plane-contracts.mjs
+node scripts/validate-control-plane-hardening.mjs
+node scripts/validate-orchestration-contract.mjs
+node scripts/validate-ttd-trust-anchor.mjs
+node scripts/test-ttd-normalization.mjs
+node scripts/test-ttd-policy-evaluator.mjs
+node scripts/test-ttd-adjudication-composition.mjs
+node scripts/test-ttd-adversarial-regressions.mjs
+```
+
+The three stages are tested separately against `fixtures/ttd-adjudication-oracle.json`. Stage B consumes the oracle's hand-authored normalized facts rather than normalizer output, and stage C consumes the oracle's expected evaluation rather than evaluator output, so no suite generates its own expected results from the production implementation.
+
+All oracle records are synthetic. None describes a real event and none may be published.
+
 ## Next implementation tranche
 
-After this foundation passes exact-SHA independent review, the next tranche should add a deterministic adjudication evaluator and candidate normalization layer for Things to Do, then connect only governed `SELECTED` records to the existing event-publication preparation machinery. Existing publication validators and exact-SHA review gates remain controlling.
+After this tranche passes exact-SHA independent review, the next tranche should reconcile the oracle against the Project 03 standards owner's own test specification, then connect only governed `SELECTED` records to the existing event-publication preparation machinery. Existing publication validators and exact-SHA review gates remain controlling. No autonomous merge, deploy, publication, or governance authority is created here.
