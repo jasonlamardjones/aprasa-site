@@ -10684,14 +10684,14 @@
     "training.record.start-cv.disclosure": {
       "key": "training.record.start-cv.disclosure",
       "en": "Learning Spotlight is an independent A PRASA editorial selection. Inclusion does not mean A PRASA operates, accredits, certifies, endorses or sponsors this provider.",
-      "pt": "O Learning Spotlight é uma seleção editorial independente da A PRASA. A inclusão não significa que a A PRASA opere este prestador, lhe atribua acreditação ou certificação, o recomende ou patrocine.",
+      "pt": "O Destaque de Aprendizagem é uma seleção editorial independente da A PRASA. A inclusão não significa que a A PRASA opere este prestador, lhe atribua acreditação ou certificação, o recomende ou patrocine.",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": "start-cv",
       "translation_status": "APPROVED",
       "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
       "context_notes": "Home Learning Spotlight card and detail presentation for the Start CV language-course record. Learning Spotlight editorial disclosure, rendered on both the card and the detail dialog.",
-      "linguistic_notes": "Project 09 identity policy as supplied: \"TRANSLATE — preserve A PRASA\". The protected brand string A PRASA is carried verbatim. The Portuguese value supplied by Project 09 retains the English feature name \"Learning Spotlight\" in running text; the separately approved card label key spotlight.learning.label renders \"Destaque de Aprendizagem\". Both values are implemented exactly as governed and the divergence is referred to Project 09 rather than reconciled here."
+      "linguistic_notes": "Harmonized per Project 09 decision DESTAQUE_DE_APRENDIZAGEM_HARMONIZED: translates \"Learning Spotlight\" to \"Destaque de Aprendizagem\" in running text, aligning with the card label key spotlight.learning.label. Protected brand string A PRASA is preserved verbatim."
     }
   }
 }
