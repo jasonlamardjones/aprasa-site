@@ -260,17 +260,119 @@ export function admitSnapshot(value, at = '$') {
   return admitSnapshotValue(value, at, new Set());
 }
 
-// Bounded identity extraction for the failure path. Never invokes an accessor,
-// never traverses a prototype chain, and tolerates a malformed or unreadable
-// descriptor. Used where attacker-controlled input must be read after an
-// unexpected exception has already been raised by it.
-export function readOwnDataProperty(target, key) {
-  if (target === null || typeof target !== 'object') return undefined;
-  try {
-    const descriptor = Object.getOwnPropertyDescriptor(target, key);
-    if (descriptor === undefined || !Object.hasOwn(descriptor, 'value')) return undefined;
-    return descriptor.value;
-  } catch {
-    return undefined;
-  }
+// --- Container admission boundary -------------------------------------------
+//
+// admitSnapshot admits a whole DOCUMENT: it copies a deep tree of plain data.
+// That is the right boundary for evidence and for the registry, but it is the
+// wrong one for a CALL: an invocation object legitimately carries large trusted
+// in-process values (the policy, the trust anchor, the routing vocabulary)
+// whose own admission already happened where they were loaded and pinned.
+//
+// admitDataContainer is the boundary for those: it admits the container itself,
+// once, and hands back the values it carried. What it guarantees is exactly
+// what the pre-admission descriptor reads it replaces could not:
+//
+//   * no caller code runs. An exotic view is refused BEFORE any operation that
+//     could trigger a trap, so a getOwnPropertyDescriptor, ownKeys or get trap
+//     never executes -- and therefore can never mutate process-local state
+//     between one read and the next.
+//   * every own key is enumerated once and every descriptor is taken once, so
+//     the container cannot answer differently on a later consultation.
+//   * an accessor, a setter, a non-enumerable own property, a symbol key, a
+//     dangerous key, a tampered prototype or (when an allowlist is given) an
+//     unexpected key fails the whole admission. None of them is read, and none
+//     is silently ignored.
+//
+// The result is a Map of PRESENT entries. Absence is represented by the key
+// simply not being in the map, which is what makes ABSENT distinguishable from
+// PRESENT-but-invalid: an invalid descriptor never becomes an absent entry,
+// it fails the admission outright.
+export const ABSENT_ENTRY = Object.freeze({ present: false, value: undefined });
+
+export function isExoticView(value) {
+  return value !== null && typeof value === 'object' && types.isProxy(value);
 }
+
+// Refuses an exotic view wherever one has no legitimate reason to appear.
+export function assertNotExoticView(value, at) {
+  if (isExoticView(value)) throw new Error(`exotic object view at ${at}`);
+}
+
+export function admitDataContainer(target, at = '$', { allowedKeys = null } = {}) {
+  if (target === null || typeof target !== 'object') {
+    throw new Error(`non-object container at ${at}`);
+  }
+  if (Array.isArray(target)) throw new Error(`array container at ${at}`);
+  // FIRST, before Object.getPrototypeOf, Reflect.ownKeys or any descriptor
+  // read. Each of those is a trap on a Proxy, so the order here is the whole
+  // point: the view is refused before it can run anything.
+  assertNotExoticView(target, at);
+
+  const prototype = Object.getPrototypeOf(target);
+  if (prototype !== Object.prototype && prototype !== null) {
+    throw new Error(`tampered object prototype at ${at}`);
+  }
+
+  const keys = ownKeysOnce(target, at);
+  const entries = new Map();
+  for (const key of keys) {
+    if (DANGEROUS_KEYS.has(key)) throw new Error(`unsafe object key ${key} at ${at}`);
+    if (allowedKeys !== null && !allowedKeys.includes(key)) {
+      throw new Error(`unsupported own property ${key} at ${at}`);
+    }
+    // describe() refuses an accessor, a setter-only property, a non-enumerable
+    // own property and an unreadable descriptor. Any of those fails the
+    // container rather than being read or collapsed into absence.
+    const descriptor = describe(target, key, at);
+    entries.set(key, Object.freeze({ present: true, value: descriptor.value }));
+  }
+  return entries;
+}
+
+// The tagged read. Three states, never one `undefined` standing for several:
+//   { present: false }                 the property is ABSENT
+//   { present: true, value }           the property is PRESENT and valid
+//   (no entry is ever produced)        PRESENT-but-invalid; admitDataContainer
+//                                      already refused the whole container
+export function containerEntry(entries, key) {
+  const entry = entries.get(key);
+  return entry === undefined ? ABSENT_ENTRY : entry;
+}
+
+// Bounded identity extraction from an ALREADY STRUCTURALLY ADMITTED container.
+//
+// This is the only identity read the failure path is allowed to make, and it is
+// deliberately not a general property read: the container must be a real,
+// non-exotic, untampered plain object, and the property must be an enumerable
+// own DATA property holding a non-empty string. Every other shape -- an
+// accessor, a setter, a non-enumerable property, a hostile view, a tampered
+// prototype, an unreadable descriptor, a non-string value -- yields null, the
+// fixed safe fallback identity. No caller code can run, so an audit record can
+// never be the reason a hostile getter executed.
+export function readAdmittedIdentity(container, key) {
+  if (container === null || typeof container !== 'object' || Array.isArray(container)) return null;
+  if (isExoticView(container)) return null;
+  const prototype = Object.getPrototypeOf(container);
+  if (prototype !== Object.prototype && prototype !== null) return null;
+  let descriptor;
+  try {
+    descriptor = Object.getOwnPropertyDescriptor(container, key);
+  } catch {
+    return null;
+  }
+  if (descriptor === undefined || !Object.hasOwn(descriptor, 'value')) return null;
+  if (descriptor.enumerable !== true) return null;
+  const value = descriptor.value;
+  return typeof value === 'string' && value.length > 0 ? value : null;
+}
+
+// readOwnDataProperty used to live here: a bounded single-property read that
+// returned `undefined` for an absent property, for an accessor, and for an
+// unreadable descriptor alike. It is deliberately gone rather than merely
+// unused. Both repaired findings came from it: reading the invocation field by
+// field with it ran a hostile view's traps before any validation, and its one
+// `undefined` return silently rewrote a present-but-invalid control property
+// into an omitted one. Anything that needs a property off externally supplied
+// data now goes through admitDataContainer (which admits the container once and
+// fails closed) or readAdmittedIdentity (which reads one identity and can only
+// ever return a string or the fixed safe fallback).

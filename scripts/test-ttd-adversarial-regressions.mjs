@@ -1965,4 +1965,524 @@ function assertBoundedTechnicalFailure(label, evidence, adjudicationContext = co
   }
 }
 
+// [F4] The whole externally supplied invocation crosses ONE fail-closed
+// admission boundary before anything decision-relevant is consumed.
+//
+// The closed defect: the entrypoint used to read the invocation's fields with
+// separate Object.getOwnPropertyDescriptor calls. On a hostile outer view each
+// of those is a trap, so caller code ran repeatedly BEFORE any validation --
+// long enough to mutate the evidence object handed out on an earlier read.
+// LOW-confidence evidence that correctly HOLDs in an ordinary object became
+// SELECT / publication_blocked=false / LOCALIZATION_WORKER / SELECTED.
+//
+// Every case below therefore asserts two things: the safe disposition, and that
+// the caller's code never ran at all. A hostile invocation that produced the
+// right answer only after executing an attacker's trap would still be a defect.
+{
+  const lowConfidenceEvidence = () => {
+    const evidence = baseEvidence();
+    for (const assertion of evidence.assertions) assertion.confidence = 'LOW';
+    return evidence;
+  };
+
+  const assertInvocationRefused = (label, build) => {
+    const probe = { calls: 0 };
+    let composed = null;
+    let threw = null;
+    try {
+      composed = adjudicateCandidate(build(probe));
+    } catch (error) {
+      threw = error;
+    }
+    harness.equal(label + ': adjudication does not throw', threw, null);
+    harness.ok(label + ': an audit record is produced', composed !== null && composed.audit !== undefined);
+    if (composed === null || composed.audit === undefined) return null;
+    const audit = composed.audit;
+    harness.equal(label + ': no caller code runs before the boundary', probe.calls, 0);
+    harness.ok(label + ': never SELECT', audit.evaluation.disposition !== 'SELECT');
+    harness.equal(label + ': disposition holds', audit.evaluation.disposition, 'HOLD');
+    harness.equal(label + ': publication is blocked', audit.evaluation.publication_blocked, true);
+    harness.equal(label + ': human review is required', audit.evaluation.human_review, true);
+    harness.equal(label + ': no advancing rules matched', audit.evaluation.matched_rule_ids, []);
+    harness.equal(label + ': no field actions are emitted', audit.evaluation.field_actions, {});
+    harness.ok(label + ': no advancing route', audit.routing.automatic_route?.next_status !== 'SELECTED');
+    harness.equal(label + ': downstream execution is NOT_EXECUTED', audit.routing.downstream_execution, { attempted: false, status: 'NOT_EXECUTED' });
+    harness.equal(label + ': no inadmissible timestamp reaches the audit', audit.evaluated_at, null);
+    harness.ok(label + ': an explicit technical diagnostic is preserved', audit.evaluation.failures.length > 0);
+    harness.equal(label + ': the failure audit is canonically representable', typeof canonicalText(audit), 'string');
+    harness.ok(label + ': the failure audit parses', parsesCanonically(audit));
+    return audit;
+  };
+
+  const ordinaryCall = (overrides = {}) => ({
+    evidence: baseEvidence(),
+    context,
+    authorityResolution: TRUSTED_AUTHORITY_RESOLUTION,
+    evaluatedAt: FIXED_EVALUATION_TIMESTAMP,
+    ...overrides
+  });
+
+  // A hostile outer view, in each of the three trap shapes that used to run.
+  const outerViews = [
+    {
+      label: '[F4] Proxy-wrapped invocation object',
+      build: (probe) => new Proxy(ordinaryCall({ evidence: lowConfidenceEvidence() }), {
+        get(target, key, receiver) { probe.calls += 1; return Reflect.get(target, key, receiver); }
+      })
+    },
+    {
+      label: '[F4] getOwnPropertyDescriptor trap on the outer invocation',
+      build: (probe) => new Proxy(ordinaryCall({ evidence: lowConfidenceEvidence() }), {
+        getOwnPropertyDescriptor(target, key) { probe.calls += 1; return Reflect.getOwnPropertyDescriptor(target, key); }
+      })
+    },
+    {
+      label: '[F4] ownKeys trap on the outer invocation',
+      build: (probe) => new Proxy(ordinaryCall(), {
+        ownKeys(target) { probe.calls += 1; return Reflect.ownKeys(target); }
+      })
+    },
+    {
+      label: '[F4] get trap on the outer invocation',
+      build: (probe) => new Proxy(ordinaryCall(), {
+        get(target, key, receiver) { probe.calls += 1; return Reflect.get(target, key, receiver); }
+      })
+    },
+    {
+      // The exact reported exploit: caller code, invoked through a descriptor
+      // trap, mutates process-local state that later validation depends on.
+      label: '[F4] outer input mutates process-local state during descriptor access',
+      build: (probe) => {
+        const evidence = lowConfidenceEvidence();
+        return new Proxy(ordinaryCall({ evidence }), {
+          getOwnPropertyDescriptor(target, key) {
+            probe.calls += 1;
+            for (const assertion of evidence.assertions) assertion.confidence = 'HIGH';
+            return Reflect.getOwnPropertyDescriptor(target, key);
+          }
+        });
+      }
+    }
+  ];
+  for (const view of outerViews) assertInvocationRefused(view.label, view.build);
+
+  // An accessor on the outer invocation fails the call. It is neither read nor
+  // silently ignored, whichever field carries it.
+  const accessorFields = ['evidence', 'context', 'authorityResolution', 'evaluatedAt'];
+  for (const field of accessorFields) {
+    assertInvocationRefused('[F4] accessor-backed ' + field + ' on the outer invocation', (probe) => {
+      const call = ordinaryCall();
+      delete call[field];
+      Object.defineProperty(call, field, {
+        get() { probe.calls += 1; return field === 'evaluatedAt' ? FIXED_EVALUATION_TIMESTAMP : ordinaryCall()[field]; },
+        enumerable: true,
+        configurable: true
+      });
+      return call;
+    });
+  }
+
+  // A setter-only outer field is the same class of defect and must not be read
+  // as an omission either.
+  assertInvocationRefused('[F4] setter-only evaluatedAt on the outer invocation', (probe) => {
+    const call = ordinaryCall();
+    delete call.evaluatedAt;
+    Object.defineProperty(call, 'evaluatedAt', {
+      set(value) { probe.calls += 1; },
+      enumerable: true,
+      configurable: true
+    });
+    return call;
+  });
+
+  // An accessor on the context, carrying the registry, is inside the same
+  // boundary: the registry is decision-relevant and is never read from a view.
+  assertInvocationRefused('[F4] accessor-backed registry on the context', (probe) => {
+    const hostileContext = { ...context };
+    delete hostileContext.registry;
+    Object.defineProperty(hostileContext, 'registry', {
+      get() { probe.calls += 1; return context.registry; },
+      enumerable: true,
+      configurable: true
+    });
+    return ordinaryCall({ context: hostileContext });
+  });
+
+  // A hostile view supplied as the context, or as one of its decision-relevant
+  // values, is refused before evaluation ever consults it.
+  assertInvocationRefused('[F4] Proxy-wrapped context', (probe) => ordinaryCall({
+    context: new Proxy({ ...context }, { get(target, key, receiver) { probe.calls += 1; return Reflect.get(target, key, receiver); } })
+  }));
+  assertInvocationRefused('[F4] Proxy-wrapped registry on the context', (probe) => ordinaryCall({
+    context: { ...context, registry: new Proxy(clone(registry), { get(target, key, receiver) { probe.calls += 1; return Reflect.get(target, key, receiver); } }) }
+  }));
+  assertInvocationRefused('[F4] Proxy-wrapped policy on the context', (probe) => ordinaryCall({
+    context: { ...context, policy: new Proxy(clone(policy), { get(target, key, receiver) { probe.calls += 1; return Reflect.get(target, key, receiver); } }) }
+  }));
+
+  // The strongest statement of the boundary: an invocation that counts EVERY
+  // proxy trap. Not one of them may fire. This is what "no pre-admission
+  // property, descriptor, identity, control input, registry, evidence,
+  // authority resolution or error-path read" means operationally -- the
+  // entrypoint must decline the view rather than interrogate it.
+  {
+    const label = '[F4] fully instrumented hostile invocation';
+    const fired = [];
+    const countingHandler = (tag) => {
+      const handler = {};
+      for (const trap of ['apply', 'construct', 'defineProperty', 'deleteProperty', 'get', 'getOwnPropertyDescriptor',
+        'getPrototypeOf', 'has', 'isExtensible', 'ownKeys', 'preventExtensions', 'set', 'setPrototypeOf']) {
+        handler[trap] = (...args) => {
+          fired.push(`${tag}.${trap}`);
+          return Reflect[trap](...args);
+        };
+      }
+      return handler;
+    };
+    const composed = adjudicateCandidate(new Proxy({
+      evidence: lowConfidenceEvidence(),
+      context,
+      authorityResolution: TRUSTED_AUTHORITY_RESOLUTION,
+      evaluatedAt: FIXED_EVALUATION_TIMESTAMP
+    }, countingHandler('invocation')));
+    harness.equal(label + ': no trap of any kind fires', fired.join(','), '');
+    harness.equal(label + ': disposition holds', composed.audit.evaluation.disposition, 'HOLD');
+    harness.equal(label + ': publication is blocked', composed.audit.evaluation.publication_blocked, true);
+    harness.equal(label + ': human review is required', composed.audit.evaluation.human_review, true);
+    harness.equal(label + ': no identity is fabricated', composed.audit.candidate_id, null);
+    harness.equal(label + ': downstream execution is NOT_EXECUTED', composed.audit.routing.downstream_execution, { attempted: false, status: 'NOT_EXECUTED' });
+    harness.equal(label + ': the failure audit is canonically representable', typeof canonicalText(composed.audit), 'string');
+
+    // The same instrumentation on the evidence, behind an ordinary outer
+    // object: the identity read declines the view instead of consulting it.
+    fired.length = 0;
+    const nested = adjudicateCandidate({
+      evidence: new Proxy(baseEvidence(), countingHandler('evidence')),
+      context,
+      authorityResolution: TRUSTED_AUTHORITY_RESOLUTION,
+      evaluatedAt: FIXED_EVALUATION_TIMESTAMP
+    });
+    harness.equal(label + ': no evidence trap fires either', fired.join(','), '');
+    harness.ok(label + ': a viewed candidate never selects', nested.audit.evaluation.disposition !== 'SELECT');
+    harness.equal(label + ': a viewed candidate is blocked', nested.audit.evaluation.publication_blocked, true);
+    harness.equal(label + ': a viewed candidate names no identity', nested.audit.candidate_id, null);
+  }
+
+  // Structural hostility on the outer object, matching the shapes the inner
+  // snapshot boundary has always refused.
+  assertInvocationRefused('[F4] symbol own key on the outer invocation', () => {
+    const call = ordinaryCall();
+    call[Symbol('smuggled')] = true;
+    return call;
+  });
+  assertInvocationRefused('[F4] tampered outer invocation prototype', () => {
+    const call = ordinaryCall();
+    Object.setPrototypeOf(call, { injected: true });
+    return call;
+  });
+  assertInvocationRefused('[F4] non-enumerable own field on the outer invocation', () => {
+    const call = ordinaryCall();
+    delete call.evaluatedAt;
+    Object.defineProperty(call, 'evaluatedAt', { value: FIXED_EVALUATION_TIMESTAMP, enumerable: false, configurable: true });
+    return call;
+  });
+  assertInvocationRefused('[F4] unexpected own key on the outer invocation', () => ordinaryCall({ smuggled: true }));
+  assertInvocationRefused('[F4] array as the invocation', () => [baseEvidence(), context]);
+  assertInvocationRefused('[F4] null invocation', () => null);
+  assertInvocationRefused('[F4] primitive invocation', () => 'evidence');
+
+  // Nested hostile data behind an otherwise ordinary outer object still fails
+  // closed, at the inner boundary that already owned it.
+  {
+    const label = '[F4] nested hostile data behind an ordinary outer object';
+    const probe = { calls: 0 };
+    const evidence = baseEvidence();
+    delete evidence.assertions;
+    Object.defineProperty(evidence, 'assertions', {
+      get() { probe.calls += 1; throw new Error('hostile nested accessor'); },
+      enumerable: true,
+      configurable: true
+    });
+    const composed = adjudicateCandidate(ordinaryCall({ evidence }));
+    harness.equal(label + ': the nested accessor is never invoked', probe.calls, 0);
+    harness.ok(label + ': never SELECT', composed.audit.evaluation.disposition !== 'SELECT');
+    harness.equal(label + ': disposition holds', composed.audit.evaluation.disposition, 'HOLD');
+    harness.equal(label + ': publication is blocked', composed.audit.evaluation.publication_blocked, true);
+    harness.equal(label + ': the failure audit is canonically representable', typeof canonicalText(composed.audit), 'string');
+  }
+
+  // The admitted call is detached from the caller: mutating the original object
+  // afterwards cannot retroactively change what was adjudicated.
+  {
+    const label = '[F4] post-admission mutation of the original invocation';
+    const call = ordinaryCall();
+    const first = adjudicateCandidate(call);
+    const before = canonicalText(first.audit);
+    harness.equal(label + ': the ordinary call still selects', first.audit.evaluation.disposition, 'SELECT');
+
+    call.evidence = lowConfidenceEvidence();
+    call.evaluatedAt = null;
+    call.context = { ...context, registry: null };
+    harness.equal(label + ': the returned audit is unchanged by later mutation', canonicalText(first.audit), before);
+
+    // Detachment, not caching: a fresh call on the mutated object reflects the
+    // mutation and fails closed on it.
+    const second = adjudicateCandidate(call);
+    harness.ok(label + ': a fresh call on the mutated object never selects', second.audit.evaluation.disposition !== 'SELECT');
+    harness.equal(label + ': a fresh call on the mutated object is blocked', second.audit.evaluation.publication_blocked, true);
+  }
+
+  // The ordinary incumbent invocation shape is behaviorally unchanged.
+  {
+    const label = '[F4] ordinary invocation shape';
+    const composed = adjudicateCandidate(ordinaryCall());
+    harness.equal(label + ': still selects', composed.audit.evaluation.disposition, 'SELECT');
+    harness.equal(label + ': is not blocked', composed.audit.evaluation.publication_blocked, false);
+    harness.equal(label + ': needs no human review', composed.audit.evaluation.human_review, false);
+    harness.equal(label + ': preserves the supplied timestamp', composed.audit.evaluated_at, FIXED_EVALUATION_TIMESTAMP);
+    harness.equal(label + ': names the candidate', composed.audit.candidate_id, 'F01');
+    const frozenCall = Object.freeze(ordinaryCall());
+    harness.equal(label + ': a frozen ordinary invocation is equally admissible',
+      adjudicateCandidate(frozenCall).audit.evaluation.disposition, 'SELECT');
+    const nullPrototypeCall = Object.assign(Object.create(null), ordinaryCall());
+    harness.equal(label + ': a null-prototype invocation is admissible',
+      adjudicateCandidate(nullPrototypeCall).audit.evaluation.disposition, 'SELECT');
+  }
+}
+
+// [F5] Control-input admission distinguishes ABSENT from PRESENT-but-invalid.
+//
+// The closed defect: the data-property helper returned `undefined` both for a
+// property that was not there and for one whose descriptor was an accessor, so
+// an accessor-backed evaluatedAt was silently rewritten into an omission. The
+// getter correctly never ran -- and the candidate then went on to SELECT with
+// evaluated_at: null, which is the part that was wrong.
+{
+  const call = (overrides) => ({
+    evidence: baseEvidence(),
+    context,
+    authorityResolution: TRUSTED_AUTHORITY_RESOLUTION,
+    ...overrides
+  });
+
+  const disposition = (input) => {
+    const composed = adjudicateCandidate(input);
+    return { disposition: composed.audit.evaluation.disposition, blocked: composed.audit.evaluation.publication_blocked, evaluatedAt: composed.audit.evaluated_at, audit: composed.audit };
+  };
+
+  // A. ABSENT -- incumbent omission behavior is preserved.
+  {
+    const observed = disposition(call({}));
+    harness.equal('[F5] evaluatedAt absent: incumbent omission behavior', observed.disposition, 'SELECT');
+    harness.equal('[F5] evaluatedAt absent: records no timestamp', observed.evaluatedAt, null);
+  }
+
+  // B. PRESENT as a valid own data property -- incumbent behavior is preserved.
+  {
+    const observed = disposition(call({ evaluatedAt: FIXED_EVALUATION_TIMESTAMP }));
+    harness.equal('[F5] evaluatedAt valid own data string: incumbent behavior', observed.disposition, 'SELECT');
+    harness.equal('[F5] evaluatedAt valid own data string: preserved verbatim', observed.evaluatedAt, FIXED_EVALUATION_TIMESTAMP);
+
+    const explicitNull = disposition(call({ evaluatedAt: null }));
+    harness.equal('[F5] evaluatedAt null: incumbent behavior', explicitNull.disposition, 'SELECT');
+    harness.equal('[F5] evaluatedAt null: records no timestamp', explicitNull.evaluatedAt, null);
+
+  }
+
+  // PRESENT with an explicitly supplied `undefined` is a PRESENT value JSON
+  // cannot express, not an omission. It is the one case where the tag alone
+  // decides the outcome: the same `undefined` reaches admitEvaluatedAt from an
+  // absent property and from a present one, and only the tag separates them.
+  {
+    const explicitUndefined = disposition(call({ evaluatedAt: undefined }));
+    const absent = disposition(call({}));
+    harness.equal('[F5] evaluatedAt explicitly undefined: disposition holds', explicitUndefined.disposition, 'HOLD');
+    harness.equal('[F5] evaluatedAt explicitly undefined: publication is blocked', explicitUndefined.blocked, true);
+    harness.equal('[F5] evaluatedAt explicitly undefined: is a control-input failure',
+      explicitUndefined.audit.evaluation.reason_codes, ['ADJUDICATION_CONTROL_INPUT_INADMISSIBLE']);
+    harness.equal('[F5] an absent property is not the same state as a present undefined',
+      absent.disposition === explicitUndefined.disposition, false);
+    harness.equal('[F5] an absent property still admits', absent.disposition, 'SELECT');
+  }
+
+  // C. PRESENT but invalid -- fails closed, and is never collapsed into ABSENT.
+  const invalidDescriptors = [
+    {
+      label: 'accessor getter',
+      build: (probe) => {
+        const input = call({});
+        Object.defineProperty(input, 'evaluatedAt', { get() { probe.calls += 1; return FIXED_EVALUATION_TIMESTAMP; }, enumerable: true, configurable: true });
+        return input;
+      }
+    },
+    {
+      label: 'setter-only',
+      build: (probe) => {
+        const input = call({});
+        Object.defineProperty(input, 'evaluatedAt', { set(value) { probe.calls += 1; }, enumerable: true, configurable: true });
+        return input;
+      }
+    },
+    {
+      label: 'getter and setter',
+      build: (probe) => {
+        const input = call({});
+        Object.defineProperty(input, 'evaluatedAt', { get() { probe.calls += 1; return FIXED_EVALUATION_TIMESTAMP; }, set() { probe.calls += 1; }, enumerable: true, configurable: true });
+        return input;
+      }
+    },
+    {
+      label: 'non-enumerable own data property',
+      build: () => {
+        const input = call({});
+        Object.defineProperty(input, 'evaluatedAt', { value: FIXED_EVALUATION_TIMESTAMP, enumerable: false, configurable: true });
+        return input;
+      }
+    },
+    {
+      label: 'inherited from a tampered prototype',
+      build: () => Object.assign(Object.create({ evaluatedAt: FIXED_EVALUATION_TIMESTAMP }), call({}))
+    }
+  ];
+
+  for (const invalid of invalidDescriptors) {
+    const label = '[F5] evaluatedAt ' + invalid.label;
+    const probe = { calls: 0 };
+    let composed = null;
+    let threw = null;
+    try {
+      composed = adjudicateCandidate(invalid.build(probe));
+    } catch (error) {
+      threw = error;
+    }
+    harness.equal(label + ': adjudication does not throw', threw, null);
+    harness.ok(label + ': an audit record is produced', composed !== null && composed.audit !== undefined);
+    if (composed === null || composed.audit === undefined) continue;
+    harness.equal(label + ': the accessor is never invoked', probe.calls, 0);
+    harness.ok(label + ': never SELECT', composed.audit.evaluation.disposition !== 'SELECT');
+    harness.equal(label + ': disposition holds', composed.audit.evaluation.disposition, 'HOLD');
+    harness.equal(label + ': publication is blocked', composed.audit.evaluation.publication_blocked, true);
+    harness.equal(label + ': human review is required', composed.audit.evaluation.human_review, true);
+    harness.ok(label + ': no advancing route', composed.audit.routing.automatic_route?.next_status !== 'SELECTED');
+    harness.equal(label + ': downstream execution is NOT_EXECUTED', composed.audit.routing.downstream_execution, { attempted: false, status: 'NOT_EXECUTED' });
+    harness.equal(label + ': no timestamp is copied into the audit', composed.audit.evaluated_at, null);
+    harness.equal(label + ': the failure audit is canonically representable', typeof canonicalText(composed.audit), 'string');
+  }
+
+  // An unsupported own DATA value keeps its incumbent treatment: fail closed on
+  // the value, not on the descriptor.
+  {
+    const observed = disposition(call({ evaluatedAt: 1757116800000 }));
+    harness.equal('[F5] evaluatedAt unsupported data value: disposition holds', observed.disposition, 'HOLD');
+    harness.equal('[F5] evaluatedAt unsupported data value: publication is blocked', observed.blocked, true);
+    harness.equal('[F5] evaluatedAt unsupported data value: no timestamp reaches the audit', observed.evaluatedAt, null);
+    harness.equal('[F5] evaluatedAt unsupported data value: is a control-input failure',
+      observed.audit.evaluation.reason_codes, ['ADJUDICATION_CONTROL_INPUT_INADMISSIBLE']);
+  }
+
+  // The load-bearing distinction, stated directly: ABSENT and PRESENT-INVALID
+  // must reach observably different outcomes. Collapsing either into the other
+  // is the defect.
+  {
+    const absent = disposition(call({}));
+    const presentInvalid = (() => {
+      const input = call({});
+      Object.defineProperty(input, 'evaluatedAt', { get() { return FIXED_EVALUATION_TIMESTAMP; }, enumerable: true, configurable: true });
+      return disposition(input);
+    })();
+    harness.equal('[F5] ABSENT is admitted', absent.disposition, 'SELECT');
+    harness.equal('[F5] PRESENT-INVALID is refused', presentInvalid.disposition, 'HOLD');
+    harness.ok('[F5] ABSENT and PRESENT-INVALID are observably distinguished',
+      absent.disposition !== presentInvalid.disposition && absent.blocked !== presentInvalid.blocked);
+    harness.equal('[F5] ABSENT is not a control-input failure',
+      absent.audit.evaluation.reason_codes.includes('ADJUDICATION_INVOCATION_INADMISSIBLE'), false);
+    harness.equal('[F5] PRESENT-INVALID is named as an inadmissible invocation',
+      presentInvalid.audit.evaluation.reason_codes, ['ADJUDICATION_INVOCATION_INADMISSIBLE']);
+  }
+
+  // An inherited-but-not-own property on an otherwise ordinary object is ABSENT,
+  // because own-data semantics are what the boundary reads. Object.prototype is
+  // restored immediately whatever happens.
+  {
+    const label = '[F5] evaluatedAt inherited from Object.prototype';
+    Object.defineProperty(Object.prototype, 'evaluatedAt', { value: 'INHERITED', writable: true, configurable: true, enumerable: false });
+    try {
+      const observed = disposition(call({}));
+      harness.equal(label + ': is treated as absent, not as a supplied value', observed.evaluatedAt, null);
+      harness.equal(label + ': incumbent omission behavior is preserved', observed.disposition, 'SELECT');
+    } finally {
+      delete Object.prototype.evaluatedAt;
+    }
+    harness.equal(label + ': Object.prototype is restored', Object.hasOwn(Object.prototype, 'evaluatedAt'), false);
+  }
+}
+
+// [F4/F5] Failure-path identity is taken from safe admitted data or from a
+// fixed safe fallback -- never from hostile raw input.
+{
+  // An invocation that never crossed the boundary yields no identity at all.
+  {
+    const label = '[F4] identity on an invocation that never admitted';
+    const probe = { calls: 0 };
+    const composed = adjudicateCandidate(new Proxy({
+      evidence: baseEvidence(),
+      context,
+      authorityResolution: TRUSTED_AUTHORITY_RESOLUTION,
+      evaluatedAt: FIXED_EVALUATION_TIMESTAMP
+    }, {
+      getOwnPropertyDescriptor(target, key) { probe.calls += 1; return Reflect.getOwnPropertyDescriptor(target, key); }
+    }));
+    harness.equal(label + ': no descriptor trap is consulted for the audit', probe.calls, 0);
+    harness.equal(label + ': the fixed safe fallback identity is used', composed.audit.candidate_id, null);
+    harness.equal(label + ': the failure audit stays canonical', typeof canonicalText(composed.audit), 'string');
+    harness.ok(label + ': the failure audit parses', parsesCanonically(composed.audit));
+    harness.equal(label + ': the technical HOLD fallback is canonical', composed.audit.evaluation.disposition, 'HOLD');
+    harness.equal(label + ': downstream execution is NOT_EXECUTED', composed.audit.routing.downstream_execution, { attempted: false, status: 'NOT_EXECUTED' });
+  }
+
+  // A hostile identity descriptor is never consulted to populate the audit, and
+  // never fabricates an identity either.
+  for (const shape of ['getter', 'setter', 'non-enumerable data', 'exotic view']) {
+    const label = '[F4] hostile candidate identity descriptor (' + shape + ')';
+    const probe = { calls: 0 };
+    const evidence = baseEvidence();
+    if (shape === 'exotic view') {
+      // A view as the evidence itself: the identity read must decline it.
+      const view = new Proxy(evidence, {
+        getOwnPropertyDescriptor(target, key) { probe.calls += 1; return Reflect.getOwnPropertyDescriptor(target, key); }
+      });
+      const composed = adjudicateCandidate({ evidence: view, context, authorityResolution: TRUSTED_AUTHORITY_RESOLUTION, evaluatedAt: FIXED_EVALUATION_TIMESTAMP });
+      harness.equal(label + ': no trap is consulted for the audit', probe.calls, 0);
+      harness.equal(label + ': no identity is fabricated', composed.audit.candidate_id, null);
+      harness.ok(label + ': never SELECT', composed.audit.evaluation.disposition !== 'SELECT');
+      harness.equal(label + ': publication is blocked', composed.audit.evaluation.publication_blocked, true);
+      continue;
+    }
+    delete evidence.candidate_id;
+    if (shape === 'getter') {
+      Object.defineProperty(evidence, 'candidate_id', { get() { probe.calls += 1; return 'FORGED'; }, enumerable: true, configurable: true });
+    } else if (shape === 'setter') {
+      Object.defineProperty(evidence, 'candidate_id', { set() { probe.calls += 1; }, enumerable: true, configurable: true });
+    } else {
+      Object.defineProperty(evidence, 'candidate_id', { value: 'HIDDEN', enumerable: false, configurable: true });
+    }
+    const composed = adjudicateCandidate({ evidence, context, authorityResolution: TRUSTED_AUTHORITY_RESOLUTION, evaluatedAt: FIXED_EVALUATION_TIMESTAMP });
+    harness.equal(label + ': the hostile descriptor is never executed', probe.calls, 0);
+    harness.equal(label + ': no identity is fabricated', composed.audit.candidate_id, null);
+    harness.ok(label + ': never SELECT', composed.audit.evaluation.disposition !== 'SELECT');
+    harness.equal(label + ': publication is blocked', composed.audit.evaluation.publication_blocked, true);
+    harness.equal(label + ': the failure audit stays canonical', typeof canonicalText(composed.audit), 'string');
+  }
+
+  // A safe identity is still preserved where one can be read without running
+  // anything, which is what keeps the failure audit useful.
+  {
+    const forged = clone(registry);
+    forged.fact_consistency_constraints = [];
+    const composed = adjudicateCandidate({ evidence: baseEvidence(), context: { ...context, registry: forged }, authorityResolution: TRUSTED_AUTHORITY_RESOLUTION, evaluatedAt: FIXED_EVALUATION_TIMESTAMP });
+    harness.equal('[F4] a safe admitted identity is still preserved on the failure path', composed.audit.candidate_id, 'F01');
+    harness.equal('[F4] the safe-identity failure path still holds', composed.audit.evaluation.disposition, 'HOLD');
+  }
+}
+
 harness.finish([`eligibility_predicates=${ELIGIBILITY_PREDICATES.length}`, `material_predicates=${materialPredicates.length}`, `fixtures=${oracle.fixtures.length}`]);

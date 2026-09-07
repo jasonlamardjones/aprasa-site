@@ -2,7 +2,16 @@
 // with a single auditable record. Deterministic and provider-neutral: no LLM,
 // no network, no clock read. The evaluation timestamp is injected by the caller.
 
-import { admitSnapshot, canonicalize, digest, readOwnDataProperty } from './ttd-canonical-json.mjs';
+import {
+  admitDataContainer,
+  admitSnapshot,
+  assertNotExoticView,
+  canonicalize,
+  containerEntry,
+  digest,
+  isExoticView,
+  readAdmittedIdentity
+} from './ttd-canonical-json.mjs';
 import { normalizeCandidate, factSummary, loadFactRegistry } from './ttd-normalizer.mjs';
 import { deriveTrustedFactPolicy, evaluateNormalizedFacts, loadPolicy, loadTrustAnchor, semanticFingerprint } from './ttd-policy-evaluator.mjs';
 import { routeEvaluation, loadRoutingVocabulary } from './ttd-adjudication-routing.mjs';
@@ -22,12 +31,83 @@ export function loadAdjudicationContext(root = process.cwd()) {
   };
 }
 
-// Bounded, accessor-free identity extraction. Reading a descriptor never
-// invokes a getter, so a hostile candidate cannot run code here — including on
-// the failure path, after its own input has already raised an exception.
-function safeCandidateId(evidence) {
-  const value = readOwnDataProperty(evidence, 'candidate_id');
-  return typeof value === 'string' && value.length > 0 ? value : null;
+// --- The single invocation admission boundary --------------------------------
+//
+// The whole externally supplied call crosses ONE fail-closed boundary before
+// any decision-relevant property, descriptor, identity, control input,
+// registry, evidence, authority resolution or error-path datum is consumed.
+//
+// The defect this closes: the entrypoint used to read the invocation's four
+// fields with four separate Object.getOwnPropertyDescriptor calls. On a hostile
+// outer view each of those is a trap, so caller code ran four times before any
+// validation — enough to mutate the evidence object already handed out on an
+// earlier read. LOW-confidence evidence that correctly HOLDs in an ordinary
+// object was turned into SELECT that way. Descriptor reads were never the
+// safeguard; not reading the hostile object at all is.
+//
+// Exactly these four keys are admitted. Every incumbent call site passes this
+// shape; an unexpected key fails the call rather than being ignored.
+const INVOCATION_KEYS = Object.freeze(['evidence', 'context', 'authorityResolution', 'evaluatedAt']);
+
+// The decision-relevant context fields. The context also legitimately carries
+// factConsistencyConstraints and materialPredicates, which this entrypoint has
+// always deliberately ignored in favour of the values derived from the pinned
+// registry; they are left out here for the same reason, not admitted and
+// discarded.
+const CONTEXT_KEYS = Object.freeze(['registry', 'policy', 'trustAnchor', 'vocabulary']);
+
+function admitContextValue(entries, key) {
+  const entry = containerEntry(entries, key);
+  if (!entry.present) return undefined;
+  // A trusted context value has no legitimate reason to be an exotic view, and
+  // one here would run traps deep inside evaluation rather than at a boundary.
+  assertNotExoticView(entry.value, `$invocation.context.${key}`);
+  return entry.value;
+}
+
+function admitInvocation(raw) {
+  const outer = admitDataContainer(raw, '$invocation', { allowedKeys: INVOCATION_KEYS });
+
+  const evidence = containerEntry(outer, 'evidence');
+  const suppliedContext = containerEntry(outer, 'context');
+  const authority = containerEntry(outer, 'authorityResolution');
+
+  // The context container crosses the same boundary, so `context.registry` and
+  // the rest are values taken from single descriptor reads on a proven
+  // non-exotic object — never ordinary property reads on a caller-controlled
+  // view. Extra own keys are permitted (the incumbent context carries two this
+  // entrypoint ignores), but an accessor, symbol or dangerous key anywhere on
+  // it still fails the call.
+  let context = null;
+  if (suppliedContext.present
+    && suppliedContext.value !== null
+    && typeof suppliedContext.value === 'object'
+    && !Array.isArray(suppliedContext.value)) {
+    const inner = admitDataContainer(suppliedContext.value, '$invocation.context');
+    context = Object.freeze({
+      registry: admitContextValue(inner, 'registry'),
+      policy: admitContextValue(inner, 'policy'),
+      trustAnchor: admitContextValue(inner, 'trustAnchor'),
+      vocabulary: admitContextValue(inner, 'vocabulary')
+    });
+  }
+
+  const evidenceValue = evidence.present ? evidence.value : undefined;
+
+  return Object.freeze({
+    evidence: evidenceValue,
+    context,
+    // Incumbent semantics: an absent, undefined or null authority resolution is
+    // all the same null.
+    authorityResolution: (authority.present ? authority.value : undefined) ?? null,
+    // Left TAGGED on purpose. Collapsing it to a value here would reintroduce
+    // exactly the conflation F5 names.
+    evaluatedAt: containerEntry(outer, 'evaluatedAt'),
+    // The fixed safe fallback identity for the failure path, taken once, from
+    // the admitted evidence container, without running any caller code. Null
+    // whenever the identity cannot be read safely.
+    candidateId: readAdmittedIdentity(evidenceValue, 'candidate_id')
+  });
 }
 
 // evaluatedAt is injected by the caller and copied verbatim into the audit.
@@ -37,8 +117,32 @@ function safeCandidateId(evidence) {
 // inadmissible, because a control value that cannot be canonically represented
 // would produce an audit that cannot be canonically represented, and no
 // advancing disposition may rest on one.
-function admitEvaluatedAt(value) {
-  if (value === undefined || value === null) return { value: null, error: null };
+//
+// Three states, kept distinct. The defect this closes: the old data-property
+// helper returned `undefined` both for "the property is not there" and for "the
+// property is there but its descriptor is an accessor", so an accessor-backed
+// evaluatedAt was silently rewritten into an omission and the candidate went on
+// to SELECT with evaluated_at: null. PRESENT-but-invalid never reaches this
+// function now — admitDataContainer refuses the whole call — and what does
+// reach it arrives tagged, so absence is a state, not a missing value.
+//
+//   ABSENT                        -> incumbent omission behavior (null)
+//   PRESENT, null                 -> incumbent behavior (null)
+//   PRESENT, non-empty string     -> incumbent behavior (copied verbatim)
+//   PRESENT, any other value      -> fail closed, `undefined` included
+//   PRESENT, invalid descriptor   -> already refused at the admission boundary
+//
+// `undefined` used to be accepted here as if it were null. That branch existed
+// only because the old raw read reported an ABSENT property as `undefined`; it
+// was absence handling, never a decision that `undefined` is a supported
+// control value. Absence is its own tagged state now, so the branch has no
+// remaining justification: an explicitly supplied `undefined` is a PRESENT
+// value that JSON cannot express, and collapsing it into omission would be the
+// very conflation this repair closes.
+function admitEvaluatedAt(entry) {
+  if (entry.present !== true) return { value: null, error: null };
+  const value = entry.value;
+  if (value === null) return { value: null, error: null };
   if (typeof value === 'string' && value.length > 0) return { value, error: null };
   return {
     value: null,
@@ -59,15 +163,24 @@ function admitEvidence(evidence) {
   }
 }
 
+// Error-path metadata is input too. A thrown value can be caller-controlled, so
+// an exotic view is refused before its descriptor is consulted: an audit record
+// must never be the reason a hostile trap executes.
 function safeErrorMessage(error) {
+  const fallback = 'adjudication failed with an unrepresentable error';
+  if (error === null || typeof error !== 'object') return fallback;
+  if (isExoticView(error)) return fallback;
   try {
-    const message = readOwnDataProperty(error, 'message');
-    if (typeof message === 'string' && message.length > 0) return message;
+    const descriptor = Object.getOwnPropertyDescriptor(error, 'message');
+    if (descriptor !== undefined && Object.hasOwn(descriptor, 'value')) {
+      const message = descriptor.value;
+      if (typeof message === 'string' && message.length > 0) return message;
+    }
     if (error instanceof Error && typeof error.message === 'string' && error.message.length > 0) return error.message;
   } catch {
     // fall through to the bounded default
   }
-  return 'adjudication failed with an unrepresentable error';
+  return fallback;
 }
 
 function boundedFailureAudit(candidateId, evaluatedAt, message, code) {
@@ -126,16 +239,20 @@ function boundedFailureAudit(candidateId, evaluatedAt, message, code) {
 // derived from the validated registry; any caller-supplied constraint set or
 // material predicate set on the context is deliberately ignored.
 export function adjudicateCandidate(input) {
-  // Every field of the call is read once, using accessor-free reads, so the
-  // bounded failure path never has to re-read attacker-controlled input that
-  // has already thrown once.
-  const evidence = readOwnDataProperty(input, 'evidence');
-  const context = readOwnDataProperty(input, 'context');
-  const authorityResolution = readOwnDataProperty(input, 'authorityResolution') ?? null;
-  const suppliedEvaluatedAt = readOwnDataProperty(input, 'evaluatedAt');
-  const candidateId = safeCandidateId(evidence);
+  // Boundary first. Nothing below this point has touched the caller's object:
+  // the values used from here on came out of one admission, and the identity
+  // used on every failure path came out of the same one.
+  let admitted;
+  try {
+    admitted = admitInvocation(input);
+  } catch (error) {
+    const audit = boundedFailureAudit(null, null, safeErrorMessage(error), 'ADJUDICATION_INVOCATION_INADMISSIBLE');
+    return { normalized: null, evaluation: null, routing: audit.routing, audit };
+  }
 
-  const evaluatedAt = admitEvaluatedAt(suppliedEvaluatedAt);
+  const { evidence, context, authorityResolution, candidateId } = admitted;
+
+  const evaluatedAt = admitEvaluatedAt(admitted.evaluatedAt);
   if (evaluatedAt.error !== null) {
     const audit = boundedFailureAudit(candidateId, null, evaluatedAt.error, 'ADJUDICATION_CONTROL_INPUT_INADMISSIBLE');
     return { normalized: null, evaluation: null, routing: audit.routing, audit };
