@@ -10,6 +10,14 @@ on:
       - 'internal/provider-media-manifest.json'
       - 'scripts/build-sitemap.mjs'
       - 'scripts/build-locale-data.mjs'
+      - 'scripts/build-static-pages.mjs'
+      - 'scripts/build-mindelo-pt.mjs'
+      - 'scripts/lib/canonical-links.mjs'
+      - 'prasa-launch.js'
+      - 'about/**'
+      - 'pt/about/**'
+      - 'mindelo-essentials/**'
+      - 'pt/mindelo-essentials/**'
       - 'scripts/generate-things-to-do.mjs'
       - 'scripts/render-things-to-do-adapter.mjs'
       - 'scripts/prepare-event-publication.mjs'
@@ -19,9 +27,15 @@ on:
       - 'scripts/validate-event-publication-packet.mjs'
       - 'scripts/lib/event-publication-contract.mjs'
       - 'scripts/lib/event-publication-write.mjs'
+      - 'scripts/lib/things-to-do-collection.mjs'
+      - 'scripts/lib/things-to-do-currentness.mjs'
+      - 'scripts/lib/things-to-do-keys.mjs'
+      - 'scripts/test-things-to-do-*.mjs'
       - 'scripts/validate-locale-contract.mjs'
       - 'scripts/validate-things-to-do-*.mjs'
       - 'scripts/validate-card-media.mjs'
+      - 'scripts/validate-canonical-internal-links.mjs'
+      - 'scripts/validate-runtime-locale-strings.mjs'
       - 'scripts/validate-training-opportunities-currentness.mjs'
       - 'index.html'
       - 'pt/index.html'
@@ -108,10 +122,30 @@ jobs:
       - name: Detail-body paragraph regression tests
         run: node scripts/test-things-to-do-detail-paragraphs.mjs
 
+      # Behaviour the collection hub introduces: the approved Home preview /
+      # full-collection split, the empty state through a synthetic zero-
+      # inventory fixture (live inventory is never zero), generator determinism
+      # and idempotence for the hub, REVIEW_DUE preservation on a public
+      # collection surface, and negative coverage proving the hub gate rejects
+      # a wrong surface rather than passing vacuously.
+      - name: Collection hub regression tests
+        run: node scripts/test-things-to-do-hub.mjs
+
+      # Technical-SEO audit follow-ups. Internal Home links stay in canonical
+      # directory form and every Things-to-Do return control resolves to its
+      # own locale's collection route; the governed runtime fallback strings
+      # resolve per locale, with the one string Project 09 has not approved
+      # left unresolved rather than invented.
+      - name: Validate canonical internal links and governed runtime strings
+        run: |
+          node scripts/validate-canonical-internal-links.mjs
+          node scripts/validate-runtime-locale-strings.mjs
+
       - name: Validate committed current surfaces
         run: |
           node scripts/validate-things-to-do-currentness.mjs --as-of="$AS_OF"
           node scripts/validate-things-to-do-surface-equivalence.mjs --as-of="$AS_OF"
+          node scripts/validate-things-to-do-hub.mjs --as-of="$AS_OF"
           node scripts/validate-things-to-do-sitemap.mjs
 
       - name: Validate training opportunity currentness (EN + PT Home)
@@ -138,19 +172,21 @@ jobs:
         run: |
           node scripts/validate-things-to-do-currentness.mjs --as-of="$AS_OF"
           node scripts/validate-things-to-do-surface-equivalence.mjs --as-of="$AS_OF"
+          node scripts/validate-things-to-do-hub.mjs --as-of="$AS_OF"
           node scripts/validate-things-to-do-sitemap.mjs
+          node scripts/validate-canonical-internal-links.mjs
           git diff --check
 
       - name: Verify generated diff scope
         shell: bash
         run: |
-          unexpected=$(git diff --name-only | grep -Ev '^(index\.html|sitemap\.xml|things-to-do/[a-z0-9]+(-[a-z0-9]+)*/index\.html)$' || true)
+          unexpected=$(git diff --name-only | grep -Ev '^(index\.html|sitemap\.xml|things-to-do/index\.html|things-to-do/[a-z0-9]+(-[a-z0-9]+)*/index\.html)$' || true)
           if [ -n "$unexpected" ]; then
             echo "Generator changed unexpected files:"
             echo "$unexpected"
             exit 1
           fi
-          echo "Generated diff is limited to Home, sitemap, and canonical dated-event detail pages."
+          echo "Generated diff is limited to Home, sitemap, the collection hub, and canonical dated-event detail pages."
 
       - name: Save generated diff
         shell: bash
@@ -174,15 +210,42 @@ jobs:
           set -e
           git reset --hard HEAD
 
+          # Home is the approved LIMITED PREVIEW (the first three eligible
+          # records in canonical order); the full eligible collection lives on
+          # the hub at things-to-do/index.html. An eligible record that is not
+          # in the preview is correctly absent from Home and present on the
+          # hub, so the two surfaces are asserted separately.
           check_home_present() {
             if ! grep -q "<h3>$2</h3>" index.html; then
-              echo "$1 incorrectly absent from Home as of $3."
+              echo "$1 incorrectly absent from the Home preview as of $3."
               exit 1
             fi
           }
           check_home_absent() {
             if grep -q "<h3>$2</h3>" index.html; then
-              echo "$1 incorrectly present on Home as of $3."
+              echo "$1 incorrectly present on the Home preview as of $3."
+              exit 1
+            fi
+          }
+          check_hub_present() {
+            if ! grep -q "<h3>$2</h3>" things-to-do/index.html; then
+              echo "$1 incorrectly absent from the collection hub as of $3."
+              exit 1
+            fi
+          }
+          check_hub_absent() {
+            if grep -q "<h3>$2</h3>" things-to-do/index.html; then
+              echo "$1 incorrectly present on the collection hub as of $3."
+              exit 1
+            fi
+          }
+          # The preview is capped at three generated cards. Every generated
+          # Home card carries data-event-id, so this counts exactly those and
+          # never the hand-authored evergreen cards in the same section.
+          check_preview_cap() {
+            count=$(grep -c '<article class="resource-card" data-event-id="' index.html || true)
+            if [ "$count" -gt 3 ]; then
+              echo "Home shows $count generated Things-to-Do cards as of $1; the approved preview is at most 3."
               exit 1
             fi
           }
@@ -220,7 +283,8 @@ jobs:
             # \b matters: without it "[0-9]{1,2}" happily matches the "20" of
             # "2026", so "until November 2026" would false-positive as a day.
             if grep -rEq '(\b[0-9]{1,2}\b[[:space:]]+(de[[:space:]]+)?(November|novembro))|((November|novembro)[[:space:]]+\b[0-9]{1,2}\b)' \
-              things-to-do/sinergia-da-materia/index.html pt/things-to-do/sinergia-da-materia/index.html index.html pt/index.html; then
+              things-to-do/sinergia-da-materia/index.html pt/things-to-do/sinergia-da-materia/index.html index.html pt/index.html \
+              things-to-do/index.html pt/things-to-do/index.html; then
               echo "An exact November day was published for sinergia-da-materia as of $1."
               exit 1
             fi
@@ -235,10 +299,20 @@ jobs:
           node scripts/validate-things-to-do-surface-equivalence.mjs --as-of=2026-08-24
           check_home_absent part-ilhas "PART_ILHAS — ciclo de conversas com Nuno Miranda" 2026-08-24
           check_home_absent arquitectura "Arquitectura da Imperfeição" 2026-08-24
+          check_preview_cap 2026-08-24
+          # First three eligible records in canonical order as of 2026-08-24.
           check_home_present mon-pikenin "Mon Pikenin" 2026-08-24
           check_home_present sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-08-24
           check_home_present eclipse "Exposição “Eclipse”" 2026-08-24
-          check_home_present oficina "Exposição dos trabalhos finais do projeto Oficina Contemporânea Lata" 2026-08-24
+          # Eligible but beyond the preview: hub only, and never lost.
+          check_home_absent oficina "Exposição dos trabalhos finais do projeto Oficina Contemporânea Lata" 2026-08-24
+          check_hub_present oficina "Exposição dos trabalhos finais do projeto Oficina Contemporânea Lata" 2026-08-24
+          check_hub_present artemisa "PART_ILHAS — ciclo de conversas com Artemisa Ferreira" 2026-08-24
+          check_hub_present boxe "4.º Campeonato Nacional Sénior de Boxe" 2026-08-24
+          check_hub_present mon-pikenin "Mon Pikenin" 2026-08-24
+          # Expired records are absent from both public surfaces.
+          check_hub_absent part-ilhas "PART_ILHAS — ciclo de conversas com Nuno Miranda" 2026-08-24
+          check_hub_absent arquitectura "Arquitectura da Imperfeição" 2026-08-24
           require_past_event part-ilhas-nuno-miranda 2026-08-24
           require_past_event arquitectura-da-imperfeicao 2026-08-24
           if grep -rq 'https://schema.org/EventCompleted' things-to-do/*/index.html; then
@@ -261,8 +335,14 @@ jobs:
           check_home_absent arquitectura "Arquitectura da Imperfeição" 2026-08-30
           check_home_absent mon-pikenin "Mon Pikenin" 2026-08-30
           check_home_absent oficina "Exposição dos trabalhos finais do projeto Oficina Contemporânea Lata" 2026-08-30
+          check_preview_cap 2026-08-30
           check_home_present sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-08-30
           check_home_present eclipse "Exposição “Eclipse”" 2026-08-30
+          check_home_present 50-anos "50 Anos de Memória, Criação e Resistência" 2026-08-30
+          check_home_absent boxe "4.º Campeonato Nacional Sénior de Boxe" 2026-08-30
+          check_hub_present boxe "4.º Campeonato Nacional Sénior de Boxe" 2026-08-30
+          check_hub_absent oficina "Exposição dos trabalhos finais do projeto Oficina Contemporânea Lata" 2026-08-30
+          check_hub_absent artemisa "PART_ILHAS — ciclo de conversas com Artemisa Ferreira" 2026-08-30
           require_past_event part-ilhas-artemisa-ferreira 2026-08-30
           if grep -rq 'https://schema.org/EventCompleted' things-to-do/*/index.html; then
             echo 'A generated detail page emits invalid Schema.org EventCompleted status.'
@@ -279,7 +359,9 @@ jobs:
           node scripts/generate-things-to-do.mjs --as-of=2026-09-01 --write
           expect_currentness_exit 2026-09-01 0
           node scripts/validate-things-to-do-surface-equivalence.mjs --as-of=2026-09-01
+          check_preview_cap 2026-09-01
           check_home_present sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-09-01
+          check_hub_present sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-09-01
           refute_past_event sinergia-da-materia 2026-09-01
           refute_exact_november_day 2026-09-01
           check_home_present eclipse "Exposição “Eclipse”" 2026-09-01
@@ -292,10 +374,14 @@ jobs:
           node scripts/generate-things-to-do.mjs --as-of=2026-10-31 --write
           expect_currentness_exit 2026-10-31 0
           node scripts/validate-things-to-do-surface-equivalence.mjs --as-of=2026-10-31
+          check_preview_cap 2026-10-31
           check_home_present sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-10-31
+          check_home_present 50-anos "50 Anos de Memória, Criação e Resistência" 2026-10-31
           refute_past_event sinergia-da-materia 2026-10-31
           refute_exact_november_day 2026-10-31
           check_home_absent eclipse "Exposição “Eclipse”" 2026-10-31
+          check_hub_absent eclipse "Exposição “Eclipse”" 2026-10-31
+          check_hub_absent boxe "4.º Campeonato Nacional Sénior de Boxe" 2026-10-31
           require_past_event eclipse-yuran-henrique 2026-10-31
 
           # November boundary: REVIEW-DUE. The validator must fail non-zero to
@@ -306,6 +392,9 @@ jobs:
           expect_currentness_exit 2026-11-01 3
           node scripts/validate-things-to-do-surface-equivalence.mjs --as-of=2026-11-01
           check_home_present sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-11-01
+          # A review-due record stays an ordinary public card on the collection
+          # surface too — it is not expired, so it is never dropped from it.
+          check_hub_present sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-11-01
           refute_past_event sinergia-da-materia 2026-11-01
           refute_exact_november_day 2026-11-01
 

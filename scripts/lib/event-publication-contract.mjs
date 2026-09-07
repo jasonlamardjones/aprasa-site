@@ -140,6 +140,12 @@ export function expectedDryRunChangedFiles(packet, { root = ROOT } = {}) {
     'index.html',
     'pt/index.html',
     'sitemap.xml',
+    // The Things-to-Do collection hub. Publishing a record changes the full
+    // eligible collection, so a full both-locale generator run rewrites both
+    // hub surfaces alongside Home. They are generator-owned output of the same
+    // canonical data, not a widening of what a packet may author.
+    'things-to-do/index.html',
+    'pt/things-to-do/index.html',
     `things-to-do/${id}/index.html`,
     `pt/things-to-do/${id}/index.html`
   ];
@@ -459,6 +465,10 @@ export function expectedChangedFiles(packet) {
     'internal/provider-media-manifest.json',
     'index.html',
     'pt/index.html',
+    // See expectedDryRunChangedFiles: a full generator run reconciles both
+    // collection-hub surfaces along with Home.
+    'things-to-do/index.html',
+    'pt/things-to-do/index.html',
     `things-to-do/${id}/index.html`,
     `pt/things-to-do/${id}/index.html`,
     'sitemap.xml'

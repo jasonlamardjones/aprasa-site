@@ -1,0 +1,47 @@
+{
+  "package_id": "aprasa-pt-section-fallback-note-r14-delta",
+  "revision_class": "ADDITIVE_NEW_KEYS",
+  "source_revision": "P03-PT-SOURCE-2026-09-06-r14",
+  "previous_revision": "P03-PT-SOURCE-2026-09-04-r13",
+  "revision_type": "RUNTIME_SECTION_FALLBACK_NOTE",
+  "semantic_authority": "Project 03 — runtime fallback-media presentation",
+  "linguistic_authority": "Project 09 — READY_FOR_PROJECT_04_IMPLEMENTATION (approved EN/PT strings)",
+  "project_09_status": "approved",
+  "project_09_verdict": "READY_FOR_PROJECT_04_IMPLEMENTATION",
+  "intent": "Supplies the approved Portuguese value for the generic runtime section fallback-media explanatory label, the one string the collection-hub tranche deliberately left unresolved rather than translate without approval. Strictly additive: it introduces no change to any previously approved key, retranslates nothing, and alters no lifecycle, publication, currentness or media policy. The English source value is the incumbent runtime string, carried over byte for byte.",
+  "declared_new_row_count_in_handoff": 1,
+  "actual_row_objects_supplied": 1,
+  "missing_or_unaccounted_row_count": 0,
+  "supplied_rows_approved": 1,
+  "review_required": 0,
+  "semantic_escalations_required": 0,
+  "source_english_changed": false,
+  "localization_architecture_reopened": false,
+  "duplicate_keys": [],
+  "placeholder_mismatches": [],
+  "a_prasa_to_a_praca_violations": [],
+  "linguistic_refinements": [],
+  "blocking_issue": null,
+  "change_control_status": {
+    "new_keys_introduced": 1,
+    "existing_keys_overridden": 0,
+    "english_source_values_modified": 0,
+    "lifecycle_or_publication_state_modified": 0,
+    "protected_identities_modified": 0,
+    "additional_languages_authorized": 0
+  },
+  "rows": [
+    {
+      "key": "system.media_fallback.section_note",
+      "source_revision": "P03-PT-SOURCE-2026-09-06-r14",
+      "source_en": "A PRASA section thumbnail — not provider-specific imagery.",
+      "pt": "Miniatura da secção A PRASA — imagem não específica do prestador.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "context_notes": "Runtime generic section fallback-media explanatory label, injected by prasa-launch.js into the Trainings, Tools & Opportunities and Organizations & Ways to Help shelves for any card without governed media. Sits alongside the incumbent system.media_fallback.label / system.media_fallback.note pair, which serve the Things-to-Do shelf.",
+      "linguistic_notes": "Project 09 identity policy as supplied: \"TRANSLATE — preserve A PRASA\". The protected brand string A PRASA is carried verbatim into the Portuguese value."
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { isExpired } from './lib/things-to-do-currentness.mjs';
+import { hubOutputPath } from './lib/things-to-do-collection.mjs';
 
 const root = process.cwd();
 const manifestPath = path.join(root, 'internal', 'provider-media-manifest.json');
@@ -10,6 +11,13 @@ const currentnessPath = path.join(root, 'data', 'things-to-do-currentness.json')
 
 const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 const html = fs.readFileSync(htmlPath, 'utf8');
+// Home is a limited preview of the Things-to-Do collection since the Project 03
+// collection approval, so an eligible dated-event card may legitimately live on
+// the collection hub rather than on Home. The presence check reads both EN
+// public surfaces; it is not relaxed, only re-pointed at where the card is now
+// allowed to be.
+const hubPath = path.join(root, hubOutputPath('en'));
+const hubHtml = fs.existsSync(hubPath) ? fs.readFileSync(hubPath, 'utf8') : '';
 const eventRecords = JSON.parse(fs.readFileSync(eventsPath, 'utf8')).records ?? [];
 const currentness = JSON.parse(fs.readFileSync(currentnessPath, 'utf8'));
 const asOf = currentness.as_of;
@@ -54,7 +62,9 @@ const canonicalEventByManifestTitle = new Map(
 
 for (const record of manifest.records) {
   const label = `${record.section} :: ${record.title}`;
-  const appearsOnHome = html.includes(`<h3>${escapeHtml(record.title)}</h3>`);
+  const titleHeading = `<h3>${escapeHtml(record.title)}</h3>`;
+  const appearsOnHome = html.includes(titleHeading);
+  const appearsOnHub = hubHtml.includes(titleHeading);
   const canonicalEvent = record.section === 'things-to-do'
     ? canonicalEventByManifestTitle.get(record.title)
     : null;
@@ -64,8 +74,8 @@ for (const record of manifest.records) {
     && isExpired(canonicalEvent, asOf)
   );
 
-  if (!appearsOnHome && !isExpiredDatedEvent) {
-    errors.push(`${label}: card title not found in index.html`);
+  if (!appearsOnHome && !appearsOnHub && !isExpiredDatedEvent) {
+    errors.push(`${label}: card title not found in index.html or ${hubOutputPath('en')}`);
   }
   if (!record.source_url) errors.push(`${label}: missing source_url`);
   if (!allowedTypes.has(record.media_type)) errors.push(`${label}: invalid media_type ${record.media_type}`);
