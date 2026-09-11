@@ -192,6 +192,23 @@
       width: 1200,
       height: 900
     }],
+    // Same approved A PRASA arts/exhibition editorial fallback as the record
+    // above, reused as the CATEGORY fallback its own manifest entry already
+    // declares it to be (fallback_category "things-visual-arts"). The image is
+    // deliberately generic — gallery visitors viewing artworks — and depicts
+    // nothing specific to either exhibition, so alt stays empty: it is
+    // decorative, and the media convention is explicit that a fallback
+    // "carries no alt-text claim about the specific record".
+    //
+    // Keyed on the governed display identity, which Project 03 pinned
+    // byte-exact in both locales, so unlike a translated title this entry
+    // matches on EN and PT Home alike.
+    ["CARTINHA D’HOLANDA", {
+      src: "assets/card-media/things-to-do/sinergia-da-materia-editorial-fallback.webp",
+      alt: "",
+      width: 1200,
+      height: 900
+    }],
     ["Myrtle Atividades Educativas", {
       src: "assets/card-media/trainings-tools/myrtle-learning-programs.webp",
       alt: "An educator and student work together with learning materials beside a periodic table.",
