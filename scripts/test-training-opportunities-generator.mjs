@@ -79,6 +79,34 @@ function setState(dir, id, state) {
 const MARKER_ONLY = (id) =>
   `        <!-- BEGIN GENERATED TRAINING: ${id} -->\n        <!-- END GENERATED TRAINING: ${id} -->`;
 
+// --- corpus completeness, established INDEPENDENTLY of the canonical data ---
+//
+// The generator's own report line is the thing under test, so its expected
+// numbers must not be read back out of data/training-opportunities.json — the
+// very file the generator renders from. Deriving the expectation from that
+// file would make the assertion vacuous: a record silently dropped from the
+// corpus would shrink both the report and the expectation together and the
+// suite would still pass, which is precisely the "quietly smaller record
+// count" failure these tests exist to catch.
+//
+// The independent witness is the committed Home surface itself. Every
+// generator-owned record has a BEGIN marker on that surface, the generator
+// fails closed on a marker with no canonical record behind it (orphan check)
+// and on a canonical record with no marker (missing check), so the marker
+// count on the surface is an equal-and-independent statement of the corpus.
+// Comparing the two catches a drop on either side.
+function ownedMarkerIds(dir, locale) {
+  const html = fs.readFileSync(homePath(dir, locale), 'utf8');
+  return [...html.matchAll(/<!-- BEGIN GENERATED TRAINING: ([^>]+?) -->/g)].map((m) => m[1].trim());
+}
+
+// Parse "N region(s) owned (R rendered, C cleared)" out of a generator run.
+function reportCounts(stdout) {
+  const m = /(\d+) region\(s\) owned \((\d+) rendered, (\d+) cleared\)/.exec(stdout);
+  if (!m) return null;
+  return { owned: Number(m[1]), rendered: Number(m[2]), cleared: Number(m[3]) };
+}
+
 // --- populated-region transition tests ------------------------------------
 // CURRENT -> removed state -> CURRENT, against a genuinely populated region.
 for (const removedState of ['EXPIRED', 'WITHDRAWN', 'SUPERSEDED']) {
@@ -90,6 +118,18 @@ for (const removedState of ['EXPIRED', 'WITHDRAWN', 'SUPERSEDED']) {
     const populated = region(dir, locale, id);
     check(`${label}: starts populated`, populated !== null && populated.includes('<article class="resource-card"'));
 
+    // Baseline, taken from a read-only run before any state is changed. The
+    // surface's own marker set is the independent witness for the corpus size.
+    const markers = ownedMarkerIds(dir, locale);
+    const baseline = reportCounts(run(dir, locale).stdout);
+    check(`${label}: baseline run reports its region counts`, baseline !== null);
+    check(`${label}: every marker region on the surface is owned`,
+      baseline !== null && baseline.owned === markers.length,
+      `owned=${baseline?.owned} markers=${markers.length}`);
+    check(`${label}: baseline rendered + cleared accounts for every owned region`,
+      baseline !== null && baseline.rendered + baseline.cleared === baseline.owned,
+      JSON.stringify(baseline));
+
     // Forward transition.
     setState(dir, id, removedState);
     const fwd = run(dir, locale, ['--write']);
@@ -99,8 +139,18 @@ for (const removedState of ['EXPIRED', 'WITHDRAWN', 'SUPERSEDED']) {
     check(`${label}: region is exactly the marker pair`, cleared === MARKER_ONLY(id), JSON.stringify(cleared));
     check(`${label}: marker pair preserved`,
       cleared !== null && cleared.includes(`BEGIN GENERATED TRAINING: ${id}`) && cleared.includes(`END GENERATED TRAINING: ${id}`));
-    check(`${label}: all nine regions still owned`, /9 region\(s\) owned/.test(fwd.stdout), fwd.stdout.trim());
-    check(`${label}: reports one cleared region`, /8 rendered, 1 cleared/.test(fwd.stdout), fwd.stdout.trim());
+    // Ownership is total: the transition must not shrink the owned count, and
+    // must move exactly one region from rendered to cleared.
+    const after = reportCounts(fwd.stdout);
+    check(`${label}: transition run reports its region counts`, after !== null, fwd.stdout.trim());
+    check(`${label}: every region is still owned after the transition`,
+      after !== null && baseline !== null && after.owned === baseline.owned, fwd.stdout.trim());
+    check(`${label}: the surface still carries every marker region`,
+      ownedMarkerIds(dir, locale).length === markers.length, fwd.stdout.trim());
+    check(`${label}: exactly one more region is cleared`,
+      after !== null && baseline !== null
+        && after.cleared === baseline.cleared + 1
+        && after.rendered === baseline.rendered - 1, fwd.stdout.trim());
 
     // Deterministic + idempotent in the removed state.
     const again = run(dir, locale, ['--write']);

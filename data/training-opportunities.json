@@ -718,6 +718,638 @@
           }
         }
       }
+    },
+    {
+      "id": "unicv-erasmus-viana-do-castelo-edital-027-2026",
+      "lifecycle_class": "fixed-window-opportunity",
+      "publication_state": "EXPIRED",
+      "provider": "Universidade de Cabo Verde — Gabinete de Estudos, Planeamento e Cooperação (GEPC)",
+      "source": {
+        "source_url": "https://www.unicv.edu.cv/pt/nots-geral/5956-novas-oportunidades-erasmus-para-estudantes-da-uni-cv",
+        "provenance": "Official Uni-CV Erasmus+ announcement; Edital 027/2026-27 supplied in the evidence packet with no separate public URL."
+      },
+      "checked_at": "2026-09-07",
+      "end_date": "2026-09-10",
+      "card": {
+        "action_tags": null,
+        "status": {
+          "locale_key": "training.record.unicv-erasmus-viana-do-castelo-edital-027-2026.status"
+        },
+        "title": {
+          "locale_key": "training.record.unicv-erasmus-viana-do-castelo-edital-027-2026.title"
+        },
+        "meta": {
+          "locale_key": "training.record.unicv-erasmus-viana-do-castelo-edital-027-2026.meta"
+        },
+        "body": {
+          "locale_key": "training.record.unicv-erasmus-viana-do-castelo-edital-027-2026.body"
+        },
+        "checked": {
+          "locale_key": "training.record.unicv-erasmus-viana-do-castelo-edital-027-2026.checked"
+        },
+        "action": {
+          "href": "https://www.unicv.edu.cv/pt/nots-geral/5956-novas-oportunidades-erasmus-para-estudantes-da-uni-cv",
+          "label": {
+            "locale_key": "training.record.unicv-erasmus-viana-do-castelo-edital-027-2026.action"
+          }
+        }
+      },
+      "detail": {
+        "action_tags": null,
+        "title": {
+          "locale_key": "training.record.unicv-erasmus-viana-do-castelo-edital-027-2026.title"
+        },
+        "facts": [
+          {
+            "label": {
+              "locale_key": "ui.location"
+            },
+            "value": {
+              "locale_key": "training.record.unicv-erasmus-viana-do-castelo-edital-027-2026.fact.location"
+            }
+          },
+          {
+            "label": {
+              "locale_key": "ui.dates"
+            },
+            "value": {
+              "locale_key": "training.record.unicv-erasmus-viana-do-castelo-edital-027-2026.fact.programme_dates"
+            }
+          }
+        ],
+        "details_body": {
+          "locale_key": "training.record.unicv-erasmus-viana-do-castelo-edital-027-2026.how_to_apply"
+        },
+        "requirements": {
+          "locale_key": "training.record.unicv-erasmus-viana-do-castelo-edital-027-2026.requirements"
+        },
+        "original_posting": null,
+        "good_to_know": {
+          "locale_key": "training.record.unicv-erasmus-viana-do-castelo-edital-027-2026.good"
+        },
+        "checked": {
+          "locale_key": "training.record.unicv-erasmus-viana-do-castelo-edital-027-2026.detail_checked"
+        },
+        "action": {
+          "href": "https://www.unicv.edu.cv/pt/nots-geral/5956-novas-oportunidades-erasmus-para-estudantes-da-uni-cv",
+          "label": {
+            "locale_key": "training.record.unicv-erasmus-viana-do-castelo-edital-027-2026.action"
+          }
+        }
+      }
+    },
+    {
+      "id": "unicv-erasmus-bielefeld-edital-028-2026",
+      "lifecycle_class": "fixed-window-opportunity",
+      "publication_state": "EXPIRED",
+      "provider": "Universidade de Cabo Verde — Gabinete de Estudos, Planeamento e Cooperação (GEPC)",
+      "source": {
+        "source_url": "https://www.unicv.edu.cv/pt/nots-geral/5956-novas-oportunidades-erasmus-para-estudantes-da-uni-cv",
+        "provenance": "Official Uni-CV Erasmus+ announcement; Edital 028/2026-27 supplied in the evidence packet with no separate public URL."
+      },
+      "checked_at": "2026-09-07",
+      "end_date": "2026-09-10",
+      "card": {
+        "action_tags": null,
+        "status": {
+          "locale_key": "training.record.unicv-erasmus-bielefeld-edital-028-2026.status"
+        },
+        "title": {
+          "locale_key": "training.record.unicv-erasmus-bielefeld-edital-028-2026.title"
+        },
+        "meta": {
+          "locale_key": "training.record.unicv-erasmus-bielefeld-edital-028-2026.meta"
+        },
+        "body": {
+          "locale_key": "training.record.unicv-erasmus-bielefeld-edital-028-2026.body"
+        },
+        "checked": {
+          "locale_key": "training.record.unicv-erasmus-bielefeld-edital-028-2026.checked"
+        },
+        "action": {
+          "href": "https://www.unicv.edu.cv/pt/nots-geral/5956-novas-oportunidades-erasmus-para-estudantes-da-uni-cv",
+          "label": {
+            "locale_key": "training.record.unicv-erasmus-bielefeld-edital-028-2026.action"
+          }
+        }
+      },
+      "detail": {
+        "action_tags": null,
+        "title": {
+          "locale_key": "training.record.unicv-erasmus-bielefeld-edital-028-2026.title"
+        },
+        "facts": [
+          {
+            "label": {
+              "locale_key": "ui.location"
+            },
+            "value": {
+              "locale_key": "training.record.unicv-erasmus-bielefeld-edital-028-2026.fact.location"
+            }
+          },
+          {
+            "label": {
+              "locale_key": "ui.dates"
+            },
+            "value": {
+              "locale_key": "training.record.unicv-erasmus-bielefeld-edital-028-2026.fact.programme_dates"
+            }
+          }
+        ],
+        "details_body": {
+          "locale_key": "training.record.unicv-erasmus-bielefeld-edital-028-2026.how_to_apply"
+        },
+        "requirements": {
+          "locale_key": "training.record.unicv-erasmus-bielefeld-edital-028-2026.requirements"
+        },
+        "original_posting": null,
+        "good_to_know": {
+          "locale_key": "training.record.unicv-erasmus-bielefeld-edital-028-2026.good"
+        },
+        "checked": {
+          "locale_key": "training.record.unicv-erasmus-bielefeld-edital-028-2026.detail_checked"
+        },
+        "action": {
+          "href": "https://www.unicv.edu.cv/pt/nots-geral/5956-novas-oportunidades-erasmus-para-estudantes-da-uni-cv",
+          "label": {
+            "locale_key": "training.record.unicv-erasmus-bielefeld-edital-028-2026.action"
+          }
+        }
+      }
+    },
+    {
+      "id": "unicv-erasmus-ca-foscari-edital-029-2026",
+      "lifecycle_class": "fixed-window-opportunity",
+      "publication_state": "EXPIRED",
+      "provider": "Universidade de Cabo Verde — Gabinete de Estudos, Planeamento e Cooperação (GEPC)",
+      "source": {
+        "source_url": "https://www.unicv.edu.cv/pt/nots-geral/5956-novas-oportunidades-erasmus-para-estudantes-da-uni-cv",
+        "provenance": "Official Uni-CV Erasmus+ announcement; Edital 029/2026-27 supplied in the evidence packet with no separate public URL."
+      },
+      "checked_at": "2026-09-07",
+      "end_date": "2026-09-10",
+      "card": {
+        "action_tags": null,
+        "status": {
+          "locale_key": "training.record.unicv-erasmus-ca-foscari-edital-029-2026.status"
+        },
+        "title": {
+          "locale_key": "training.record.unicv-erasmus-ca-foscari-edital-029-2026.title"
+        },
+        "meta": {
+          "locale_key": "training.record.unicv-erasmus-ca-foscari-edital-029-2026.meta"
+        },
+        "body": {
+          "locale_key": "training.record.unicv-erasmus-ca-foscari-edital-029-2026.body"
+        },
+        "checked": {
+          "locale_key": "training.record.unicv-erasmus-ca-foscari-edital-029-2026.checked"
+        },
+        "action": {
+          "href": "https://www.unicv.edu.cv/pt/nots-geral/5956-novas-oportunidades-erasmus-para-estudantes-da-uni-cv",
+          "label": {
+            "locale_key": "training.record.unicv-erasmus-ca-foscari-edital-029-2026.action"
+          }
+        }
+      },
+      "detail": {
+        "action_tags": null,
+        "title": {
+          "locale_key": "training.record.unicv-erasmus-ca-foscari-edital-029-2026.title"
+        },
+        "facts": [
+          {
+            "label": {
+              "locale_key": "ui.location"
+            },
+            "value": {
+              "locale_key": "training.record.unicv-erasmus-ca-foscari-edital-029-2026.fact.location"
+            }
+          },
+          {
+            "label": {
+              "locale_key": "ui.dates"
+            },
+            "value": {
+              "locale_key": "training.record.unicv-erasmus-ca-foscari-edital-029-2026.fact.programme_dates"
+            }
+          }
+        ],
+        "details_body": {
+          "locale_key": "training.record.unicv-erasmus-ca-foscari-edital-029-2026.how_to_apply"
+        },
+        "requirements": {
+          "locale_key": "training.record.unicv-erasmus-ca-foscari-edital-029-2026.requirements"
+        },
+        "original_posting": null,
+        "good_to_know": {
+          "locale_key": "training.record.unicv-erasmus-ca-foscari-edital-029-2026.good"
+        },
+        "checked": {
+          "locale_key": "training.record.unicv-erasmus-ca-foscari-edital-029-2026.detail_checked"
+        },
+        "action": {
+          "href": "https://www.unicv.edu.cv/pt/nots-geral/5956-novas-oportunidades-erasmus-para-estudantes-da-uni-cv",
+          "label": {
+            "locale_key": "training.record.unicv-erasmus-ca-foscari-edital-029-2026.action"
+          }
+        }
+      }
+    },
+    {
+      "id": "unicv-undergraduate-admissions-third-phase-2026-2027",
+      "lifecycle_class": "fixed-window-opportunity",
+      "publication_state": "CURRENT",
+      "provider": "Universidade de Cabo Verde",
+      "source": {
+        "source_url": "https://www.unicv.edu.cv/pt/nots-geral/5933-uni-cv-mantem-aberta-3-fase-de-candidaturas-as-licenciaturas-ate-11-de-setembro",
+        "provenance": "Official Uni-CV third-phase admissions announcement, the Uni-CV admissions information page and the application portal; the third-phase vacancy document was supplied in the evidence packet with no separate public URL."
+      },
+      "checked_at": "2026-09-07",
+      "end_date": "2026-09-11",
+      "card": {
+        "action_tags": null,
+        "status": {
+          "locale_key": "training.record.unicv-undergraduate-admissions-third-phase-2026-2027.status"
+        },
+        "title": {
+          "locale_key": "training.record.unicv-undergraduate-admissions-third-phase-2026-2027.title"
+        },
+        "meta": {
+          "locale_key": "training.record.unicv-undergraduate-admissions-third-phase-2026-2027.meta"
+        },
+        "body": {
+          "locale_key": "training.record.unicv-undergraduate-admissions-third-phase-2026-2027.body"
+        },
+        "checked": {
+          "locale_key": "training.record.unicv-undergraduate-admissions-third-phase-2026-2027.checked"
+        },
+        "action": {
+          "href": "https://candidatura.unicv.cv/",
+          "label": {
+            "locale_key": "training.record.unicv-undergraduate-admissions-third-phase-2026-2027.action"
+          }
+        }
+      },
+      "detail": {
+        "action_tags": null,
+        "title": {
+          "locale_key": "training.record.unicv-undergraduate-admissions-third-phase-2026-2027.title"
+        },
+        "facts": [
+          {
+            "label": {
+              "locale_key": "ui.location"
+            },
+            "value": {
+              "locale_key": "training.record.unicv-undergraduate-admissions-third-phase-2026-2027.fact.location"
+            }
+          },
+          {
+            "label": {
+              "locale_key": "ui.dates"
+            },
+            "value": {
+              "locale_key": "training.record.unicv-undergraduate-admissions-third-phase-2026-2027.fact.programme_dates"
+            }
+          }
+        ],
+        "details_body": {
+          "locale_key": "training.record.unicv-undergraduate-admissions-third-phase-2026-2027.how_to_apply"
+        },
+        "requirements": {
+          "locale_key": "training.record.unicv-undergraduate-admissions-third-phase-2026-2027.requirements"
+        },
+        "original_posting": null,
+        "good_to_know": {
+          "locale_key": "training.record.unicv-undergraduate-admissions-third-phase-2026-2027.good"
+        },
+        "checked": {
+          "locale_key": "training.record.unicv-undergraduate-admissions-third-phase-2026-2027.detail_checked"
+        },
+        "action": {
+          "href": "https://candidatura.unicv.cv/",
+          "label": {
+            "locale_key": "training.record.unicv-undergraduate-admissions-third-phase-2026-2027.action"
+          }
+        }
+      }
+    },
+    {
+      "id": "laczos-artisticos-2nd-edition-2026",
+      "lifecycle_class": "fixed-window-opportunity",
+      "publication_state": "CURRENT",
+      "provider": "Direção-Geral das Artes (DGARTES)",
+      "source": {
+        "source_url": "https://www.dgartes.gov.pt/pt/noticia/10122",
+        "provenance": "Official DGARTES announcement, the official application form and the published programme regulation."
+      },
+      "checked_at": "2026-09-07",
+      "end_date": "2026-09-15",
+      "card": {
+        "action_tags": null,
+        "status": {
+          "locale_key": "training.record.laczos-artisticos-2nd-edition-2026.status"
+        },
+        "title": {
+          "locale_key": "training.record.laczos-artisticos-2nd-edition-2026.title"
+        },
+        "meta": {
+          "locale_key": "training.record.laczos-artisticos-2nd-edition-2026.meta"
+        },
+        "body": {
+          "locale_key": "training.record.laczos-artisticos-2nd-edition-2026.body"
+        },
+        "checked": {
+          "locale_key": "training.record.laczos-artisticos-2nd-edition-2026.checked"
+        },
+        "action": {
+          "href": "https://911v6nzp0bv.typeform.com/to/gIU7zx1k",
+          "label": {
+            "locale_key": "training.record.laczos-artisticos-2nd-edition-2026.action"
+          }
+        }
+      },
+      "detail": {
+        "action_tags": null,
+        "title": {
+          "locale_key": "training.record.laczos-artisticos-2nd-edition-2026.title"
+        },
+        "facts": [
+          {
+            "label": {
+              "locale_key": "ui.location"
+            },
+            "value": {
+              "locale_key": "training.record.laczos-artisticos-2nd-edition-2026.fact.location"
+            }
+          },
+          {
+            "label": {
+              "locale_key": "ui.dates"
+            },
+            "value": {
+              "locale_key": "training.record.laczos-artisticos-2nd-edition-2026.fact.programme_dates"
+            }
+          }
+        ],
+        "details_body": {
+          "locale_key": "training.record.laczos-artisticos-2nd-edition-2026.how_to_apply"
+        },
+        "requirements": {
+          "locale_key": "training.record.laczos-artisticos-2nd-edition-2026.requirements"
+        },
+        "original_posting": null,
+        "good_to_know": {
+          "locale_key": "training.record.laczos-artisticos-2nd-edition-2026.good"
+        },
+        "checked": {
+          "locale_key": "training.record.laczos-artisticos-2nd-edition-2026.detail_checked"
+        },
+        "action": {
+          "href": "https://911v6nzp0bv.typeform.com/to/gIU7zx1k",
+          "label": {
+            "locale_key": "training.record.laczos-artisticos-2nd-edition-2026.action"
+          }
+        }
+      }
+    },
+    {
+      "id": "unicv-china-ambassador-scholarship-2026",
+      "lifecycle_class": "fixed-window-opportunity",
+      "publication_state": "CURRENT",
+      "provider": "Universidade de Cabo Verde / Embassy of the People's Republic of China in Cabo Verde",
+      "source": {
+        "source_url": "https://www.unicv.edu.cv/pt/noticias-confucio/5932-uni-cv-prorroga-candidaturas-a-bolsa-do-embaixador-da-china-ate-20-de-setembro",
+        "provenance": "Official Uni-CV scholarship announcement and the application portal; Edital 02/2026 supplied in the evidence packet with no separate public URL."
+      },
+      "checked_at": "2026-09-07",
+      "end_date": "2026-09-20",
+      "card": {
+        "action_tags": null,
+        "status": {
+          "locale_key": "training.record.unicv-china-ambassador-scholarship-2026.status"
+        },
+        "title": {
+          "locale_key": "training.record.unicv-china-ambassador-scholarship-2026.title"
+        },
+        "meta": {
+          "locale_key": "training.record.unicv-china-ambassador-scholarship-2026.meta"
+        },
+        "body": {
+          "locale_key": "training.record.unicv-china-ambassador-scholarship-2026.body"
+        },
+        "checked": {
+          "locale_key": "training.record.unicv-china-ambassador-scholarship-2026.checked"
+        },
+        "action": {
+          "href": "https://candidatura.unicv.cv/",
+          "label": {
+            "locale_key": "training.record.unicv-china-ambassador-scholarship-2026.action"
+          }
+        }
+      },
+      "detail": {
+        "action_tags": null,
+        "title": {
+          "locale_key": "training.record.unicv-china-ambassador-scholarship-2026.title"
+        },
+        "facts": [
+          {
+            "label": {
+              "locale_key": "ui.location"
+            },
+            "value": {
+              "locale_key": "training.record.unicv-china-ambassador-scholarship-2026.fact.location"
+            }
+          },
+          {
+            "label": {
+              "locale_key": "ui.dates"
+            },
+            "value": {
+              "locale_key": "training.record.unicv-china-ambassador-scholarship-2026.fact.programme_dates"
+            }
+          }
+        ],
+        "details_body": {
+          "locale_key": "training.record.unicv-china-ambassador-scholarship-2026.how_to_apply"
+        },
+        "requirements": {
+          "locale_key": "training.record.unicv-china-ambassador-scholarship-2026.requirements"
+        },
+        "original_posting": null,
+        "good_to_know": {
+          "locale_key": "training.record.unicv-china-ambassador-scholarship-2026.good"
+        },
+        "checked": {
+          "locale_key": "training.record.unicv-china-ambassador-scholarship-2026.detail_checked"
+        },
+        "action": {
+          "href": "https://candidatura.unicv.cv/",
+          "label": {
+            "locale_key": "training.record.unicv-china-ambassador-scholarship-2026.action"
+          }
+        }
+      }
+    },
+    {
+      "id": "unicv-confucius-chinese-language-courses-2026-2027",
+      "lifecycle_class": "fixed-window-opportunity",
+      "publication_state": "CURRENT",
+      "provider": "Instituto Confúcio na Universidade de Cabo Verde",
+      "source": {
+        "source_url": "https://www.unicv.edu.cv/pt/nots-geral/5948-instituto-confucio-na-uni-cv-abre-inscricoes-para-cursos-livres-de-lingua-chinesa",
+        "provenance": "Official Uni-CV course announcement; the course information notice and the registration form were supplied in the evidence packet with no separate public URL."
+      },
+      "checked_at": "2026-09-07",
+      "end_date": "2026-09-25",
+      "card": {
+        "action_tags": null,
+        "status": {
+          "locale_key": "training.record.unicv-confucius-chinese-language-courses-2026-2027.status"
+        },
+        "title": {
+          "locale_key": "training.record.unicv-confucius-chinese-language-courses-2026-2027.title"
+        },
+        "meta": {
+          "locale_key": "training.record.unicv-confucius-chinese-language-courses-2026-2027.meta"
+        },
+        "body": {
+          "locale_key": "training.record.unicv-confucius-chinese-language-courses-2026-2027.body"
+        },
+        "checked": {
+          "locale_key": "training.record.unicv-confucius-chinese-language-courses-2026-2027.checked"
+        },
+        "action": {
+          "href": "https://www.unicv.edu.cv/pt/nots-geral/5948-instituto-confucio-na-uni-cv-abre-inscricoes-para-cursos-livres-de-lingua-chinesa",
+          "label": {
+            "locale_key": "training.record.unicv-confucius-chinese-language-courses-2026-2027.action"
+          }
+        }
+      },
+      "detail": {
+        "action_tags": null,
+        "title": {
+          "locale_key": "training.record.unicv-confucius-chinese-language-courses-2026-2027.title"
+        },
+        "facts": [
+          {
+            "label": {
+              "locale_key": "ui.location"
+            },
+            "value": {
+              "locale_key": "training.record.unicv-confucius-chinese-language-courses-2026-2027.fact.location"
+            }
+          },
+          {
+            "label": {
+              "locale_key": "ui.dates"
+            },
+            "value": {
+              "locale_key": "training.record.unicv-confucius-chinese-language-courses-2026-2027.fact.programme_dates"
+            }
+          }
+        ],
+        "details_body": {
+          "locale_key": "training.record.unicv-confucius-chinese-language-courses-2026-2027.how_to_apply"
+        },
+        "requirements": {
+          "locale_key": "training.record.unicv-confucius-chinese-language-courses-2026-2027.requirements"
+        },
+        "original_posting": null,
+        "good_to_know": {
+          "locale_key": "training.record.unicv-confucius-chinese-language-courses-2026-2027.good"
+        },
+        "checked": {
+          "locale_key": "training.record.unicv-confucius-chinese-language-courses-2026-2027.detail_checked"
+        },
+        "action": {
+          "href": "https://www.unicv.edu.cv/pt/nots-geral/5948-instituto-confucio-na-uni-cv-abre-inscricoes-para-cursos-livres-de-lingua-chinesa",
+          "label": {
+            "locale_key": "training.record.unicv-confucius-chinese-language-courses-2026-2027.action"
+          }
+        }
+      }
+    },
+    {
+      "id": "regea-oral-communications-call-2026",
+      "lifecycle_class": "fixed-window-opportunity",
+      "publication_state": "CURRENT",
+      "provider": "Universidade de Cabo Verde / CIGEF",
+      "source": {
+        "source_url": "https://www.unicv.edu.cv/pt/nots-geral/5949-regea-prorroga-ate-30-de-setembro-chamada-para-comunicacoes-orais-em-16-grupos-de-trabalho",
+        "provenance": "Official Uni-CV deadline-extension announcement; the oral-communications call and template were supplied in the evidence packet with no separate public URL."
+      },
+      "checked_at": "2026-09-07",
+      "end_date": "2026-09-30",
+      "card": {
+        "action_tags": null,
+        "status": {
+          "locale_key": "training.record.regea-oral-communications-call-2026.status"
+        },
+        "title": {
+          "locale_key": "training.record.regea-oral-communications-call-2026.title"
+        },
+        "meta": {
+          "locale_key": "training.record.regea-oral-communications-call-2026.meta"
+        },
+        "body": {
+          "locale_key": "training.record.regea-oral-communications-call-2026.body"
+        },
+        "checked": {
+          "locale_key": "training.record.regea-oral-communications-call-2026.checked"
+        },
+        "action": {
+          "href": "https://www.unicv.edu.cv/pt/nots-geral/5949-regea-prorroga-ate-30-de-setembro-chamada-para-comunicacoes-orais-em-16-grupos-de-trabalho",
+          "label": {
+            "locale_key": "training.record.regea-oral-communications-call-2026.action"
+          }
+        }
+      },
+      "detail": {
+        "action_tags": null,
+        "title": {
+          "locale_key": "training.record.regea-oral-communications-call-2026.title"
+        },
+        "facts": [
+          {
+            "label": {
+              "locale_key": "ui.location"
+            },
+            "value": {
+              "locale_key": "training.record.regea-oral-communications-call-2026.fact.location"
+            }
+          },
+          {
+            "label": {
+              "locale_key": "ui.dates"
+            },
+            "value": {
+              "locale_key": "training.record.regea-oral-communications-call-2026.fact.programme_dates"
+            }
+          }
+        ],
+        "details_body": {
+          "locale_key": "training.record.regea-oral-communications-call-2026.how_to_apply"
+        },
+        "requirements": {
+          "locale_key": "training.record.regea-oral-communications-call-2026.requirements"
+        },
+        "original_posting": null,
+        "good_to_know": {
+          "locale_key": "training.record.regea-oral-communications-call-2026.good"
+        },
+        "checked": {
+          "locale_key": "training.record.regea-oral-communications-call-2026.detail_checked"
+        },
+        "action": {
+          "href": "https://www.unicv.edu.cv/pt/nots-geral/5949-regea-prorroga-ate-30-de-setembro-chamada-para-comunicacoes-orais-em-16-grupos-de-trabalho",
+          "label": {
+            "locale_key": "training.record.regea-oral-communications-call-2026.action"
+          }
+        }
+      }
     }
   ]
 }

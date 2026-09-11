@@ -83,6 +83,18 @@ const ALLOWED_UNTRANSLATED = new Set([
   'Captura de ecrã da página da Kre+ para Motorista — Nível 3',
   'Screenshot of the Kre+ course page for Naval Electrotechnical Assistant – Level 4',
   'Captura de ecrã da página da Kre+ para Assistente Eletrotécnico Naval — Nível 4',
+  // Institutional identities carried by the weekly fixed-window opportunity
+  // records. Project 09 marked every one of them "provider — intentionally
+  // unchanged" and listed provider/institution identities among the values
+  // that stay mechanically preserved as canonical data rather than being
+  // translated. They are therefore deliberately absent from the overlay, for
+  // the same reason as the provider identities above — not a localization gap.
+  'Universidade de Cabo Verde',
+  'Universidade de Cabo Verde — Gabinete de Estudos, Planeamento e Cooperação (GEPC)',
+  'Universidade de Cabo Verde / Embassy of the People\'s Republic of China in Cabo Verde',
+  'Universidade de Cabo Verde / CIGEF',
+  'Instituto Confúcio na Universidade de Cabo Verde',
+  'Direção-Geral das Artes (DGARTES)',
 ]);
 
 // Two spots in Home's hero use inline markup to control visual line-breaks

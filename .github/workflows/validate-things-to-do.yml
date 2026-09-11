@@ -37,6 +37,9 @@ on:
       - 'scripts/validate-canonical-internal-links.mjs'
       - 'scripts/validate-runtime-locale-strings.mjs'
       - 'scripts/validate-training-opportunities-currentness.mjs'
+      - 'scripts/validate-training-opportunities-data.mjs'
+      - 'scripts/generate-training-opportunities.mjs'
+      - 'data/training-opportunities.json'
       - 'index.html'
       - 'pt/index.html'
       - 'sitemap.xml'
@@ -150,6 +153,28 @@ jobs:
 
       - name: Validate training opportunity currentness (EN + PT Home)
         run: node scripts/validate-training-opportunities-currentness.mjs --as-of="$AS_OF_EMAR" --home=index.html --home=pt/index.html
+
+      # Two bounded checks that were not previously in CI, so the canonical
+      # training records are guarded the same way the Things-to-Do records
+      # already are:
+      #
+      #   1. the structured-data validator, which proves every record resolves
+      #      against the governed locale overlay and the media manifest;
+      #   2. the generator drift-check, run WITHOUT --write on both locales, so
+      #      a Home training region that no longer matches what the canonical
+      #      data would produce fails the build instead of shipping.
+      #
+      # The generator's --as-of is reporting-only -- it never affects rendered
+      # output -- so the committed currentness date is used here to keep the
+      # check deterministic rather than clock-dependent. This is CI coverage
+      # for the incumbent system only: no generator is wired into
+      # scripts/build-all.mjs here, and no lifecycle, currentness or expiry
+      # behavior is changed.
+      - name: Validate training opportunity structured data and generator drift
+        run: |
+          node scripts/validate-training-opportunities-data.mjs
+          node scripts/generate-training-opportunities.mjs --locale=en --as-of="$AS_OF"
+          node scripts/generate-training-opportunities.mjs --locale=pt --as-of="$AS_OF" --home=pt/index.html
 
       - name: Validate card media
         shell: bash
