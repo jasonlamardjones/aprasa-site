@@ -7,6 +7,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import {
   dryRunValidationCommands,
+  isMediaGateOpen,
   expectedDryRunChangedFiles,
   loadPacket,
   validatePacket
@@ -115,14 +116,19 @@ function run(tempRoot, script, args = []) {
     encoding: 'utf8',
     env: process.env
   });
-  if (proc.status !== 0) {
+  // Exit 2 from the media validator is a documented open-gate state, not a
+  // failure; it is recorded and reported rather than thrown. Everything else
+  // non-zero -- including exit 1 from the same script -- stays fatal.
+  if (proc.status !== 0 && !isMediaGateOpen(script, proc.status)) {
     const message = [proc.stdout, proc.stderr].filter(Boolean).join('\n').trim();
     throw new Error(`${script} failed (${proc.status})${message ? `:\n${message}` : ''}`);
   }
+  if (isMediaGateOpen(script, proc.status)) mediaGateOpen = true;
   return proc.stdout.trim();
 }
 
 const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aprasa-event-publication-'));
+let mediaGateOpen = false;
 const validations = [];
 const validationSteps = [];
 
@@ -246,6 +252,7 @@ try {
     'MEDIA: approved; local asset verified',
     'GOVERNANCE: publication authorized',
     `VALIDATION: ${validations.length} deterministic checks/generation stages passed`,
+    `MEDIA GATE: ${mediaGateOpen ? 'OPEN — unresolved media records remain; the branch is not media-complete for merge' : 'PASSED'}`,
     'DIFF: bounded expected files only in isolated dry-run workspace',
     'CURRENTNESS: validated',
     '',

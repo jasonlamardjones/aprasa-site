@@ -46,6 +46,31 @@ function evt(record, suffix, jsonValue) {
   return t(`event.${record.id}.${suffix}`, 'pt');
 }
 
+/**
+ * A record's media alt text.
+ *
+ * An EMPTY alt is not copy. It is the ARIA representation of a decorative
+ * image -- the approved editorial/category fallback, which the media convention
+ * requires to carry "no alt-text claim about the specific record" -- and it is
+ * byte-identical in every locale because there is no text to translate.
+ *
+ * Routing it through the governed overlay was a category error: it demanded a
+ * non-empty approved Portuguese string for a value whose whole purpose is to be
+ * empty, which made an approved decorative fallback impossible to express on a
+ * PT surface at all. That is not the no-silent-fallback contract doing its job;
+ * nothing is being silently fallen back TO, because no English string exists.
+ *
+ * So an empty alt resolves to an empty alt, in both locales, the same way
+ * record.provider and other locale-independent values already do. A NON-empty
+ * alt is real descriptive copy about real authentic media and still goes
+ * through the governed overlay, unchanged, and still throws on a PT gap.
+ */
+function mediaAltOf(record) {
+  const alt = record.media?.alt;
+  if (alt === '') return '';
+  return evt(record, 'media.alt', alt);
+}
+
 // Reconstructs a locale-localized value_html for a fact whose English value
 // carries markup (links). Anchor tags are canonical (URLs are locale-
 // independent) and are preserved as-is; only the connecting text around them
@@ -211,7 +236,7 @@ function localizeRecord(record) {
     displayStatus: evt(record, 'display.status', record.display?.status),
     displayMeta: evt(record, 'display.meta', record.display?.meta),
     displayChecked: evt(record, 'display.checked', record.display?.checked),
-    mediaAlt: record.media ? evt(record, 'media.alt', record.media.alt) : null,
+    mediaAlt: record.media ? mediaAltOf(record) : null,
     cardActionLabel: record.card_action ? evt(record, 'card_action.label', record.card_action.label) : null,
     goodToKnow: record.detail?.good_to_know ? evt(record, 'detail.good_to_know', record.detail.good_to_know) : null,
     detailBody: evt(record, 'detail.body', record.detail?.body),

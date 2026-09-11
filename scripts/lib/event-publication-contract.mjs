@@ -117,6 +117,36 @@ export function mediaIntakeRoot(root = ROOT) {
   return path.join(root, '.git', 'aprasa-media-intake');
 }
 
+// --- Media gate exit semantics ----------------------------------------------
+//
+// internal/publishing-media-convention.md defines three outcomes for
+// scripts/validate-card-media.mjs, and only one of them is an error:
+//
+//   0  publication media gate PASSED
+//   2  structurally valid, but unresolved media work remains -- the branch is
+//      "not media-complete for merge"
+//   1  structural validation FAILED
+//
+// 2 is a DOMAIN STATE, not an execution failure. The generic subprocess helpers
+// on this path collapsed every non-zero status into "<script> failed (N)",
+// which made a documented open gate indistinguishable from a crashed validator
+// and took down publication preparation entirely.
+//
+// This narrows that: exit 2 FROM THIS ONE SCRIPT is recognized and carried
+// forward as state. It is deliberately not a general "tolerate non-zero" rule
+// -- every other script, and every other exit code from this one, stays fatal.
+//
+// The gate is not weakened. The convention scopes exit 2 to merge readiness,
+// and nothing on this path merges: preparation still terminates at
+// FOUNDER_APPROVAL_REQUIRED with merge_allowed false. Recognizing the state
+// makes it visible to the approver instead of crashing before they see it.
+export const MEDIA_GATE_SCRIPT = 'scripts/validate-card-media.mjs';
+export const MEDIA_GATE_OPEN_EXIT = 2;
+
+export function isMediaGateOpen(script, status) {
+  return script === MEDIA_GATE_SCRIPT && status === MEDIA_GATE_OPEN_EXIT;
+}
+
 export function dryRunValidationCommands(packet) {
   return [
     ['scripts/validate-things-to-do-events.mjs'],

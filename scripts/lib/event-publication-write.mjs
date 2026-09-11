@@ -5,6 +5,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import {
   dryRunValidationCommands,
+  isMediaGateOpen,
   expectedChangedFiles,
   expectedDryRunChangedFiles,
   validatePacket
@@ -95,7 +96,15 @@ function insertHomeMarkers(root, relativeFile, id) {
 }
 
 function runNode(root, script, args = []) {
-  return command(root, process.execPath, [script, ...args]).stdout.trim();
+  // Same documented exception as the dry-run path: a media gate reported OPEN
+  // (exit 2) is state to carry forward, not a crashed subprocess. Any other
+  // non-zero status from any script still throws.
+  const result = command(root, process.execPath, [script, ...args], { allowFailure: true });
+  if (result.status !== 0 && !isMediaGateOpen(script, result.status)) {
+    const detail = [result.stdout, result.stderr].filter(Boolean).join('\n').trim();
+    throw new Error(`${process.execPath} ${[script, ...args].join(' ')} failed (${result.status})${detail ? `:\n${detail}` : ''}`);
+  }
+  return result.stdout.trim();
 }
 
 function buildCandidate(root, packet) {
