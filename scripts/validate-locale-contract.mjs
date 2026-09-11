@@ -3,7 +3,7 @@
 // Run standalone (validates data/locales/locale-data.generated.json) and/or
 // against generated PT HTML output (pass --html <dir> one or more times).
 
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadLocaleData, RETIRED_KEY_REMAP } from "./lib/locale.mjs";
@@ -49,14 +49,15 @@ for (const fileName of eventDeltaFiles) {
 }
 
 // --- Overlay contract (counts) — combined r2 base (732) + r3 delta (21) + r4 delta (26)
-// + r5 delta (2) + r7 delta (19) + r8 delta (21) + r13 delta (8) + r14 delta (1).
-// The r6 brand-voice delta overrides 42 existing PT values and adds no keys, so every
-// count below is unchanged by it; r13 adds the 8 Things-to-Do collection-hub keys and
-// r14 the runtime section fallback note, all required. ---
-if (keys.length !== 830 + eventDeltaRequired + eventDeltaUnchanged) fail(`expected ${830 + eventDeltaRequired + eventDeltaUnchanged} total keys including approved event deltas, got ${keys.length}`);
+// + r5 delta (2) + r7 delta (19) + r8 delta (21) + r13 delta (8) + r14 delta (1)
+// + r15 delta (96). The r6 brand-voice delta overrides 42 existing PT values and adds
+// no keys, so every count below is unchanged by it; r13 adds the 8 Things-to-Do
+// collection-hub keys, r14 the runtime section fallback note, and r15 the 96
+// presentation keys for the eight weekly fixed-window opportunity records — all required. ---
+if (keys.length !== 926 + eventDeltaRequired + eventDeltaUnchanged) fail(`expected ${926 + eventDeltaRequired + eventDeltaUnchanged} total keys including approved event deltas, got ${keys.length}`);
 const required = keys.filter((k) => k.scope_status === "REQUIRED_FOR_PT_LAUNCH");
 const unchanged = keys.filter((k) => k.scope_status === "INTENTIONALLY_UNCHANGED");
-if (required.length !== 802 + eventDeltaRequired) fail(`expected ${802 + eventDeltaRequired} REQUIRED_FOR_PT_LAUNCH keys, got ${required.length}`);
+if (required.length !== 898 + eventDeltaRequired) fail(`expected ${898 + eventDeltaRequired} REQUIRED_FOR_PT_LAUNCH keys, got ${required.length}`);
 if (unchanged.length !== 28 + eventDeltaUnchanged) fail(`expected ${28 + eventDeltaUnchanged} INTENTIONALLY_UNCHANGED keys, got ${unchanged.length}`);
 if (data.provenance.delta_revision !== "P03-PT-SOURCE-2026-08-25-r3") {
   fail(`unexpected delta_revision: ${data.provenance.delta_revision}`);
@@ -106,6 +107,59 @@ if (data.provenance.delta9_superseding_ruling !== "P03-SINERGIA-CURRENTNESS-2026
 }
 if (data.provenance.delta9_owning_project !== "Project 03") {
   fail(`unexpected delta9_owning_project: ${data.provenance.delta9_owning_project}`);
+}
+
+// --- r15 delta spot checks (weekly opportunity publication) ---
+// The eight governed fixed-window opportunity records. Each must carry its full
+// 12-key presentation set, entirely inside its own namespace, with an approved
+// Portuguese value. The governed display identity Laç(z)os Artísticos is pinned
+// byte-exact in both locales: Project 03 ruled it must never be normalized,
+// respelled or simplified.
+const R15_RECORDS = [
+  "unicv-erasmus-viana-do-castelo-edital-027-2026",
+  "unicv-erasmus-bielefeld-edital-028-2026",
+  "unicv-erasmus-ca-foscari-edital-029-2026",
+  "unicv-undergraduate-admissions-third-phase-2026-2027",
+  "laczos-artisticos-2nd-edition-2026",
+  "unicv-china-ambassador-scholarship-2026",
+  "unicv-confucius-chinese-language-courses-2026-2027",
+  "regea-oral-communications-call-2026",
+];
+const R15_FIELDS = [
+  "title", "status", "meta", "body", "how_to_apply", "requirements",
+  "good", "checked", "detail_checked", "action", "fact.location", "fact.programme_dates",
+];
+for (const recordId of R15_RECORDS) {
+  for (const field of R15_FIELDS) {
+    const key = `training.record.${recordId}.${field}`;
+    const row = data.keys[key];
+    if (!row) {
+      fail(`r15 key missing from generated locale data: ${key}`);
+      continue;
+    }
+    if (row.scope_status !== "REQUIRED_FOR_PT_LAUNCH") fail(`r15 ${key} must be REQUIRED_FOR_PT_LAUNCH`);
+    if (row.source_revision !== "P03-PT-SOURCE-2026-09-07-r15") fail(`r15 ${key} provenance is not the r15 revision`);
+    if (row.record_id !== recordId) fail(`r15 ${key} is not scoped to its own record`);
+    if (typeof row.pt !== "string" || row.pt === "") fail(`r15 ${key} has no governed Portuguese value`);
+  }
+}
+{
+  const identity = "Laç(z)os Artísticos";
+  for (const locale of ["en", "pt"]) {
+    const row = data.keys["training.record.laczos-artisticos-2nd-edition-2026.title"];
+    const value = locale === "en" ? row?.en : row?.pt;
+    if (typeof value !== "string" || !value.includes(identity)) {
+      fail(`r15 governed display identity "${identity}" is not preserved in the ${locale.toUpperCase()} title`);
+    }
+  }
+}
+// The three Erasmus records stay three separate records with their own copy.
+{
+  const titles = new Set(
+    ["unicv-erasmus-viana-do-castelo-edital-027-2026", "unicv-erasmus-bielefeld-edital-028-2026", "unicv-erasmus-ca-foscari-edital-029-2026"]
+      .map((id) => data.keys[`training.record.${id}.title`]?.en)
+  );
+  if (titles.size !== 3) fail("r15 the three Erasmus records do not carry three distinct governed titles");
 }
 
 // --- r14 delta spot check (runtime section fallback note) ---
@@ -639,6 +693,81 @@ for (const dir of htmlDirs) {
 if (warnings.length) {
   console.warn(`[validate-locale-contract] ${warnings.length} warning(s):`);
   for (const w of warnings) console.warn(`  - ${w}`);
+}
+
+// --- generated audit metadata must describe the artifact it is attached to ---
+//
+// counts used to be re-summed by hand, package by package, inside
+// build-locale-data.mjs. It silently never gained a term for r13, r14 or r15,
+// so the artifact shipped 977 keys while reporting 872 — a 105-key discrepancy
+// in its own audit metadata, which no check could see because nothing compared
+// the two. The counts are derived from the assembled key map now; this block is
+// what keeps them honest, so the hand-summed failure mode cannot come back in
+// another form.
+{
+  const actual = {
+    total_rows: Object.keys(data.keys).length,
+    required_for_pt_launch: 0,
+    intentionally_unchanged: 0,
+    approved_rows_total: 0,
+  };
+  for (const row of Object.values(data.keys)) {
+    if (row.scope_status === "REQUIRED_FOR_PT_LAUNCH") actual.required_for_pt_launch += 1;
+    else if (row.scope_status === "INTENTIONALLY_UNCHANGED") actual.intentionally_unchanged += 1;
+    else fail(`generated key "${row.key}" has an unrecognized scope_status: ${JSON.stringify(row.scope_status)}`);
+    if (row.translation_status === "APPROVED") actual.approved_rows_total += 1;
+  }
+
+  const reported = data.counts || {};
+  for (const field of ["total_rows", "required_for_pt_launch", "intentionally_unchanged", "approved_rows_total"]) {
+    if (reported[field] !== actual[field]) {
+      fail(`generated counts.${field} is ${reported[field]}, but the artifact actually contains ${actual[field]} — generated audit metadata must describe the artifact it ships with`);
+    }
+  }
+  if (actual.required_for_pt_launch + actual.intentionally_unchanged !== actual.total_rows) {
+    fail(`generated keys do not partition into the two scope states: ${actual.required_for_pt_launch} + ${actual.intentionally_unchanged} !== ${actual.total_rows}`);
+  }
+
+  // Provenance has to be real: a generated_from entry naming a file that does
+  // not exist is the same class of defect as a wrong count (this caught
+  // "pt-overlay-r9-migration.source.json", which was never the migration
+  // package's name — it is r10).
+  const generatedFrom = data.provenance?.generated_from ?? [];
+  if (!generatedFrom.length) fail("generated provenance.generated_from is empty");
+  for (const file of generatedFrom) {
+    if (!existsSync(path.join(ROOT, file))) {
+      fail(`generated provenance.generated_from names a file that does not exist: ${file}`);
+    }
+  }
+
+  // Every additive package on disk must be declared AND actually merged. This
+  // is the specific regression guard: a future additive package listed in
+  // generated_from but missing from the artifact (and therefore from the
+  // counts) fails here rather than shipping as an inert declaration. Discovered
+  // by revision_class rather than by a hardcoded list, so a package nobody
+  // remembers to add here is still covered.
+  //
+  // Deliberately additive-only: override (r6, r9, r11, r12) and rename (r10)
+  // packages restate or move keys that other packages own, so "its rows must
+  // appear verbatim in the artifact" is not their contract.
+  for (const fileName of readdirSync(path.join(ROOT, "data", "locales"))) {
+    if (!/^pt-overlay-.*\.source\.json$/.test(fileName)) continue;
+    const source = JSON.parse(readFileSync(path.join(ROOT, "data", "locales", fileName), "utf8"));
+    if (!String(source.revision_class || "").startsWith("ADDITIVE")) continue;
+
+    const relative = `data/locales/${fileName}`;
+    if (!generatedFrom.includes(relative)) {
+      fail(`additive package ${relative} is merged into the build but is not declared in provenance.generated_from`);
+    }
+    for (const row of source.rows ?? []) {
+      const generated = data.keys[row.key];
+      if (!generated) {
+        fail(`additive package ${relative} declares key "${row.key}" which is absent from the generated artifact — it is therefore uncounted`);
+      } else if (generated.en !== row.source_en || generated.pt !== row.pt) {
+        fail(`additive package ${relative} key "${row.key}" does not match the generated artifact`);
+      }
+    }
+  }
 }
 
 if (errors.length) {

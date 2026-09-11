@@ -230,6 +230,14 @@ function localizeRecord(record) {
 // supplies raw HTML and still cannot. A single-paragraph body produces the
 // identical one-<p> string this used to emit inline, so incumbent event output
 // is unchanged byte-for-byte.
+//
+// It renders the governed "Good to know" block as well. That block is authored
+// the same way a body is — governed prose, occasionally more than one approved
+// paragraph — and it was previously emitted as a single <p>, which silently
+// swallowed an approved paragraph break into a raw newline inside the element.
+// Routing it through the same rule keeps the two blocks consistent and, because
+// every incumbent good_to_know value is a single paragraph, leaves all of their
+// committed output byte-identical.
 function renderBodyParagraphs(body, indent) {
   return bodyParagraphs(body)
     .map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`)
@@ -297,7 +305,7 @@ function renderHomeArticle(record, loc) {
   const media = record.media ? `\n          <div class="card-media"><img src="${homeMediaPrefix}${escapeHtml(record.media.asset)}" alt="${escapeHtml(loc.mediaAlt)}" loading="lazy" width="${record.media.width}" height="${record.media.height}"></div>` : '';
   const externalAction = record.card_action ? `\n            <a class="resource-link" href="${escapeHtml(record.card_action.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(loc.cardActionLabel)} <span aria-hidden="true">↗</span></a>` : '';
   const dialogMedia = record.media ? `\n              <div class="dialog-media"><img src="${homeMediaPrefix}${escapeHtml(record.media.asset)}" alt="${escapeHtml(loc.mediaAlt)}" loading="lazy" width="${record.media.width}" height="${record.media.height}"></div>` : '';
-  const goodToKnow = loc.goodToKnow ? `\n              <h3>${escapeHtml(CHROME.goodToKnowHeading)}</h3>\n              <p>${escapeHtml(loc.goodToKnow)}</p>` : '';
+  const goodToKnow = loc.goodToKnow ? `\n              <h3>${escapeHtml(CHROME.goodToKnowHeading)}</h3>\n              ${renderBodyParagraphs(loc.goodToKnow, '              ')}` : '';
   const dialogAction = loc.actionLabel ? `\n              <a class="dialog-link" href="${escapeHtml(record.source_url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(loc.actionLabel)} <span aria-hidden="true">↗</span></a>` : '';
   // Only an exact day-precision end is published here. A month-precision
   // record has no verified closing day, so no end attribute is emitted --
@@ -374,7 +382,7 @@ function renderDetailPage(record, loc) {
   const links = detailPageLinks(record);
   const media = record.media ? `\n      <div class="${detailMediaClass(record)}"><img src="${links.rootPrefix}${escapeHtml(record.media.asset)}" alt="${escapeHtml(loc.mediaAlt)}" loading="lazy" width="${record.media.width}" height="${record.media.height}"></div>` : '';
   const pastStatus = expired ? `\n      <p class="card-status">${escapeHtml(CHROME.pastEvent)}</p>` : '';
-  const goodToKnow = loc.goodToKnow ? `\n      <h2>${escapeHtml(CHROME.goodToKnowHeading)}</h2>\n      <p>${escapeHtml(loc.goodToKnow)}</p>` : '';
+  const goodToKnow = loc.goodToKnow ? `\n      <h2>${escapeHtml(CHROME.goodToKnowHeading)}</h2>\n      ${renderBodyParagraphs(loc.goodToKnow, '      ')}` : '';
   const action = loc.actionLabel ? `\n      <a class="dialog-link" href="${escapeHtml(record.source_url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(loc.actionLabel)} <span aria-hidden="true">↗</span></a>` : '';
 
   return `<!DOCTYPE html>

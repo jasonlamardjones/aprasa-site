@@ -67,6 +67,36 @@ function generate(dir, asOf) {
 const cardIds = (html) => [...html.matchAll(/<article class="resource-card" data-event-id="([^"]+)"/g)].map((m) => m[1]);
 const read = (dir, relative) => fs.readFileSync(path.join(dir, relative), 'utf8');
 
+/**
+ * One record's hub card, or null when it has none.
+ *
+ * The synthesized-closing-day rule below is a statement about ONE record's own
+ * card -- a month-precision record must never acquire a closing day it does not
+ * have -- so it has to be evaluated against that card, not against the whole
+ * page. Scanned page-wide it also reads every OTHER card, and a day-precision
+ * record whose governed copy legitimately names a day in the same month (an
+ * exhibition closing 15 November, say) would fail an assertion about a record
+ * it is not.
+ */
+function cardFor(html, id) {
+  const open = `<article class="resource-card" data-event-id="${id}"`;
+  const start = html.indexOf(open);
+  if (start === -1) return null;
+  const end = html.indexOf('</article>', start);
+  return end === -1 ? null : html.slice(start, end + '</article>'.length);
+}
+
+/**
+ * Ids of the canonical records that actually carry month precision. This
+ * selects the SUBJECTS of the rule from canonical data; the expected outcome
+ * below is still stated independently, so a record silently losing its month
+ * precision drops out of the subject list and the count assertion catches it.
+ */
+function monthPrecisionIds(dir) {
+  const records = JSON.parse(read(dir, EVENTS)).records;
+  return records.filter((record) => record.end_precision === 'month').map((record) => record.id);
+}
+
 // ---------------------------------------------------------------------------
 // 1. Preview / collection split, both locales, at the committed as_of.
 // ---------------------------------------------------------------------------
@@ -171,8 +201,16 @@ const read = (dir, relative) => fs.readFileSync(path.join(dir, relative), 'utf8'
       check(`${locale} hub does not label a review-due record a past event`,
         !html.includes('Past event') && !html.includes('Evento já realizado'));
       check(`${locale} hub introduces no REVIEW_DUE badge or copy`, !/REVIEW.?DUE/i.test(html));
-      check(`${locale} hub publishes no synthesized closing day for a month-precision record`,
-        !/(\b[0-9]{1,2}\b[ ]+(de[ ]+)?(November|novembro))|((November|novembro)[ ]+\b[0-9]{1,2}\b)/.test(html));
+      const monthIds = monthPrecisionIds(dir);
+      check(`${locale} hub has a card for every month-precision record`,
+        monthIds.length > 0 && monthIds.every((id) => cardFor(html, id) !== null), `month-precision ids [${monthIds}]`);
+      for (const id of monthIds) {
+        const card = cardFor(html, id) ?? '';
+        check(`${locale} hub publishes no synthesized closing day for month-precision record ${id}`,
+          !/(\b[0-9]{1,2}\b[ ]+(de[ ]+)?(November|novembro))|((November|novembro)[ ]+\b[0-9]{1,2}\b)/.test(card), card);
+        check(`${locale} hub emits no data-event-end for month-precision record ${id}`,
+          !card.includes('data-event-end'), card);
+      }
       check(`${locale} hub serializes no endDate for a month-precision record`, !html.includes('"endDate"'));
     }
     check('hub validator passes at the review-due boundary',

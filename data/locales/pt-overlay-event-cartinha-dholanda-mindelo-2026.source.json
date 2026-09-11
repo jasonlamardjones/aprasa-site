@@ -1,0 +1,189 @@
+{
+  "event_id": "cartinha-dholanda-mindelo-2026",
+  "package_id": "aprasa-pt-cartinha-dholanda-mindelo-2026",
+  "source_revision": "P09-PT-CARTINHA-DHOLANDA-MINDELO-2026-2026-09-11-r1",
+  "project_09_status": "approved",
+  "revision_class": "ADDITIVE_EVENT_KEYS",
+  "owning_project": "Project 03",
+  "supplied_rows_approved": 16,
+  "review_required": 0,
+  "blocking_issue": null,
+  "rows": [
+    {
+      "key": "event.cartinha-dholanda-mindelo-2026.title",
+      "record_id": "cartinha-dholanda-mindelo-2026",
+      "source_en": "CARTINHA D’HOLANDA",
+      "pt": "CARTINHA D’HOLANDA",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "GOVERNED_SOURCE",
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-CARTINHA-DHOLANDA-MINDELO-2026-2026-09-11-r1",
+      "context_notes": "Governed display identity. Preserved byte-exact in both locales, including the U+2019 apostrophe; never normalized or respelled."
+    },
+    {
+      "key": "event.cartinha-dholanda-mindelo-2026.summary",
+      "record_id": "cartinha-dholanda-mindelo-2026",
+      "source_en": "CARTINHA D’HOLANDA brings photographs, stories, art and heritage connected to Cape Verdean communities in Rotterdam to Mindelo, with an opening at Centro Cultural do Mindelo on 12 September.",
+      "pt": "CARTINHA D’HOLANDA traz ao Mindelo fotografias, histórias, arte e património ligados às comunidades cabo-verdianas de Roterdão, com abertura no Centro Cultural do Mindelo no dia 12 de setembro.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "GOVERNED_SOURCE",
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-CARTINHA-DHOLANDA-MINDELO-2026-2026-09-11-r1",
+      "context_notes": "Card and hub summary."
+    },
+    {
+      "key": "event.cartinha-dholanda-mindelo-2026.display.status",
+      "record_id": "cartinha-dholanda-mindelo-2026",
+      "source_en": "Opens 12 September 2026 · On view through 15 November 2026",
+      "pt": "Inaugura em 12 de setembro de 2026 · Em exibição até 15 de novembro de 2026",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "GOVERNED_SOURCE",
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-CARTINHA-DHOLANDA-MINDELO-2026-2026-09-11-r1",
+      "context_notes": "Opening day plus the published exhibition period. The 18:30 opening time is deliberately NOT carried here."
+    },
+    {
+      "key": "event.cartinha-dholanda-mindelo-2026.display.meta",
+      "record_id": "cartinha-dholanda-mindelo-2026",
+      "source_en": "Centro Cultural do Mindelo + CNAD · Opening at 18:30",
+      "pt": "Centro Cultural do Mindelo + CNAD · Inauguração às 18:30",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "GOVERNED_SOURCE",
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-CARTINHA-DHOLANDA-MINDELO-2026-2026-09-11-r1",
+      "context_notes": "Both exhibition venues plus the opening time, which is scoped to 12 September by the words \"Opening at\" and must never read as recurring exhibition hours."
+    },
+    {
+      "key": "event.cartinha-dholanda-mindelo-2026.display.checked",
+      "record_id": "cartinha-dholanda-mindelo-2026",
+      "source_en": "Checked 11 September 2026 against the partner exhibition page.",
+      "pt": "Revisto em 11 de setembro de 2026 com base na página da exposição da entidade parceira.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "GOVERNED_SOURCE",
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-CARTINHA-DHOLANDA-MINDELO-2026-2026-09-11-r1",
+      "context_notes": "Provenance line."
+    },
+    {
+      "key": "event.cartinha-dholanda-mindelo-2026.card_action.label",
+      "record_id": "cartinha-dholanda-mindelo-2026",
+      "source_en": "View exhibition details",
+      "pt": "Ver detalhes da exposição",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "GOVERNED_SOURCE",
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-CARTINHA-DHOLANDA-MINDELO-2026-2026-09-11-r1",
+      "context_notes": "Card call to action."
+    },
+    {
+      "key": "event.cartinha-dholanda-mindelo-2026.detail.fact.dates.label",
+      "record_id": "cartinha-dholanda-mindelo-2026",
+      "source_en": "Dates",
+      "pt": "Datas",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "GOVERNED_SOURCE",
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-CARTINHA-DHOLANDA-MINDELO-2026-2026-09-11-r1",
+      "context_notes": "Existing governed generic fact label."
+    },
+    {
+      "key": "event.cartinha-dholanda-mindelo-2026.detail.fact.dates.value_display",
+      "record_id": "cartinha-dholanda-mindelo-2026",
+      "source_en": "Opens 12 September 2026 · On view through 15 November 2026",
+      "pt": "Inaugura em 12 de setembro de 2026 · Em exibição até 15 de novembro de 2026",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "GOVERNED_SOURCE",
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-CARTINHA-DHOLANDA-MINDELO-2026-2026-09-11-r1",
+      "context_notes": "Same governed string as display.status, so the card and the detail dialog cannot drift apart."
+    },
+    {
+      "key": "event.cartinha-dholanda-mindelo-2026.detail.fact.admission.label",
+      "record_id": "cartinha-dholanda-mindelo-2026",
+      "source_en": "Admission",
+      "pt": "Admissão",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "GOVERNED_SOURCE",
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-CARTINHA-DHOLANDA-MINDELO-2026-2026-09-11-r1",
+      "context_notes": "Existing governed generic fact label."
+    },
+    {
+      "key": "event.cartinha-dholanda-mindelo-2026.detail.fact.admission.value_display",
+      "record_id": "cartinha-dholanda-mindelo-2026",
+      "source_en": "Free admission",
+      "pt": "Entrada livre",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "GOVERNED_SOURCE",
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-CARTINHA-DHOLANDA-MINDELO-2026-2026-09-11-r1",
+      "context_notes": "Project 09 ruling B. The bare string \"Free\" is deliberately NOT used: it is already bound to \"Gratuito\" elsewhere in the overlay, and a second mapping would make it ambiguous for the EN->PT index the static-page localizer builds. \"Free admission\" already resolves to \"Entrada livre\" for the incumbent Sinergia da Matéria record, so this row reuses that exact pairing and introduces no new ambiguity."
+    },
+    {
+      "key": "event.cartinha-dholanda-mindelo-2026.detail.body",
+      "record_id": "cartinha-dholanda-mindelo-2026",
+      "source_en": "The exhibition presents stories of Cape Verdean Rotterdammers through photographs, personal histories, art and heritage.\n\nIt opens at Centro Cultural do Mindelo on Saturday, 12 September 2026 at 18:30 and is presented across Centro Cultural do Mindelo and CNAD through 15 November 2026.",
+      "pt": "A exposição apresenta histórias de cabo-verdianos de Roterdão através de fotografias, memórias pessoais, arte e património.\n\nA abertura realiza-se no Centro Cultural do Mindelo no sábado, 12 de setembro de 2026, às 18:30, e a exposição estará patente no Centro Cultural do Mindelo e no CNAD até 15 de novembro de 2026.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "GOVERNED_SOURCE",
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-CARTINHA-DHOLANDA-MINDELO-2026-2026-09-11-r1",
+      "context_notes": "Two governed paragraphs. The blank line is the paragraph break the incumbent generic rule renders."
+    },
+    {
+      "key": "event.cartinha-dholanda-mindelo-2026.detail.good_to_know",
+      "record_id": "cartinha-dholanda-mindelo-2026",
+      "source_en": "Admission is free. The partner states that the exhibition is open daily except Sundays, with visiting hours of 10:00–13:00 and 15:00–20:00.\n\nThe published exhibition period is subject to change, so confirm current access with the venues before visiting.",
+      "pt": "A entrada é livre. O parceiro indica que a exposição está aberta diariamente, exceto aos domingos, das 10:00 às 13:00 e das 15:00 às 20:00.\n\nO período publicado da exposição está sujeito a alteração, por isso confirme o acesso atual junto dos espaços antes da visita.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "GOVERNED_SOURCE",
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-CARTINHA-DHOLANDA-MINDELO-2026-2026-09-11-r1",
+      "context_notes": "Two governed paragraphs. Visiting hours are attributed to the partner and the published period is flagged as subject to change."
+    },
+    {
+      "key": "event.cartinha-dholanda-mindelo-2026.detail.checked",
+      "record_id": "cartinha-dholanda-mindelo-2026",
+      "source_en": "Checked 11 September 2026 against the partner exhibition page.",
+      "pt": "Revisto em 11 de setembro de 2026 com base na página da exposição da entidade parceira.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "GOVERNED_SOURCE",
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-CARTINHA-DHOLANDA-MINDELO-2026-2026-09-11-r1",
+      "context_notes": "Provenance line."
+    },
+    {
+      "key": "event.cartinha-dholanda-mindelo-2026.detail.action_label",
+      "record_id": "cartinha-dholanda-mindelo-2026",
+      "source_en": "View exhibition details",
+      "pt": "Ver detalhes da exposição",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "GOVERNED_SOURCE",
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-CARTINHA-DHOLANDA-MINDELO-2026-2026-09-11-r1",
+      "context_notes": "Detail dialog call to action."
+    },
+    {
+      "key": "event.cartinha-dholanda-mindelo-2026.seo.description",
+      "record_id": "cartinha-dholanda-mindelo-2026",
+      "source_en": "CARTINHA D’HOLANDA opens at Centro Cultural do Mindelo on 12 September 2026 and is presented at Centro Cultural do Mindelo and CNAD through 15 November. Free admission.",
+      "pt": "CARTINHA D’HOLANDA inaugura no Centro Cultural do Mindelo em 12 de setembro de 2026 e está patente no Centro Cultural do Mindelo e no CNAD até 15 de novembro. Entrada livre.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "GOVERNED_SOURCE",
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-CARTINHA-DHOLANDA-MINDELO-2026-2026-09-11-r1",
+      "context_notes": "Meta description."
+    },
+    {
+      "key": "event.cartinha-dholanda-mindelo-2026.seo.title",
+      "record_id": "cartinha-dholanda-mindelo-2026",
+      "source_en": "CARTINHA D’HOLANDA in Mindelo | A PRASA",
+      "pt": "CARTINHA D’HOLANDA em Mindelo | A PRASA",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "GOVERNED_SOURCE",
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-CARTINHA-DHOLANDA-MINDELO-2026-2026-09-11-r1",
+      "context_notes": "Meta title."
+    }
+  ]
+}
