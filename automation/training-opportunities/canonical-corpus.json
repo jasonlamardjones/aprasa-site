@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "schema": "aprasa.training-opportunities.canonical-corpus.v1",
+  "owning_project": "Project 03 — A PRASA Business, Brand & Administration",
+  "purpose": "Independent completeness witness for the canonical Training corpus. This file is the expected record set; data/training-opportunities.json is the candidate. They are compared against each other, so neither can shrink on its own.",
+  "why_this_exists": [
+    "Deriving the expected record set from the candidate data file, or from the marker regions on index.html / pt/index.html, cannot detect a COORDINATED deletion: remove a record from the data file AND its marker regions from both Home surfaces and every derived expectation shrinks with it, so the structured-data validator, both generator drift checks and the generator ownership tests all still pass while a governed record has silently left the site.",
+    "This manifest does not shrink by itself. Removing, adding or renaming a governed record requires editing this file in the same commit, which is the point: the change becomes explicit and reviewable instead of invisible.",
+    "It is an IDENTITY and ORDER witness only. It carries no copy, no lifecycle state and no currentness rule — publication_state and expiry stay entirely in the canonical data file and the incumbent lifecycle system. A record moving CURRENT -> EXPIRED is not a corpus change and must not require touching this file."
+  ],
+  "maintenance": "When Project 03 adds, retires or renames a canonical training record, update record_ids in the same commit as data/training-opportunities.json. Order is the governed published Home order and is compared exactly.",
+  "governed_surfaces": [
+    "index.html",
+    "pt/index.html"
+  ],
+  "record_ids": [
+    "myrtle",
+    "academia-crescer",
+    "kafe-djan-djan",
+    "hp-life",
+    "openlearn",
+    "iefp-pepe",
+    "iefp-training",
+    "ibm-skillsbuild",
+    "microsoft-learn",
+    "unicv-erasmus-viana-do-castelo-edital-027-2026",
+    "unicv-erasmus-bielefeld-edital-028-2026",
+    "unicv-erasmus-ca-foscari-edital-029-2026",
+    "unicv-undergraduate-admissions-third-phase-2026-2027",
+    "laczos-artisticos-2nd-edition-2026",
+    "unicv-china-ambassador-scholarship-2026",
+    "unicv-confucius-chinese-language-courses-2026-2027",
+    "regea-oral-communications-call-2026"
+  ]
+}

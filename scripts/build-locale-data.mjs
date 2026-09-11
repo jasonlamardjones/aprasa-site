@@ -1709,6 +1709,19 @@ for (const contract of GOVERNED_OVERRIDE_CONTRACTS) {
 
 const governedOverrideCount = governedOverrideResults.reduce((n, r) => n + r.overridden_keys, 0);
 
+// Aggregate tallies, read off the finished key map that is about to be written.
+const assembled = (() => {
+  const values = Object.values(keys);
+  const tally = { total: values.length, required: 0, unchanged: 0, approved: 0 };
+  for (const row of values) {
+    if (row.scope_status === "REQUIRED_FOR_PT_LAUNCH") tally.required += 1;
+    else if (row.scope_status === "INTENTIONALLY_UNCHANGED") tally.unchanged += 1;
+    else fail(`assembled key "${row.key}" has an unrecognized scope_status: ${JSON.stringify(row.scope_status)}`);
+    if (row.translation_status === "APPROVED") tally.approved += 1;
+  }
+  return tally;
+})();
+
 const output = {
   provenance: {
     source_revision: eventDeltaPackages.at(-1)?.source_revision ?? delta8.source_revision,
@@ -1727,7 +1740,7 @@ const output = {
       "data/locales/pt-overlay-r8-delta.source.json",
       "data/locales/pt-overlay-r9-delta.source.json",
       ...eventDeltaPackages.map((item) => item.file),
-      "data/locales/pt-overlay-r9-migration.source.json",
+      "data/locales/pt-overlay-r10-migration.source.json",
       "data/locales/pt-overlay-r13-things-to-do-hub.source.json",
       "data/locales/pt-overlay-r14-section-fallback-note.source.json",
       "data/locales/pt-overlay-r15-weekly-opportunity-2026-09.source.json",
@@ -1770,11 +1783,27 @@ const output = {
     governed_override_packages: governedOverrideResults,
     governed_override_authorization: "fixed code-side contract in scripts/build-locale-data.mjs (GOVERNED_OVERRIDE_CONTRACTS)",
   },
+  // The aggregate counts are DERIVED from the finished key map, never re-summed
+  // from the packages by hand.
+  //
+  // The hand-summed form was wrong, and wrong in the way that form always
+  // eventually is: it enumerated r2 + r3 + r4 + r5 + r7 + r8 + event deltas and
+  // simply never gained a term for r13, r14 or r15. The artifact carried 977
+  // keys while reporting 872 — a 105-key lie (8 + 1 + 96) in the audit metadata,
+  // silently growing every time an additive package shipped without someone
+  // remembering to extend four separate expressions.
+  //
+  // Counting the assembled corpus removes that failure mode by construction: a
+  // future additive package is counted because its rows are in the map, not
+  // because anybody remembered it here. The per-package breakdown fields below
+  // stay as they are — each is a genuine statement about one package, and
+  // validate-locale-contract.mjs now reconciles the aggregates against the
+  // artifact so the two can never drift apart again.
   counts: {
-    total_rows: rows.length + delta.rows.length + delta4.rows.length + delta5.rows.length + delta7.rows.length + delta8.rows.length + eventDeltaRequired + eventDeltaUnchanged,
-    required_for_pt_launch: qa_summary.required_for_pt_launch + deltaRequired + delta4Required + delta5Required + delta7Required + delta8Required + eventDeltaRequired,
-    intentionally_unchanged: qa_summary.intentionally_unchanged + deltaUnchanged + delta4Unchanged + delta5Unchanged + delta7Unchanged + delta8Unchanged + eventDeltaUnchanged,
-    approved_rows_total: qa_summary.approved_rows_total + delta.rows.length + delta4.rows.length + delta5.rows.length + delta7.rows.length + delta8.rows.length + eventDeltaRequired + eventDeltaUnchanged,
+    total_rows: assembled.total,
+    required_for_pt_launch: assembled.required,
+    intentionally_unchanged: assembled.unchanged,
+    approved_rows_total: assembled.approved,
     r3_delta_rows: delta.rows.length,
     r4_delta_rows: delta4.rows.length,
     r5_delta_rows: delta5.rows.length,

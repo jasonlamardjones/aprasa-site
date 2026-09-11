@@ -20,6 +20,7 @@ const root = path.resolve(__dirname, '..');
 
 const DATA_PATH = path.join(root, 'data', 'training-opportunities.json');
 const MANIFEST_PATH = path.join(root, 'internal', 'provider-media-manifest.json');
+const CORPUS_PATH = path.join(root, 'automation', 'training-opportunities', 'canonical-corpus.json');
 
 // Project 03 approved lifecycle classes and publication states. A value
 // outside these sets is a governance error, not a typo to be tolerated.
@@ -58,8 +59,81 @@ function isIsoDate(value) {
 
 const data = JSON.parse(fs.readFileSync(DATA_PATH, 'utf8'));
 const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
+const corpus = JSON.parse(fs.readFileSync(CORPUS_PATH, 'utf8'));
 const manifestTitles = new Set(manifest.records.map((r) => r.title));
 const locale = loadLocaleData();
+
+// --- corpus completeness, against an INDEPENDENT witness -------------------
+//
+// Everything else in this file reads the candidate data file and asks whether
+// it is internally sound. That can never answer "is a governed record
+// missing?", because a record deleted from the candidate is also absent from
+// every expectation derived from the candidate. The same blind spot covers the
+// rendered surfaces: delete a record from data/training-opportunities.json AND
+// its marker regions from index.html and pt/index.html, and the structured-data
+// checks, both generator drift checks and the generator ownership tests all
+// still pass while a governed record has silently left the site.
+//
+// automation/training-opportunities/canonical-corpus.json is the independent
+// witness. It is maintained by hand, it does not shrink when the candidate
+// shrinks, and it is compared here as an exact ordered list: a missing record,
+// an unexpected record, a renamed id and a reordered corpus are each distinct
+// failures. Removing a governed record therefore requires editing the manifest
+// in the same commit, where a reviewer can see it.
+//
+// Identity and order only. This says nothing about publication_state, expiry or
+// currentness: a record moving CURRENT -> EXPIRED is a lifecycle change, not a
+// corpus change, and must not have to touch the manifest.
+{
+  const expected = corpus.record_ids;
+  if (corpus.schema !== 'aprasa.training-opportunities.canonical-corpus.v1') {
+    fail(`canonical-corpus.json: unexpected schema id ${JSON.stringify(corpus.schema)}`);
+  }
+  if (!Array.isArray(expected) || expected.length === 0) {
+    fail('canonical-corpus.json: record_ids[] must be a non-empty array');
+  } else {
+    const actual = (data.records ?? []).map((record) => record.id);
+    const expectedSet = new Set(expected);
+    const actualSet = new Set(actual);
+    if (expectedSet.size !== expected.length) fail('canonical-corpus.json: record_ids[] contains duplicates');
+
+    for (const id of expected) {
+      if (!actualSet.has(id)) {
+        fail(`canonical record "${id}" is declared in canonical-corpus.json but missing from data/training-opportunities.json — a governed record cannot leave the corpus silently; remove it from the manifest in the same commit if that is intended`);
+      }
+    }
+    for (const id of actual) {
+      if (!expectedSet.has(id)) {
+        fail(`record "${id}" is present in data/training-opportunities.json but not declared in canonical-corpus.json — add it to the manifest in the same commit`);
+      }
+    }
+    // Order is the governed published Home order, so it is part of the
+    // contract, not an incidental detail.
+    if (expected.length === actual.length && expected.some((id, i) => id !== actual[i])) {
+      fail(`canonical record order differs from canonical-corpus.json: expected [${expected.join(', ')}], got [${actual.join(', ')}]`);
+    }
+
+    // Surface ownership, also anchored to the manifest rather than to whatever
+    // the surfaces happen to contain. This is what catches the deletion of a
+    // marker region — on its own, or in the same commit as the record.
+    for (const surface of corpus.governed_surfaces ?? []) {
+      let html;
+      try {
+        html = fs.readFileSync(path.join(root, surface), 'utf8');
+      } catch {
+        fail(`governed surface ${surface} could not be read`);
+        continue;
+      }
+      for (const id of expected) {
+        const begin = `<!-- BEGIN GENERATED TRAINING: ${id} -->`;
+        const end = `<!-- END GENERATED TRAINING: ${id} -->`;
+        if (!html.includes(begin) || !html.includes(end)) {
+          fail(`${surface}: no generated-training marker region for canonical record "${id}" — every record in canonical-corpus.json must stay generator-owned on every governed surface, in every publication state`);
+        }
+      }
+    }
+  }
+}
 
 // --- document shape -------------------------------------------------------
 if (data.version !== 1) fail(`version must be 1, got ${JSON.stringify(data.version)}`);
@@ -292,4 +366,4 @@ if (errors.length) {
 const byClass = {};
 for (const record of data.records) byClass[record.lifecycle_class] = (byClass[record.lifecycle_class] ?? 0) + 1;
 const summary = Object.entries(byClass).map(([k, v]) => `${k}=${v}`).join(', ');
-console.log(`Training opportunities structured-data validation passed: ${data.records.length} record(s) (${summary}).`);
+console.log(`Training opportunities structured-data validation passed: ${data.records.length} record(s) (${summary}); corpus matches the ${corpus.record_ids.length} record(s) declared in automation/training-opportunities/canonical-corpus.json and every one is generator-owned on ${(corpus.governed_surfaces ?? []).join(' + ')}.`);

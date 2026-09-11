@@ -40,6 +40,7 @@ on:
       - 'scripts/validate-training-opportunities-data.mjs'
       - 'scripts/generate-training-opportunities.mjs'
       - 'data/training-opportunities.json'
+      - 'automation/training-opportunities/canonical-corpus.json'
       - 'index.html'
       - 'pt/index.html'
       - 'sitemap.xml'

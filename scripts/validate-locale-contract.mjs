@@ -3,7 +3,7 @@
 // Run standalone (validates data/locales/locale-data.generated.json) and/or
 // against generated PT HTML output (pass --html <dir> one or more times).
 
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadLocaleData, RETIRED_KEY_REMAP } from "./lib/locale.mjs";
@@ -693,6 +693,81 @@ for (const dir of htmlDirs) {
 if (warnings.length) {
   console.warn(`[validate-locale-contract] ${warnings.length} warning(s):`);
   for (const w of warnings) console.warn(`  - ${w}`);
+}
+
+// --- generated audit metadata must describe the artifact it is attached to ---
+//
+// counts used to be re-summed by hand, package by package, inside
+// build-locale-data.mjs. It silently never gained a term for r13, r14 or r15,
+// so the artifact shipped 977 keys while reporting 872 — a 105-key discrepancy
+// in its own audit metadata, which no check could see because nothing compared
+// the two. The counts are derived from the assembled key map now; this block is
+// what keeps them honest, so the hand-summed failure mode cannot come back in
+// another form.
+{
+  const actual = {
+    total_rows: Object.keys(data.keys).length,
+    required_for_pt_launch: 0,
+    intentionally_unchanged: 0,
+    approved_rows_total: 0,
+  };
+  for (const row of Object.values(data.keys)) {
+    if (row.scope_status === "REQUIRED_FOR_PT_LAUNCH") actual.required_for_pt_launch += 1;
+    else if (row.scope_status === "INTENTIONALLY_UNCHANGED") actual.intentionally_unchanged += 1;
+    else fail(`generated key "${row.key}" has an unrecognized scope_status: ${JSON.stringify(row.scope_status)}`);
+    if (row.translation_status === "APPROVED") actual.approved_rows_total += 1;
+  }
+
+  const reported = data.counts || {};
+  for (const field of ["total_rows", "required_for_pt_launch", "intentionally_unchanged", "approved_rows_total"]) {
+    if (reported[field] !== actual[field]) {
+      fail(`generated counts.${field} is ${reported[field]}, but the artifact actually contains ${actual[field]} — generated audit metadata must describe the artifact it ships with`);
+    }
+  }
+  if (actual.required_for_pt_launch + actual.intentionally_unchanged !== actual.total_rows) {
+    fail(`generated keys do not partition into the two scope states: ${actual.required_for_pt_launch} + ${actual.intentionally_unchanged} !== ${actual.total_rows}`);
+  }
+
+  // Provenance has to be real: a generated_from entry naming a file that does
+  // not exist is the same class of defect as a wrong count (this caught
+  // "pt-overlay-r9-migration.source.json", which was never the migration
+  // package's name — it is r10).
+  const generatedFrom = data.provenance?.generated_from ?? [];
+  if (!generatedFrom.length) fail("generated provenance.generated_from is empty");
+  for (const file of generatedFrom) {
+    if (!existsSync(path.join(ROOT, file))) {
+      fail(`generated provenance.generated_from names a file that does not exist: ${file}`);
+    }
+  }
+
+  // Every additive package on disk must be declared AND actually merged. This
+  // is the specific regression guard: a future additive package listed in
+  // generated_from but missing from the artifact (and therefore from the
+  // counts) fails here rather than shipping as an inert declaration. Discovered
+  // by revision_class rather than by a hardcoded list, so a package nobody
+  // remembers to add here is still covered.
+  //
+  // Deliberately additive-only: override (r6, r9, r11, r12) and rename (r10)
+  // packages restate or move keys that other packages own, so "its rows must
+  // appear verbatim in the artifact" is not their contract.
+  for (const fileName of readdirSync(path.join(ROOT, "data", "locales"))) {
+    if (!/^pt-overlay-.*\.source\.json$/.test(fileName)) continue;
+    const source = JSON.parse(readFileSync(path.join(ROOT, "data", "locales", fileName), "utf8"));
+    if (!String(source.revision_class || "").startsWith("ADDITIVE")) continue;
+
+    const relative = `data/locales/${fileName}`;
+    if (!generatedFrom.includes(relative)) {
+      fail(`additive package ${relative} is merged into the build but is not declared in provenance.generated_from`);
+    }
+    for (const row of source.rows ?? []) {
+      const generated = data.keys[row.key];
+      if (!generated) {
+        fail(`additive package ${relative} declares key "${row.key}" which is absent from the generated artifact — it is therefore uncounted`);
+      } else if (generated.en !== row.source_en || generated.pt !== row.pt) {
+        fail(`additive package ${relative} key "${row.key}" does not match the generated artifact`);
+      }
+    }
+  }
 }
 
 if (errors.length) {

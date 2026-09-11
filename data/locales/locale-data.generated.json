@@ -22,7 +22,7 @@
       "data/locales/pt-overlay-event-50-anos-de-memoria-criacao-e-resistencia.source.json",
       "data/locales/pt-overlay-event-cartinha-dholanda-mindelo-2026.source.json",
       "data/locales/pt-overlay-event-sinergia-da-materia.source.json",
-      "data/locales/pt-overlay-r9-migration.source.json",
+      "data/locales/pt-overlay-r10-migration.source.json",
       "data/locales/pt-overlay-r13-things-to-do-hub.source.json",
       "data/locales/pt-overlay-r14-section-fallback-note.source.json",
       "data/locales/pt-overlay-r15-weekly-opportunity-2026-09.source.json"
@@ -112,10 +112,10 @@
     "governed_override_authorization": "fixed code-side contract in scripts/build-locale-data.mjs (GOVERNED_OVERRIDE_CONTRACTS)"
   },
   "counts": {
-    "total_rows": 872,
-    "required_for_pt_launch": 844,
+    "total_rows": 977,
+    "required_for_pt_launch": 949,
     "intentionally_unchanged": 28,
-    "approved_rows_total": 872,
+    "approved_rows_total": 977,
     "r3_delta_rows": 21,
     "r4_delta_rows": 26,
     "r5_delta_rows": 2,
