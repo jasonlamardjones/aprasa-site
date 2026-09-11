@@ -8,6 +8,10 @@ import { fileURLToPath } from 'node:url';
 import {
   dryRunValidationCommands,
   isMediaGateOpen,
+  mediaGateStateFrom,
+  mediaGateSummary,
+  MEDIA_GATE_OPEN,
+  validationOutcome,
   expectedDryRunChangedFiles,
   loadPacket,
   validatePacket
@@ -123,12 +127,11 @@ function run(tempRoot, script, args = []) {
     const message = [proc.stdout, proc.stderr].filter(Boolean).join('\n').trim();
     throw new Error(`${script} failed (${proc.status})${message ? `:\n${message}` : ''}`);
   }
-  if (isMediaGateOpen(script, proc.status)) mediaGateOpen = true;
-  return proc.stdout.trim();
+  return { stdout: proc.stdout.trim(), status: proc.status };
 }
 
 const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aprasa-event-publication-'));
-let mediaGateOpen = false;
+const validationOutcomes = [];
 const validations = [];
 const validationSteps = [];
 
@@ -204,8 +207,10 @@ try {
   insertHomeMarkers(path.join(tempRoot, 'pt', 'index.html'), packet.event.id);
 
   const runStep = (script, args = []) => {
-    validations.push(run(tempRoot, script, args));
+    const { stdout, status } = run(tempRoot, script, args);
+    validations.push(stdout);
     validationSteps.push([script, ...args].join(' '));
+    validationOutcomes.push(validationOutcome(script, args, status));
   };
   for (const [script, ...args] of dryRunValidationCommands(packet)) runStep(script, args);
 
@@ -235,12 +240,20 @@ try {
       as_of: packet.control.as_of,
       changed_files: changed,
       validation_steps: validationSteps,
+      // The media gate travels WITH the proof. Without it the real-write path
+      // has no way to know the dry run ended with an open gate, and would
+      // report the candidate as fully validated.
+      validation_outcomes: validationOutcomes,
+      media_gate: mediaGateStateFrom(validationOutcomes),
+      media_gate_open: mediaGateStateFrom(validationOutcomes) === MEDIA_GATE_OPEN,
       created_at: new Date().toISOString()
     };
     fs.mkdirSync(path.dirname(proofPath), { recursive: true });
     writeJson(proofPath, proof);
   }
 
+  const mediaGateState = mediaGateStateFrom(validationOutcomes);
+  const mediaGateOpen = mediaGateState === MEDIA_GATE_OPEN;
   console.log([
     `EVENT: ${packet.event.title}`,
     '',
@@ -249,10 +262,12 @@ try {
     'SOURCE: verified approved machine-readable packet',
     `AS OF: ${packet.control.as_of}`,
     'LOCALIZATION: approved; required PT keys present',
-    'MEDIA: approved; local asset verified',
+    mediaGateOpen
+      ? 'MEDIA: manifest structurally valid; unresolved media records remain (see MEDIA GATE)'
+      : 'MEDIA: approved; local asset verified',
     'GOVERNANCE: publication authorized',
-    `VALIDATION: ${validations.length} deterministic checks/generation stages passed`,
-    `MEDIA GATE: ${mediaGateOpen ? 'OPEN — unresolved media records remain; the branch is not media-complete for merge' : 'PASSED'}`,
+    `VALIDATION: ${validationOutcomes.filter((outcome) => outcome.passed).length} of ${validationOutcomes.length} deterministic checks/generation stages passed`,
+    `MEDIA GATE: ${mediaGateSummary(mediaGateState)}`,
     'DIFF: bounded expected files only in isolated dry-run workspace',
     'CURRENTNESS: validated',
     '',

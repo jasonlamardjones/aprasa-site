@@ -143,8 +143,57 @@ export function mediaIntakeRoot(root = ROOT) {
 export const MEDIA_GATE_SCRIPT = 'scripts/validate-card-media.mjs';
 export const MEDIA_GATE_OPEN_EXIT = 2;
 
+export const MEDIA_GATE_OPEN = 'OPEN';
+export const MEDIA_GATE_PASSED = 'PASSED';
+
+/**
+ * True only for the exact media validator reporting the exact open-gate exit.
+ *
+ * Strictly numeric: a string "2" is a status nobody should be producing, and
+ * treating it as the recognized state would let a stringified or coerced exit
+ * code silently bypass a fatal path. Every other script, and every other code
+ * from this one, is false here and therefore fatal to the caller.
+ */
 export function isMediaGateOpen(script, status) {
-  return script === MEDIA_GATE_SCRIPT && status === MEDIA_GATE_OPEN_EXIT;
+  return script === MEDIA_GATE_SCRIPT
+    && typeof status === 'number'
+    && status === MEDIA_GATE_OPEN_EXIT;
+}
+
+/**
+ * The outcome of one validation step, modelled explicitly.
+ *
+ * Storing only the step NAME is what let an open gate be reported as "N
+ * validators passed": a name carries no status, so exit 2 was indistinguishable
+ * from exit 0 once the step list was built. Callers record these instead, and
+ * every publication artifact derives its media-gate state from them rather than
+ * from a count.
+ */
+export function validationOutcome(script, args, status) {
+  const step = [script, ...args].join(' ');
+  const mediaGateOpen = isMediaGateOpen(script, status);
+  return Object.freeze({
+    step,
+    status,
+    media_gate_open: mediaGateOpen,
+    // "passed" means exit 0. An open media gate is structurally valid but is
+    // NOT a pass, and must never be counted as one.
+    passed: status === 0
+  });
+}
+
+/** OPEN when any recorded outcome reports the media gate open. */
+export function mediaGateStateFrom(outcomes) {
+  return (outcomes ?? []).some((outcome) => outcome.media_gate_open)
+    ? MEDIA_GATE_OPEN
+    : MEDIA_GATE_PASSED;
+}
+
+/** One-line founder-facing explanation of the gate state. */
+export function mediaGateSummary(state) {
+  return state === MEDIA_GATE_OPEN
+    ? 'OPEN — unresolved media records remain; the branch is not media-complete for merge'
+    : 'PASSED — no temporary or pending-ingestion media records remain';
 }
 
 export function dryRunValidationCommands(packet) {

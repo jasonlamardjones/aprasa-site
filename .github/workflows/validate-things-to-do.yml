@@ -23,6 +23,7 @@ on:
       - 'scripts/prepare-event-publication.mjs'
       - 'scripts/write-event-publication.mjs'
       - 'scripts/test-event-publication-write.mjs'
+      - 'scripts/test-media-gate-propagation.mjs'
       - 'scripts/test-event-publication-packet-currentness.mjs'
       - 'scripts/validate-event-publication-packet.mjs'
       - 'scripts/lib/event-publication-contract.mjs'
@@ -98,6 +99,9 @@ jobs:
 
       - name: Validate Phase 1B guarded real-write workflow
         run: node scripts/test-event-publication-write.mjs
+
+      - name: Validate media-gate exit-2 contract and propagation
+        run: node scripts/test-media-gate-propagation.mjs
 
       - name: Load explicit currentness date
         shell: bash

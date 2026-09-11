@@ -6,6 +6,10 @@ import { spawnSync } from 'node:child_process';
 import {
   dryRunValidationCommands,
   isMediaGateOpen,
+  mediaGateStateFrom,
+  mediaGateSummary,
+  MEDIA_GATE_OPEN,
+  validationOutcome,
   expectedChangedFiles,
   expectedDryRunChangedFiles,
   validatePacket
@@ -95,7 +99,7 @@ function insertHomeMarkers(root, relativeFile, id) {
   fs.writeFileSync(file, html);
 }
 
-function runNode(root, script, args = []) {
+function runNodeStep(root, script, args = []) {
   // Same documented exception as the dry-run path: a media gate reported OPEN
   // (exit 2) is state to carry forward, not a crashed subprocess. Any other
   // non-zero status from any script still throws.
@@ -104,7 +108,11 @@ function runNode(root, script, args = []) {
     const detail = [result.stdout, result.stderr].filter(Boolean).join('\n').trim();
     throw new Error(`${process.execPath} ${[script, ...args].join(' ')} failed (${result.status})${detail ? `:\n${detail}` : ''}`);
   }
-  return result.stdout.trim();
+  return { stdout: result.stdout.trim(), status: result.status };
+}
+
+function runNode(root, script, args = []) {
+  return runNodeStep(root, script, args).stdout;
 }
 
 function buildCandidate(root, packet) {
@@ -126,7 +134,12 @@ function validateCandidate(root, packet) {
     ['scripts/validate-pt-home-events.mjs'],
     ['scripts/validate-training-opportunities-currentness.mjs', `--as-of=${packet.control.as_of}`, '--home=index.html', '--home=pt/index.html']
   ];
-  return steps.map(([script, ...args]) => ({ step: [script, ...args].join(' '), output: runNode(root, script, args) }));
+  return steps.map(([script, ...args]) => {
+    const { stdout, status } = runNodeStep(root, script, args);
+    // The outcome is recorded with its STATUS, not just its name, so an open
+    // media gate cannot be counted as a pass further downstream.
+    return { ...validationOutcome(script, args, status), output: stdout };
+  });
 }
 
 function initializeStagingGit(root) {
@@ -157,6 +170,12 @@ export function assertDryRunProof(root, packet, packetPath, proof, head, authori
   const expectedFiles = expectedDryRunChangedFiles(packet, { root });
   if (JSON.stringify(proof.changed_files) !== JSON.stringify(expectedFiles)) {
     throw new Error('DRY_RUN_PROOF_SCOPE_MISMATCH: dry-run changed-file evidence is not exact');
+  }
+  // A proof that cannot state its media-gate disposition is not usable
+  // evidence: the real write would have to assume one, and assuming PASSED is
+  // exactly the failure this contract exists to prevent.
+  if (typeof proof.media_gate_open !== 'boolean' || !Array.isArray(proof.validation_outcomes)) {
+    throw new Error('DRY_RUN_PROOF_INCOMPLETE: dry-run proof carries no media-gate disposition');
   }
 }
 
@@ -237,7 +256,7 @@ function applyApprovedInputs(root, packet) {
   insertHomeMarkers(root, path.join('pt', 'index.html'), packet.event.id);
 }
 
-function reportFor(packet, result) {
+export function reportFor(packet, result) {
   return [
     `# ${packet.event.title}`,
     '',
@@ -246,9 +265,12 @@ function reportFor(packet, result) {
     `- Source: approved packet (SHA-256 \`${result.packet_sha256}\`)`,
     '- Publication authority: approved',
     '- Localization: Project 09-approved additive package; no generated translation',
-    '- Media: approved manifest and verified local asset',
+    result.media_gate_open
+      ? '- Media: manifest structurally valid; unresolved media records remain — NOT media-complete'
+      : '- Media: approved manifest and verified local asset',
     `- Currentness as of: ${packet.control.as_of}`,
-    `- Validation: ${result.validations.length} incumbent validators passed`,
+    `- Validation: ${(result.validation_outcomes ?? []).filter((outcome) => outcome.passed).length} of ${(result.validation_outcomes ?? []).length} incumbent validators passed`,
+    `- MEDIA GATE: ${mediaGateSummary(result.media_gate)}`,
     '- Generation: idempotent',
     '- Diff: exact expected file scope only',
     '- Merge allowed: false',
@@ -383,7 +405,11 @@ export function prepareRealWriteCandidate({ root, packet, packetPath, testHooks 
       as_of: packet.control.as_of,
       changed_files: finalChanged,
       validations: validations.map((item) => item.step),
+      validation_outcomes: validations.map(({ step, status, passed, media_gate_open }) => ({ step, status, passed, media_gate_open })),
+      media_gate: mediaGateStateFrom(validations),
+      media_gate_open: mediaGateStateFrom(validations) === MEDIA_GATE_OPEN,
       idempotent: true,
+      // An open media gate is never merge-ready. This stays false regardless.
       merge_allowed: false,
       created_at: new Date().toISOString()
     };
