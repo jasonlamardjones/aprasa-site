@@ -96,38 +96,59 @@
       "seo": {"description": "Arquitectura da Imperfeição is a painting exhibition by Nuno M. Martins at Alternativa Galeria in Mindelo, opening 17 August 2026.", "title": "Arquitectura da Imperfeição — Painting Exhibition in Mindelo | A PRASA", "schema_type": "ExhibitionEvent"}
     },
     {
-      "id": "sinergia-da-materia",
+      "id": "cartinha-dholanda-mindelo-2026",
       "kind": "dated-event",
-      "title": "Sinergia da Matéria: Entre o Bruto e o Traço",
-      "provider": "CNAD",
-      "summary": "Explore Davitson Almeida’s investigation of stone, metal, drawing and three-dimensional form at CNAD’s Galeria Zero.",
+      "title": "CARTINHA D’HOLANDA",
+      "provider": "Centro Cultural do Mindelo",
+      "summary": "CARTINHA D’HOLANDA brings photographs, stories, art and heritage connected to Cape Verdean communities in Rotterdam to Mindelo, with an opening at Centro Cultural do Mindelo on 12 September.",
       "category": "visual-arts",
-      "location": {"name": "Galeria Zero, CNAD", "locality": "Mindelo", "street": "Praça Amílcar Cabral, Mindelo"},
-      "source_url": "https://cnad.cv/info/",
-      "source_type": "provider-visitor-info",
-      "start_date": "2026-07-31",
+      "location": {
+        "name": "Centro Cultural do Mindelo",
+        "locality": "Mindelo"
+      },
+      "source_url": "https://verhalenhuisrotterdam.nl/za-12-sept-expositie-opent-in-sao-vicente-kaapverdie/",
+      "source_type": "Partner / exhibition source",
+      "start_date": "2026-09-12",
       "start_datetime": null,
       "end_datetime": null,
-      "end_date": null,
-      "end_precision": "month",
-      "end_month": "2026-11",
-      "checked_at": "2026-08-15",
+      "end_date": "2026-11-15",
+      "checked_at": "2026-09-11",
       "publication_state": "published",
       "media_policy": "fallback_allowed",
-      "media_manifest_title": "Sinergia da Matéria: Entre o Bruto e o Traço",
-      "detail_page": "things-to-do/sinergia-da-materia/",
+      "media_manifest_title": "CARTINHA D’HOLANDA",
+      "detail_page": "things-to-do/cartinha-dholanda-mindelo-2026/",
       "free_admission": true,
-      "display": {"status": "On view until November 2026", "meta": "Exhibition by Davitson Almeida", "checked": "Checked 15 August 2026"},
-      "media": null,
-      "card_action": {"label": "Visitor information", "url": "https://cnad.cv/info/"},
-      "detail": {
-        "facts": [{"label": "Dates", "value": "On view until November 2026"}, {"label": "Where", "value": "Galeria Zero, CNAD, Praça Amílcar Cabral, Mindelo"}, {"label": "Admission", "value": "Free admission"}],
-        "body": "Explore Davitson Almeida’s investigation of stone, metal, drawing and three-dimensional form at CNAD’s Galeria Zero.",
-        "good_to_know": "Confirm current exhibition access and admission directly with CNAD before visiting.",
-        "checked": "Checked 15 August 2026",
-        "action_label": "Visitor information"
+      "display": {
+        "status": "Opens 12 September 2026 · On view through 15 November 2026",
+        "meta": "Centro Cultural do Mindelo + CNAD · Opening at 18:30",
+        "checked": "Checked 11 September 2026 against the partner exhibition page."
       },
-      "seo": {"description": "Sinergia da Matéria: Entre o Bruto e o Traço is an exhibition by Davitson Almeida at CNAD’s Galeria Zero in Mindelo, on view until November 2026.", "title": "Sinergia da Matéria: Entre o Bruto e o Traço — CNAD Exhibition in Mindelo | A PRASA", "schema_type": "ExhibitionEvent"}
+      "media": null,
+      "card_action": {
+        "label": "View exhibition details",
+        "url": "https://verhalenhuisrotterdam.nl/za-12-sept-expositie-opent-in-sao-vicente-kaapverdie/"
+      },
+      "detail": {
+        "facts": [
+          {
+            "label": "Dates",
+            "value": "Opens 12 September 2026 · On view through 15 November 2026"
+          },
+          {
+            "label": "Admission",
+            "value": "Free admission"
+          }
+        ],
+        "body": "The exhibition presents stories of Cape Verdean Rotterdammers through photographs, personal histories, art and heritage.\n\nIt opens at Centro Cultural do Mindelo on Saturday, 12 September 2026 at 18:30 and is presented across Centro Cultural do Mindelo and CNAD through 15 November 2026.",
+        "good_to_know": "Admission is free. The partner states that the exhibition is open daily except Sundays, with visiting hours of 10:00–13:00 and 15:00–20:00.\n\nThe published exhibition period is subject to change, so confirm current access with the venues before visiting.",
+        "checked": "Checked 11 September 2026 against the partner exhibition page.",
+        "action_label": "View exhibition details"
+      },
+      "seo": {
+        "description": "CARTINHA D’HOLANDA opens at Centro Cultural do Mindelo on 12 September 2026 and is presented at Centro Cultural do Mindelo and CNAD through 15 November. Free admission.",
+        "title": "CARTINHA D’HOLANDA in Mindelo | A PRASA",
+        "schema_type": "ExhibitionEvent"
+      }
     },
     {
       "id": "eclipse-yuran-henrique",
@@ -225,61 +246,38 @@
       "seo": {"description": "PART_ILHAS conversation with filmmaker and poet Artemisa Ferreira about creative process, images, intention and what happens before a work takes shape at Centro Cultural do Mindelo.", "title": "PART_ILHAS — ciclo de conversas com Artemisa Ferreira | A PRASA", "schema_type": "Event"}
     },
     {
-      "id": "50-anos-de-memoria-criacao-e-resistencia",
+      "id": "sinergia-da-materia",
       "kind": "dated-event",
-      "title": "50 Anos de Memória, Criação e Resistência",
+      "title": "Sinergia da Matéria: Entre o Bruto e o Traço",
       "provider": "CNAD",
-      "summary": "An exhibition at CNAD’s Galeria Bela Duarte marking the 50th anniversary of Cooperativa Resistência.",
+      "summary": "Explore Davitson Almeida’s investigation of stone, metal, drawing and three-dimensional form at CNAD’s Galeria Zero.",
       "category": "visual-arts",
-      "location": {
-        "name": "Galeria Bela Duarte, CNAD",
-        "locality": "Mindelo"
-      },
+      "location": {"name": "Galeria Zero, CNAD", "locality": "Mindelo", "street": "Praça Amílcar Cabral, Mindelo"},
       "source_url": "https://cnad.cv/info/",
       "source_type": "provider-visitor-info",
-      "start_date": "2026-07-23",
+      "start_date": "2026-07-31",
       "start_datetime": null,
       "end_datetime": null,
       "end_date": null,
       "end_precision": "month",
       "end_month": "2026-11",
-      "checked_at": "2026-09-01",
+      "checked_at": "2026-08-15",
       "publication_state": "published",
       "media_policy": "fallback_allowed",
-      "media_manifest_title": "50 Anos de Memória, Criação e Resistência",
-      "detail_page": "things-to-do/50-anos-de-memoria-criacao-e-resistencia/",
-      "free_admission": null,
-      "display": {
-        "status": "Opened 23 July 2026 · On view into November 2026",
-        "meta": "Galeria Bela Duarte, CNAD",
-        "checked": "Checked 1 September 2026"
-      },
+      "media_manifest_title": "Sinergia da Matéria: Entre o Bruto e o Traço",
+      "detail_page": "things-to-do/sinergia-da-materia/",
+      "free_admission": true,
+      "display": {"status": "On view until November 2026", "meta": "Exhibition by Davitson Almeida", "checked": "Checked 15 August 2026"},
       "media": null,
-      "card_action": {
-        "label": "Visitor information",
-        "url": "https://cnad.cv/info/"
-      },
+      "card_action": {"label": "Visitor information", "url": "https://cnad.cv/info/"},
       "detail": {
-        "facts": [
-          {
-            "label": "Dates",
-            "value": "Opened 23 July 2026 · On view into November 2026"
-          },
-          {
-            "label": "Where",
-            "value": "Galeria Bela Duarte, CNAD, Mindelo"
-          }
-        ],
-        "body": "50 Anos de Memória, Criação e Resistência is an exhibition at CNAD’s Galeria Bela Duarte in Mindelo, presented in connection with the 50th anniversary of Cooperativa Resistência.\n\nThe exhibition opened on 23 July 2026 and is on view into November 2026.",
-        "good_to_know": "Confirm current access and opening hours with CNAD before visiting.",
-        "checked": "Checked 1 September 2026",
+        "facts": [{"label": "Dates", "value": "On view until November 2026"}, {"label": "Where", "value": "Galeria Zero, CNAD, Praça Amílcar Cabral, Mindelo"}, {"label": "Admission", "value": "Free admission"}],
+        "body": "Explore Davitson Almeida’s investigation of stone, metal, drawing and three-dimensional form at CNAD’s Galeria Zero.",
+        "good_to_know": "Confirm current exhibition access and admission directly with CNAD before visiting.",
+        "checked": "Checked 15 August 2026",
         "action_label": "Visitor information"
       },
-      "seo": {
-        "description": "50 Anos de Memória, Criação e Resistência is an exhibition at CNAD’s Galeria Bela Duarte in Mindelo, presented in connection with the 50th anniversary of Cooperativa Resistência.",
-        "title": "50 Anos de Memória, Criação e Resistência — CNAD Exhibition in Mindelo | A PRASA",
-        "schema_type": "ExhibitionEvent"
-      }
+      "seo": {"description": "Sinergia da Matéria: Entre o Bruto e o Traço is an exhibition by Davitson Almeida at CNAD’s Galeria Zero in Mindelo, on view until November 2026.", "title": "Sinergia da Matéria: Entre o Bruto e o Traço — CNAD Exhibition in Mindelo | A PRASA", "schema_type": "ExhibitionEvent"}
     },
     {
       "id": "4-campeonato-nacional-senior-de-boxe",
@@ -341,53 +339,59 @@
       }
     },
     {
-      "id": "cartinha-dholanda-mindelo-2026",
+      "id": "50-anos-de-memoria-criacao-e-resistencia",
       "kind": "dated-event",
-      "title": "CARTINHA D’HOLANDA",
-      "provider": "Centro Cultural do Mindelo",
-      "summary": "CARTINHA D’HOLANDA brings photographs, stories, art and heritage connected to Cape Verdean communities in Rotterdam to Mindelo, with an opening at Centro Cultural do Mindelo on 12 September.",
+      "title": "50 Anos de Memória, Criação e Resistência",
+      "provider": "CNAD",
+      "summary": "An exhibition at CNAD’s Galeria Bela Duarte marking the 50th anniversary of Cooperativa Resistência.",
       "category": "visual-arts",
       "location": {
-        "name": "Centro Cultural do Mindelo",
+        "name": "Galeria Bela Duarte, CNAD",
         "locality": "Mindelo"
       },
-      "source_url": "https://verhalenhuisrotterdam.nl/za-12-sept-expositie-opent-in-sao-vicente-kaapverdie/",
-      "source_type": "Partner / exhibition source",
-      "start_date": "2026-09-12",
+      "source_url": "https://cnad.cv/info/",
+      "source_type": "provider-visitor-info",
+      "start_date": "2026-07-23",
       "start_datetime": null,
       "end_datetime": null,
-      "end_date": "2026-11-15",
-      "checked_at": "2026-09-11",
+      "end_date": null,
+      "end_precision": "month",
+      "end_month": "2026-11",
+      "checked_at": "2026-09-01",
       "publication_state": "published",
       "media_policy": "fallback_allowed",
-      "media_manifest_title": "CARTINHA D’HOLANDA",
-      "detail_page": "things-to-do/cartinha-dholanda-mindelo-2026/",
-      "free_admission": true,
+      "media_manifest_title": "50 Anos de Memória, Criação e Resistência",
+      "detail_page": "things-to-do/50-anos-de-memoria-criacao-e-resistencia/",
+      "free_admission": null,
       "display": {
-        "status": "Opens 12 September 2026 · On view through 15 November 2026",
-        "meta": "Centro Cultural do Mindelo + CNAD · Opening at 18:30",
-        "checked": "Checked 11 September 2026 against the partner exhibition page."
+        "status": "Opened 23 July 2026 · On view into November 2026",
+        "meta": "Galeria Bela Duarte, CNAD",
+        "checked": "Checked 1 September 2026"
       },
       "media": null,
       "card_action": {
-        "label": "View exhibition details",
-        "url": "https://verhalenhuisrotterdam.nl/za-12-sept-expositie-opent-in-sao-vicente-kaapverdie/"
+        "label": "Visitor information",
+        "url": "https://cnad.cv/info/"
       },
       "detail": {
         "facts": [
           {
             "label": "Dates",
-            "value": "Opens 12 September 2026 · On view through 15 November 2026"
+            "value": "Opened 23 July 2026 · On view into November 2026"
+          },
+          {
+            "label": "Where",
+            "value": "Galeria Bela Duarte, CNAD, Mindelo"
           }
         ],
-        "body": "The exhibition presents stories of Cape Verdean Rotterdammers through photographs, personal histories, art and heritage.\n\nIt opens at Centro Cultural do Mindelo on Saturday, 12 September 2026 at 18:30 and is presented across Centro Cultural do Mindelo and CNAD through 15 November 2026.",
-        "good_to_know": "Admission is free. The partner states that the exhibition is open daily except Sundays, with visiting hours of 10:00–13:00 and 15:00–20:00.\n\nThe published exhibition period is subject to change, so confirm current access with the venues before visiting.",
-        "checked": "Checked 11 September 2026 against the partner exhibition page.",
-        "action_label": "View exhibition details"
+        "body": "50 Anos de Memória, Criação e Resistência is an exhibition at CNAD’s Galeria Bela Duarte in Mindelo, presented in connection with the 50th anniversary of Cooperativa Resistência.\n\nThe exhibition opened on 23 July 2026 and is on view into November 2026.",
+        "good_to_know": "Confirm current access and opening hours with CNAD before visiting.",
+        "checked": "Checked 1 September 2026",
+        "action_label": "Visitor information"
       },
       "seo": {
-        "description": "CARTINHA D’HOLANDA opens at Centro Cultural do Mindelo on 12 September 2026 and is presented at Centro Cultural do Mindelo and CNAD through 15 November. Free admission.",
-        "title": "CARTINHA D’HOLANDA in Mindelo | A PRASA",
+        "description": "50 Anos de Memória, Criação e Resistência is an exhibition at CNAD’s Galeria Bela Duarte in Mindelo, presented in connection with the 50th anniversary of Cooperativa Resistência.",
+        "title": "50 Anos de Memória, Criação e Resistência — CNAD Exhibition in Mindelo | A PRASA",
         "schema_type": "ExhibitionEvent"
       }
     }

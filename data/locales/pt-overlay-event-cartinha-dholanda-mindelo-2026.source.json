@@ -5,7 +5,7 @@
   "project_09_status": "approved",
   "revision_class": "ADDITIVE_EVENT_KEYS",
   "owning_project": "Project 03",
-  "supplied_rows_approved": 14,
+  "supplied_rows_approved": 16,
   "review_required": 0,
   "blocking_issue": null,
   "rows": [
@@ -96,6 +96,28 @@
       "translation_status": "APPROVED",
       "source_revision": "P09-PT-CARTINHA-DHOLANDA-MINDELO-2026-2026-09-11-r1",
       "context_notes": "Same governed string as display.status, so the card and the detail dialog cannot drift apart."
+    },
+    {
+      "key": "event.cartinha-dholanda-mindelo-2026.detail.fact.admission.label",
+      "record_id": "cartinha-dholanda-mindelo-2026",
+      "source_en": "Admission",
+      "pt": "Admissão",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "GOVERNED_SOURCE",
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-CARTINHA-DHOLANDA-MINDELO-2026-2026-09-11-r1",
+      "context_notes": "Existing governed generic fact label."
+    },
+    {
+      "key": "event.cartinha-dholanda-mindelo-2026.detail.fact.admission.value_display",
+      "record_id": "cartinha-dholanda-mindelo-2026",
+      "source_en": "Free admission",
+      "pt": "Entrada livre",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "GOVERNED_SOURCE",
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-CARTINHA-DHOLANDA-MINDELO-2026-2026-09-11-r1",
+      "context_notes": "Project 09 ruling B. The bare string \"Free\" is deliberately NOT used: it is already bound to \"Gratuito\" elsewhere in the overlay, and a second mapping would make it ambiguous for the EN->PT index the static-page localizer builds. \"Free admission\" already resolves to \"Entrada livre\" for the incumbent Sinergia da Matéria record, so this row reuses that exact pairing and introduces no new ambiguity."
     },
     {
       "key": "event.cartinha-dholanda-mindelo-2026.detail.body",

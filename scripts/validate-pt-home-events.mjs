@@ -106,7 +106,29 @@ for (const record of events) {
     checkPair(record.id, 'detail.action_label', region, t(`event.${record.id}.detail.action_label`, 'en'), t(`event.${record.id}.detail.action_label`, 'pt'));
   }
   if (record.detail?.good_to_know) {
-    checkPair(record.id, 'detail.good_to_know', region, t(`event.${record.id}.detail.good_to_know`, 'en'), t(`event.${record.id}.detail.good_to_know`, 'pt'));
+    // Same treatment as the detail body directly above, for the same reason:
+    // the generator renders a governed "Good to know" block as one <p> per
+    // approved paragraph, so a multi-paragraph value is never present in the
+    // markup contiguously. Checking it one paragraph at a time through the
+    // shared bodyParagraphs() rule is what keeps this validator's derivation
+    // and the generator's rendering from drifting apart. A single-paragraph
+    // value yields exactly one check with the identical label and expectation
+    // this had before.
+    //
+    // These lines are LF-terminated while the rest of this file is CRLF: it is
+    // the only CRLF file in the repository, and `git diff --check` rejects a CR
+    // at end of line, so new lines here follow the repository convention rather
+    // than the outlier. Normalizing the whole file instead would bury a 17-line
+    // change in a 380-line diff.
+    const enGood = bodyParagraphs(t(`event.${record.id}.detail.good_to_know`, 'en'));
+    const ptGood = bodyParagraphs(t(`event.${record.id}.detail.good_to_know`, 'pt'));
+    if (enGood.length !== ptGood.length) {
+      errors.push(`${record.id}: governed EN good_to_know has ${enGood.length} paragraph(s) but PT has ${ptGood.length} — approved paragraph structure must match across locales`);
+    }
+    ptGood.forEach((paragraph, index) => {
+      const field = ptGood.length === 1 ? 'detail.good_to_know' : `detail.good_to_know paragraph ${index + 1}`;
+      checkPair(record.id, field, region, enGood[index], paragraph);
+    });
     checkPair(record.id, 'Good to know heading', region, t('ui.good_to_know', 'en'), t('ui.good_to_know', 'pt'));
   }
 

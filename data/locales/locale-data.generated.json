@@ -75,7 +75,7 @@
         "event_id": "cartinha-dholanda-mindelo-2026",
         "package_id": "aprasa-pt-cartinha-dholanda-mindelo-2026",
         "source_revision": "P09-PT-CARTINHA-DHOLANDA-MINDELO-2026-2026-09-11-r1",
-        "row_count": 14
+        "row_count": 16
       },
       {
         "file": "data/locales/pt-overlay-event-sinergia-da-materia.source.json",
@@ -112,10 +112,10 @@
     "governed_override_authorization": "fixed code-side contract in scripts/build-locale-data.mjs (GOVERNED_OVERRIDE_CONTRACTS)"
   },
   "counts": {
-    "total_rows": 870,
-    "required_for_pt_launch": 842,
+    "total_rows": 872,
+    "required_for_pt_launch": 844,
     "intentionally_unchanged": 28,
-    "approved_rows_total": 870,
+    "approved_rows_total": 872,
     "r3_delta_rows": 21,
     "r4_delta_rows": 26,
     "r5_delta_rows": 2,
@@ -123,7 +123,7 @@
     "r7_delta_rows": 19,
     "r8_delta_rows": 21,
     "r9_source_correction_rows": 3,
-    "event_delta_rows": 49,
+    "event_delta_rows": 51,
     "r10_renamed_rows": 76,
     "governed_override_rows": 6
   },
@@ -10503,6 +10503,30 @@
       "translation_status": "APPROVED",
       "source_revision": "P09-PT-CARTINHA-DHOLANDA-MINDELO-2026-2026-09-11-r1",
       "context_notes": "Same governed string as display.status, so the card and the detail dialog cannot drift apart.",
+      "linguistic_notes": ""
+    },
+    "event.cartinha-dholanda-mindelo-2026.detail.fact.admission.label": {
+      "key": "event.cartinha-dholanda-mindelo-2026.detail.fact.admission.label",
+      "en": "Admission",
+      "pt": "Admissão",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "GOVERNED_SOURCE",
+      "record_id": "cartinha-dholanda-mindelo-2026",
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-CARTINHA-DHOLANDA-MINDELO-2026-2026-09-11-r1",
+      "context_notes": "Existing governed generic fact label.",
+      "linguistic_notes": ""
+    },
+    "event.cartinha-dholanda-mindelo-2026.detail.fact.admission.value_display": {
+      "key": "event.cartinha-dholanda-mindelo-2026.detail.fact.admission.value_display",
+      "en": "Free admission",
+      "pt": "Entrada livre",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "GOVERNED_SOURCE",
+      "record_id": "cartinha-dholanda-mindelo-2026",
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-CARTINHA-DHOLANDA-MINDELO-2026-2026-09-11-r1",
+      "context_notes": "Project 09 ruling B. The bare string \"Free\" is deliberately NOT used: it is already bound to \"Gratuito\" elsewhere in the overlay, and a second mapping would make it ambiguous for the EN->PT index the static-page localizer builds. \"Free admission\" already resolves to \"Entrada livre\" for the incumbent Sinergia da Matéria record, so this row reuses that exact pairing and introduces no new ambiguity.",
       "linguistic_notes": ""
     },
     "event.cartinha-dholanda-mindelo-2026.detail.body": {
