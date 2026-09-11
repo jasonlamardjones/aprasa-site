@@ -339,6 +339,57 @@
         "title": "4.º Campeonato Nacional Sénior de Boxe | A PRASA",
         "schema_type": "SportsEvent"
       }
+    },
+    {
+      "id": "cartinha-dholanda-mindelo-2026",
+      "kind": "dated-event",
+      "title": "CARTINHA D’HOLANDA",
+      "provider": "Centro Cultural do Mindelo",
+      "summary": "CARTINHA D’HOLANDA brings photographs, stories, art and heritage connected to Cape Verdean communities in Rotterdam to Mindelo, with an opening at Centro Cultural do Mindelo on 12 September.",
+      "category": "visual-arts",
+      "location": {
+        "name": "Centro Cultural do Mindelo",
+        "locality": "Mindelo"
+      },
+      "source_url": "https://verhalenhuisrotterdam.nl/za-12-sept-expositie-opent-in-sao-vicente-kaapverdie/",
+      "source_type": "Partner / exhibition source",
+      "start_date": "2026-09-12",
+      "start_datetime": null,
+      "end_datetime": null,
+      "end_date": "2026-11-15",
+      "checked_at": "2026-09-11",
+      "publication_state": "published",
+      "media_policy": "fallback_allowed",
+      "media_manifest_title": "CARTINHA D’HOLANDA",
+      "detail_page": "things-to-do/cartinha-dholanda-mindelo-2026/",
+      "free_admission": true,
+      "display": {
+        "status": "Opens 12 September 2026 · On view through 15 November 2026",
+        "meta": "Centro Cultural do Mindelo + CNAD · Opening at 18:30",
+        "checked": "Checked 11 September 2026 against the partner exhibition page."
+      },
+      "media": null,
+      "card_action": {
+        "label": "View exhibition details",
+        "url": "https://verhalenhuisrotterdam.nl/za-12-sept-expositie-opent-in-sao-vicente-kaapverdie/"
+      },
+      "detail": {
+        "facts": [
+          {
+            "label": "Dates",
+            "value": "Opens 12 September 2026 · On view through 15 November 2026"
+          }
+        ],
+        "body": "The exhibition presents stories of Cape Verdean Rotterdammers through photographs, personal histories, art and heritage.\n\nIt opens at Centro Cultural do Mindelo on Saturday, 12 September 2026 at 18:30 and is presented across Centro Cultural do Mindelo and CNAD through 15 November 2026.",
+        "good_to_know": "Admission is free. The partner states that the exhibition is open daily except Sundays, with visiting hours of 10:00–13:00 and 15:00–20:00.\n\nThe published exhibition period is subject to change, so confirm current access with the venues before visiting.",
+        "checked": "Checked 11 September 2026 against the partner exhibition page.",
+        "action_label": "View exhibition details"
+      },
+      "seo": {
+        "description": "CARTINHA D’HOLANDA opens at Centro Cultural do Mindelo on 12 September 2026 and is presented at Centro Cultural do Mindelo and CNAD through 15 November. Free admission.",
+        "title": "CARTINHA D’HOLANDA in Mindelo | A PRASA",
+        "schema_type": "ExhibitionEvent"
+      }
     }
   ]
 }
