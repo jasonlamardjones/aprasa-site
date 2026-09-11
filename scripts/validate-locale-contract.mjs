@@ -50,14 +50,15 @@ for (const fileName of eventDeltaFiles) {
 
 // --- Overlay contract (counts) — combined r2 base (732) + r3 delta (21) + r4 delta (26)
 // + r5 delta (2) + r7 delta (19) + r8 delta (21) + r13 delta (8) + r14 delta (1)
-// + r15 delta (96). The r6 brand-voice delta overrides 42 existing PT values and adds
+// + r15 delta (96) + r16 provider-media alt delta (4). The r6 brand-voice delta overrides 42 existing PT values and adds
 // no keys, so every count below is unchanged by it; r13 adds the 8 Things-to-Do
 // collection-hub keys, r14 the runtime section fallback note, and r15 the 96
-// presentation keys for the eight weekly fixed-window opportunity records — all required. ---
-if (keys.length !== 926 + eventDeltaRequired + eventDeltaUnchanged) fail(`expected ${926 + eventDeltaRequired + eventDeltaUnchanged} total keys including approved event deltas, got ${keys.length}`);
+// presentation keys for the eight weekly fixed-window opportunity records; r16
+// adds four localized informative alt descriptions — all required. ---
+if (keys.length !== 930 + eventDeltaRequired + eventDeltaUnchanged) fail(`expected ${930 + eventDeltaRequired + eventDeltaUnchanged} total keys including approved event deltas, got ${keys.length}`);
 const required = keys.filter((k) => k.scope_status === "REQUIRED_FOR_PT_LAUNCH");
 const unchanged = keys.filter((k) => k.scope_status === "INTENTIONALLY_UNCHANGED");
-if (required.length !== 898 + eventDeltaRequired) fail(`expected ${898 + eventDeltaRequired} REQUIRED_FOR_PT_LAUNCH keys, got ${required.length}`);
+if (required.length !== 902 + eventDeltaRequired) fail(`expected ${902 + eventDeltaRequired} REQUIRED_FOR_PT_LAUNCH keys, got ${required.length}`);
 if (unchanged.length !== 28 + eventDeltaUnchanged) fail(`expected ${28 + eventDeltaUnchanged} INTENTIONALLY_UNCHANGED keys, got ${unchanged.length}`);
 if (data.provenance.delta_revision !== "P03-PT-SOURCE-2026-08-25-r3") {
   fail(`unexpected delta_revision: ${data.provenance.delta_revision}`);
@@ -160,6 +161,37 @@ for (const recordId of R15_RECORDS) {
       .map((id) => data.keys[`training.record.${id}.title`]?.en)
   );
   if (titles.size !== 3) fail("r15 the three Erasmus records do not carry three distinct governed titles");
+}
+
+// --- r16 delta spot checks (four provider-media alt descriptions) ---
+const R16_RECORDS = [
+  "unicv-undergraduate-admissions-third-phase-2026-2027",
+  "laczos-artisticos-2nd-edition-2026",
+  "unicv-confucius-chinese-language-courses-2026-2027",
+  "regea-oral-communications-call-2026",
+];
+if (data.provenance.delta16_package_id !== "aprasa-provider-media-alt-r16-delta") {
+  fail(`unexpected delta16_package_id: ${data.provenance.delta16_package_id}`);
+}
+if (data.provenance.delta16_revision !== "P04-MEDIA-ALT-2026-09-11-r16") {
+  fail(`unexpected delta16_revision: ${data.provenance.delta16_revision}`);
+}
+if (data.provenance.delta16_revision_class !== "ADDITIVE_NEW_KEYS" || data.provenance.delta16_row_count !== 4) {
+  fail("r16 provenance does not describe the four-key additive media-alt package");
+}
+for (const recordId of R16_RECORDS) {
+  const key = `training.record.${recordId}.alt`;
+  const row = data.keys[key];
+  if (!row) {
+    fail(`r16 key missing from generated locale data: ${key}`);
+    continue;
+  }
+  if (row.scope_status !== "REQUIRED_FOR_PT_LAUNCH") fail(`r16 ${key} must be REQUIRED_FOR_PT_LAUNCH`);
+  if (row.source_revision !== "P04-MEDIA-ALT-2026-09-11-r16") fail(`r16 ${key} provenance is not the r16 revision`);
+  if (row.record_id !== recordId) fail(`r16 ${key} is not scoped to its own record`);
+  if (typeof row.en !== "string" || row.en === "" || typeof row.pt !== "string" || row.pt === "") {
+    fail(`r16 ${key} requires informative EN and PT text`);
+  }
 }
 
 // --- r14 delta spot check (runtime section fallback note) ---

@@ -207,6 +207,22 @@ function installBoundaryRecord(root, boundary) {
   insertHomeMarkers(root, path.join('pt', 'index.html'), BOUNDARY_ID);
 }
 
+// Install an unresolved media state only inside the throwaway repository used
+// by the gate-propagation regression. The production corpus is now media-
+// complete, so the test must own the exit-2 condition it is asserting instead
+// of depending on whichever live record happens to remain unresolved.
+function installTemporaryMediaGap(root) {
+  const manifestPath = path.join(root, 'internal', 'provider-media-manifest.json');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  const record = manifest.records.find((item) => item.title === 'China Ambassador Scholarship for Uni-CV Students');
+  if (!record) throw new Error('test media-gap fixture record is missing');
+  record.media_state = 'fallback-temporary';
+  record.fallback_reason = 'Test-only unresolved media state used to exercise exit-2 propagation.';
+  record.media_provenance = 'Test-only standardized fallback in an isolated repository; no production metadata is changed.';
+  record.media_checked_date = null;
+  writeJsonFile(manifestPath, manifest);
+}
+
 const BOUNDARY_ROUTES = [
   `things-to-do/${BOUNDARY_ID}/index.html`,
   `pt/things-to-do/${BOUNDARY_ID}/index.html`
@@ -228,7 +244,10 @@ const BOUNDARY_ROUTES = [
 //   asOf           override the test packet's control.as_of. Only the
 //                  deliberate cross-boundary divergence case supplies this;
 //                  every normal case stays bound to committed currentness.
-function createRepository({ branch = 'feature/phase1b-test', committedAsOf = null, boundaryDay = null, asOf = null } = {}) {
+//   openMediaGate  install one test-only fallback-temporary manifest state so
+//                  exit-2 propagation is deterministic even when production
+//                  media is fully resolved.
+function createRepository({ branch = 'feature/phase1b-test', committedAsOf = null, boundaryDay = null, asOf = null, openMediaGate = false } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aprasa-phase1b-test-'));
   const remote = `${root}-remote.git`;
   fs.cpSync(ROOT, root, { recursive: true, filter: (src) => path.basename(src) !== '.git' });
@@ -238,6 +257,7 @@ function createRepository({ branch = 'feature/phase1b-test', committedAsOf = nul
     writeJsonFile(path.join(root, CURRENTNESS_FILE), { ...JSON.parse(fs.readFileSync(path.join(root, CURRENTNESS_FILE), 'utf8')), as_of: committedAsOf });
   }
   if (boundaryDay) installBoundaryRecord(root, boundaryDay);
+  if (openMediaGate) installTemporaryMediaGap(root);
   const committed = readCommittedCurrentness(root);
   if (committedAsOf || boundaryDay) runCanonicalGenerators(root, committed);
 
@@ -378,11 +398,11 @@ record('successful guarded write using non-public fixture', () => withRepository
 // the way out. A test that builds its own result cannot observe that, so the
 // precise path that regressed in patch cycle 2 would stay uncovered.
 //
-// The fixture repository is a copy of this repository, which currently carries
-// fallback-temporary media records, so validate-card-media.mjs genuinely exits
-// 2 here. The candidate is rolled back immediately; nothing outside the
-// throwaway copy is touched, and no PR, merge or deployment occurs.
-record('real-write result and founder report preserve the open media gate', () => withRepository((ctx) => {
+// The fixture repository explicitly installs one fallback-temporary state, so
+// validate-card-media.mjs genuinely exits 2 without borrowing a live production
+// gap. The candidate is rolled back immediately; nothing outside the throwaway
+// copy is touched, and no PR, merge or deployment occurs.
+record('real-write result and founder report preserve the open media gate', () => withRepository({ openMediaGate: true }, (ctx) => {
   const result = prepareRealWriteCandidate(ctx);
   try {
     const outcomes = result.validation_outcomes;

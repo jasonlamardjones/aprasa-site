@@ -80,13 +80,24 @@ check('6c. one open-gate outcome among passes still resolves the batch to OPEN',
   ]) === MEDIA_GATE_OPEN);
 
 // --- 7: the dry-run proof carries the state, end to end --------------------
-// The real script, the real validators, the real repository state. This is the
-// artifact the real write consumes, so if the gate is lost here it is lost
-// everywhere downstream.
+// The real script and real validators against an isolated copy of the real
+// repository. The copy installs its own fallback-temporary state so this
+// regression remains deterministic after production media becomes complete.
+// This is the artifact the real write consumes, so if the gate is lost here it
+// is lost everywhere downstream.
 {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'aprasa-media-gate-'));
   try {
     fs.cpSync(ROOT, dir, { recursive: true, filter: (src) => !src.includes(`${path.sep}.git${path.sep}`) && path.basename(src) !== '.git' });
+    const manifestPath = path.join(dir, 'internal', 'provider-media-manifest.json');
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    const gap = manifest.records.find((record) => record.title === 'China Ambassador Scholarship for Uni-CV Students');
+    if (!gap) throw new Error('test media-gap fixture record is missing');
+    gap.media_state = 'fallback-temporary';
+    gap.fallback_reason = 'Test-only unresolved media state used to exercise exit-2 propagation.';
+    gap.media_provenance = 'Test-only standardized fallback in an isolated repository; no production metadata is changed.';
+    gap.media_checked_date = null;
+    fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
     fs.mkdirSync(path.join(dir, '.git'), { recursive: true });
     spawnSync('git', ['init', '-q', '-b', 'main'], { cwd: dir });
     spawnSync('git', ['config', 'user.email', 'test@aprasa.org'], { cwd: dir });

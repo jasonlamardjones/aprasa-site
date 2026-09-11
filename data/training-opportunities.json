@@ -967,6 +967,28 @@
       },
       "checked_at": "2026-09-07",
       "end_date": "2026-09-11",
+      "media_manifest_title": "Uni-CV Undergraduate Admissions — Third Phase 2026/2027",
+      "media": {
+        "asset": "assets/card-media/trainings-tools/unicv-undergraduate-admissions-third-phase-2026-2027.webp",
+        "width": 960,
+        "height": 960,
+        "loading": "lazy",
+        "decoding": "async",
+        "alt": {
+          "locale_key": "training.record.unicv-undergraduate-admissions-third-phase-2026-2027.alt"
+        },
+        "card_class": "card-media card-media-poster",
+        "detail_class": "dialog-media dialog-media-poster",
+        "layout": "block",
+        "attribute_order": [
+          "src",
+          "width",
+          "height",
+          "loading",
+          "decoding",
+          "alt"
+        ]
+      },
       "card": {
         "action_tags": null,
         "status": {
@@ -1046,6 +1068,28 @@
       },
       "checked_at": "2026-09-07",
       "end_date": "2026-09-15",
+      "media_manifest_title": "Laç(z)os Artísticos — Second Edition Mobility Grants",
+      "media": {
+        "asset": "assets/card-media/trainings-tools/laczos-artisticos-2nd-edition-2026.webp",
+        "width": 850,
+        "height": 638,
+        "loading": "lazy",
+        "decoding": "async",
+        "alt": {
+          "locale_key": "training.record.laczos-artisticos-2nd-edition-2026.alt"
+        },
+        "card_class": "card-media card-media-poster",
+        "detail_class": "dialog-media dialog-media-poster",
+        "layout": "block",
+        "attribute_order": [
+          "src",
+          "width",
+          "height",
+          "loading",
+          "decoding",
+          "alt"
+        ]
+      },
       "card": {
         "action_tags": null,
         "status": {
@@ -1204,6 +1248,28 @@
       },
       "checked_at": "2026-09-07",
       "end_date": "2026-09-25",
+      "media_manifest_title": "Chinese-Language Courses at the Confucius Institute — 2026/2027",
+      "media": {
+        "asset": "assets/card-media/trainings-tools/unicv-confucius-chinese-language-courses-2026-2027.webp",
+        "width": 960,
+        "height": 539,
+        "loading": "lazy",
+        "decoding": "async",
+        "alt": {
+          "locale_key": "training.record.unicv-confucius-chinese-language-courses-2026-2027.alt"
+        },
+        "card_class": "card-media card-media-poster",
+        "detail_class": "dialog-media dialog-media-poster",
+        "layout": "block",
+        "attribute_order": [
+          "src",
+          "width",
+          "height",
+          "loading",
+          "decoding",
+          "alt"
+        ]
+      },
       "card": {
         "action_tags": null,
         "status": {
@@ -1283,6 +1349,28 @@
       },
       "checked_at": "2026-09-07",
       "end_date": "2026-09-30",
+      "media_manifest_title": "REGEA 2026 — Call for Oral Communications",
+      "media": {
+        "asset": "assets/card-media/trainings-tools/regea-oral-communications-call-2026.webp",
+        "width": 960,
+        "height": 540,
+        "loading": "lazy",
+        "decoding": "async",
+        "alt": {
+          "locale_key": "training.record.regea-oral-communications-call-2026.alt"
+        },
+        "card_class": "card-media card-media-poster",
+        "detail_class": "dialog-media dialog-media-poster",
+        "layout": "block",
+        "attribute_order": [
+          "src",
+          "width",
+          "height",
+          "loading",
+          "decoding",
+          "alt"
+        ]
+      },
       "card": {
         "action_tags": null,
         "status": {
