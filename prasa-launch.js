@@ -505,3 +505,164 @@
   });
 
 })();
+
+(() => {
+  "use strict";
+
+  const GOVERNED_WHATSAPP_URL = "https://wa.me/message/GC3C5Q4MSF37I1";
+
+  function normalizeUrl(value) {
+    try {
+      return new URL(value, window.location.href).href;
+    } catch {
+      return null;
+    }
+  }
+
+  function resolveGovernedWhatsAppSource() {
+    const whatsappAnchors = Array.from(document.querySelectorAll('a[href*="wa.me/"]'));
+    if (!whatsappAnchors.length) return null;
+
+    const destinations = new Set(whatsappAnchors.map((anchor) => normalizeUrl(anchor.getAttribute("href"))).filter(Boolean));
+    if (destinations.size !== 1 || !destinations.has(GOVERNED_WHATSAPP_URL)) {
+      console.warn("A PRASA floating WhatsApp control not initialized: incumbent WhatsApp destination is missing or conflicts with the governed destination.");
+      return null;
+    }
+
+    const exactAnchors = whatsappAnchors.filter((anchor) => normalizeUrl(anchor.getAttribute("href")) === GOVERNED_WHATSAPP_URL);
+    return exactAnchors.find((anchor) => anchor.closest(".footer-contact, .site-footer") && /whatsapp/i.test(anchor.textContent || ""))
+      || exactAnchors.find((anchor) => /whatsapp/i.test(anchor.textContent || ""))
+      || exactAnchors[0]
+      || null;
+  }
+
+  function createIcon(symbol) {
+    const icon = document.createElement("span");
+    icon.className = "floating-utility-icon";
+    icon.setAttribute("aria-hidden", "true");
+    icon.textContent = symbol;
+    return icon;
+  }
+
+  function createWhatsAppControl(sourceAnchor) {
+    const label = (sourceAnchor.textContent || "").trim();
+    if (!label) return null;
+
+    const link = document.createElement("a");
+    link.className = "floating-utility floating-utility-whatsapp";
+    link.href = sourceAnchor.href;
+    if (sourceAnchor.target) link.target = sourceAnchor.target;
+    if (sourceAnchor.rel) link.rel = sourceAnchor.rel;
+    link.setAttribute("aria-label", label);
+    link.title = label;
+    link.append(createIcon("↗"));
+
+    const text = document.createElement("span");
+    text.className = "floating-utility-label";
+    text.textContent = "WhatsApp";
+    link.append(text);
+    return link;
+  }
+
+  function createHomeNavigationControls(cluster) {
+    const nav = document.querySelector(".home-page-nav");
+    if (!nav) return;
+
+    const targets = Array.from(nav.querySelectorAll('a[href^="#"]'))
+      .map((anchor) => {
+        const id = anchor.getAttribute("href")?.slice(1);
+        const target = id ? document.getElementById(id) : null;
+        const label = (anchor.textContent || "").trim();
+        return target && label ? {target, label} : null;
+      })
+      .filter(Boolean);
+    if (!targets.length) return;
+
+    const backTop = document.querySelector("a.back-top[href^=\"#\"]");
+    const upLabel = (backTop?.textContent || "").trim();
+    if (!upLabel) return;
+
+    const navGroup = document.createElement("div");
+    navGroup.className = "floating-nav-controls";
+
+    const up = document.createElement("button");
+    up.type = "button";
+    up.className = "floating-utility floating-utility-nav";
+    up.setAttribute("aria-label", upLabel);
+    up.title = upLabel;
+    up.append(createIcon("↑"));
+
+    const down = document.createElement("button");
+    down.type = "button";
+    down.className = "floating-utility floating-utility-nav";
+    down.append(createIcon("↓"));
+
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const behavior = () => reducedMotion.matches ? "auto" : "smooth";
+
+    function nextTarget() {
+      return targets.find(({target}) => target.getBoundingClientRect().top > 1) || null;
+    }
+
+    function update() {
+      up.hidden = window.scrollY <= 0;
+      const next = nextTarget();
+      down.hidden = !next;
+      if (next) {
+        down.setAttribute("aria-label", next.label);
+        down.title = next.label;
+      } else {
+        down.removeAttribute("aria-label");
+        down.removeAttribute("title");
+      }
+    }
+
+    up.addEventListener("click", () => {
+      window.scrollTo({top: 0, behavior: behavior()});
+    });
+    down.addEventListener("click", () => {
+      nextTarget()?.target.scrollIntoView({behavior: behavior(), block: "start"});
+    });
+
+    let scheduled = false;
+    const scheduleUpdate = () => {
+      if (scheduled) return;
+      scheduled = true;
+      window.requestAnimationFrame(() => {
+        scheduled = false;
+        update();
+      });
+    };
+    window.addEventListener("scroll", scheduleUpdate, {passive: true});
+    window.addEventListener("resize", scheduleUpdate);
+
+    navGroup.append(up, down);
+    cluster.append(navGroup);
+    update();
+  }
+
+  function initFloatingUtilities() {
+    if (document.querySelector("[data-floating-utilities]")) return;
+
+    const sourceAnchor = resolveGovernedWhatsAppSource();
+    if (!sourceAnchor || normalizeUrl(sourceAnchor.href) !== GOVERNED_WHATSAPP_URL) return;
+
+    const whatsApp = createWhatsAppControl(sourceAnchor);
+    if (!whatsApp) return;
+
+    const cluster = document.createElement("div");
+    cluster.className = "floating-utilities";
+    cluster.dataset.floatingUtilities = "";
+    cluster.setAttribute("role", "group");
+    cluster.setAttribute("aria-label", "A PRASA");
+    cluster.append(whatsApp);
+    createHomeNavigationControls(cluster);
+    document.body.append(cluster);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initFloatingUtilities, {once: true});
+  } else {
+    initFloatingUtilities();
+  }
+})();

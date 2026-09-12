@@ -334,3 +334,76 @@
 
   enhanceMap();
 })();
+
+(() => {
+  "use strict";
+
+  const GOVERNED_WHATSAPP_URL = "https://wa.me/message/GC3C5Q4MSF37I1";
+
+  function normalizeUrl(value) {
+    try {
+      return new URL(value, window.location.href).href;
+    } catch {
+      return null;
+    }
+  }
+
+  function resolveGovernedWhatsAppSource() {
+    const whatsappAnchors = Array.from(document.querySelectorAll('a[href*="wa.me/"]'));
+    if (!whatsappAnchors.length) return null;
+
+    const destinations = new Set(whatsappAnchors.map((anchor) => normalizeUrl(anchor.getAttribute("href"))).filter(Boolean));
+    if (destinations.size !== 1 || !destinations.has(GOVERNED_WHATSAPP_URL)) {
+      console.warn("A PRASA floating WhatsApp control not initialized: incumbent WhatsApp destination is missing or conflicts with the governed destination.");
+      return null;
+    }
+
+    const exactAnchors = whatsappAnchors.filter((anchor) => normalizeUrl(anchor.getAttribute("href")) === GOVERNED_WHATSAPP_URL);
+    return exactAnchors.find((anchor) => anchor.closest(".source-section") && /whatsapp/i.test(anchor.textContent || ""))
+      || exactAnchors.find((anchor) => /whatsapp/i.test(anchor.textContent || ""))
+      || null;
+  }
+
+  function initFloatingWhatsApp() {
+    if (document.querySelector("[data-floating-utilities]")) return;
+
+    const sourceAnchor = resolveGovernedWhatsAppSource();
+    if (!sourceAnchor || normalizeUrl(sourceAnchor.href) !== GOVERNED_WHATSAPP_URL) return;
+
+    const label = (sourceAnchor.textContent || "").trim();
+    if (!label) return;
+
+    const cluster = document.createElement("div");
+    cluster.className = "floating-utilities";
+    cluster.dataset.floatingUtilities = "";
+    cluster.setAttribute("role", "group");
+    cluster.setAttribute("aria-label", "A PRASA");
+
+    const link = document.createElement("a");
+    link.className = "floating-utility floating-utility-whatsapp";
+    link.href = sourceAnchor.href;
+    if (sourceAnchor.target) link.target = sourceAnchor.target;
+    if (sourceAnchor.rel) link.rel = sourceAnchor.rel;
+    link.setAttribute("aria-label", label);
+    link.title = label;
+
+    const icon = document.createElement("span");
+    icon.className = "floating-utility-icon";
+    icon.setAttribute("aria-hidden", "true");
+    icon.textContent = "↗";
+
+    const text = document.createElement("span");
+    text.className = "floating-utility-label";
+    text.textContent = "WhatsApp";
+
+    link.append(icon, text);
+    cluster.append(link);
+    document.body.append(cluster);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initFloatingWhatsApp, {once: true});
+  } else {
+    initFloatingWhatsApp();
+  }
+})();
