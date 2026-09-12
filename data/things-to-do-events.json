@@ -123,7 +123,12 @@
         "meta": "Centro Cultural do Mindelo + CNAD · Opening at 18:30",
         "checked": "Checked 11 September 2026 against the partner exhibition page."
       },
-      "media": null,
+      "media": {
+        "asset": "assets/card-media/things-to-do/sinergia-da-materia-editorial-fallback.webp",
+        "alt": "",
+        "width": 1200,
+        "height": 900
+      },
       "card_action": {
         "label": "View exhibition details",
         "url": "https://verhalenhuisrotterdam.nl/za-12-sept-expositie-opent-in-sao-vicente-kaapverdie/"

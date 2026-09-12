@@ -73,6 +73,7 @@ const R10_MIGRATION_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r10-mi
 const DELTA13_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r13-things-to-do-hub.source.json");
 const DELTA14_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r14-section-fallback-note.source.json");
 const DELTA15_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r15-weekly-opportunity-2026-09.source.json");
+const DELTA16_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r16-provider-media-alt.source.json");
 const LOCALE_DIR = path.join(ROOT, "data", "locales");
 const OUT_PATH = path.join(ROOT, "data", "locales", "locale-data.generated.json");
 
@@ -1349,6 +1350,90 @@ for (const recordId of EXPECTED_DELTA15.records) {
   }
 }
 
+// --- r16 delta: four founder-authorized provider-media alt descriptions ----
+//
+// These strings are presentation content and therefore stay in the governed
+// locale chain rather than being embedded in the training generator or data
+// record. The package is deliberately one key per cleared record and additive
+// only: it cannot rewrite the previously approved r15 opportunity copy.
+const EXPECTED_DELTA16 = {
+  package_id: "aprasa-provider-media-alt-r16-delta",
+  revision_class: "ADDITIVE_NEW_KEYS",
+  source_revision: "P04-MEDIA-ALT-2026-09-11-r16",
+  previous_revision: "P03-PT-SOURCE-2026-09-07-r15",
+  row_count: 4,
+  approval_status: "FOUNDER_AUTHORIZED_FOR_IMPLEMENTATION",
+  records: [
+    "unicv-undergraduate-admissions-third-phase-2026-2027",
+    "laczos-artisticos-2nd-edition-2026",
+    "unicv-confucius-chinese-language-courses-2026-2027",
+    "regea-oral-communications-call-2026",
+  ],
+};
+
+const delta16 = JSON.parse(readFileSync(DELTA16_PATH, "utf8"));
+for (const field of ["package_id", "revision_class", "source_revision", "previous_revision", "approval_status"]) {
+  if (delta16[field] !== EXPECTED_DELTA16[field]) {
+    fail(`r16 ${field} mismatch: got ${JSON.stringify(delta16[field])}, expected ${JSON.stringify(EXPECTED_DELTA16[field])}`);
+  }
+}
+if (!Array.isArray(delta16.rows) || delta16.rows.length !== EXPECTED_DELTA16.row_count) {
+  fail(`r16 row count mismatch: got ${delta16.rows?.length}, expected ${EXPECTED_DELTA16.row_count}`);
+}
+if (delta16.supplied_rows_approved !== EXPECTED_DELTA16.row_count
+    || delta16.review_required !== 0
+    || delta16.semantic_escalations_required !== 0
+    || delta16.blocking_issue != null) {
+  fail("r16 has unresolved accessibility-copy approval state");
+}
+if (delta16.missing_or_unaccounted_row_count !== 0) {
+  fail(`r16 missing_or_unaccounted_row_count is non-zero: ${delta16.missing_or_unaccounted_row_count}`);
+}
+for (const listField of ["duplicate_keys", "placeholder_mismatches", "a_prasa_to_a_praca_violations"]) {
+  if ((delta16[listField] || []).length !== 0) fail(`r16 ${listField} is non-empty: ${JSON.stringify(delta16[listField])}`);
+}
+if (delta16.source_english_changed !== false
+    || delta16.change_control_status?.new_keys_introduced !== EXPECTED_DELTA16.row_count
+    || delta16.change_control_status?.existing_keys_overridden !== 0
+    || delta16.change_control_status?.lifecycle_or_publication_state_modified !== 0) {
+  fail("r16 declares a change outside the four additive accessibility keys");
+}
+
+const DELTA16_RECORDS = new Set(EXPECTED_DELTA16.records);
+const delta16SeenRecords = new Set();
+for (const row of delta16.rows) {
+  if (seen.has(row.key)) fail(`r16 key "${row.key}" collides with an existing key`);
+  seen.add(row.key);
+  if (!DELTA16_RECORDS.has(row.record_id)) fail(`r16 key "${row.key}" targets unauthorized record ${JSON.stringify(row.record_id)}`);
+  if (row.key !== `training.record.${row.record_id}.alt`) fail(`r16 key "${row.key}" is not its record's alt key`);
+  if (delta16SeenRecords.has(row.record_id)) fail(`r16 declares more than one alt key for record "${row.record_id}"`);
+  delta16SeenRecords.add(row.record_id);
+  if (row.source_revision !== EXPECTED_DELTA16.source_revision) fail(`r16 ${row.key} source_revision mismatch`);
+  if (row.scope_status !== "REQUIRED_FOR_PT_LAUNCH") fail(`r16 ${row.key} must be REQUIRED_FOR_PT_LAUNCH`);
+  if (row.translation_status !== "APPROVED") fail(`r16 ${row.key} is not APPROVED`);
+  if (!row.source_en || !row.pt) fail(`r16 ${row.key} requires non-empty EN and PT values`);
+  const enPlaceholders = (row.source_en.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+  const ptPlaceholders = (row.pt.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+  if (JSON.stringify(enPlaceholders) !== JSON.stringify(ptPlaceholders)) fail(`r16 ${row.key} placeholder mismatch`);
+  if ([row.source_en, row.pt].some((value) => value.includes("A PRAÇA"))) fail(`r16 ${row.key} violates protected A PRASA brand spelling`);
+
+  keys[row.key] = {
+    key: row.key,
+    en: row.source_en,
+    pt: row.pt,
+    scope_status: row.scope_status,
+    identity_policy: row.identity_policy,
+    record_id: row.record_id,
+    translation_status: row.translation_status,
+    source_revision: row.source_revision,
+    context_notes: row.context_notes || "",
+    linguistic_notes: row.linguistic_notes || "",
+  };
+}
+for (const recordId of EXPECTED_DELTA16.records) {
+  if (!delta16SeenRecords.has(recordId)) fail(`r16 is missing the alt key for authorized record "${recordId}"`);
+}
+
 // --- r10 migration: ATOMIC namespace rename, applied last -------------------
 //
 // Project 09 approved moving the governed Home training presentation keys off
@@ -1744,6 +1829,7 @@ const output = {
       "data/locales/pt-overlay-r13-things-to-do-hub.source.json",
       "data/locales/pt-overlay-r14-section-fallback-note.source.json",
       "data/locales/pt-overlay-r15-weekly-opportunity-2026-09.source.json",
+      "data/locales/pt-overlay-r16-provider-media-alt.source.json",
     ],
     base_revision: pkg.source_revision,
     delta_revision: delta.source_revision,
@@ -1771,6 +1857,10 @@ const output = {
     delta15_revision: delta15.source_revision,
     delta15_revision_class: delta15.revision_class,
     delta15_row_count: delta15.rows.length,
+    delta16_package_id: delta16.package_id,
+    delta16_revision: delta16.source_revision,
+    delta16_revision_class: delta16.revision_class,
+    delta16_row_count: delta16.rows.length,
     delta9_superseding_ruling: delta9.superseding_ruling,
     delta9_owning_project: delta9.owning_project,
     event_delta_packages: eventDeltaPackages,
@@ -1812,6 +1902,7 @@ const output = {
     r8_delta_rows: delta8.rows.length,
     r9_source_correction_rows: delta9.rows.length,
     event_delta_rows: eventDeltaRequired + eventDeltaUnchanged,
+    r16_delta_rows: delta16.rows.length,
     r10_renamed_rows: r10Renamed.length,
     governed_override_rows: governedOverrideCount,
   },

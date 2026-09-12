@@ -207,6 +207,22 @@ function installBoundaryRecord(root, boundary) {
   insertHomeMarkers(root, path.join('pt', 'index.html'), BOUNDARY_ID);
 }
 
+// Install an unresolved media state only inside the throwaway repository used
+// by the gate-propagation regression. The production corpus is now media-
+// complete, so the test must own the exit-2 condition it is asserting instead
+// of depending on whichever live record happens to remain unresolved.
+function installTemporaryMediaGap(root) {
+  const manifestPath = path.join(root, 'internal', 'provider-media-manifest.json');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  const record = manifest.records.find((item) => item.title === 'China Ambassador Scholarship for Uni-CV Students');
+  if (!record) throw new Error('test media-gap fixture record is missing');
+  record.media_state = 'fallback-temporary';
+  record.fallback_reason = 'Test-only unresolved media state used to exercise exit-2 propagation.';
+  record.media_provenance = 'Test-only standardized fallback in an isolated repository; no production metadata is changed.';
+  record.media_checked_date = null;
+  writeJsonFile(manifestPath, manifest);
+}
+
 const BOUNDARY_ROUTES = [
   `things-to-do/${BOUNDARY_ID}/index.html`,
   `pt/things-to-do/${BOUNDARY_ID}/index.html`
@@ -228,7 +244,10 @@ const BOUNDARY_ROUTES = [
 //   asOf           override the test packet's control.as_of. Only the
 //                  deliberate cross-boundary divergence case supplies this;
 //                  every normal case stays bound to committed currentness.
-function createRepository({ branch = 'feature/phase1b-test', committedAsOf = null, boundaryDay = null, asOf = null } = {}) {
+//   openMediaGate  install one test-only fallback-temporary manifest state so
+//                  exit-2 propagation is deterministic even when production
+//                  media is fully resolved.
+function createRepository({ branch = 'feature/phase1b-test', committedAsOf = null, boundaryDay = null, asOf = null, openMediaGate = false } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aprasa-phase1b-test-'));
   const remote = `${root}-remote.git`;
   fs.cpSync(ROOT, root, { recursive: true, filter: (src) => path.basename(src) !== '.git' });
@@ -238,6 +257,7 @@ function createRepository({ branch = 'feature/phase1b-test', committedAsOf = nul
     writeJsonFile(path.join(root, CURRENTNESS_FILE), { ...JSON.parse(fs.readFileSync(path.join(root, CURRENTNESS_FILE), 'utf8')), as_of: committedAsOf });
   }
   if (boundaryDay) installBoundaryRecord(root, boundaryDay);
+  if (openMediaGate) installTemporaryMediaGap(root);
   const committed = readCommittedCurrentness(root);
   if (committedAsOf || boundaryDay) runCanonicalGenerators(root, committed);
 
@@ -368,6 +388,66 @@ record('successful guarded write using non-public fixture', () => withRepository
   rollbackRealWriteCandidate(ctx.root, result);
   assertClean(ctx.root, ctx.baseline);
 }), 'original');
+
+// --- the open media gate survives the REAL write -----------------------------
+//
+// This asserts against the object prepareRealWriteCandidate actually returns
+// and against the founder report it actually writes to disk -- not against a
+// handcrafted result. That distinction is the whole point: the defect this
+// pins was not a wrong classification, it was correct state being dropped on
+// the way out. A test that builds its own result cannot observe that, so the
+// precise path that regressed in patch cycle 2 would stay uncovered.
+//
+// The fixture repository explicitly installs one fallback-temporary state, so
+// validate-card-media.mjs genuinely exits 2 without borrowing a live production
+// gap. The candidate is rolled back immediately; nothing outside the throwaway
+// copy is touched, and no PR, merge or deployment occurs.
+record('real-write result and founder report preserve the open media gate', () => withRepository({ openMediaGate: true }, (ctx) => {
+  const result = prepareRealWriteCandidate(ctx);
+  try {
+    const outcomes = result.validation_outcomes;
+    if (!Array.isArray(outcomes)) throw new Error('real result carries no validation_outcomes');
+
+    // 1-4: the media validator's own recorded outcome.
+    const media = outcomes.find((outcome) => outcome.step === 'scripts/validate-card-media.mjs');
+    if (!media) throw new Error('real result has no validate-card-media.mjs outcome');
+    if (media.status !== 2) throw new Error(`media outcome status is ${JSON.stringify(media.status)}, expected numeric 2`);
+    if (media.passed !== false) throw new Error('an exit-2 media outcome must never be recorded as passed');
+    if (media.media_gate_open !== true) throw new Error('media outcome did not record media_gate_open');
+
+    // 5-7: result-level disposition.
+    if (result.media_gate !== 'OPEN') throw new Error(`result.media_gate is ${JSON.stringify(result.media_gate)}, expected "OPEN"`);
+    if (result.media_gate_open !== true) throw new Error('result.media_gate_open did not survive the real write');
+    if (result.merge_allowed !== false) throw new Error('an open media gate must never be merge-ready');
+
+    // 8-10: the founder report as actually written into the candidate.
+    const reportPath = path.join(ctx.root, 'automation', 'things-to-do', 'runs', `${ctx.packet.event.id}.md`);
+    const report = fs.readFileSync(reportPath, 'utf8');
+    if (!/MEDIA GATE: OPEN/.test(report)) throw new Error('written founder report does not state MEDIA GATE: OPEN');
+    if (!/unresolved media records remain/.test(report) || !/not media-complete for merge/.test(report)) {
+      throw new Error('written founder report does not explain that the branch is not media-complete');
+    }
+    if (/- Media: approved/.test(report)) throw new Error('written founder report calls media approved while the gate is open');
+    if (!/- Merge allowed: false/.test(report)) throw new Error('written founder report does not carry the merge stop gate');
+
+    // 11: totals count only genuine passes.
+    const passedCount = outcomes.filter((outcome) => outcome.passed === true).length;
+    const expectedLine = `- Validation: ${passedCount} of ${outcomes.length} incumbent validators passed`;
+    if (!report.includes(expectedLine)) {
+      throw new Error(`written founder report validation total is not "${expectedLine}"`);
+    }
+    if (passedCount >= outcomes.length) throw new Error('an open gate must leave at least one outcome unpassed');
+
+    // The persisted machine-readable artifact must agree with the report.
+    const artifact = JSON.parse(fs.readFileSync(path.join(ctx.root, 'automation', 'things-to-do', 'runs', `${ctx.packet.event.id}.json`), 'utf8'));
+    if (artifact.media_gate !== 'OPEN' || artifact.media_gate_open !== true || artifact.merge_allowed !== false) {
+      throw new Error('persisted run artifact lost the open media gate');
+    }
+  } finally {
+    rollbackRealWriteCandidate(ctx.root, result);
+  }
+  assertClean(ctx.root, ctx.baseline);
+}), 'media-gate');
 
 const proofContext = createRepository();
 let trustedProof;

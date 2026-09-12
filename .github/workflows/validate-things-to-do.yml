@@ -23,6 +23,7 @@ on:
       - 'scripts/prepare-event-publication.mjs'
       - 'scripts/write-event-publication.mjs'
       - 'scripts/test-event-publication-write.mjs'
+      - 'scripts/test-media-gate-propagation.mjs'
       - 'scripts/test-event-publication-packet-currentness.mjs'
       - 'scripts/validate-event-publication-packet.mjs'
       - 'scripts/lib/event-publication-contract.mjs'
@@ -98,6 +99,9 @@ jobs:
 
       - name: Validate Phase 1B guarded real-write workflow
         run: node scripts/test-event-publication-write.mjs
+
+      - name: Validate media-gate exit-2 contract and propagation
+        run: node scripts/test-media-gate-propagation.mjs
 
       - name: Load explicit currentness date
         shell: bash
@@ -275,6 +279,28 @@ jobs:
               exit 1
             fi
           }
+          # The preview identity, asked of the shipped collection library rather
+          # than hard-coded a second time: Home must render exactly the first
+          # three eligible records in canonical order, in that order. The
+          # per-title checks below stay as they are; this one additionally
+          # cannot go stale when the canonical corpus changes, which is the
+          # failure mode that made the titles below wrong in the first place.
+          check_preview_matches_canonical() {
+            expected=$(node -e '
+              const fs = require("node:fs");
+              const asOf = process.argv[1];
+              import("./scripts/lib/things-to-do-collection.mjs").then((m) => {
+                const data = JSON.parse(fs.readFileSync("data/things-to-do-events.json", "utf8"));
+                process.stdout.write(m.homePreviewRecords(data.records, asOf).map((r) => r.id).join(" "));
+              });
+            ' "$1")
+            actual=$(grep -o '<article class="resource-card" data-event-id="[^"]*"' index.html \
+              | sed 's/.*data-event-id="//; s/"$//' | tr '\n' ' ' | sed 's/ *$//')
+            if [ "$actual" != "$expected" ]; then
+              echo "Home preview as of $1 is [$actual]; canonical order requires [$expected]."
+              exit 1
+            fi
+          }
           require_past_event() {
             if ! grep -q 'Past event' "things-to-do/$1/index.html"; then
               echo "$1 detail page is not marked Past event as of $2."
@@ -305,15 +331,30 @@ jobs:
             fi
           }
           # A record whose closing day is unknown must never gain one.
+          # Sinergia's own generated region on a shared surface. index.html and
+          # the hub carry every record's copy, so the whole file is the wrong
+          # scope: another record with a genuine November closing day (for
+          # example cartinha-dholanda-mindelo-2026, which really does end
+          # 2026-11-15) would trip a guard that is about sinergia alone. The
+          # dedicated detail pages are still scanned whole, below.
+          sinergia_region() {
+            awk '/BEGIN GENERATED EVENT: sinergia-da-materia/,/END GENERATED EVENT: sinergia-da-materia/' "$1"
+          }
           refute_exact_november_day() {
             # \b matters: without it "[0-9]{1,2}" happily matches the "20" of
             # "2026", so "until November 2026" would false-positive as a day.
-            if grep -rEq '(\b[0-9]{1,2}\b[[:space:]]+(de[[:space:]]+)?(November|novembro))|((November|novembro)[[:space:]]+\b[0-9]{1,2}\b)' \
-              things-to-do/sinergia-da-materia/index.html pt/things-to-do/sinergia-da-materia/index.html index.html pt/index.html \
-              things-to-do/index.html pt/things-to-do/index.html; then
+            november_day='(\b[0-9]{1,2}\b[[:space:]]+(de[[:space:]]+)?(November|novembro))|((November|novembro)[[:space:]]+\b[0-9]{1,2}\b)'
+            if grep -Eq "$november_day" \
+              things-to-do/sinergia-da-materia/index.html pt/things-to-do/sinergia-da-materia/index.html; then
               echo "An exact November day was published for sinergia-da-materia as of $1."
               exit 1
             fi
+            for surface in index.html pt/index.html things-to-do/index.html pt/things-to-do/index.html; do
+              if sinergia_region "$surface" | grep -Eq "$november_day"; then
+                echo "An exact November day was published for sinergia-da-materia in $surface as of $1."
+                exit 1
+              fi
+            done
             if grep -q '"endDate"' things-to-do/sinergia-da-materia/index.html pt/things-to-do/sinergia-da-materia/index.html; then
               echo "A month-precision record serialized an endDate as of $1."
               exit 1
@@ -326,16 +367,27 @@ jobs:
           check_home_absent part-ilhas "PART_ILHAS — ciclo de conversas com Nuno Miranda" 2026-08-24
           check_home_absent arquitectura "Arquitectura da Imperfeição" 2026-08-24
           check_preview_cap 2026-08-24
+          check_preview_matches_canonical 2026-08-24
           # First three eligible records in canonical order as of 2026-08-24.
+          # cartinha-dholanda-mindelo-2026 sits at canonical index 3, ahead of
+          # eclipse and sinergia, so it holds the second preview slot and
+          # sinergia is the sixth eligible record — hub only, not Home.
           check_home_present mon-pikenin "Mon Pikenin" 2026-08-24
-          check_home_present sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-08-24
+          check_home_present cartinha "CARTINHA D’HOLANDA" 2026-08-24
           check_home_present eclipse "Exposição “Eclipse”" 2026-08-24
           # Eligible but beyond the preview: hub only, and never lost.
           check_home_absent oficina "Exposição dos trabalhos finais do projeto Oficina Contemporânea Lata" 2026-08-24
           check_hub_present oficina "Exposição dos trabalhos finais do projeto Oficina Contemporânea Lata" 2026-08-24
           check_hub_present artemisa "PART_ILHAS — ciclo de conversas com Artemisa Ferreira" 2026-08-24
-          check_hub_present boxe "4.º Campeonato Nacional Sénior de Boxe" 2026-08-24
+          check_home_absent sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-08-24
+          check_hub_present sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-08-24
           check_hub_present mon-pikenin "Mon Pikenin" 2026-08-24
+          # An explicit editorial expiry wins at every --as-of: the generator
+          # reads publication_state from the CURRENT canonical corpus and does
+          # not reconstruct a historical snapshot of it, so a record marked
+          # expired is absent from both surfaces even at a past date.
+          check_home_absent boxe "4.º Campeonato Nacional Sénior de Boxe" 2026-08-24
+          check_hub_absent boxe "4.º Campeonato Nacional Sénior de Boxe" 2026-08-24
           # Expired records are absent from both public surfaces.
           check_hub_absent part-ilhas "PART_ILHAS — ciclo de conversas com Nuno Miranda" 2026-08-24
           check_hub_absent arquitectura "Arquitectura da Imperfeição" 2026-08-24
@@ -362,11 +414,16 @@ jobs:
           check_home_absent mon-pikenin "Mon Pikenin" 2026-08-30
           check_home_absent oficina "Exposição dos trabalhos finais do projeto Oficina Contemporânea Lata" 2026-08-30
           check_preview_cap 2026-08-30
-          check_home_present sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-08-30
+          check_preview_matches_canonical 2026-08-30
+          check_home_present cartinha "CARTINHA D’HOLANDA" 2026-08-30
           check_home_present eclipse "Exposição “Eclipse”" 2026-08-30
-          check_home_present 50-anos "50 Anos de Memória, Criação e Resistência" 2026-08-30
+          check_home_present sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-08-30
+          # Eligible but beyond the three-card preview: hub only, never lost.
+          check_home_absent 50-anos "50 Anos de Memória, Criação e Resistência" 2026-08-30
+          check_hub_present 50-anos "50 Anos de Memória, Criação e Resistência" 2026-08-30
+          # Editorially expired: absent from both surfaces, as at 2026-08-24.
           check_home_absent boxe "4.º Campeonato Nacional Sénior de Boxe" 2026-08-30
-          check_hub_present boxe "4.º Campeonato Nacional Sénior de Boxe" 2026-08-30
+          check_hub_absent boxe "4.º Campeonato Nacional Sénior de Boxe" 2026-08-30
           check_hub_absent oficina "Exposição dos trabalhos finais do projeto Oficina Contemporânea Lata" 2026-08-30
           check_hub_absent artemisa "PART_ILHAS — ciclo de conversas com Artemisa Ferreira" 2026-08-30
           require_past_event part-ilhas-artemisa-ferreira 2026-08-30
@@ -386,6 +443,7 @@ jobs:
           expect_currentness_exit 2026-09-01 0
           node scripts/validate-things-to-do-surface-equivalence.mjs --as-of=2026-09-01
           check_preview_cap 2026-09-01
+          check_preview_matches_canonical 2026-09-01
           check_home_present sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-09-01
           check_hub_present sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-09-01
           refute_past_event sinergia-da-materia 2026-09-01
@@ -401,6 +459,7 @@ jobs:
           expect_currentness_exit 2026-10-31 0
           node scripts/validate-things-to-do-surface-equivalence.mjs --as-of=2026-10-31
           check_preview_cap 2026-10-31
+          check_preview_matches_canonical 2026-10-31
           check_home_present sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-10-31
           check_home_present 50-anos "50 Anos de Memória, Criação e Resistência" 2026-10-31
           refute_past_event sinergia-da-materia 2026-10-31

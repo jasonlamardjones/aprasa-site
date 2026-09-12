@@ -25,7 +25,8 @@
       "data/locales/pt-overlay-r10-migration.source.json",
       "data/locales/pt-overlay-r13-things-to-do-hub.source.json",
       "data/locales/pt-overlay-r14-section-fallback-note.source.json",
-      "data/locales/pt-overlay-r15-weekly-opportunity-2026-09.source.json"
+      "data/locales/pt-overlay-r15-weekly-opportunity-2026-09.source.json",
+      "data/locales/pt-overlay-r16-provider-media-alt.source.json"
     ],
     "base_revision": "P03-PT-SOURCE-2026-08-25-r2",
     "delta_revision": "P03-PT-SOURCE-2026-08-25-r3",
@@ -53,6 +54,10 @@
     "delta15_revision": "P03-PT-SOURCE-2026-09-07-r15",
     "delta15_revision_class": "ADDITIVE_NEW_KEYS",
     "delta15_row_count": 96,
+    "delta16_package_id": "aprasa-provider-media-alt-r16-delta",
+    "delta16_revision": "P04-MEDIA-ALT-2026-09-11-r16",
+    "delta16_revision_class": "ADDITIVE_NEW_KEYS",
+    "delta16_row_count": 4,
     "delta9_superseding_ruling": "P03-SINERGIA-CURRENTNESS-2026-09-01",
     "delta9_owning_project": "Project 03",
     "event_delta_packages": [
@@ -112,10 +117,10 @@
     "governed_override_authorization": "fixed code-side contract in scripts/build-locale-data.mjs (GOVERNED_OVERRIDE_CONTRACTS)"
   },
   "counts": {
-    "total_rows": 977,
-    "required_for_pt_launch": 949,
+    "total_rows": 981,
+    "required_for_pt_launch": 953,
     "intentionally_unchanged": 28,
-    "approved_rows_total": 977,
+    "approved_rows_total": 981,
     "r3_delta_rows": 21,
     "r4_delta_rows": 26,
     "r5_delta_rows": 2,
@@ -124,6 +129,7 @@
     "r8_delta_rows": 21,
     "r9_source_correction_rows": 3,
     "event_delta_rows": 51,
+    "r16_delta_rows": 4,
     "r10_renamed_rows": 76,
     "governed_override_rows": 6
   },
@@ -11884,6 +11890,54 @@
       "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
       "context_notes": "Governed presentation for the fixed-window opportunity regea-oral-communications-call-2026 on Home — Trainings, Tools & Opportunities.",
       "linguistic_notes": ""
+    },
+    "training.record.unicv-undergraduate-admissions-third-phase-2026-2027.alt": {
+      "key": "training.record.unicv-undergraduate-admissions-third-phase-2026-2027.alt",
+      "en": "Uni-CV undergraduate admissions poster for the 2026/2027 third phase, open 17 August–11 September 2026, with applications at candidatura.unicv.cv.",
+      "pt": "Cartaz de candidaturas às licenciaturas da Uni-CV para a terceira fase de 2026/2027, aberta de 17 de agosto a 11 de setembro de 2026, com candidaturas em candidatura.unicv.cv.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "unicv-undergraduate-admissions-third-phase-2026-2027",
+      "translation_status": "APPROVED",
+      "source_revision": "P04-MEDIA-ALT-2026-09-11-r16",
+      "context_notes": "Informative alt text for the authentic founder-supplied Uni-CV third-phase admissions artwork used on the EN/PT Home card and Details dialog.",
+      "linguistic_notes": "Preserves the provider name, governed dates and application-domain identity visible in the artwork."
+    },
+    "training.record.laczos-artisticos-2nd-edition-2026.alt": {
+      "key": "training.record.laczos-artisticos-2nd-edition-2026.alt",
+      "en": "Laç(z)os Artísticos second-edition artwork announcing that applications are open, over a photograph of a person drawing.",
+      "pt": "Imagem da segunda edição de Laç(z)os Artísticos a anunciar candidaturas abertas, sobre uma fotografia de uma pessoa a desenhar.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "laczos-artisticos-2nd-edition-2026",
+      "translation_status": "APPROVED",
+      "source_revision": "P04-MEDIA-ALT-2026-09-11-r16",
+      "context_notes": "Informative alt text for the authentic founder-supplied Laç(z)os Artísticos artwork used on the EN/PT Home card and Details dialog.",
+      "linguistic_notes": "Preserves the governed Laç(z)os Artísticos display identity exactly."
+    },
+    "training.record.unicv-confucius-chinese-language-courses-2026-2027.alt": {
+      "key": "training.record.unicv-confucius-chinese-language-courses-2026-2027.alt",
+      "en": "Uni-CV Confucius Institute classroom image announcing open registration for free Chinese-language courses.",
+      "pt": "Imagem de uma sala de aula do Instituto Confúcio na Uni-CV a anunciar inscrições abertas para cursos livres de língua chinesa.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "unicv-confucius-chinese-language-courses-2026-2027",
+      "translation_status": "APPROVED",
+      "source_revision": "P04-MEDIA-ALT-2026-09-11-r16",
+      "context_notes": "Informative alt text for the authentic founder-supplied Uni-CV Confucius Institute course artwork used on the EN/PT Home card and Details dialog.",
+      "linguistic_notes": "Describes the classroom scene and the registration message without adding a date not shown in the artwork."
+    },
+    "training.record.regea-oral-communications-call-2026.alt": {
+      "key": "training.record.regea-oral-communications-call-2026.alt",
+      "en": "REGEA 2026 call for oral communications poster showing the original 30 July–30 August window and the extension through 30 September.",
+      "pt": "Cartaz da chamada para comunicações orais da REGEA 2026, com o período original de 30 de julho a 30 de agosto e a prorrogação até 30 de setembro.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "regea-oral-communications-call-2026",
+      "translation_status": "APPROVED",
+      "source_revision": "P04-MEDIA-ALT-2026-09-11-r16",
+      "context_notes": "Informative alt text for the authentic founder-supplied Uni-CV/CIGEF REGEA artwork used on the EN/PT Home card and Details dialog.",
+      "linguistic_notes": "States both date ranges visible in the artwork so the extension is not obscured."
     }
   }
 }

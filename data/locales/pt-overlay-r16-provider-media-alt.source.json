@@ -1,0 +1,81 @@
+{
+  "package_id": "aprasa-provider-media-alt-r16-delta",
+  "revision_class": "ADDITIVE_NEW_KEYS",
+  "source_revision": "P04-MEDIA-ALT-2026-09-11-r16",
+  "previous_revision": "P03-PT-SOURCE-2026-09-07-r15",
+  "revision_type": "PROVIDER_MEDIA_ACCESSIBILITY_TEXT",
+  "semantic_authority": "Project 04 — founder-authorized final media ingestion pass of 11 September 2026",
+  "linguistic_authority": "Project 04 — informative EN/PT accessibility descriptions required by the founder's implementation brief",
+  "approval_status": "FOUNDER_AUTHORIZED_FOR_IMPLEMENTATION",
+  "intent": "Adds one localized informative alt-text key for each of the four newly ingested authentic provider artworks. Strictly additive: it changes no existing copy, lifecycle, publication, currentness or media policy.",
+  "declared_new_row_count_in_handoff": 4,
+  "actual_row_objects_supplied": 4,
+  "missing_or_unaccounted_row_count": 0,
+  "supplied_rows_approved": 4,
+  "review_required": 0,
+  "semantic_escalations_required": 0,
+  "source_english_changed": false,
+  "localization_architecture_reopened": false,
+  "duplicate_keys": [],
+  "placeholder_mismatches": [],
+  "a_prasa_to_a_praca_violations": [],
+  "blocking_issue": null,
+  "change_control_status": {
+    "new_keys_introduced": 4,
+    "existing_keys_overridden": 0,
+    "english_source_values_modified": 0,
+    "lifecycle_or_publication_state_modified": 0,
+    "protected_identities_modified": 0,
+    "additional_languages_authorized": 0
+  },
+  "rows": [
+    {
+      "key": "training.record.unicv-undergraduate-admissions-third-phase-2026-2027.alt",
+      "source_revision": "P04-MEDIA-ALT-2026-09-11-r16",
+      "source_en": "Uni-CV undergraduate admissions poster for the 2026/2027 third phase, open 17 August–11 September 2026, with applications at candidatura.unicv.cv.",
+      "pt": "Cartaz de candidaturas às licenciaturas da Uni-CV para a terceira fase de 2026/2027, aberta de 17 de agosto a 11 de setembro de 2026, com candidaturas em candidatura.unicv.cv.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "unicv-undergraduate-admissions-third-phase-2026-2027",
+      "translation_status": "APPROVED",
+      "context_notes": "Informative alt text for the authentic founder-supplied Uni-CV third-phase admissions artwork used on the EN/PT Home card and Details dialog.",
+      "linguistic_notes": "Preserves the provider name, governed dates and application-domain identity visible in the artwork."
+    },
+    {
+      "key": "training.record.laczos-artisticos-2nd-edition-2026.alt",
+      "source_revision": "P04-MEDIA-ALT-2026-09-11-r16",
+      "source_en": "Laç(z)os Artísticos second-edition artwork announcing that applications are open, over a photograph of a person drawing.",
+      "pt": "Imagem da segunda edição de Laç(z)os Artísticos a anunciar candidaturas abertas, sobre uma fotografia de uma pessoa a desenhar.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "laczos-artisticos-2nd-edition-2026",
+      "translation_status": "APPROVED",
+      "context_notes": "Informative alt text for the authentic founder-supplied Laç(z)os Artísticos artwork used on the EN/PT Home card and Details dialog.",
+      "linguistic_notes": "Preserves the governed Laç(z)os Artísticos display identity exactly."
+    },
+    {
+      "key": "training.record.unicv-confucius-chinese-language-courses-2026-2027.alt",
+      "source_revision": "P04-MEDIA-ALT-2026-09-11-r16",
+      "source_en": "Uni-CV Confucius Institute classroom image announcing open registration for free Chinese-language courses.",
+      "pt": "Imagem de uma sala de aula do Instituto Confúcio na Uni-CV a anunciar inscrições abertas para cursos livres de língua chinesa.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "unicv-confucius-chinese-language-courses-2026-2027",
+      "translation_status": "APPROVED",
+      "context_notes": "Informative alt text for the authentic founder-supplied Uni-CV Confucius Institute course artwork used on the EN/PT Home card and Details dialog.",
+      "linguistic_notes": "Describes the classroom scene and the registration message without adding a date not shown in the artwork."
+    },
+    {
+      "key": "training.record.regea-oral-communications-call-2026.alt",
+      "source_revision": "P04-MEDIA-ALT-2026-09-11-r16",
+      "source_en": "REGEA 2026 call for oral communications poster showing the original 30 July–30 August window and the extension through 30 September.",
+      "pt": "Cartaz da chamada para comunicações orais da REGEA 2026, com o período original de 30 de julho a 30 de agosto e a prorrogação até 30 de setembro.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "regea-oral-communications-call-2026",
+      "translation_status": "APPROVED",
+      "context_notes": "Informative alt text for the authentic founder-supplied Uni-CV/CIGEF REGEA artwork used on the EN/PT Home card and Details dialog.",
+      "linguistic_notes": "States both date ranges visible in the artwork so the extension is not obscured."
+    }
+  ]
+}
