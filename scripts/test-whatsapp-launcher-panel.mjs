@@ -42,7 +42,10 @@ function walkHtml(dir, out = []) {
 
 // Same discovery semantics as the runtime selector a[href*="wa.me/"], so this
 // test cannot drift narrower than the set of pages the launcher runs on.
-const WA_ANCHOR = /href\s*=\s*["'][^"']*wa\.me\//i;
+// Quoted (double or single) and unquoted attribute values all reach
+// a[href*="wa.me/"] in a browser, so all three must be discovered here.
+// An unquoted value runs to the first whitespace, quote or ">".
+const WA_ANCHOR = /href\s*=\s*(?:"[^"]*wa\.me\/|'[^']*wa\.me\/|[^\s"'>]*wa\.me\/)/i;
 const surfaces = walkHtml(root).filter((rel) => WA_ANCHOR.test(read(rel))).sort();
 const launcherJs = read('prasa-launch.js');
 const mindeloJs = read('mindelo-essentials/mindelo-essentials.js');

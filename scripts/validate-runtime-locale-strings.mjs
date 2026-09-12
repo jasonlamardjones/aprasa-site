@@ -128,7 +128,10 @@ function walkHtml(dir, out = []) {
 // discovery rule stricter than the runtime's would skip a page the launcher
 // still runs on — and on a PT page that is exactly the silent English
 // fallback this validator exists to prevent.
-const WA_ANCHOR = /href\s*=\s*["'][^"']*wa\.me\//i;
+// Quoted (double or single) and unquoted attribute values all reach
+// a[href*="wa.me/"] in a browser, so all three must be discovered here.
+// An unquoted value runs to the first whitespace, quote or ">".
+const WA_ANCHOR = /href\s*=\s*(?:"[^"]*wa\.me\/|'[^']*wa\.me\/|[^\s"'>]*wa\.me\/)/i;
 
 const surfaces = walkHtml(root)
   .filter((rel) => WA_ANCHOR.test(fs.readFileSync(path.join(root, rel), 'utf8')))
