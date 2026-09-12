@@ -1830,7 +1830,14 @@ if (!Array.isArray(delta17.rows) || delta17.rows.length !== EXPECTED_DELTA17.row
 if (delta17.supplied_rows_approved !== EXPECTED_DELTA17.approved) {
   fail(`r17 supplied_rows_approved mismatch: got ${delta17.supplied_rows_approved}`);
 }
-if (delta17.review_required !== EXPECTED_DELTA17.review_required || delta17.blocking_issue != null) {
+if (delta17.review_required !== EXPECTED_DELTA17.review_required
+  || delta17.blocking_issue != null
+  || delta17.semantic_escalations_required !== 0) {
+  // semantic_escalations_required is part of the unresolved-state gate here
+  // for the same reason it is for r6/r9/r16 and the governed override
+  // packages: a package can declare itself linguistically approved while
+  // still holding an open semantic escalation, and publishing those rows
+  // would ship copy whose meaning is still in dispute.
   fail("r17 has unresolved localization review state");
 }
 if (delta17.missing_or_unaccounted_row_count !== 0) {

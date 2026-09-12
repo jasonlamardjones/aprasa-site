@@ -66,6 +66,22 @@ const GOVERNED_LAUNCHER = {
 
 const GOVERNED = { ...GOVERNED_MEDIA, ...GOVERNED_LAUNCHER };
 
+// Mindelo Essentials' own runtime strings, written into the same block by
+// scripts/build-mindelo-pt.mjs under that script's contract. Listed explicitly
+// so the two Mindelo surfaces are held to a closed key set like every other
+// surface, rather than exempted wholesale. Values are that contract's business;
+// what this file asserts is only that no OTHER key appears.
+const MINDELO_RUNTIME_KEYS = new Set([
+  'searchCountOne',
+  'searchCountManyTemplate',
+  'mapEnhancedGuidance',
+  'mapDefaultMarkerTitle',
+  'markerOrientationAccessibleNameTemplate',
+  'markerDirectoryAccessibleNameTemplate',
+  'markerOrientationDefaultName',
+  'markerDirectoryDefaultName',
+]);
+
 // Runtime keys deliberately left unresolved because the governed overlay
 // carries no approved Portuguese value for them yet. Each one must stay out of
 // both blocks, and must still have an English default in prasa-launch.js.
@@ -106,8 +122,16 @@ function walkHtml(dir, out = []) {
   return out;
 }
 
+// Mirror the runtime's own selector, a[href*="wa.me/"], rather than a
+// narrower literal: the launcher initializes on any anchor whose href merely
+// CONTAINS "wa.me/", so single-quoted or protocol-relative markup counts. A
+// discovery rule stricter than the runtime's would skip a page the launcher
+// still runs on — and on a PT page that is exactly the silent English
+// fallback this validator exists to prevent.
+const WA_ANCHOR = /href\s*=\s*["'][^"']*wa\.me\//i;
+
 const surfaces = walkHtml(root)
-  .filter((rel) => /href="https:\/\/wa\.me\//.test(fs.readFileSync(path.join(root, rel), 'utf8')))
+  .filter((rel) => WA_ANCHOR.test(fs.readFileSync(path.join(root, rel), 'utf8')))
   .sort();
 
 if (!surfaces.length) errors.push('no floating-launcher surfaces found — the wa.me discovery key matched nothing');
@@ -119,9 +143,12 @@ for (const relative of surfaces) {
   const isHome = relative === 'index.html' || relative === 'pt/index.html';
   // Mindelo Essentials runs its own runtime (mindelo-essentials.js) and its
   // block carries that runtime's own governed strings alongside the launcher
-  // copy, under scripts/build-mindelo-pt.mjs's contract. Its extra keys are
-  // therefore expected here, not a smuggled string.
-  const ownsExtraKeys = /mindelo-essentials\.js/.test(html);
+  // copy, under scripts/build-mindelo-pt.mjs's contract. Those specific keys
+  // are expected here — but only those: a blanket "anything goes on Mindelo"
+  // exemption would let a new or misspelled key ride onto a public block
+  // unchecked, which is precisely what the unknown-key rule below exists to
+  // stop.
+  const carriesMindeloRuntime = /mindelo-essentials\.js/.test(html);
   const expected = { ...GOVERNED_LAUNCHER, ...(isHome ? GOVERNED_MEDIA : {}) };
 
   const block = readBlock(relative);
@@ -159,7 +186,7 @@ for (const relative of surfaces) {
   // public surface outside the governed set.
   for (const runtimeKey of Object.keys(block)) {
     if (runtimeKey in GOVERNED) continue;
-    if (ownsExtraKeys) continue;
+    if (carriesMindeloRuntime && MINDELO_RUNTIME_KEYS.has(runtimeKey)) continue;
     errors.push(`${relative}: "${runtimeKey}" is not a governed runtime string key`);
   }
 }
