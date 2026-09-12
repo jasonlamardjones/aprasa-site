@@ -720,7 +720,7 @@ a.floating-utility { text-decoration: none; }
   border-color: var(--green);
   box-shadow: 0 .35rem 1.1rem rgba(17,17,17,.18);
 }
-.floating-utility-whatsapp .floating-utility-icon { width: 1.85rem; height: 1.85rem; }
+.floating-utility-whatsapp .floating-utility-icon { width: 1.7rem; height: 1.7rem; }
 .floating-utility-whatsapp:hover {
   color: var(--white);
   box-shadow: 0 .45rem 1.35rem rgba(17,17,17,.26);
@@ -760,7 +760,7 @@ body.dialog-open .floating-utilities { display: none; }
     bottom: calc(.75rem + env(safe-area-inset-bottom, 0px));
   }
   .floating-utility-whatsapp { width: 3rem; height: 3rem; }
-  .floating-utility-whatsapp .floating-utility-icon { width: 1.7rem; height: 1.7rem; }
+  .floating-utility-whatsapp .floating-utility-icon { width: 1.55rem; height: 1.55rem; }
 }
 
 @media print {
