@@ -536,12 +536,53 @@
       || null;
   }
 
-  function createIcon(symbol) {
-    const icon = document.createElement("span");
-    icon.className = "floating-utility-icon";
+  // Decorative inline SVG marks. They carry no text, so the control's
+  // accessible name keeps coming from the incumbent anchor label (WhatsApp)
+  // or the incumbent in-page navigation label (Up/Down) exactly as before —
+  // this file still contributes no copy of its own.
+  const SVG_NS = "http://www.w3.org/2000/svg";
+
+  function createIcon(viewBox, build) {
+    const icon = document.createElementNS(SVG_NS, "svg");
+    icon.setAttribute("class", "floating-utility-icon");
+    icon.setAttribute("viewBox", viewBox);
     icon.setAttribute("aria-hidden", "true");
-    icon.textContent = symbol;
+    icon.setAttribute("focusable", "false");
+    build(icon);
     return icon;
+  }
+
+  function appendPath(svg, d, attributes) {
+    const path = document.createElementNS(SVG_NS, "path");
+    path.setAttribute("d", d);
+    for (const [name, value] of Object.entries(attributes || {})) path.setAttribute(name, value);
+    svg.append(path);
+    return path;
+  }
+
+  // WhatsApp mark, drawn as a solid white glyph on the deep-green launcher.
+  const WHATSAPP_MARK = "M19.11 17.2c-.28-.14-1.65-.81-1.9-.9-.26-.1-.44-.14-.63.14-.18.28-.72.9-.88 1.09-.16.18-.32.2-.6.07-.28-.14-1.18-.44-2.25-1.39-.83-.74-1.39-1.65-1.55-1.93-.16-.28-.02-.43.12-.57.13-.13.28-.33.42-.49.14-.17.19-.28.28-.47.09-.18.05-.35-.02-.49-.07-.14-.63-1.51-.86-2.07-.22-.54-.45-.47-.63-.48l-.53-.01c-.19 0-.49.07-.74.35-.26.28-.98.95-.98 2.32s1 2.69 1.14 2.88c.14.18 1.97 3 4.77 4.21.67.29 1.19.46 1.59.59.67.21 1.28.18 1.76.11.54-.08 1.65-.67 1.88-1.32.23-.66.23-1.22.16-1.33-.07-.12-.25-.19-.53-.33Z M23.02 8.98A11.44 11.44 0 0 0 5.36 22.88L3.7 28.95l6.21-1.63a11.44 11.44 0 0 0 13.11-18.34Zm-1.62 15.4a9.52 9.52 0 0 1-11.13 1.42l-.4-.21-3.68.97.98-3.59-.26-.41a9.53 9.53 0 1 1 14.49 1.82Z";
+
+  // Chevrons: light, secondary controls in place of the previous arrow glyphs.
+  const CHEVRON_UP = "M6 14.5 12 8.5l6 6";
+  const CHEVRON_DOWN = "M6 9.5l6 6 6-6";
+
+  function createWhatsAppIcon() {
+    return createIcon("1.9 4.4 24.6 24.6", (svg) => {
+      appendPath(svg, WHATSAPP_MARK, {fill: "currentColor"});
+    });
+  }
+
+  function createChevronIcon(d) {
+    return createIcon("0 0 24 24", (svg) => {
+      appendPath(svg, d, {
+        fill: "none",
+        stroke: "currentColor",
+        "stroke-width": "2.25",
+        "stroke-linecap": "round",
+        "stroke-linejoin": "round"
+      });
+    });
   }
 
   function createWhatsAppControl(sourceAnchor) {
@@ -555,12 +596,7 @@
     if (sourceAnchor.rel) link.rel = sourceAnchor.rel;
     link.setAttribute("aria-label", label);
     link.title = label;
-    link.append(createIcon("↗"));
-
-    const text = document.createElement("span");
-    text.className = "floating-utility-label";
-    text.textContent = "WhatsApp";
-    link.append(text);
+    link.append(createWhatsAppIcon());
     return link;
   }
 
@@ -590,12 +626,12 @@
     up.className = "floating-utility floating-utility-nav";
     up.setAttribute("aria-label", upLabel);
     up.title = upLabel;
-    up.append(createIcon("↑"));
+    up.append(createChevronIcon(CHEVRON_UP));
 
     const down = document.createElement("button");
     down.type = "button";
     down.className = "floating-utility floating-utility-nav";
-    down.append(createIcon("↓"));
+    down.append(createChevronIcon(CHEVRON_DOWN));
 
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     const behavior = () => reducedMotion.matches ? "auto" : "smooth";
