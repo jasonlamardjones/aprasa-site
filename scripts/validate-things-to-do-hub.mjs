@@ -44,6 +44,10 @@ const eligible = collectionRecords(records, asOf);
 const preview = homePreviewRecords(records, asOf);
 const errors = [];
 
+function toPosixPath(value) {
+  return value.split(path.sep).join('/');
+}
+
 function read(relative) {
   const file = path.join(root, relative);
   return fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : null;
@@ -247,7 +251,10 @@ for (const record of records) {
       errors.push(`${relative}: breadcrumb points at a fragment (${href}) instead of the collection route`);
       continue;
     }
-    const resolved = `/${path.relative(root, path.resolve(path.dirname(path.join(root, relative)), href))}/`.replace(/\/+$/, '/');
+    const resolvedRelative = toPosixPath(
+      path.relative(root, path.resolve(path.dirname(path.join(root, relative)), href))
+    );
+    const resolved = `/${resolvedRelative}/`.replace(/\/+$/, '/');
     const expected = `/${prefix}${HUB_ROUTE}`;
     if (resolved !== expected) {
       errors.push(`${relative}: breadcrumb resolves to ${resolved}, expected the same-locale collection route ${expected}`);
