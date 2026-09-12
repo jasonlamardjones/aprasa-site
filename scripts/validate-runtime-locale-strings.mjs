@@ -128,13 +128,34 @@ function walkHtml(dir, out = []) {
 // discovery rule stricter than the runtime's would skip a page the launcher
 // still runs on — and on a PT page that is exactly the silent English
 // fallback this validator exists to prevent.
-// Quoted (double or single) and unquoted attribute values all reach
-// a[href*="wa.me/"] in a browser, so all three must be discovered here.
-// An unquoted value runs to the first whitespace, quote or ">".
-const WA_ANCHOR = /href\s*=\s*(?:"[^"]*wa\.me\/|'[^']*wa\.me\/|[^\s"'>]*wa\.me\/)/i;
+// Discovery must see what the BROWSER sees, not what the source looks like.
+// Two things separate the two, and scanning raw markup misses both:
+//   - attribute quoting: double, single, or unquoted (running to the first
+//     whitespace, quote or ">") all reach a[href*="wa.me/"];
+//   - character references: href="https://wa&#46;me/..." is decoded by the
+//     parser to the governed URL, so the launcher initializes on it.
+// So: pull out every href value, decode character references, then test the
+// decoded value. That closes the class rather than one spelling of it.
+const HREF_ATTR = /href\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/gi;
+const NAMED_REFS = {amp: '&', period: '.', sol: '/', colon: ':', lpar: '(', rpar: ')'};
+
+function decodeCharRefs(value) {
+  return value
+    .replace(/&#x([0-9a-f]+);/gi, (whole, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (whole, dec) => String.fromCodePoint(parseInt(dec, 10)))
+    .replace(/&([a-z]+);/gi, (whole, name) => NAMED_REFS[name.toLowerCase()] ?? whole);
+}
+
+function hasGovernedWhatsAppAnchor(html) {
+  for (const match of html.matchAll(HREF_ATTR)) {
+    const value = match[1] ?? match[2] ?? match[3] ?? '';
+    if (decodeCharRefs(value).includes('wa.me/')) return true;
+  }
+  return false;
+}
 
 const surfaces = walkHtml(root)
-  .filter((rel) => WA_ANCHOR.test(fs.readFileSync(path.join(root, rel), 'utf8')))
+  .filter((rel) => hasGovernedWhatsAppAnchor(fs.readFileSync(path.join(root, rel), 'utf8')))
   .sort();
 
 if (!surfaces.length) errors.push('no floating-launcher surfaces found — the wa.me discovery key matched nothing');
