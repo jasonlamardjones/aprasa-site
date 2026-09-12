@@ -34,15 +34,37 @@ import { t, hasKey } from './lib/locale.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const errors = [];
 
-// runtime key -> governed locale key. Must mirror RUNTIME_STRING_KEYS in
-// scripts/build-static-pages.mjs.
-const GOVERNED = {
+// runtime key -> governed locale key. Must mirror the maps in
+// scripts/lib/runtime-strings.mjs. This file deliberately keeps its OWN copy
+// rather than importing them: it is the check that those maps are correct, so
+// importing from them would make the check vacuous.
+//
+// Two groups, because they have different reach. The media-fallback copy is
+// rendered only into Home's card shelves. The launcher-panel copy (Project 09
+// r17) is rendered into the on-site panel the floating WhatsApp launcher
+// opens, and that launcher initializes on every surface carrying the governed
+// WhatsApp anchor — so those keys must reach every such surface, in that
+// surface's own locale.
+const GOVERNED_MEDIA = {
   mediaFallbackLabel: 'system.media_fallback.label',
   mediaFallbackNote: 'system.media_fallback.note',
   sectionThumbnailNote: 'system.media_fallback.section_note',
   trainingsSectionLabel: 'home.training.title',
   organizationsSectionLabel: 'home.organizations.title',
 };
+
+const GOVERNED_LAUNCHER = {
+  launcherHeader: 'runtime.whatsapp_launcher.header',
+  launcherIntro: 'runtime.whatsapp_launcher.intro',
+  launcherQuickActionShare: 'runtime.whatsapp_launcher.quick_action.share',
+  launcherQuickActionCorrection: 'runtime.whatsapp_launcher.quick_action.correction',
+  launcherQuickActionQuestion: 'runtime.whatsapp_launcher.quick_action.question',
+  launcherQuickActionSubmissions: 'runtime.whatsapp_launcher.quick_action.submissions',
+  launcherPrimaryAction: 'runtime.whatsapp_launcher.primary_action',
+  launcherSecondaryAction: 'runtime.whatsapp_launcher.secondary_action',
+};
+
+const GOVERNED = { ...GOVERNED_MEDIA, ...GOVERNED_LAUNCHER };
 
 // Runtime keys deliberately left unresolved because the governed overlay
 // carries no approved Portuguese value for them yet. Each one must stay out of
@@ -70,23 +92,55 @@ function readBlock(relative) {
   }
 }
 
-for (const [locale, relative] of [['en', 'index.html'], ['pt', 'pt/index.html']]) {
+// Every surface the floating launcher can initialize on. Discovered from the
+// repository rather than listed by hand, so a new page cannot silently ship
+// without the governed runtime copy: the launcher initializes wherever the
+// governed WhatsApp anchor is, so that anchor is the discovery key.
+function walkHtml(dir, out = []) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name === '.git' || entry.name === 'node_modules') continue;
+    const abs = path.join(dir, entry.name);
+    if (entry.isDirectory()) walkHtml(abs, out);
+    else if (entry.name.endsWith('.html')) out.push(path.relative(root, abs).split(path.sep).join('/'));
+  }
+  return out;
+}
+
+const surfaces = walkHtml(root)
+  .filter((rel) => /href="https:\/\/wa\.me\//.test(fs.readFileSync(path.join(root, rel), 'utf8')))
+  .sort();
+
+if (!surfaces.length) errors.push('no floating-launcher surfaces found — the wa.me discovery key matched nothing');
+
+let checkedSurfaces = 0;
+for (const relative of surfaces) {
+  const html = fs.readFileSync(path.join(root, relative), 'utf8');
+  const locale = relative === 'pt/index.html' || relative.startsWith('pt/') ? 'pt' : 'en';
+  const isHome = relative === 'index.html' || relative === 'pt/index.html';
+  // Mindelo Essentials runs its own runtime (mindelo-essentials.js) and its
+  // block carries that runtime's own governed strings alongside the launcher
+  // copy, under scripts/build-mindelo-pt.mjs's contract. Its extra keys are
+  // therefore expected here, not a smuggled string.
+  const ownsExtraKeys = /mindelo-essentials\.js/.test(html);
+  const expected = { ...GOVERNED_LAUNCHER, ...(isHome ? GOVERNED_MEDIA : {}) };
+
   const block = readBlock(relative);
   if (!block) continue;
+  checkedSurfaces += 1;
 
-  for (const [runtimeKey, localeKey] of Object.entries(GOVERNED)) {
+  for (const [runtimeKey, localeKey] of Object.entries(expected)) {
     if (!hasKey(localeKey)) {
       errors.push(`${relative}: governed key "${localeKey}" no longer exists in the overlay`);
       continue;
     }
-    const expected = t(localeKey, locale);
-    if (block[runtimeKey] !== expected) {
-      errors.push(`${relative}: "${runtimeKey}" is ${JSON.stringify(block[runtimeKey])}, expected the governed ${locale.toUpperCase()} value ${JSON.stringify(expected)} from "${localeKey}"`);
+    const want = t(localeKey, locale);
+    if (block[runtimeKey] !== want) {
+      errors.push(`${relative}: "${runtimeKey}" is ${JSON.stringify(block[runtimeKey])}, expected the governed ${locale.toUpperCase()} value ${JSON.stringify(want)} from "${localeKey}"`);
     }
-    // No English may survive on the PT surface where the governed values differ.
+    // No English may survive on a PT surface where the governed values differ.
     if (locale === 'pt') {
       const en = t(localeKey, 'en');
-      if (en !== expected && block[runtimeKey] === en) {
+      if (en !== want && block[runtimeKey] === en) {
         errors.push(`${relative}: "${runtimeKey}" still holds the English value ${JSON.stringify(en)}`);
       }
     }
@@ -101,12 +155,12 @@ for (const [locale, relative] of [['en', 'index.html'], ['pt', 'pt/index.html']]
     }
   }
 
-  // Every key the block declares must be one this contract knows about, so a
-  // string cannot be smuggled onto a public surface outside the governed set.
+  // A key this contract does not know about would be copy smuggled onto a
+  // public surface outside the governed set.
   for (const runtimeKey of Object.keys(block)) {
-    if (!(runtimeKey in GOVERNED)) {
-      errors.push(`${relative}: "${runtimeKey}" is not a governed runtime string key`);
-    }
+    if (runtimeKey in GOVERNED) continue;
+    if (ownsExtraKeys) continue;
+    errors.push(`${relative}: "${runtimeKey}" is not a governed runtime string key`);
   }
 }
 
@@ -155,6 +209,6 @@ if (errors.length) {
 
 const blocked = Object.keys(BLOCKED_PENDING_APPROVAL);
 console.log(
-  `[validate-runtime-locale-strings] OK — ${Object.keys(GOVERNED).length} governed runtime string(s) resolved per locale on both Home surfaces;`
+  `[validate-runtime-locale-strings] OK — ${Object.keys(GOVERNED).length} governed runtime string(s); ${checkedSurfaces} floating-launcher surface(s) carry the governed block in their own locale;`
   + ` ${blocked.length} left unresolved pending Project 09 approval${blocked.length ? ` (${blocked.join(', ')})` : ''}.`
 );

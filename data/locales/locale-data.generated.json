@@ -26,7 +26,8 @@
       "data/locales/pt-overlay-r13-things-to-do-hub.source.json",
       "data/locales/pt-overlay-r14-section-fallback-note.source.json",
       "data/locales/pt-overlay-r15-weekly-opportunity-2026-09.source.json",
-      "data/locales/pt-overlay-r16-provider-media-alt.source.json"
+      "data/locales/pt-overlay-r16-provider-media-alt.source.json",
+      "data/locales/pt-overlay-r17-runtime-whatsapp-launcher.source.json"
     ],
     "base_revision": "P03-PT-SOURCE-2026-08-25-r2",
     "delta_revision": "P03-PT-SOURCE-2026-08-25-r3",
@@ -58,6 +59,10 @@
     "delta16_revision": "P04-MEDIA-ALT-2026-09-11-r16",
     "delta16_revision_class": "ADDITIVE_NEW_KEYS",
     "delta16_row_count": 4,
+    "delta17_package_id": "aprasa-pt-runtime-whatsapp-launcher",
+    "delta17_revision": "P09-PT-RUNTIME-WHATSAPP-LAUNCHER-2026-09-12-r1",
+    "delta17_revision_class": "ADDITIVE_RUNTIME_KEYS",
+    "delta17_row_count": 8,
     "delta9_superseding_ruling": "P03-SINERGIA-CURRENTNESS-2026-09-01",
     "delta9_owning_project": "Project 03",
     "event_delta_packages": [
@@ -117,10 +122,10 @@
     "governed_override_authorization": "fixed code-side contract in scripts/build-locale-data.mjs (GOVERNED_OVERRIDE_CONTRACTS)"
   },
   "counts": {
-    "total_rows": 981,
-    "required_for_pt_launch": 953,
+    "total_rows": 989,
+    "required_for_pt_launch": 961,
     "intentionally_unchanged": 28,
-    "approved_rows_total": 981,
+    "approved_rows_total": 989,
     "r3_delta_rows": 21,
     "r4_delta_rows": 26,
     "r5_delta_rows": 2,
@@ -130,6 +135,7 @@
     "r9_source_correction_rows": 3,
     "event_delta_rows": 51,
     "r16_delta_rows": 4,
+    "r17_delta_rows": 8,
     "r10_renamed_rows": 76,
     "governed_override_rows": 6
   },
@@ -11938,6 +11944,102 @@
       "source_revision": "P04-MEDIA-ALT-2026-09-11-r16",
       "context_notes": "Informative alt text for the authentic founder-supplied Uni-CV/CIGEF REGEA artwork used on the EN/PT Home card and Details dialog.",
       "linguistic_notes": "States both date ranges visible in the artwork so the extension is not obscured."
+    },
+    "runtime.whatsapp_launcher.header": {
+      "key": "runtime.whatsapp_launcher.header",
+      "en": "Message A PRASA",
+      "pt": "Enviar mensagem à A PRASA",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-RUNTIME-WHATSAPP-LAUNCHER-2026-09-12-r1",
+      "context_notes": "Heading of the on-site chat-style panel opened by the floating WhatsApp launcher.",
+      "linguistic_notes": "Project 09 identity policy as supplied: \"TRANSLATE — preserve A PRASA\". The protected brand string A PRASA is carried verbatim into the Portuguese value where the English carries it. WhatsApp is a third-party product name and is never translated."
+    },
+    "runtime.whatsapp_launcher.intro": {
+      "key": "runtime.whatsapp_launcher.intro",
+      "en": "How can we help?",
+      "pt": "Como podemos ajudar?",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-RUNTIME-WHATSAPP-LAUNCHER-2026-09-12-r1",
+      "context_notes": "Opening line inside the launcher panel, above the quick actions.",
+      "linguistic_notes": "Project 09 identity policy as supplied: \"TRANSLATE — preserve A PRASA\". The protected brand string A PRASA is carried verbatim into the Portuguese value where the English carries it. WhatsApp is a third-party product name and is never translated."
+    },
+    "runtime.whatsapp_launcher.quick_action.share": {
+      "key": "runtime.whatsapp_launcher.quick_action.share",
+      "en": "Share an event or opportunity",
+      "pt": "Partilhar um evento ou oportunidade",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-RUNTIME-WHATSAPP-LAUNCHER-2026-09-12-r1",
+      "context_notes": "Quick action inside the launcher panel. Selects the visitor's intent locally; nothing is transmitted.",
+      "linguistic_notes": "Project 09 identity policy as supplied: \"TRANSLATE — preserve A PRASA\". The protected brand string A PRASA is carried verbatim into the Portuguese value where the English carries it. WhatsApp is a third-party product name and is never translated."
+    },
+    "runtime.whatsapp_launcher.quick_action.correction": {
+      "key": "runtime.whatsapp_launcher.quick_action.correction",
+      "en": "Report a correction or issue",
+      "pt": "Comunicar uma correção ou um problema",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-RUNTIME-WHATSAPP-LAUNCHER-2026-09-12-r1",
+      "context_notes": "Quick action inside the launcher panel. Selects the visitor's intent locally; nothing is transmitted.",
+      "linguistic_notes": "Project 09 identity policy as supplied: \"TRANSLATE — preserve A PRASA\". The protected brand string A PRASA is carried verbatim into the Portuguese value where the English carries it. WhatsApp is a third-party product name and is never translated."
+    },
+    "runtime.whatsapp_launcher.quick_action.question": {
+      "key": "runtime.whatsapp_launcher.quick_action.question",
+      "en": "Ask a question",
+      "pt": "Fazer uma pergunta",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-RUNTIME-WHATSAPP-LAUNCHER-2026-09-12-r1",
+      "context_notes": "Quick action inside the launcher panel. Selects the visitor's intent locally; nothing is transmitted.",
+      "linguistic_notes": "Project 09 identity policy as supplied: \"TRANSLATE — preserve A PRASA\". The protected brand string A PRASA is carried verbatim into the Portuguese value where the English carries it. WhatsApp is a third-party product name and is never translated."
+    },
+    "runtime.whatsapp_launcher.quick_action.submissions": {
+      "key": "runtime.whatsapp_launcher.quick_action.submissions",
+      "en": "Learn how submissions work",
+      "pt": "Saber como funciona o processo de submissão",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-RUNTIME-WHATSAPP-LAUNCHER-2026-09-12-r1",
+      "context_notes": "Quick action inside the launcher panel. Selects the visitor's intent locally; nothing is transmitted.",
+      "linguistic_notes": "Project 09 identity policy as supplied: \"TRANSLATE — preserve A PRASA\". The protected brand string A PRASA is carried verbatim into the Portuguese value where the English carries it. WhatsApp is a third-party product name and is never translated."
+    },
+    "runtime.whatsapp_launcher.primary_action": {
+      "key": "runtime.whatsapp_launcher.primary_action",
+      "en": "Open WhatsApp",
+      "pt": "Abrir o WhatsApp",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-RUNTIME-WHATSAPP-LAUNCHER-2026-09-12-r1",
+      "context_notes": "Primary action of the launcher panel and the single outbound navigation point to the governed WhatsApp destination.",
+      "linguistic_notes": "Project 09 identity policy as supplied: \"TRANSLATE — preserve A PRASA\". The protected brand string A PRASA is carried verbatim into the Portuguese value where the English carries it. WhatsApp is a third-party product name and is never translated."
+    },
+    "runtime.whatsapp_launcher.secondary_action": {
+      "key": "runtime.whatsapp_launcher.secondary_action",
+      "en": "Close",
+      "pt": "Fechar",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-RUNTIME-WHATSAPP-LAUNCHER-2026-09-12-r1",
+      "context_notes": "Secondary action of the launcher panel; dismisses it without leaving the page.",
+      "linguistic_notes": "Project 09 identity policy as supplied: \"TRANSLATE — preserve A PRASA\". The protected brand string A PRASA is carried verbatim into the Portuguese value where the English carries it. WhatsApp is a third-party product name and is never translated."
     }
   }
 }

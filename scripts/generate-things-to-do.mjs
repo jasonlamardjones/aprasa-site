@@ -5,6 +5,7 @@ import { t, hasKey } from './lib/locale.mjs';
 import { bodyParagraphs, factKeyBase } from './lib/things-to-do-keys.mjs';
 import { currentnessState, isExpired as recordIsExpired, EXPIRED, REVIEW_DUE } from './lib/things-to-do-currentness.mjs';
 import { HOME_PREVIEW_LIMIT, collectionRecords, homePreviewIds, hubOutputPath, hubCanonical } from './lib/things-to-do-collection.mjs';
+import { LAUNCHER_PANEL_KEYS, resolveRuntimeStrings, renderRuntimeStringsBlock } from './lib/runtime-strings.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(scriptDir, '..');
@@ -29,6 +30,18 @@ if (!/^\d{4}-\d{2}-\d{2}$/.test(asOf)) {
 const requestedId = idArg ? idArg.split('=')[1] : null;
 const write = process.argv.includes('--write');
 const locale = localeArg ? localeArg.split('=')[1] : 'en';
+
+// Governed runtime strings for the floating WhatsApp launcher's on-site panel.
+//
+// prasa-launch.js injects the panel at runtime, so this copy never passes
+// through the page templates below as markup and the static localizer never
+// sees it. Every page this generator emits carries the governed WhatsApp
+// anchor, so the launcher initializes on every one of them and each therefore
+// needs the block for its OWN locale. The key map is shared with
+// scripts/build-static-pages.mjs via scripts/lib/runtime-strings.mjs.
+function runtimeStringsBlock() {
+  return renderRuntimeStringsBlock(resolveRuntimeStrings(LAUNCHER_PANEL_KEYS, locale));
+}
 if (locale !== 'en' && locale !== 'pt') {
   console.error(`Invalid --locale: ${locale} (expected "en" or "pt")`);
   process.exit(1);
@@ -432,7 +445,7 @@ ${renderSocialMeta(record, loc)}
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Baskerville&family=Work+Sans&display=swap">
 <link rel="stylesheet" href="${links.rootPrefix}prasa-launch.css">
-<script src="${links.rootPrefix}prasa-launch.js" defer></script>
+${runtimeStringsBlock()}<script src="${links.rootPrefix}prasa-launch.js" defer></script>
 <!-- Privacy-friendly analytics by Plausible -->
 <script async src="https://plausible.io/js/pa-eShJ2lYHDu0B2CdpzVYvZ.js"></script>
 <script>
@@ -629,7 +642,7 @@ function renderHubPage(eligible) {
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Baskerville&family=Work+Sans&display=swap">
 <link rel="stylesheet" href="${links.rootPrefix}prasa-launch.css">
-<script src="${links.rootPrefix}prasa-launch.js" defer></script>
+${runtimeStringsBlock()}<script src="${links.rootPrefix}prasa-launch.js" defer></script>
 <!-- Privacy-friendly analytics by Plausible -->
 <script async src="https://plausible.io/js/pa-eShJ2lYHDu0B2CdpzVYvZ.js"></script>
 <script>

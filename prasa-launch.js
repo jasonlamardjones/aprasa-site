@@ -511,6 +511,44 @@
 
   const GOVERNED_WHATSAPP_URL = "https://wa.me/message/GC3C5Q4MSF37I1";
 
+  // Governed launcher-panel copy. This IIFE is a separate scope from the
+  // dialog module above, so it reads the same governed
+  // <script type="application/json" id="i18n-strings"> island itself rather
+  // than sharing that module's STRINGS.
+  //
+  // The defaults below are the governed ENGLISH values and are the fallback
+  // for any surface without the block. This file never carries a translation:
+  // a Portuguese value reaches it only through the island, which
+  // scripts/build-static-pages.mjs, scripts/generate-things-to-do.mjs and
+  // scripts/build-mindelo-pt.mjs write for the page's own locale.
+  const RUNTIME_STRINGS_DEFAULTS = {
+    launcherHeader: "Message A PRASA",
+    launcherIntro: "How can we help?",
+    launcherQuickActionShare: "Share an event or opportunity",
+    launcherQuickActionCorrection: "Report a correction or issue",
+    launcherQuickActionQuestion: "Ask a question",
+    launcherQuickActionSubmissions: "Learn how submissions work",
+    launcherPrimaryAction: "Open WhatsApp",
+    launcherSecondaryAction: "Close",
+  };
+
+  const STRINGS = (() => {
+    const resolved = {...RUNTIME_STRINGS_DEFAULTS};
+    let supplied = null;
+    try {
+      const node = document.getElementById("i18n-strings");
+      if (!node) return resolved;
+      supplied = JSON.parse(node.textContent || "{}");
+    } catch {
+      return resolved;
+    }
+    for (const key of Object.keys(RUNTIME_STRINGS_DEFAULTS)) {
+      const value = supplied?.[key];
+      if (typeof value === "string" && value.length > 0) resolved[key] = value;
+    }
+    return resolved;
+  })();
+
   function normalizeUrl(value) {
     try {
       return new URL(value, window.location.href).href;
@@ -589,19 +627,134 @@
     });
   }
 
+  // The launcher is a toggle, not an outbound link: activating it opens the
+  // on-site panel below. The single outbound navigation point is the panel's
+  // governed "Open WhatsApp" action, which carries the governed destination
+  // resolved and asserted above. Nothing here transmits anything to WhatsApp,
+  // and a selected quick action is local panel state only.
+  const PANEL_ID = "prasa-launcher-panel";
+  const PANEL_TITLE_ID = "prasa-launcher-panel-title";
+
+  const QUICK_ACTION_KEYS = [
+    "launcherQuickActionShare",
+    "launcherQuickActionCorrection",
+    "launcherQuickActionQuestion",
+    "launcherQuickActionSubmissions",
+  ];
+
   function createWhatsAppControl(sourceAnchor) {
     const label = (sourceAnchor.textContent || "").trim();
     if (!label) return null;
 
-    const link = document.createElement("a");
-    link.className = "floating-utility floating-utility-whatsapp";
-    link.href = sourceAnchor.href;
-    if (sourceAnchor.target) link.target = sourceAnchor.target;
-    if (sourceAnchor.rel) link.rel = sourceAnchor.rel;
-    link.setAttribute("aria-label", label);
-    link.title = label;
-    link.append(createWhatsAppIcon());
-    return link;
+    // The incumbent anchor label is governed and already localized per page,
+    // so it stays the launcher's accessible name exactly as before.
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "floating-utility floating-utility-whatsapp";
+    button.setAttribute("aria-label", label);
+    button.title = label;
+    button.setAttribute("aria-expanded", "false");
+    button.setAttribute("aria-controls", PANEL_ID);
+    button.append(createWhatsAppIcon());
+    return button;
+  }
+
+  function createQuickAction(label) {
+    const action = document.createElement("button");
+    action.type = "button";
+    action.className = "launcher-quick-action";
+    action.setAttribute("aria-pressed", "false");
+    action.textContent = label;
+    return action;
+  }
+
+  function createPanel(sourceAnchor) {
+    const panel = document.createElement("div");
+    panel.className = "launcher-panel";
+    panel.id = PANEL_ID;
+    panel.hidden = true;
+    panel.tabIndex = -1;
+    panel.setAttribute("role", "dialog");
+    panel.setAttribute("aria-labelledby", PANEL_TITLE_ID);
+
+    // A paragraph rather than a heading: the panel is appended to the end of
+    // the document, and a real heading there would land in the page outline
+    // after the footer. aria-labelledby gives it the accessible name instead.
+    const title = document.createElement("p");
+    title.className = "launcher-panel-title";
+    title.id = PANEL_TITLE_ID;
+    title.textContent = STRINGS.launcherHeader;
+
+    const intro = document.createElement("p");
+    intro.className = "launcher-panel-intro";
+    intro.textContent = STRINGS.launcherIntro;
+
+    const actions = document.createElement("div");
+    actions.className = "launcher-panel-actions";
+    const quickActions = QUICK_ACTION_KEYS.map((key) => createQuickAction(STRINGS[key]));
+    for (const action of quickActions) {
+      action.addEventListener("click", () => {
+        const selected = action.getAttribute("aria-pressed") === "true";
+        // Single-select: the panel records one intent at a time. This is local
+        // state that changes nothing about the outbound destination.
+        for (const other of quickActions) other.setAttribute("aria-pressed", "false");
+        action.setAttribute("aria-pressed", selected ? "false" : "true");
+      });
+      actions.append(action);
+    }
+
+    const cta = document.createElement("a");
+    cta.className = "launcher-panel-cta";
+    cta.href = sourceAnchor.href;
+    if (sourceAnchor.target) cta.target = sourceAnchor.target;
+    if (sourceAnchor.rel) cta.rel = sourceAnchor.rel;
+    cta.textContent = STRINGS.launcherPrimaryAction;
+
+    const close = document.createElement("button");
+    close.type = "button";
+    close.className = "launcher-panel-close";
+    close.textContent = STRINGS.launcherSecondaryAction;
+
+    panel.append(title, intro, actions, cta, close);
+    return {panel, close};
+  }
+
+  function wireLauncher(button, panel, close) {
+    const isOpen = () => !panel.hidden;
+
+    function openPanel() {
+      panel.hidden = false;
+      button.setAttribute("aria-expanded", "true");
+      // Move focus into the panel so its name is announced, without trapping
+      // it: Tab continues through the panel and back out to the page.
+      panel.focus();
+    }
+
+    function closePanel(returnFocus) {
+      if (!isOpen()) return;
+      panel.hidden = true;
+      button.setAttribute("aria-expanded", "false");
+      if (returnFocus) button.focus();
+    }
+
+    button.addEventListener("click", () => {
+      if (isOpen()) closePanel(true);
+      else openPanel();
+    });
+    close.addEventListener("click", () => closePanel(true));
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape" || !isOpen()) return;
+      closePanel(true);
+    });
+
+    // Dismiss on an outside pointer press. Focus is not returned here: the
+    // visitor's attention has already moved elsewhere on the page.
+    document.addEventListener("pointerdown", (event) => {
+      if (!isOpen()) return;
+      if (panel.contains(event.target) || button.contains(event.target)) return;
+      closePanel(false);
+    });
   }
 
   function createHomeNavigationControls(cluster) {
@@ -690,12 +843,17 @@
     const whatsApp = createWhatsAppControl(sourceAnchor);
     if (!whatsApp) return;
 
+    const {panel, close} = createPanel(sourceAnchor);
+    wireLauncher(whatsApp, panel, close);
+
     const cluster = document.createElement("div");
     cluster.className = "floating-utilities";
     cluster.dataset.floatingUtilities = "";
     cluster.setAttribute("role", "group");
     cluster.setAttribute("aria-label", "A PRASA");
-    cluster.append(whatsApp);
+    // Panel first: the cluster is a bottom-anchored column, so this places the
+    // panel above the launcher that opens it.
+    cluster.append(panel, whatsApp);
     createHomeNavigationControls(cluster);
     document.body.append(cluster);
   }

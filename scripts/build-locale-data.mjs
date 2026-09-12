@@ -74,6 +74,7 @@ const DELTA13_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r13-things-t
 const DELTA14_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r14-section-fallback-note.source.json");
 const DELTA15_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r15-weekly-opportunity-2026-09.source.json");
 const DELTA16_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r16-provider-media-alt.source.json");
+const DELTA17_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r17-runtime-whatsapp-launcher.source.json");
 const LOCALE_DIR = path.join(ROOT, "data", "locales");
 const OUT_PATH = path.join(ROOT, "data", "locales", "locale-data.generated.json");
 
@@ -1794,6 +1795,126 @@ for (const contract of GOVERNED_OVERRIDE_CONTRACTS) {
 
 const governedOverrideCount = governedOverrideResults.reduce((n, r) => n + r.overridden_keys, 0);
 
+// --- r17 delta: additive merge for the runtime contact-panel copy ----------
+// Supplies the approved EN/PT values for the on-site contact panel opened by
+// the floating WhatsApp launcher. Like the media-fallback strings, this copy is
+// injected by prasa-launch.js at runtime rather than baked into the page, so it
+// reaches the surface through the governed i18n-strings block and never through
+// a translation hardcoded in the runtime. Strictly additive on the same lane as
+// r13/r14: it may never reopen an existing key.
+const EXPECTED_DELTA17 = {
+  package_id: "aprasa-pt-runtime-whatsapp-launcher",
+  revision_class: "ADDITIVE_RUNTIME_KEYS",
+  source_revision: "P09-PT-RUNTIME-WHATSAPP-LAUNCHER-2026-09-12-r1",
+  previous_revision: "P04-MEDIA-ALT-2026-09-11-r16",
+  row_count: 8,
+  approved: 8,
+  required_for_pt_launch: 8,
+  intentionally_unchanged: 0,
+  review_required: 0,
+};
+
+const delta17 = JSON.parse(readFileSync(DELTA17_PATH, "utf8"));
+
+for (const field of ["package_id", "revision_class", "source_revision", "previous_revision"]) {
+  if (delta17[field] !== EXPECTED_DELTA17[field]) {
+    fail(`r17 ${field} mismatch: got ${JSON.stringify(delta17[field])}, expected ${JSON.stringify(EXPECTED_DELTA17[field])}`);
+  }
+}
+if (delta17.project_09_status !== "approved") {
+  fail(`r17 Project 09 status is not approved: ${JSON.stringify(delta17.project_09_status)}`);
+}
+if (!Array.isArray(delta17.rows) || delta17.rows.length !== EXPECTED_DELTA17.row_count) {
+  fail(`r17 row count mismatch: got ${delta17.rows?.length}, expected ${EXPECTED_DELTA17.row_count}`);
+}
+if (delta17.supplied_rows_approved !== EXPECTED_DELTA17.approved) {
+  fail(`r17 supplied_rows_approved mismatch: got ${delta17.supplied_rows_approved}`);
+}
+if (delta17.review_required !== EXPECTED_DELTA17.review_required || delta17.blocking_issue != null) {
+  fail("r17 has unresolved localization review state");
+}
+if (delta17.missing_or_unaccounted_row_count !== 0) {
+  fail(`r17 missing_or_unaccounted_row_count is non-zero: ${delta17.missing_or_unaccounted_row_count}`);
+}
+for (const listField of ["duplicate_keys", "placeholder_mismatches", "a_prasa_to_a_praca_violations"]) {
+  if ((delta17[listField] || []).length !== 0) fail(`r17 ${listField} is non-empty: ${JSON.stringify(delta17[listField])}`);
+}
+if (delta17.source_english_changed !== false || delta17.change_control_status?.existing_keys_overridden !== 0) {
+  fail("r17 declares a non-additive change (source_english_changed/existing_keys_overridden)");
+}
+if (delta17.change_control_status?.new_keys_introduced !== EXPECTED_DELTA17.row_count) {
+  fail(`r17 new_keys_introduced mismatch: got ${delta17.change_control_status?.new_keys_introduced}`);
+}
+if (delta17.change_control_status?.lifecycle_or_publication_state_modified !== 0) {
+  fail("r17 must not modify lifecycle or publication state");
+}
+if (delta17.semantic_change !== false) {
+  fail("r17 declares a semantic change; this package is runtime presentation copy only");
+}
+if (delta17.target_language !== "pt") {
+  fail(`r17 target_language mismatch: got ${JSON.stringify(delta17.target_language)}`);
+}
+
+let delta17Required = 0;
+let delta17Unchanged = 0;
+for (const row of delta17.rows) {
+  if (seen.has(row.key)) {
+    fail(`r17 key "${row.key}" collides with an existing key — r17 must be strictly additive, never reopen an existing key`);
+  }
+  seen.add(row.key);
+
+  if (row.record_id != null) fail(`r17 key "${row.key}" is record-scoped; this package carries no record copy`);
+  if (!/^runtime\.whatsapp_launcher\./.test(row.key)) {
+    fail(`r17 key "${row.key}" is outside the authorized runtime.whatsapp_launcher.* namespace`);
+  }
+  if (row.source_revision !== EXPECTED_DELTA17.source_revision) fail(`r17 ${row.key} source_revision mismatch`);
+  if (row.translation_status !== "APPROVED") fail(`r17 key "${row.key}" is not APPROVED (status: ${row.translation_status})`);
+
+  if (row.scope_status === "REQUIRED_FOR_PT_LAUNCH") delta17Required += 1;
+  else if (row.scope_status === "INTENTIONALLY_UNCHANGED") delta17Unchanged += 1;
+  else fail(`r17 key "${row.key}" has invalid scope_status`);
+
+  if (row.scope_status === "REQUIRED_FOR_PT_LAUNCH" && (row.pt == null || row.pt === "")) {
+    fail(`r17 REQUIRED_FOR_PT_LAUNCH key "${row.key}" has no PT value`);
+  }
+  if (!row.source_en) fail(`r17 key "${row.key}" is missing approved English text`);
+  const enPlaceholders = (row.source_en.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+  const ptPlaceholders = (row.pt.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+  if (JSON.stringify(enPlaceholders) !== JSON.stringify(ptPlaceholders)) {
+    fail(`r17 key "${row.key}" placeholder mismatch: en=${JSON.stringify(enPlaceholders)} pt=${JSON.stringify(ptPlaceholders)}`);
+  }
+  if ([row.source_en, row.pt].some((value) => value.includes("A PRAÇA"))) {
+    fail(`r17 key "${row.key}" violates protected A PRASA brand spelling`);
+  }
+  if (row.source_en.includes("A PRASA") && !row.pt.includes("A PRASA")) {
+    fail(`r17 key "${row.key}" drops the protected brand string A PRASA from its Portuguese value`);
+  }
+  // WhatsApp is a third-party product name: it is never translated away.
+  if (row.source_en.includes("WhatsApp") && !row.pt.includes("WhatsApp")) {
+    fail(`r17 key "${row.key}" drops the product name WhatsApp from its Portuguese value`);
+  }
+
+  keys[row.key] = {
+    key: row.key,
+    en: row.source_en,
+    pt: row.pt,
+    scope_status: row.scope_status,
+    identity_policy: row.identity_policy,
+    record_id: row.record_id,
+    translation_status: row.translation_status,
+    source_revision: row.source_revision,
+    context_notes: row.context_notes || "",
+    linguistic_notes: row.linguistic_notes || "",
+  };
+}
+
+if (delta17Required !== EXPECTED_DELTA17.required_for_pt_launch) {
+  fail(`r17 required_for_pt_launch mismatch: got ${delta17Required}, expected ${EXPECTED_DELTA17.required_for_pt_launch}`);
+}
+if (delta17Unchanged !== EXPECTED_DELTA17.intentionally_unchanged) {
+  fail(`r17 intentionally_unchanged mismatch: got ${delta17Unchanged}, expected ${EXPECTED_DELTA17.intentionally_unchanged}`);
+}
+
 // Aggregate tallies, read off the finished key map that is about to be written.
 const assembled = (() => {
   const values = Object.values(keys);
@@ -1830,6 +1951,7 @@ const output = {
       "data/locales/pt-overlay-r14-section-fallback-note.source.json",
       "data/locales/pt-overlay-r15-weekly-opportunity-2026-09.source.json",
       "data/locales/pt-overlay-r16-provider-media-alt.source.json",
+      "data/locales/pt-overlay-r17-runtime-whatsapp-launcher.source.json",
     ],
     base_revision: pkg.source_revision,
     delta_revision: delta.source_revision,
@@ -1861,6 +1983,10 @@ const output = {
     delta16_revision: delta16.source_revision,
     delta16_revision_class: delta16.revision_class,
     delta16_row_count: delta16.rows.length,
+    delta17_package_id: delta17.package_id,
+    delta17_revision: delta17.source_revision,
+    delta17_revision_class: delta17.revision_class,
+    delta17_row_count: delta17.rows.length,
     delta9_superseding_ruling: delta9.superseding_ruling,
     delta9_owning_project: delta9.owning_project,
     event_delta_packages: eventDeltaPackages,
@@ -1903,6 +2029,7 @@ const output = {
     r9_source_correction_rows: delta9.rows.length,
     event_delta_rows: eventDeltaRequired + eventDeltaUnchanged,
     r16_delta_rows: delta16.rows.length,
+    r17_delta_rows: delta17.rows.length,
     r10_renamed_rows: r10Renamed.length,
     governed_override_rows: governedOverrideCount,
   },

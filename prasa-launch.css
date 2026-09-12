@@ -707,6 +707,9 @@ html[lang="pt"] img.lang-only-pt { display: block; }
   font-family: var(--sans);
   line-height: 1;
 }
+/* The WhatsApp launcher is a <button> (it toggles the panel rather than
+   navigating), so it needs the button resets the anchor never did. */
+button.floating-utility { cursor: pointer; }
 a.floating-utility { text-decoration: none; }
 .floating-utility[hidden] { display: none; }
 .floating-utility-icon { display: block; }
@@ -753,6 +756,100 @@ a.floating-utility { text-decoration: none; }
 .floating-utility-nav:hover { background: var(--cream); }
 
 body.dialog-open .floating-utilities { display: none; }
+
+/* On-site chat-style panel opened by the floating WhatsApp launcher.
+   Anchored to the launcher inside the fixed cluster, deliberately small: it is
+   a guidance card, not a modal, and never covers the viewport. Colours are the
+   incumbent tokens — deep green ground, cream surface, ochre only as the
+   selected-intent accent. */
+.launcher-panel {
+  width: min(20rem, calc(100vw - 2rem));
+  max-height: min(26rem, calc(100vh - 9rem));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: .95rem 1rem 1rem;
+  background: var(--cream);
+  color: var(--ink);
+  border: 1px solid rgba(30,61,46,.28);
+  border-radius: var(--radius);
+  box-shadow: 0 .8rem 2rem rgba(17,17,17,.22);
+  text-align: left;
+}
+.launcher-panel:focus-visible { outline: 3px solid var(--green); outline-offset: 3px; }
+.launcher-panel-title {
+  margin: 0 0 .2rem;
+  font-family: var(--serif);
+  font-size: 1rem;
+  line-height: 1.25;
+  color: var(--green);
+}
+.launcher-panel-intro {
+  margin: 0 0 .7rem;
+  font-size: .85rem;
+  line-height: 1.4;
+}
+.launcher-panel-actions {
+  display: grid;
+  gap: .35rem;
+  margin: 0 0 .8rem;
+}
+.launcher-quick-action {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: .5rem .65rem;
+  background: var(--white);
+  color: var(--green);
+  border: 1px solid rgba(30,61,46,.22);
+  border-radius: 8px;
+  font-family: var(--sans);
+  font-size: .82rem;
+  line-height: 1.3;
+  text-align: left;
+  cursor: pointer;
+}
+.launcher-quick-action:hover { border-color: rgba(30,61,46,.45); }
+/* Selected intent. This is local panel state only — it records what the
+   visitor wants to talk about so the panel can reflect it back, and changes
+   nothing about the outbound destination. */
+.launcher-quick-action[aria-pressed="true"] {
+  background: rgba(192,135,46,.14);
+  border-color: var(--ochre);
+  font-weight: 600;
+}
+.launcher-panel-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: .55rem .9rem;
+  background: var(--green);
+  color: var(--cream);
+  border: 1px solid var(--green);
+  border-radius: 999px;
+  font-size: .86rem;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+}
+.launcher-panel-cta:hover { color: var(--cream); text-decoration: underline; }
+.launcher-panel-close {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin-top: .3rem;
+  padding: .4rem;
+  background: none;
+  color: var(--green);
+  border: 0;
+  font-family: var(--sans);
+  font-size: .82rem;
+  text-decoration: underline;
+  text-underline-offset: .18em;
+  cursor: pointer;
+}
+.launcher-panel-close:hover { text-decoration-thickness: .13em; }
+
 
 @media (max-width: 24rem) {
   .floating-utilities {
