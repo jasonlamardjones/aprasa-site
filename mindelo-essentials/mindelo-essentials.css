@@ -266,8 +266,12 @@ a.floating-utility { text-decoration: none; }
   box-shadow: 0 .45rem 1.35rem rgba(17,17,17,.26);
 }
 
-/* Secondary controls: lighter, smaller chevrons. */
+/* Secondary controls: lighter, smaller chevrons. The visible disc is compact
+   so it stays subordinate to the WhatsApp launcher, but the interactive area
+   is widened back out to 44px square by the transparent ::after overlay below,
+   so the touch target does not regress from the previous 48px buttons. */
 .floating-utility-nav {
+  position: relative;
   width: 2.5rem;
   height: 2.5rem;
   background: var(--white);
@@ -275,6 +279,15 @@ a.floating-utility { text-decoration: none; }
   border-color: rgba(30,61,46,.22);
   box-shadow: 0 .2rem .65rem rgba(17,17,17,.12);
   cursor: pointer;
+}
+.floating-utility-nav::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
 }
 .floating-utility-nav .floating-utility-icon { width: 1.15rem; height: 1.15rem; }
 .floating-utility-nav:hover { background: var(--cream); }
@@ -288,7 +301,6 @@ body.dialog-open .floating-utilities { display: none; }
   }
   .floating-utility-whatsapp { width: 3rem; height: 3rem; }
   .floating-utility-whatsapp .floating-utility-icon { width: 1.7rem; height: 1.7rem; }
-  .floating-utility-nav { width: 2.3rem; height: 2.3rem; }
 }
 
 @media print {
