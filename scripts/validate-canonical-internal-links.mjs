@@ -27,6 +27,10 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SKIP_DIRS = new Set(['.git', 'node_modules', 'assets', 'validation-artifacts']);
 const errors = [];
 
+function toPosixPath(value) {
+  return value.split(path.sep).join('/');
+}
+
 function walk(dir, out = []) {
   for (const entry of fs.readdirSync(dir)) {
     if (SKIP_DIRS.has(entry)) continue;
@@ -39,7 +43,7 @@ function walk(dir, out = []) {
 
 const files = walk(root);
 for (const file of files) {
-  const relative = path.relative(root, file);
+  const relative = toPosixPath(path.relative(root, file));
   const html = fs.readFileSync(file, 'utf8');
 
   for (const href of findNoncanonicalHomeLinks(html)) {
@@ -55,7 +59,8 @@ for (const file of files) {
       errors.push(`${relative}: breadcrumb points at a Home fragment (${href}) instead of the collection route`);
       continue;
     }
-    const resolved = `/${path.relative(root, path.resolve(path.dirname(file), href))}`.replace(/\/?$/, '/');
+    const resolvedRelative = toPosixPath(path.relative(root, path.resolve(path.dirname(file), href)));
+    const resolved = `/${resolvedRelative}`.replace(/\/?$/, '/');
     const expected = relative.startsWith('pt/') ? `/pt/${HUB_ROUTE}` : `/${HUB_ROUTE}`;
     if (resolved !== expected) {
       errors.push(`${relative}: breadcrumb resolves to ${resolved}, expected the same-locale collection route ${expected}`);
