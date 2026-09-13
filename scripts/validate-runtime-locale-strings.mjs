@@ -30,7 +30,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { t, hasKey } from './lib/locale.mjs';
-import { findIslands } from './lib/html-islands.mjs';
+import { findElementsById, isJsonIsland } from './lib/html-islands.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const errors = [];
@@ -119,13 +119,20 @@ function readBlock(relative) {
   // different element than the browser does the moment a second island is
   // written with its attributes the other way round, which is precisely how a
   // check can stay green while the page ships something else.
-  const islands = findIslands(html, 'i18n-strings');
+  // Any element carrying the id, whatever its tag: getElementById is not
+  // constrained by tag name, so an earlier <div id="i18n-strings"> is what the
+  // runtime would receive even with every <script> spelled correctly.
+  const islands = findElementsById(html, 'i18n-strings');
   if (!islands.length) {
     errors.push(`${relative}: governed runtime-strings block is missing`);
     return null;
   }
   if (islands.length > 1) {
-    errors.push(`${relative}: ${islands.length} runtime-strings blocks; the runtime reads only the first`);
+    errors.push(`${relative}: ${islands.length} elements carry the runtime-strings id (${islands.map((e) => e.tag).join(', ')}); the runtime reads only the first`);
+    return null;
+  }
+  if (!isJsonIsland(islands[0])) {
+    errors.push(`${relative}: the runtime-strings id belongs to <${islands[0].tag}>, not a JSON script element`);
     return null;
   }
   try {

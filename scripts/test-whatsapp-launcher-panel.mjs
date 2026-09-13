@@ -15,14 +15,14 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { t } from './lib/locale.mjs';
 import { LAUNCHER_PANEL_KEYS, PREFILL_KEYS, QUICK_ACTION_PREFILL } from './lib/runtime-strings.mjs';
-import { findIslands, firstIsland } from './lib/html-islands.mjs';
+import { findElementsById, isJsonIsland } from './lib/html-islands.mjs';
 
 // Read an island the way the runtime does: by id, first in document order.
 // Every read below goes through this, so a check can never be parsing a
 // different element than getElementById would return.
 function island(rel, id) {
-  const found = firstIsland(read(rel), id);
-  if (!found) throw new Error(`${rel} carries no #${id} island`);
+  const found = findElementsById(read(rel), id)[0];
+  if (!found) throw new Error(`${rel} carries no #${id} element`);
   return found;
 }
 function islandJson(rel, id) {
@@ -84,10 +84,14 @@ for (const rel of surfaces) {
   // Both islands must be unique per surface, not merely present. getElementById
   // returns the FIRST in document order, so a second island placed ahead of the
   // generated one is what the runtime would actually read.
-  const stringIslands = findIslands(html, 'i18n-strings');
+  const stringIslands = findElementsById(html, 'i18n-strings');
   check(`${rel} carries the governed runtime-strings block`, stringIslands.length >= 1);
-  check(`${rel} carries exactly one runtime-strings block`, stringIslands.length <= 1,
-    `found ${stringIslands.length}`);
+  check(`${rel} carries exactly one element with that id`, stringIslands.length <= 1,
+    `found ${stringIslands.length}: ${stringIslands.map((e) => e.tag).join(', ')}`);
+  // getElementById is not constrained by tag: an earlier <div id="i18n-strings">
+  // is what the runtime would receive. The element must BE the governed island.
+  check(`${rel} runtime-strings id belongs to a JSON script element`,
+    isJsonIsland(stringIslands[0]), stringIslands[0] && `found <${stringIslands[0].tag}>`);
   if (!stringIslands.length) continue;
   let block;
   try { block = JSON.parse(stringIslands[0].content); } catch (error) {
@@ -377,13 +381,41 @@ const digits = CONTACT.whatsapp_business_number;
 const NUMERIC_REFERENCE = /&#(x[0-9a-f]+|[0-9]+);/gi;
 const NAMED_REFERENCE = /&[a-z][a-z0-9]{1,31};/gi;
 
+// Any Unicode decimal digit -> its ASCII value. Derived, not tabulated: every
+// \p{Nd} block is ten consecutive code points, so a digit's value is the number
+// of steps back to the block's zero. That covers Arabic-Indic, Devanagari and
+// every script nobody thought to list. NFKC ahead of it folds the compatibility
+// forms - fullwidth digits, superscripts - onto ASCII.
+function toAsciiDigits(text) {
+  return text.replace(/\p{Nd}/gu, (character) => {
+    let code = character.codePointAt(0);
+    let value = 0;
+    while (value < 10 && /\p{Nd}/u.test(String.fromCodePoint(code - 1))) {
+      code -= 1;
+      value += 1;
+    }
+    return value < 10 ? String(value) : character;
+  });
+}
+
 function normalizeForNumberSearch(source) {
-  return source
+  const decoded = source
     .replace(NUMERIC_REFERENCE, (_, code) => {
       const value = code[0].toLowerCase() === 'x' ? parseInt(code.slice(1), 16) : parseInt(code, 10);
       return Number.isFinite(value) && value >= 0 && value <= 0x10ffff ? String.fromCodePoint(value) : ' ';
     })
     .replace(NAMED_REFERENCE, ' ');
+  return toAsciiDigits(decoded.normalize('NFKC'));
+}
+
+// A visible number can also be split by MARKUP rather than by characters:
+// +238<span>597</span><span>97</span>. The tag names sit between the digits and
+// no separator class can match them, because they are not separators - they are
+// elements. Rendered text is what a reader sees, so the scan also runs against
+// a tag-stripped view. Applied to every file rather than to a list of markup
+// extensions: an extension list is the enumeration mistake again.
+function stripTags(text) {
+  return text.replace(/<[^>]*>/g, ' ');
 }
 
 const SEPARATORS = '[\\s\\p{Zs}\\p{Pd}\\p{Cf}().]{0,3}';
@@ -392,6 +424,7 @@ const FORMATTED = new RegExp(digits.split('').join(SEPARATORS), 'u');
 const scanned = walk('');
 const offenders = [];
 const duplicateIslands = [];
+const shadowedIslands = [];
 for (const rel of scanned) {
   if (rel === 'data/contact-channels.json') continue;
   let source;
@@ -404,21 +437,29 @@ for (const rel of scanned) {
     // The derived island is legitimate - but exactly ONE of it, and located the
     // way the runtime locates it. Islands are matched by parsed tag and id, so
     // attribute order, quote style and whitespace cannot spell one past this.
-    const islands = findIslands(source, 'contact-config');
-    if (islands.length > 1) duplicateIslands.push(`${rel} (${islands.length})`);
+    const islands = findElementsById(source, 'contact-config');
+    if (islands.length > 1) duplicateIslands.push(`${rel} (${islands.length}: ${islands.map((e) => e.tag).join(', ')})`);
+    if (islands.length && !isJsonIsland(islands[0])) {
+      shadowedIslands.push(`${rel} (<${islands[0].tag}> shadows the island)`);
+    }
     // Strip exactly the one getElementById would return - the FIRST in document
     // order. Any further island is then scanned as ordinary page text, and its
     // digits are caught.
     if (islands.length) source = source.replace(islands[0].raw, '');
   }
   const normalized = normalizeForNumberSearch(source);
-  if (normalized.includes(digits) || FORMATTED.test(normalized)) offenders.push(rel);
+  const rendered = normalizeForNumberSearch(stripTags(source));
+  if (normalized.includes(digits) || FORMATTED.test(normalized)
+    || rendered.includes(digits) || FORMATTED.test(rendered)) offenders.push(rel);
 }
 check('the canonical number is restated nowhere outside its governed config',
   offenders.length === 0, offenders.length ? `found in: ${offenders.join(', ')}` : undefined);
-check('no page carries more than one contact-config island',
+check('no page carries more than one element with the contact-config id',
   duplicateIslands.length === 0,
   duplicateIslands.length ? `duplicated in: ${duplicateIslands.join(', ')}` : undefined);
+check('the contact-config id always belongs to a JSON script element',
+  shadowedIslands.length === 0,
+  shadowedIslands.length ? `shadowed in: ${shadowedIslands.join(', ')}` : undefined);
 // The separator-aware search is only worth anything if it actually matches the
 // formatted spelling; assert it against the config's own display value.
 check('the scan recognizes the formatted spelling of the number',
@@ -437,6 +478,19 @@ check('the scan sees a number separated by a non-breaking hyphen',
   FORMATTED.test(normalizeForNumberSearch(digits.slice(0, 3) + '\u2011' + digits.slice(3))));
 check('the scan sees digits written as numeric character references',
   normalizeForNumberSearch(digits.split('').map((d) => `&#${d.charCodeAt(0)};`).join('')).includes(digits));
+// Compatibility and non-ASCII digit forms, all derived from `digits`.
+const fullwidth = digits.replace(/[0-9]/g, (d) => String.fromCodePoint(0xff10 + Number(d)));
+const arabicIndic = digits.replace(/[0-9]/g, (d) => String.fromCodePoint(0x0660 + Number(d)));
+const devanagari = digits.replace(/[0-9]/g, (d) => String.fromCodePoint(0x0966 + Number(d)));
+check('the scan sees fullwidth digits', normalizeForNumberSearch(fullwidth).includes(digits));
+check('the scan sees Arabic-Indic digits', normalizeForNumberSearch(arabicIndic).includes(digits));
+check('the scan sees Devanagari digits', normalizeForNumberSearch(devanagari).includes(digits));
+check('the scan sees superscript digits',
+  normalizeForNumberSearch('\u00b2\u00b3\u2078').includes('238'));
+// A visible number split across markup, which is what a reader actually sees.
+check('the scan sees a number split across markup',
+  FORMATTED.test(normalizeForNumberSearch(stripTags(
+    `${digits.slice(0, 3)}<span>${digits.slice(3, 6)}</span><span>${digits.slice(6)}</span>`))));
 // The scan is only worth anything if it actually reached the source tree.
 check('the single-source scan covered the repository',
   scanned.length > 100 && scanned.includes('prasa-launch.js')
@@ -487,7 +541,17 @@ for (const [name, source] of [['prasa-launch.js', launcherJs], ['mindelo-essenti
   check(`${name} never concatenates the text parameter by hand`,
     !/\?text=/.test(source) && !/encodeURIComponent/.test(source));
   check(`${name} reads the number from the config island only`,
-    /CONTACT\.numberBaseUrl/.test(source) && /getElementById\("contact-config"\)/.test(source));
+    /CONTACT\.numberBaseUrl/.test(source) && /governedIslandNode\("contact-config"\)/.test(source));
+  // getElementById is not tag-constrained, so the runtime must not trust what it
+  // returns: exactly one element may carry the id and it must BE a JSON script.
+  check(`${name} refuses a governed island that is not uniquely a JSON script`,
+    /const matches = document\.querySelectorAll\('\[id="' \+ id \+ '"\]'\);/.test(source)
+    && /if \(matches\.length !== 1\)/.test(source)
+    && /node\.tagName !== "SCRIPT"/.test(source)
+    && /"application\/json"/.test(source));
+  check(`${name} routes every governed island read through that check`,
+    !/getElementById\("contact-config"\)/.test(source)
+    && !/getElementById\("i18n-strings"\)/.test(source));
   check(`${name} rejects a config whose short link disagrees`,
     /supplied\.shortLink !== GOVERNED_WHATSAPP_URL/.test(source));
   check(`${name} validates the configured number destination shape`,

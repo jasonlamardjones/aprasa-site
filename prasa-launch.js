@@ -1,5 +1,24 @@
 (() => {
   "use strict";
+  // Resolve a governed JSON island the strict way. getElementById is NOT
+  // constrained by tag name, so an earlier <div id="contact-config"> holding
+  // JSON is what it returns even when every <script> on the page is correct -
+  // and the page would then hand this runtime an ungoverned destination. So:
+  // exactly one element may carry the id, and it must BE a JSON script.
+  // Anything else is refused and the caller falls back to governed defaults.
+  function governedIslandNode(id) {
+    const matches = document.querySelectorAll('[id="' + id + '"]');
+    if (matches.length !== 1) {
+      if (matches.length > 1) console.warn("A PRASA governed island ignored: " + matches.length + " elements carry id " + id + ".");
+      return null;
+    }
+    const node = matches[0];
+    if (node.tagName !== "SCRIPT" || (node.getAttribute("type") || "").toLowerCase() !== "application/json") {
+      console.warn("A PRASA governed island ignored: id " + id + " belongs to <" + node.tagName.toLowerCase() + ">, not a JSON script.");
+      return null;
+    }
+    return node;
+  }
 
   const dialog = document.getElementById("details-dialog");
   const dialogContent = document.getElementById("details-dialog-content");
@@ -47,7 +66,7 @@
   };
 
   function readRuntimeStrings() {
-    const node = document.getElementById("i18n-strings");
+    const node = governedIslandNode("i18n-strings");
     if (!node) return { ...RUNTIME_STRINGS_DEFAULTS };
     let supplied = null;
     try {
@@ -508,6 +527,25 @@
 
 (() => {
   "use strict";
+  // Resolve a governed JSON island the strict way. getElementById is NOT
+  // constrained by tag name, so an earlier <div id="contact-config"> holding
+  // JSON is what it returns even when every <script> on the page is correct -
+  // and the page would then hand this runtime an ungoverned destination. So:
+  // exactly one element may carry the id, and it must BE a JSON script.
+  // Anything else is refused and the caller falls back to governed defaults.
+  function governedIslandNode(id) {
+    const matches = document.querySelectorAll('[id="' + id + '"]');
+    if (matches.length !== 1) {
+      if (matches.length > 1) console.warn("A PRASA governed island ignored: " + matches.length + " elements carry id " + id + ".");
+      return null;
+    }
+    const node = matches[0];
+    if (node.tagName !== "SCRIPT" || (node.getAttribute("type") || "").toLowerCase() !== "application/json") {
+      console.warn("A PRASA governed island ignored: id " + id + " belongs to <" + node.tagName.toLowerCase() + ">, not a JSON script.");
+      return null;
+    }
+    return node;
+  }
 
   const GOVERNED_WHATSAPP_URL = "https://wa.me/message/GC3C5Q4MSF37I1";
 
@@ -520,7 +558,7 @@
     const inert = {shortLink: GOVERNED_WHATSAPP_URL, numberBaseUrl: null};
     let node = null;
     try {
-      node = document.getElementById("contact-config");
+      node = governedIslandNode("contact-config");
       if (!node) return inert;
       const supplied = JSON.parse(node.textContent || "{}");
       // The short link the builder derived must be the one this file pins.
@@ -572,7 +610,7 @@
     const resolved = {...RUNTIME_STRINGS_DEFAULTS};
     let supplied = null;
     try {
-      const node = document.getElementById("i18n-strings");
+      const node = governedIslandNode("i18n-strings");
       if (!node) return resolved;
       supplied = JSON.parse(node.textContent || "{}");
     } catch {

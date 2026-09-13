@@ -1,5 +1,24 @@
 (() => {
   "use strict";
+  // Resolve a governed JSON island the strict way. getElementById is NOT
+  // constrained by tag name, so an earlier <div id="contact-config"> holding
+  // JSON is what it returns even when every <script> on the page is correct -
+  // and the page would then hand this runtime an ungoverned destination. So:
+  // exactly one element may carry the id, and it must BE a JSON script.
+  // Anything else is refused and the caller falls back to governed defaults.
+  function governedIslandNode(id) {
+    const matches = document.querySelectorAll('[id="' + id + '"]');
+    if (matches.length !== 1) {
+      if (matches.length > 1) console.warn("A PRASA governed island ignored: " + matches.length + " elements carry id " + id + ".");
+      return null;
+    }
+    const node = matches[0];
+    if (node.tagName !== "SCRIPT" || (node.getAttribute("type") || "").toLowerCase() !== "application/json") {
+      console.warn("A PRASA governed island ignored: id " + id + " belongs to <" + node.tagName.toLowerCase() + ">, not a JSON script.");
+      return null;
+    }
+    return node;
+  }
 
   const searchInput = document.getElementById("directory-search");
   const status = document.getElementById("result-status");
@@ -27,7 +46,7 @@
       markerDirectoryDefaultName: "Mindelo Essentials location",
     };
     try {
-      const node = document.getElementById("i18n-strings");
+      const node = governedIslandNode("i18n-strings");
       return node ? {...fallback, ...JSON.parse(node.textContent)} : fallback;
     } catch (error) {
       return fallback;
@@ -337,6 +356,25 @@
 
 (() => {
   "use strict";
+  // Resolve a governed JSON island the strict way. getElementById is NOT
+  // constrained by tag name, so an earlier <div id="contact-config"> holding
+  // JSON is what it returns even when every <script> on the page is correct -
+  // and the page would then hand this runtime an ungoverned destination. So:
+  // exactly one element may carry the id, and it must BE a JSON script.
+  // Anything else is refused and the caller falls back to governed defaults.
+  function governedIslandNode(id) {
+    const matches = document.querySelectorAll('[id="' + id + '"]');
+    if (matches.length !== 1) {
+      if (matches.length > 1) console.warn("A PRASA governed island ignored: " + matches.length + " elements carry id " + id + ".");
+      return null;
+    }
+    const node = matches[0];
+    if (node.tagName !== "SCRIPT" || (node.getAttribute("type") || "").toLowerCase() !== "application/json") {
+      console.warn("A PRASA governed island ignored: id " + id + " belongs to <" + node.tagName.toLowerCase() + ">, not a JSON script.");
+      return null;
+    }
+    return node;
+  }
 
   const GOVERNED_WHATSAPP_URL = "https://wa.me/message/GC3C5Q4MSF37I1";
 
@@ -347,7 +385,7 @@
   const CONTACT = (() => {
     const inert = {numberBaseUrl: null};
     try {
-      const node = document.getElementById("contact-config");
+      const node = governedIslandNode("contact-config");
       if (!node) return inert;
       const supplied = JSON.parse(node.textContent || "{}");
       if (supplied.shortLink !== GOVERNED_WHATSAPP_URL) {
@@ -411,7 +449,7 @@
       prefillSubmissions: "Hi, I came from aprasa.org and I’d like to learn how submissions to A PRASA work.",
     };
     try {
-      const node = document.getElementById("i18n-strings");
+      const node = governedIslandNode("i18n-strings");
       if (!node) return fallback;
       const supplied = JSON.parse(node.textContent || "{}");
       const resolved = {...fallback};
