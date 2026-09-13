@@ -2,71 +2,31 @@ name: Validate Things to Do currentness
 
 on:
   pull_request:
-    paths:
-      - 'automation/things-to-do/**'
-      - 'data/locales/**'
-      - 'data/things-to-do-events.json'
-      - 'data/things-to-do-currentness.json'
-      - 'internal/provider-media-manifest.json'
-      - 'scripts/build-sitemap.mjs'
-      - 'scripts/build-locale-data.mjs'
-      - 'scripts/build-static-pages.mjs'
-      - 'scripts/build-mindelo-pt.mjs'
-      - 'scripts/lib/canonical-links.mjs'
-      - 'prasa-launch.js'
-      - 'prasa-launch.css'
-      - 'about/**'
-      - 'pt/about/**'
-      - 'mindelo-essentials/**'
-      - 'pt/mindelo-essentials/**'
-      - 'scripts/generate-things-to-do.mjs'
-      - 'scripts/render-things-to-do-adapter.mjs'
-      - 'scripts/prepare-event-publication.mjs'
-      - 'scripts/write-event-publication.mjs'
-      - 'scripts/test-event-publication-write.mjs'
-      - 'scripts/test-media-gate-propagation.mjs'
-      - 'scripts/test-event-publication-packet-currentness.mjs'
-      - 'scripts/validate-event-publication-packet.mjs'
-      - 'scripts/lib/event-publication-contract.mjs'
-      - 'scripts/lib/event-publication-write.mjs'
-      - 'scripts/lib/things-to-do-collection.mjs'
-      - 'scripts/lib/things-to-do-currentness.mjs'
-      - 'scripts/lib/things-to-do-keys.mjs'
-      - 'scripts/test-things-to-do-*.mjs'
-      - 'scripts/validate-locale-contract.mjs'
-      - 'scripts/validate-things-to-do-*.mjs'
-      - 'scripts/validate-card-media.mjs'
-      - 'scripts/validate-canonical-internal-links.mjs'
-      - 'scripts/validate-runtime-locale-strings.mjs'
-      - 'scripts/test-whatsapp-launcher-panel.mjs'
-      - 'scripts/lib/runtime-strings.mjs'
-      - 'mindelo-essentials/mindelo-essentials.js'
-      # The governed contact-channel source and the helper that validates and
-      # serializes it into the #contact-config island. Without these two
-      # entries a number or config change ON ITS OWN starts no job, so a stale
-      # generated destination could be published with nothing comparing the
-      # source against the tracked islands.
-      - 'data/contact-channels.json'
-      - 'scripts/lib/contact-channels.mjs'
-      # Every HTML route, at any depth. The launcher-surface checks walk the
-      # whole repository and are fail-closed — a page must carry the governed
-      # runtime-strings block or be explicitly exempted — but that walk only
-      # protects anything if the workflow actually starts. Enumerating today's
-      # HTML locations would leave a NEW route (say contact/index.html) able to
-      # ship without ever running it, which is the same fail-open hole one level
-      # up. The entries below stay because they also cover non-HTML assets.
-      - '**.html'
-      - 'scripts/validate-training-opportunities-currentness.mjs'
-      - 'scripts/validate-training-opportunities-data.mjs'
-      - 'scripts/generate-training-opportunities.mjs'
-      - 'data/training-opportunities.json'
-      - 'automation/training-opportunities/canonical-corpus.json'
-      - 'index.html'
-      - 'pt/index.html'
-      - 'sitemap.xml'
-      - 'things-to-do/**'
-      - 'pt/things-to-do/**'
-      - '.github/workflows/validate-things-to-do.yml'
+    # NO path filter, deliberately.
+    #
+    # This job now carries a repository-WIDE guarantee: the single-source
+    # tripwire in scripts/test-whatsapp-launcher-panel.mjs walks every text
+    # file in the repository and fails if the canonical A PRASA WhatsApp
+    # number appears anywhere outside data/contact-channels.json and the one
+    # derived #contact-config island per page.
+    #
+    # A path list cannot express that. Adding the number to README.md, to one
+    # of assets/brand/*.svg, or to any file nobody thought to enumerate would
+    # match no path, start no job, and ship an independently maintained second
+    # contact number with the tripwire never having run. The filter would have
+    # to list every file that exists and every file that ever will - which is
+    # the same exhaustive-enumeration mistake this check was rewritten twice to
+    # remove, one level further up.
+    #
+    # The previous list is in this file's history. It enumerated the canonical
+    # data, the generators, the validators, '**.html', and (as of this branch)
+    # the two contact-channel sources. Every one of those is still covered:
+    # running on every pull request is a superset of them.
+    #
+    # These are GitHub's default activity types for pull_request, stated
+    # explicitly so this key has a value rather than resolving to null once the
+    # path list is gone.
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: read

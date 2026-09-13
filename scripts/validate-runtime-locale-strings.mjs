@@ -30,6 +30,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { t, hasKey } from './lib/locale.mjs';
+import { findIslands } from './lib/html-islands.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const errors = [];
@@ -113,13 +114,22 @@ const runtime = fs.readFileSync(path.join(root, 'prasa-launch.js'), 'utf8');
 
 function readBlock(relative) {
   const html = fs.readFileSync(path.join(root, relative), 'utf8');
-  const match = html.match(/<script type="application\/json" id="i18n-strings">([\s\S]*?)<\/script>/);
-  if (!match) {
+  // Located by parsed tag and id, in document order - the way the runtime's
+  // getElementById locates it. An exact-order regex here would read a
+  // different element than the browser does the moment a second island is
+  // written with its attributes the other way round, which is precisely how a
+  // check can stay green while the page ships something else.
+  const islands = findIslands(html, 'i18n-strings');
+  if (!islands.length) {
     errors.push(`${relative}: governed runtime-strings block is missing`);
     return null;
   }
+  if (islands.length > 1) {
+    errors.push(`${relative}: ${islands.length} runtime-strings blocks; the runtime reads only the first`);
+    return null;
+  }
   try {
-    return JSON.parse(match[1]);
+    return JSON.parse(islands[0].content);
   } catch (error) {
     errors.push(`${relative}: governed runtime-strings block is not valid JSON: ${error.message}`);
     return null;

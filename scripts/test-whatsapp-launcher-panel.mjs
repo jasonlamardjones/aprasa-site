@@ -15,6 +15,19 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { t } from './lib/locale.mjs';
 import { LAUNCHER_PANEL_KEYS, PREFILL_KEYS, QUICK_ACTION_PREFILL } from './lib/runtime-strings.mjs';
+import { findIslands, firstIsland } from './lib/html-islands.mjs';
+
+// Read an island the way the runtime does: by id, first in document order.
+// Every read below goes through this, so a check can never be parsing a
+// different element than getElementById would return.
+function island(rel, id) {
+  const found = firstIsland(read(rel), id);
+  if (!found) throw new Error(`${rel} carries no #${id} island`);
+  return found;
+}
+function islandJson(rel, id) {
+  return JSON.parse(island(rel, id).content);
+}
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const GOVERNED_WHATSAPP_URL = 'https://wa.me/message/GC3C5Q4MSF37I1';
@@ -67,11 +80,17 @@ console.log(`[1] governed runtime-key delivery across ${surfaces.length} launche
 check('at least the four Home/Mindelo surfaces plus the generated pages exist', surfaces.length >= 30,
   `found ${surfaces.length}`);
 for (const rel of surfaces) {
-  const match = read(rel).match(/<script type="application\/json" id="i18n-strings">([\s\S]*?)<\/script>/);
-  check(`${rel} carries the governed runtime-strings block`, !!match);
-  if (!match) continue;
+  const html = read(rel);
+  // Both islands must be unique per surface, not merely present. getElementById
+  // returns the FIRST in document order, so a second island placed ahead of the
+  // generated one is what the runtime would actually read.
+  const stringIslands = findIslands(html, 'i18n-strings');
+  check(`${rel} carries the governed runtime-strings block`, stringIslands.length >= 1);
+  check(`${rel} carries exactly one runtime-strings block`, stringIslands.length <= 1,
+    `found ${stringIslands.length}`);
+  if (!stringIslands.length) continue;
   let block;
-  try { block = JSON.parse(match[1]); } catch (error) {
+  try { block = JSON.parse(stringIslands[0].content); } catch (error) {
     check(`${rel} runtime-strings block is valid JSON`, false, error.message);
     continue;
   }
@@ -83,7 +102,7 @@ for (const rel of surfaces) {
 // --- 2. PT never receives EN panel copy ------------------------------------
 console.log('[2] no English panel copy on any PT surface');
 for (const rel of surfaces.filter((r) => r.startsWith('pt/'))) {
-  const block = JSON.parse(read(rel).match(/id="i18n-strings">([\s\S]*?)<\/script>/)[1]);
+  const block = islandJson(rel, 'i18n-strings');
   for (const [runtimeKey, localeKey] of Object.entries(LAUNCHER_PANEL_KEYS)) {
     const en = t(localeKey, 'en');
     const pt = t(localeKey, 'pt');
@@ -174,7 +193,7 @@ for (const [name, source] of [['prasa-launch.js', launcherJs], ['mindelo-essenti
 // both its targets and their names.
 console.log('[7b] navigation-control surface contract');
 for (const rel of surfaces) {
-  const block = JSON.parse(read(rel).match(/id="i18n-strings">([\s\S]*?)<\/script>/)[1]);
+  const block = islandJson(rel, 'i18n-strings');
   const locale = rel.startsWith('pt/') ? 'pt' : 'en';
   check(`${rel} carries the governed Up label`,
     block.navBackToTop === t('ui.back_to_top', locale),
@@ -288,7 +307,6 @@ check('config short_link is the incumbent governed short code',
 // -- and in HTML they may appear ONLY inside that island, so a hand-authored
 // page cannot carry them either.
 const SKIP_DIRS = new Set(['.git', 'node_modules', 'validation-artifacts', '.netlify']);
-const CONTACT_ISLAND = /<script type="application\/json" id="contact-config">[\s\S]*?<\/script>/g;
 
 // Binary files are identified by CONTENT, not by extension. An extension
 // allow/deny list is the same shape of mistake as enumerating URL components:
@@ -339,8 +357,37 @@ const digits = CONTACT.whatsapp_business_number;
 // order, allowing the characters a human formats a phone number with between
 // them. Built from `digits` rather than written out, so it cannot drift from
 // the config.
-const SEPARATORS = '[\\s\\-().\u00a0]{0,3}';
-const FORMATTED = new RegExp(digits.split('').join(SEPARATORS));
+//
+// Two normalizations run before matching, because the separator a maintainer
+// actually types is often not a literal character in the source:
+//
+//   * Character references. In HTML the visible number is plausibly written
+//     with &nbsp; or &#160; between groups, which is six-plus source
+//     characters INCLUDING LETTERS - no separator class can match that.
+//     Numeric references are decoded properly (they can encode digits, so
+//     they must not simply be dropped); named references are replaced with a
+//     space, which needs no table of entity names because no named reference
+//     produces a digit.
+//   * Unicode categories, not a hand-listed set of punctuation. \p{Zs} covers
+//     every space separator including NBSP, \p{Pd} every dash including the
+//     non-breaking hyphen U+2011 that word processors paste, and \p{Cf} every
+//     invisible formatting character including the soft hyphen. Listing
+//     characters individually is the enumeration mistake this review has
+//     already found twice.
+const NUMERIC_REFERENCE = /&#(x[0-9a-f]+|[0-9]+);/gi;
+const NAMED_REFERENCE = /&[a-z][a-z0-9]{1,31};/gi;
+
+function normalizeForNumberSearch(source) {
+  return source
+    .replace(NUMERIC_REFERENCE, (_, code) => {
+      const value = code[0].toLowerCase() === 'x' ? parseInt(code.slice(1), 16) : parseInt(code, 10);
+      return Number.isFinite(value) && value >= 0 && value <= 0x10ffff ? String.fromCodePoint(value) : ' ';
+    })
+    .replace(NAMED_REFERENCE, ' ');
+}
+
+const SEPARATORS = '[\\s\\p{Zs}\\p{Pd}\\p{Cf}().]{0,3}';
+const FORMATTED = new RegExp(digits.split('').join(SEPARATORS), 'u');
 
 const scanned = walk('');
 const offenders = [];
@@ -354,16 +401,18 @@ for (const rel of scanned) {
     continue;
   }
   if (rel.endsWith('.html')) {
-    // The derived island is legitimate - but exactly ONE of it. Stripping every
-    // match while the assertions below parse only the first would let a second,
-    // hand-authored island carry the number invisibly: the strip would remove
-    // it and nothing would ever look at it.
-    const islands = source.match(CONTACT_ISLAND) || [];
+    // The derived island is legitimate - but exactly ONE of it, and located the
+    // way the runtime locates it. Islands are matched by parsed tag and id, so
+    // attribute order, quote style and whitespace cannot spell one past this.
+    const islands = findIslands(source, 'contact-config');
     if (islands.length > 1) duplicateIslands.push(`${rel} (${islands.length})`);
-    // Strip only the first, so any further island is scanned like page text.
-    source = source.replace(new RegExp(CONTACT_ISLAND.source), '');
+    // Strip exactly the one getElementById would return - the FIRST in document
+    // order. Any further island is then scanned as ordinary page text, and its
+    // digits are caught.
+    if (islands.length) source = source.replace(islands[0].raw, '');
   }
-  if (source.includes(digits) || FORMATTED.test(source)) offenders.push(rel);
+  const normalized = normalizeForNumberSearch(source);
+  if (normalized.includes(digits) || FORMATTED.test(normalized)) offenders.push(rel);
 }
 check('the canonical number is restated nowhere outside its governed config',
   offenders.length === 0, offenders.length ? `found in: ${offenders.join(', ')}` : undefined);
@@ -374,6 +423,20 @@ check('no page carries more than one contact-config island',
 // formatted spelling; assert it against the config's own display value.
 check('the scan recognizes the formatted spelling of the number',
   FORMATTED.test(CONTACT.display), `display ${JSON.stringify(CONTACT.display)} not matched`);
+// The normalization is only worth anything if it actually normalizes. These
+// assert the two classes Codex demonstrated, built from `digits` so they
+// cannot drift from the config.
+const spaced = digits.slice(0, 3) + '\u00a0' + digits.slice(3);
+check('the scan sees a number separated by a non-breaking space',
+  FORMATTED.test(normalizeForNumberSearch(spaced)));
+check('the scan sees a number separated by a named character reference',
+  FORMATTED.test(normalizeForNumberSearch(digits.slice(0, 3) + '&nbsp;' + digits.slice(3))));
+check('the scan sees a number separated by a numeric character reference',
+  FORMATTED.test(normalizeForNumberSearch(digits.slice(0, 3) + '&#160;' + digits.slice(3))));
+check('the scan sees a number separated by a non-breaking hyphen',
+  FORMATTED.test(normalizeForNumberSearch(digits.slice(0, 3) + '\u2011' + digits.slice(3))));
+check('the scan sees digits written as numeric character references',
+  normalizeForNumberSearch(digits.split('').map((d) => `&#${d.charCodeAt(0)};`).join('')).includes(digits));
 // The scan is only worth anything if it actually reached the source tree.
 check('the single-source scan covered the repository',
   scanned.length > 100 && scanned.includes('prasa-launch.js')
@@ -387,7 +450,7 @@ check('the scan reaches text assets such as SVG',
 
 // All four prefills reach every surface, in that surface's own locale.
 for (const rel of surfaces) {
-  const block = JSON.parse(read(rel).match(/id="i18n-strings">([\s\S]*?)<\/script>/)[1]);
+  const block = islandJson(rel, 'i18n-strings');
   const locale = rel.startsWith('pt/') ? 'pt' : 'en';
   for (const [runtimeKey, localeKey] of Object.entries(PREFILL_KEYS)) {
     check(`${rel} carries governed ${runtimeKey}`, block[runtimeKey] === t(localeKey, locale),
@@ -397,7 +460,7 @@ for (const rel of surfaces) {
     }
   }
   // The derived destinations island, from the one governed source.
-  const cfg = JSON.parse(read(rel).match(/id="contact-config">([\s\S]*?)<\/script>/)[1]);
+  const cfg = islandJson(rel, 'contact-config');
   check(`${rel} carries the governed short link`, cfg.shortLink === GOVERNED_WHATSAPP_URL);
   check(`${rel} carries the derived number destination`, cfg.numberBaseUrl === CONTACT.number_base_url);
   check(`${rel} exposes no other contact config`, Object.keys(cfg).sort().join(',') === 'numberBaseUrl,shortLink');
@@ -469,7 +532,7 @@ for (const [name, source] of [['prasa-launch.js', launcherJs], ['mindelo-essenti
 // than re-running the generators here (build-all is exercised separately).
 console.log('[8] governed block serialization is canonical and stable');
 for (const rel of surfaces) {
-  const raw = read(rel).match(/id="i18n-strings">([\s\S]*?)<\/script>/)[1];
+  const raw = island(rel, 'i18n-strings').content;
   check(`${rel} block is emitted on a single line`, !/\n/.test(raw));
   // Byte-identical round-trip is the real determinism property: it proves the
   // block is canonical compact JSON.stringify output, so a rebuild cannot
