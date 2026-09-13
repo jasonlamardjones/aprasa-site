@@ -41,6 +41,13 @@ on:
       - 'scripts/test-whatsapp-launcher-panel.mjs'
       - 'scripts/lib/runtime-strings.mjs'
       - 'mindelo-essentials/mindelo-essentials.js'
+      # The governed contact-channel source and the helper that validates and
+      # serializes it into the #contact-config island. Without these two
+      # entries a number or config change ON ITS OWN starts no job, so a stale
+      # generated destination could be published with nothing comparing the
+      # source against the tracked islands.
+      - 'data/contact-channels.json'
+      - 'scripts/lib/contact-channels.mjs'
       # Every HTML route, at any depth. The launcher-surface checks walk the
       # whole repository and are fail-closed — a page must carry the governed
       # runtime-strings block or be explicitly exempted — but that walk only
