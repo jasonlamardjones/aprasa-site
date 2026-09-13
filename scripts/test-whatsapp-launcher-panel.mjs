@@ -42,32 +42,19 @@ function walkHtml(dir, out = []) {
 
 // Same discovery semantics as the runtime selector a[href*="wa.me/"], so this
 // test cannot drift narrower than the set of pages the launcher runs on.
-// Discovery must see what the BROWSER sees, not what the source looks like.
-// Two things separate the two, and scanning raw markup misses both:
-//   - attribute quoting: double, single, or unquoted (running to the first
-//     whitespace, quote or ">") all reach a[href*="wa.me/"];
-//   - character references: href="https://wa&#46;me/..." is decoded by the
-//     parser to the governed URL, so the launcher initializes on it.
-// So: pull out every href value, decode character references, then test the
-// decoded value. That closes the class rather than one spelling of it.
-const HREF_ATTR = /href\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/gi;
-const NAMED_REFS = {amp: '&', period: '.', sol: '/', colon: ':', lpar: '(', rpar: ')'};
+// Coverage is inverted and fail-closed, mirroring
+// scripts/validate-runtime-locale-strings.mjs: every HTML page in the
+// repository is a launcher surface unless it is explicitly exempted here.
+// Discovering surfaces by pattern-matching WhatsApp anchors was fail-open —
+// a page whose markup the scan did not recognize was silently dropped from
+// coverage — so the exemption list carries that judgement instead, where it
+// is visible and reviewable.
+const PAGES_WITHOUT_LAUNCHER = new Set([
+  'internal/analytics-exclude.html',
+]);
 
-function decodeCharRefs(value) {
-  return value
-    .replace(/&#x([0-9a-f]+);/gi, (whole, hex) => String.fromCodePoint(parseInt(hex, 16)))
-    .replace(/&#(\d+);/g, (whole, dec) => String.fromCodePoint(parseInt(dec, 10)))
-    .replace(/&([a-z]+);/gi, (whole, name) => NAMED_REFS[name.toLowerCase()] ?? whole);
-}
+const surfaces = walkHtml(root).filter((rel) => !PAGES_WITHOUT_LAUNCHER.has(rel)).sort();
 
-function hasGovernedWhatsAppAnchor(html) {
-  for (const match of html.matchAll(HREF_ATTR)) {
-    const value = match[1] ?? match[2] ?? match[3] ?? '';
-    if (decodeCharRefs(value).includes('wa.me/')) return true;
-  }
-  return false;
-}
-const surfaces = walkHtml(root).filter((rel) => hasGovernedWhatsAppAnchor(read(rel))).sort();
 const launcherJs = read('prasa-launch.js');
 const mindeloJs = read('mindelo-essentials/mindelo-essentials.js');
 

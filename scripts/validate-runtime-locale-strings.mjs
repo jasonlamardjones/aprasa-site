@@ -108,42 +108,21 @@ function readBlock(relative) {
   }
 }
 
-// Every surface the floating launcher can initialize on. Discovered from the
-// repository rather than listed by hand, so a new page cannot silently ship
-// without the governed runtime copy: the launcher initializes wherever the
-// governed WhatsApp anchor is, so that anchor is the discovery key.
-function walkHtml(dir, out = []) {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (entry.name === '.git' || entry.name === 'node_modules') continue;
-    const abs = path.join(dir, entry.name);
-    if (entry.isDirectory()) walkHtml(abs, out);
-    else if (entry.name.endsWith('.html')) out.push(path.relative(root, abs).split(path.sep).join('/'));
-  }
-  return out;
-}
-
-// Mirror the runtime's own selector, a[href*="wa.me/"], rather than a
-// narrower literal: the launcher initializes on any anchor whose href merely
-// CONTAINS "wa.me/", so single-quoted or protocol-relative markup counts. A
-// discovery rule stricter than the runtime's would skip a page the launcher
-// still runs on — and on a PT page that is exactly the silent English
-// fallback this validator exists to prevent.
-// Discovery must see what the BROWSER sees, not what the source looks like.
-// Two things separate the two, and scanning raw markup misses both:
-//   - attribute quoting: double, single, or unquoted (running to the first
-//     whitespace, quote or ">") all reach a[href*="wa.me/"];
-//   - character references: href="https://wa&#46;me/..." is decoded by the
-//     parser to the governed URL, so the launcher initializes on it.
-// So: pull out every href value, decode character references, then test the
-// decoded value. That closes the class rather than one spelling of it.
+// Recognizing a WhatsApp anchor the way the BROWSER does, not the way the
+// source happens to be spelled. Used only to challenge an exemption below;
+// it is never what decides that a page may be skipped.
+//   - attribute quoting: double, single, or unquoted (to the first
+//     whitespace, quote or ">");
+//   - character references: href="https://wa&#46;me/..." decodes to the
+//     governed URL, so the launcher initializes on it.
 const HREF_ATTR = /href\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/gi;
 const NAMED_REFS = {amp: '&', period: '.', sol: '/', colon: ':', lpar: '(', rpar: ')'};
 
 function decodeCharRefs(value) {
   return value
-    .replace(/&#x([0-9a-f]+);/gi, (whole, hex) => String.fromCodePoint(parseInt(hex, 16)))
-    .replace(/&#(\d+);/g, (whole, dec) => String.fromCodePoint(parseInt(dec, 10)))
-    .replace(/&([a-z]+);/gi, (whole, name) => NAMED_REFS[name.toLowerCase()] ?? whole);
+    .replace(/&#x([0-9a-f]+);?/gi, (whole, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);?/g, (whole, dec) => String.fromCodePoint(parseInt(dec, 10)))
+    .replace(/&([a-z]+);?/gi, (whole, name) => NAMED_REFS[name.toLowerCase()] ?? whole);
 }
 
 function hasGovernedWhatsAppAnchor(html) {
@@ -154,11 +133,56 @@ function hasGovernedWhatsAppAnchor(html) {
   return false;
 }
 
-const surfaces = walkHtml(root)
-  .filter((rel) => hasGovernedWhatsAppAnchor(fs.readFileSync(path.join(root, rel), 'utf8')))
-  .sort();
+// Which pages must carry the governed runtime-strings block.
+//
+// This check is deliberately INVERTED relative to how it started. It used to
+// discover launcher surfaces by scanning markup for a WhatsApp anchor, which
+// made it fail-OPEN: any page whose anchor the scan failed to recognize was
+// silently skipped, and on a PT surface that means the panel renders English
+// fallbacks while validation reports success. Review found three separate
+// ways to slip past that scan in a row (single-quoted values, unquoted
+// values, character references), which is the signal that approximating an
+// HTML parser with patterns was the wrong shape for a safety check.
+//
+// So: EVERY HTML page in the repository must carry the block, except the
+// pages listed below. A new page is covered by default and a new bypass is
+// not expressible — the failure mode is now "a page you must think about",
+// not "a page nobody notices".
+const PAGES_WITHOUT_LAUNCHER = new Set([
+  // Bare analytics opt-out receipt: no site chrome, no footer contact anchor,
+  // and so no floating launcher to localize.
+  'internal/analytics-exclude.html',
+]);
 
-if (!surfaces.length) errors.push('no floating-launcher surfaces found — the wa.me discovery key matched nothing');
+function walkHtml(dir, out = []) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name === '.git' || entry.name === 'node_modules') continue;
+    const abs = path.join(dir, entry.name);
+    if (entry.isDirectory()) walkHtml(abs, out);
+    else if (entry.name.endsWith('.html')) out.push(path.relative(root, abs).split(path.sep).join('/'));
+  }
+  return out;
+}
+
+const allPages = walkHtml(root).sort();
+const surfaces = allPages.filter((rel) => !PAGES_WITHOUT_LAUNCHER.has(rel));
+
+if (!surfaces.length) errors.push('no launcher surfaces found — every HTML page is on the exemption list');
+
+// The exemption list is itself checked, from both directions: an entry that
+// no longer exists is stale, and an exempt page that actually carries a
+// WhatsApp anchor would initialize the launcher and therefore does need the
+// block. Anchor parsing is only ever used HERE, to challenge an exemption —
+// never to decide that a page can be skipped.
+for (const rel of PAGES_WITHOUT_LAUNCHER) {
+  if (!allPages.includes(rel)) {
+    errors.push(`${rel}: listed as carrying no floating launcher, but no such page exists — stale exemption`);
+    continue;
+  }
+  if (hasGovernedWhatsAppAnchor(fs.readFileSync(path.join(root, rel), 'utf8'))) {
+    errors.push(`${rel}: exempted from the governed runtime-strings block, but it carries a WhatsApp anchor — the launcher initializes there and its copy would fall back to English`);
+  }
+}
 
 let checkedSurfaces = 0;
 for (const relative of surfaces) {
