@@ -162,6 +162,49 @@ for (const [name, source] of [['prasa-launch.js', launcherJs], ['mindelo-essenti
     (source.match(/launcherQuickAction(Share|Correction|Question|Submissions)"/g) || []).length >= 4);
 }
 
+// --- 7b. Floating navigation-control surface contract ----------------------
+// The Up control is available on every launcher surface, so its governed label
+// must reach every surface too — including Mindelo Essentials, which carries no
+// in-page "Back to top" anchor for the runtime to borrow from. Down stays
+// section-aware and therefore only exists where a governed in-page nav supplies
+// both its targets and their names.
+console.log('[7b] navigation-control surface contract');
+for (const rel of surfaces) {
+  const block = JSON.parse(read(rel).match(/id="i18n-strings">([\s\S]*?)<\/script>/)[1]);
+  const locale = rel.startsWith('pt/') ? 'pt' : 'en';
+  check(`${rel} carries the governed Up label`,
+    block.navBackToTop === t('ui.back_to_top', locale),
+    `got ${JSON.stringify(block.navBackToTop)}`);
+}
+for (const [name, source] of [['prasa-launch.js', launcherJs], ['mindelo-essentials.js', mindeloJs]]) {
+  check(`${name} names the Up control from the governed string, not page markup`,
+    /navBackToTop/.test(source) && !/a\.back-top/.test(source));
+  check(`${name} builds the nav controls as buttons`, /floating-utility floating-utility-nav/.test(source));
+  check(`${name} hides Up at the document top`, /up\.hidden = window\.scrollY <= 0;/.test(source));
+  check(`${name} throttles scroll updates through rAF`, /requestAnimationFrame/.test(source));
+  check(`${name} honours reduced motion`, /prefers-reduced-motion: reduce/.test(source));
+}
+// Down is Home-only by construction: it requires .home-page-nav targets.
+check('prasa-launch.js gates Down on a governed in-page nav',
+  /if \(targets\.length\) \{/.test(launcherJs) && /\.home-page-nav/.test(launcherJs));
+check('prasa-launch.js hides Down at the document bottom',
+  /atDocumentBottom\(\)/.test(launcherJs));
+check('mindelo-essentials.js ships no Down control (it has no governed in-page nav)',
+  !/CHEVRON_DOWN/.test(mindeloJs));
+// The stack is one vertical column, in CSS, on both stylesheets.
+for (const css of ['prasa-launch.css', 'mindelo-essentials/mindelo-essentials.css']) {
+  const text = read(css);
+  // The selector appears in more than one rule (it is also grouped into the
+  // pointer-events rule), so check every rule that targets it, not the first.
+  const rules = [...text.matchAll(/\.floating-nav-controls\s*\{[^}]*\}/g)].map((m) => m[0]);
+  check(`${css} stacks the nav controls vertically`,
+    rules.some((rule) => /flex-direction:\s*column/.test(rule)),
+    rules.length ? rules.map((r) => r.replace(/\s+/g, ' ')).join(' | ') : 'no .floating-nav-controls rule');
+  check(`${css} keeps the 44px nav hit area`, /\.floating-utility-nav::after \{[\s\S]*?width: 44px;[\s\S]*?height: 44px;/.test(text));
+  check(`${css} gives the launcher a light separation ring`,
+    /\.floating-utility-whatsapp \{[\s\S]*?box-shadow:[\s\S]*?rgba\(246,240,226,/.test(text));
+}
+
 // --- 8. Generated output remains deterministic -----------------------------
 // The block is a JSON island: key order and spacing must be stable, or every
 // rebuild would churn 32 files. Assert the serialization is canonical rather

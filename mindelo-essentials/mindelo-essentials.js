@@ -381,6 +381,7 @@
       launcherQuickActionSubmissions: "Learn how submissions work",
       launcherPrimaryAction: "Open WhatsApp",
       launcherSecondaryAction: "Close",
+      navBackToTop: "Back to top",
     };
     try {
       const node = document.getElementById("i18n-strings");
@@ -395,6 +396,67 @@
       return fallback;
     }
   })();
+
+  // Chevron for the floating Up control, matching prasa-launch.js.
+  const CHEVRON_UP = "M6 14.5 12 8.5l6 6";
+
+  // Mindelo Essentials has no governed in-page section nav, so it carries the
+  // Up control only — see the reasoning in prasa-launch.js. Its label is the
+  // governed ui.back_to_top value from the runtime-strings island; this page
+  // has no in-page "Back to top" anchor to borrow one from.
+  function createNavigationControls(cluster) {
+    const upLabel = PANEL_STRINGS.navBackToTop;
+    if (!upLabel) return;
+
+    const SVG_NS = "http://www.w3.org/2000/svg";
+    const navGroup = document.createElement("div");
+    navGroup.className = "floating-nav-controls";
+
+    const up = document.createElement("button");
+    up.type = "button";
+    up.className = "floating-utility floating-utility-nav";
+    up.setAttribute("aria-label", upLabel);
+    up.title = upLabel;
+
+    const icon = document.createElementNS(SVG_NS, "svg");
+    icon.setAttribute("class", "floating-utility-icon");
+    icon.setAttribute("viewBox", "0 0 24 24");
+    icon.setAttribute("aria-hidden", "true");
+    icon.setAttribute("focusable", "false");
+    const chevron = document.createElementNS(SVG_NS, "path");
+    chevron.setAttribute("d", CHEVRON_UP);
+    chevron.setAttribute("fill", "none");
+    chevron.setAttribute("stroke", "currentColor");
+    chevron.setAttribute("stroke-width", "2.25");
+    chevron.setAttribute("stroke-linecap", "round");
+    chevron.setAttribute("stroke-linejoin", "round");
+    icon.append(chevron);
+    up.append(icon);
+
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    up.addEventListener("click", () => {
+      window.scrollTo({top: 0, behavior: reducedMotion.matches ? "auto" : "smooth"});
+    });
+
+    function update() {
+      up.hidden = window.scrollY <= 0;
+    }
+    let scheduled = false;
+    const scheduleUpdate = () => {
+      if (scheduled) return;
+      scheduled = true;
+      window.requestAnimationFrame(() => {
+        scheduled = false;
+        update();
+      });
+    };
+    window.addEventListener("scroll", scheduleUpdate, {passive: true});
+    window.addEventListener("resize", scheduleUpdate);
+
+    navGroup.append(up);
+    cluster.append(navGroup);
+    update();
+  }
 
   const PANEL_ID = "prasa-launcher-panel";
   const PANEL_TITLE_ID = "prasa-launcher-panel-title";
@@ -524,6 +586,7 @@
     });
 
     cluster.append(panel, button);
+    createNavigationControls(cluster);
     document.body.append(cluster);
   }
 

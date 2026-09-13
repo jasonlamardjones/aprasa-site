@@ -64,7 +64,14 @@ const GOVERNED_LAUNCHER = {
   launcherSecondaryAction: 'runtime.whatsapp_launcher.secondary_action',
 };
 
-const GOVERNED = { ...GOVERNED_MEDIA, ...GOVERNED_LAUNCHER };
+// Floating navigation controls. ui.back_to_top is long-standing governed copy;
+// routing it through the block is what lets the Up control exist on surfaces
+// with no in-page "Back to top" anchor to borrow a label from.
+const GOVERNED_NAV = {
+  navBackToTop: 'ui.back_to_top',
+};
+
+const GOVERNED = { ...GOVERNED_MEDIA, ...GOVERNED_LAUNCHER, ...GOVERNED_NAV };
 
 // Mindelo Essentials' own runtime strings, written into the same block by
 // scripts/build-mindelo-pt.mjs under that script's contract. Listed explicitly
@@ -197,7 +204,7 @@ for (const relative of surfaces) {
   // unchecked, which is precisely what the unknown-key rule below exists to
   // stop.
   const carriesMindeloRuntime = /mindelo-essentials\.js/.test(html);
-  const expected = { ...GOVERNED_LAUNCHER, ...(isHome ? GOVERNED_MEDIA : {}) };
+  const expected = { ...GOVERNED_LAUNCHER, ...GOVERNED_NAV, ...(isHome ? GOVERNED_MEDIA : {}) };
 
   const block = readBlock(relative);
   if (!block) continue;

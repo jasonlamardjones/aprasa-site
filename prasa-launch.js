@@ -530,6 +530,7 @@
     launcherQuickActionSubmissions: "Learn how submissions work",
     launcherPrimaryAction: "Open WhatsApp",
     launcherSecondaryAction: "Close",
+    navBackToTop: "Back to top",
   };
 
   const STRINGS = (() => {
@@ -757,11 +758,30 @@
     });
   }
 
-  function createHomeNavigationControls(cluster) {
-    const nav = document.querySelector(".home-page-nav");
-    if (!nav) return;
+  // Floating navigation controls.
+  //
+  // Reach: Up is available on every surface. Its label is the governed
+  // ui.back_to_top value delivered through the runtime-strings block, rather
+  // than the in-page "Back to top" anchor the Home-only version borrowed from
+  // — Mindelo Essentials carries no such anchor, so borrowing would have left
+  // that surface without the control.
+  //
+  // Down targeting is per-surface, and deliberately not a landmark model:
+  //   - Home has a governed in-page nav (.home-page-nav) whose anchors name
+  //     real sections, so Down steps through those, exactly as before.
+  //   - No other surface has one. Their DOM does not support a reliable
+  //     landmark mapping either: the Things-to-Do hub's only regions are
+  //     individual event cards, a detail page has exactly one region, and on
+  //     About and Mindelo the section headings sit at varying depths behind
+  //     wrappers. Mapping any of that would mean targeting on editorial copy,
+  //     which is brittle by construction. Those surfaces therefore use the
+  //     generic viewport-paging model below.
+  const VIEWPORT_PAGE_OVERLAP = 0.12;
 
-    const targets = Array.from(nav.querySelectorAll('a[href^="#"]'))
+  function homeNavTargets() {
+    const nav = document.querySelector(".home-page-nav");
+    if (!nav) return [];
+    return Array.from(nav.querySelectorAll('a[href^="#"]'))
       .map((anchor) => {
         const id = anchor.getAttribute("href")?.slice(1);
         const target = id ? document.getElementById(id) : null;
@@ -769,11 +789,18 @@
         return target && label ? {target, label} : null;
       })
       .filter(Boolean);
-    if (!targets.length) return;
+  }
 
-    const backTop = document.querySelector("a.back-top[href^=\"#\"]");
-    const upLabel = (backTop?.textContent || "").trim();
+  function atDocumentBottom() {
+    const scrollBottom = window.scrollY + window.innerHeight;
+    return scrollBottom >= document.documentElement.scrollHeight - 2;
+  }
+
+  function createNavigationControls(cluster) {
+    const upLabel = STRINGS.navBackToTop;
     if (!upLabel) return;
+
+    const targets = homeNavTargets();
 
     const navGroup = document.createElement("div");
     navGroup.className = "floating-nav-controls";
@@ -785,13 +812,27 @@
     up.title = upLabel;
     up.append(createChevronIcon(CHEVRON_UP));
 
-    const down = document.createElement("button");
-    down.type = "button";
-    down.className = "floating-utility floating-utility-nav";
-    down.append(createChevronIcon(CHEVRON_DOWN));
-
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     const behavior = () => reducedMotion.matches ? "auto" : "smooth";
+
+    up.addEventListener("click", () => {
+      window.scrollTo({top: 0, behavior: behavior()});
+    });
+
+    // Down is section-aware only where a governed in-page nav supplies both the
+    // targets and their names. Without one there is no governed name for a
+    // generic "page down" control, and an unnamed control is worse than no
+    // control, so Down is simply absent there until that string exists.
+    let down = null;
+    if (targets.length) {
+      down = document.createElement("button");
+      down.type = "button";
+      down.className = "floating-utility floating-utility-nav";
+      down.append(createChevronIcon(CHEVRON_DOWN));
+      down.addEventListener("click", () => {
+        nextTarget()?.target.scrollIntoView({behavior: behavior(), block: "start"});
+      });
+    }
 
     function nextTarget() {
       return targets.find(({target}) => target.getBoundingClientRect().top > 1) || null;
@@ -799,9 +840,14 @@
 
     function update() {
       up.hidden = window.scrollY <= 0;
+      if (!down) return;
       const next = nextTarget();
-      down.hidden = !next;
-      if (next) {
+      // Hidden once there is no further section AND once the document itself
+      // has no more to scroll: a final section taller than the viewport used
+      // to leave Down showing with nowhere left to go.
+      const hide = !next || atDocumentBottom();
+      down.hidden = hide;
+      if (!hide) {
         down.setAttribute("aria-label", next.label);
         down.title = next.label;
       } else {
@@ -809,13 +855,6 @@
         down.removeAttribute("title");
       }
     }
-
-    up.addEventListener("click", () => {
-      window.scrollTo({top: 0, behavior: behavior()});
-    });
-    down.addEventListener("click", () => {
-      nextTarget()?.target.scrollIntoView({behavior: behavior(), block: "start"});
-    });
 
     let scheduled = false;
     const scheduleUpdate = () => {
@@ -829,7 +868,8 @@
     window.addEventListener("scroll", scheduleUpdate, {passive: true});
     window.addEventListener("resize", scheduleUpdate);
 
-    navGroup.append(up, down);
+    navGroup.append(up);
+    if (down) navGroup.append(down);
     cluster.append(navGroup);
     update();
   }
@@ -854,7 +894,7 @@
     // Panel first: the cluster is a bottom-anchored column, so this places the
     // panel above the launcher that opens it.
     cluster.append(panel, whatsApp);
-    createHomeNavigationControls(cluster);
+    createNavigationControls(cluster);
     document.body.append(cluster);
   }
 

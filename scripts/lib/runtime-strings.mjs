@@ -44,7 +44,16 @@ export const LAUNCHER_PANEL_KEYS = {
   launcherSecondaryAction: 'runtime.whatsapp_launcher.secondary_action',
 };
 
-export const RUNTIME_STRING_KEYS = { ...MEDIA_FALLBACK_KEYS, ...LAUNCHER_PANEL_KEYS };
+// Floating navigation controls. The Up control is available on every surface,
+// including Mindelo Essentials, which carries no in-page "Back to top" anchor
+// for the runtime to borrow a label from. ui.back_to_top is long-standing
+// governed copy — this adds no new string, it only routes an existing one to
+// the runtime that needs it.
+export const NAV_CONTROL_KEYS = {
+  navBackToTop: 'ui.back_to_top',
+};
+
+export const RUNTIME_STRING_KEYS = { ...MEDIA_FALLBACK_KEYS, ...LAUNCHER_PANEL_KEYS, ...NAV_CONTROL_KEYS };
 
 export const RUNTIME_STRINGS_BLOCK = /<script type="application\/json" id="i18n-strings">[\s\S]*?<\/script>\n?/;
 

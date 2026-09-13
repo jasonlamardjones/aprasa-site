@@ -17,7 +17,7 @@ import { t } from './lib/locale.mjs';
 import { localizeStaticHtml } from './lib/static-page-transform.mjs';
 import { deepenSharedAssetPaths } from './lib/asset-paths.mjs';
 import { normalizeCanonicalHomeLinks } from './lib/canonical-links.mjs';
-import { LAUNCHER_PANEL_KEYS, resolveRuntimeStrings } from './lib/runtime-strings.mjs';
+import { LAUNCHER_PANEL_KEYS, NAV_CONTROL_KEYS, resolveRuntimeStrings } from './lib/runtime-strings.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
@@ -147,7 +147,7 @@ function runtimeStringsScript(locale) {
     // same on-site panel as every other surface. The panel's governed copy
     // therefore belongs in this block too, from the shared key map in
     // scripts/lib/runtime-strings.mjs — the one source both runtimes read.
-    ...resolveRuntimeStrings(LAUNCHER_PANEL_KEYS, locale),
+    ...resolveRuntimeStrings({...LAUNCHER_PANEL_KEYS, ...NAV_CONTROL_KEYS}, locale),
   };
   return `<script type="application/json" id="i18n-strings">${JSON.stringify(strings)}</script>`;
 }

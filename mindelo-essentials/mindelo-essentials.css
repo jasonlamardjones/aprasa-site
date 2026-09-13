@@ -236,7 +236,15 @@ h3 { margin:0; color:var(--green); font-size:1.05rem; line-height:1.28; font-wei
 }
 .floating-utilities > *,
 .floating-nav-controls { pointer-events: auto; }
-.floating-nav-controls { display: flex; gap: .4rem; }
+/* Vertical utility stack: WhatsApp, then Up, then Down, in one narrow
+   right-edge column. The controls were previously a horizontal row beneath the
+   launcher, which ate page width on a phone for no benefit. */
+.floating-nav-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: .4rem;
+}
 .floating-utility {
   display: inline-flex;
   align-items: center;
@@ -261,12 +269,21 @@ a.floating-utility { text-decoration: none; }
   background: var(--green);
   color: var(--white);
   border-color: var(--green);
-  box-shadow: 0 .35rem 1.1rem rgba(17,17,17,.18);
+  /* Two layers, and the first is the point: a cream hairline ring sitting just
+     outside the disc. Over a cream section it is cream-on-cream and effectively
+     invisible, so nothing reads as a glowing CTA; over the deep-green footer it
+     is the only thing separating a green disc from a green ground. One
+     treatment, no section detection, no JS. */
+  box-shadow:
+    0 0 0 1.5px rgba(246,240,226,.55),
+    0 .35rem 1.1rem rgba(17,17,17,.2);
 }
 .floating-utility-whatsapp .floating-utility-icon { width: 1.7rem; height: 1.7rem; }
 .floating-utility-whatsapp:hover {
   color: var(--white);
-  box-shadow: 0 .45rem 1.35rem rgba(17,17,17,.26);
+  box-shadow:
+    0 0 0 1.5px rgba(246,240,226,.7),
+    0 .45rem 1.35rem rgba(17,17,17,.28);
 }
 
 /* Secondary controls: lighter, smaller chevrons. The visible disc is compact
@@ -280,7 +297,12 @@ a.floating-utility { text-decoration: none; }
   background: var(--white);
   color: var(--green);
   border-color: rgba(30,61,46,.22);
-  box-shadow: 0 .2rem .65rem rgba(17,17,17,.12);
+  /* Lighter equivalent of the launcher's ring, for stack coherence. The disc is
+     already white, so this only has to keep the edge from dissolving into a
+     dark ground. */
+  box-shadow:
+    0 0 0 1px rgba(246,240,226,.4),
+    0 .2rem .65rem rgba(17,17,17,.14);
   cursor: pointer;
 }
 .floating-utility-nav::after {

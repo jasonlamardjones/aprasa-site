@@ -17,7 +17,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { t } from './lib/locale.mjs';
-import { RUNTIME_STRING_KEYS, LAUNCHER_PANEL_KEYS, applyRuntimeStrings } from './lib/runtime-strings.mjs';
+import { RUNTIME_STRING_KEYS, LAUNCHER_PANEL_KEYS, NAV_CONTROL_KEYS, applyRuntimeStrings } from './lib/runtime-strings.mjs';
 import { localizeStaticHtml } from './lib/static-page-transform.mjs';
 import { deepenSharedAssetPaths } from './lib/asset-paths.mjs';
 import { normalizeCanonicalHomeLinks } from './lib/canonical-links.mjs';
@@ -215,7 +215,7 @@ function applyAboutFounderFixup(html, locale) {
 // reach every page this builder owns — not just Home. Home therefore gets the
 // full set and every other page gets the launcher set.
 function runtimeKeysFor(name) {
-  return name === 'home' ? RUNTIME_STRING_KEYS : LAUNCHER_PANEL_KEYS;
+  return name === 'home' ? RUNTIME_STRING_KEYS : {...LAUNCHER_PANEL_KEYS, ...NAV_CONTROL_KEYS};
 }
 
 // localizeStaticHtml deliberately treats <script> content as opaque raw
