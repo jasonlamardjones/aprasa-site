@@ -19,7 +19,11 @@ import {
   classifyFailure,
   decideFailureSignal,
   failureIssueTitle,
+  parseCommentPage,
   parseOpenFailureIssueProbe,
+  resolveArtifactState,
+  assertCommentSetComplete,
+  withComments,
 } from './lib/phase2b-failure-signal.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -84,11 +88,48 @@ const probe = gh(['issue', 'list',
   '--label', FAILURE_SIGNAL.label,
   '--state', 'open',
   '--limit', String(PROBE_LIMIT),
-  '--json', 'number,url,body,comments',
+  // Comments are NOT requested here. `--json comments` nests an unpaginated
+  // comments(first: N) connection whose page size is gh's to choose, so a
+  // truncated read would be indistinguishable from a complete one. They are read
+  // below through an explicitly paginated path instead.
+  '--json', 'number,url,body',
 ], { allowFailure: true });
 
 const decision = decideFailureSignal({ context, issue: null });
-const issue = parseOpenFailureIssueProbe(probe, { key: decision.key, limit: PROBE_LIMIT });
+const probedIssue = parseOpenFailureIssueProbe(probe, { key: decision.key, limit: PROBE_LIMIT });
+
+/**
+ * Read every comment on the signal issue, and prove it.
+ *
+ * Pagination is explicit rather than delegated: each page is requested with a
+ * per_page WE choose and parsed on its own, and the walk stops only on a page
+ * shorter than that — the sole observation that can mean "there is no next
+ * page". Stopping at the page cap with a still-full page therefore fails closed
+ * as INCOMPLETE, rather than deduping against a comment set that might be
+ * missing markers.
+ */
+function readAllComments(issueNumber) {
+  const bodies = [];
+  const pageSizes = [];
+  for (let page = 1; page <= FAILURE_SIGNAL.commentPageCap; page += 1) {
+    const pageProbe = gh(['api',
+      '-H', 'Accept: application/vnd.github+json',
+      `/repos/${repository}/issues/${issueNumber}/comments?per_page=${FAILURE_SIGNAL.commentsPerPage}&page=${page}`,
+    ], { allowFailure: true });
+    const pageBodies = parseCommentPage(pageProbe, { page });
+    bodies.push(...pageBodies);
+    pageSizes.push(pageBodies.length);
+    if (pageBodies.length < FAILURE_SIGNAL.commentsPerPage) break;
+  }
+  assertCommentSetComplete({
+    pageSizes,
+    perPage: FAILURE_SIGNAL.commentsPerPage,
+    pageCap: FAILURE_SIGNAL.commentPageCap,
+  });
+  return bodies;
+}
+
+const issue = probedIssue ? withComments(probedIssue, readAllComments(probedIssue.number)) : null;
 const resolvedDecision = decideFailureSignal({ context, issue });
 
 if (resolvedDecision.action === 'NONE') {
@@ -96,6 +137,7 @@ if (resolvedDecision.action === 'NONE') {
     status: 'FAILURE_SIGNAL_ALREADY_RECORDED',
     failure_class: resolvedDecision.failureClass,
     reason: resolvedDecision.reason,
+    artifact_state: resolveArtifactState(log),
     issue_url: issue.url,
     commit,
   }, null, 2));
@@ -111,6 +153,7 @@ if (resolvedDecision.action === 'COMMENT') {
     status: resolvedDecision.escalation ? 'FAILURE_SIGNAL_RECOVERY_ESCALATED' : 'FAILURE_SIGNAL_RECURRENCE_RECORDED',
     failure_class: resolvedDecision.failureClass,
     reason: resolvedDecision.reason,
+    artifact_state: resolveArtifactState(log),
     issue_url: issue.url,
     commit,
   }, null, 2));
@@ -128,6 +171,7 @@ console.log(JSON.stringify({
   status: 'FAILURE_SIGNAL_CREATED',
   failure_class: resolvedDecision.failureClass,
   reason: resolvedDecision.reason,
+  artifact_state: resolveArtifactState(log),
   issue_url: created,
   commit,
 }, null, 2));

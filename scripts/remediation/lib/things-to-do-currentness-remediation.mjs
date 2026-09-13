@@ -257,6 +257,19 @@ export function resolvePreviewTransition({ records = [], fromAsOf, toAsOf } = {}
   if (typeof toAsOf !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(toAsOf)) {
     throw new Error('PHASE2B_PREVIEW_TARGET_AS_OF_UNREADABLE');
   }
+  // A transition must run forwards. Both dates are zero-padded ISO days, so a
+  // lexicographic comparison is a calendar comparison.
+  //
+  // Refused BEFORE any authority is derived, because a backwards transition
+  // inverts the meaning of every set below: records would cross OUT of EXPIRED,
+  // collect Home and detail authority, and be regenerated as current — the
+  // currentness repairer publishing a currentness regression, with every
+  // downstream gate passing because all of them derive from this same
+  // transition. Equal dates stay permitted: that is an ordinary no-movement
+  // repair, refused later by the empty-transition checks if nothing moved.
+  if (toAsOf < fromAsOf) {
+    throw new Error(`PHASE2B_AS_OF_REGRESSION_REFUSED: tracked as_of ${fromAsOf} is ahead of the repair as_of ${toAsOf}`);
+  }
   // Reported for transparency in the repair's own report; authority comes from
   // detailRenderingChangedIds, which is deliberately narrower.
   const stateChangedIds = (records ?? [])

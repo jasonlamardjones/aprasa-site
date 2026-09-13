@@ -42,13 +42,25 @@ export const FAILURE_SIGNAL = Object.freeze({
   keyMarkerPrefix: 'phase2b-failure-signal',
   commitMarkerPrefix: 'phase2b-failure-commit',
   recoveryMarkerPrefix: 'phase2b-failure-recovery',
+  // Positive terminal evidence that the adapter refused BEFORE writing anything.
+  // Only a surviving process can emit it, which is exactly the property the
+  // disposition below needs — see resolveArtifactState().
+  noWriteMarker: 'PHASE2B_NO_WRITE_PERFORMED',
   unclassified: 'PHASE2B_UNCLASSIFIED_FAILURE',
-  // `gh issue list --json comments` requests a nested comments(first: 100)
-  // connection and does NOT paginate it; --limit bounds the number of ISSUES
-  // fetched, not comments. A result that fills this page therefore cannot prove
-  // a marker is absent, so it is refused rather than trusted — the same rule the
-  // issues-list probe already applies one level up.
-  commentPageLimit: 100,
+  // Comments are NOT read through `gh issue list --json comments`: that nests an
+  // unpaginated comments(first: N) connection whose page size is gh's to choose,
+  // and mirroring that N as a local constant fails in the UNSAFE direction — if
+  // gh's page size ever shrinks below ours, a truncated read stops looking
+  // truncated and dedupe markers silently vanish. Completeness cannot be derived
+  // from the payload either, since gh drops totalCount.
+  //
+  // So comments are fetched through an explicitly paginated API path instead.
+  // commentsPerPage is a value WE send as per_page, not an assumed server cap,
+  // and completeness is proven by a terminating short page rather than assumed:
+  // a full page always means "ask for another". commentPageCap only stops a
+  // runaway loop, and reaching it fails closed.
+  commentsPerPage: 100,
+  commentPageCap: 50,
 });
 
 const SHA_PATTERN = /^[a-f0-9]{40}$/;
@@ -59,17 +71,18 @@ const SHA_PATTERN = /^[a-f0-9]{40}$/;
  * refusal reason rather than to an incidental line of stack trace, so the same
  * defect recurring is recognised as the same defect.
  */
+// Markers that describe the ARTIFACT DISPOSITION, not the failure. They can
+// appear anywhere in the log — and, since the exit handler flushes before the
+// uncaught-exception report, often FIRST — so classifying on them would key
+// dedupe on the disposition and collapse every distinct refusal into one issue.
+const DISPOSITION_MARKERS = Object.freeze(['PHASE2B_POST_COMMIT_RECOVERY', 'PHASE2B_NO_WRITE_PERFORMED']);
+
 export function classifyFailure(log) {
   if (typeof log !== 'string') return FAILURE_SIGNAL.unclassified;
-  const match = log.match(/PHASE2B_[A-Z0-9_]+/);
-  if (!match) return FAILURE_SIGNAL.unclassified;
-  // POST_COMMIT_RECOVERY is guidance appended to another error, never the
-  // failure class itself.
-  if (match[0] === 'PHASE2B_POST_COMMIT_RECOVERY') {
-    const real = log.match(/PHASE2B_(?!POST_COMMIT_RECOVERY)[A-Z0-9_]+/);
-    return real ? real[0] : FAILURE_SIGNAL.unclassified;
+  for (const match of log.matchAll(/PHASE2B_[A-Z0-9_]+/g)) {
+    if (!DISPOSITION_MARKERS.includes(match[0])) return match[0];
   }
-  return match[0];
+  return FAILURE_SIGNAL.unclassified;
 }
 
 /**
@@ -81,6 +94,36 @@ export function classifyFailure(log) {
  * remotely, so the issue must not tell an investigator that nothing was
  * created: that reading invites a rerun on top of a live candidate.
  */
+export const ARTIFACT_POST_COMMIT = 'POST_COMMIT';
+export const ARTIFACT_NO_WRITE = 'NO_WRITE';
+export const ARTIFACT_UNKNOWN = 'UNKNOWN';
+
+/**
+ * What exists on the remote after this failure — and, crucially, what we can
+ * PROVE exists.
+ *
+ * Both definite answers require a terminal statement the adapter can only make
+ * if it survived long enough to make it:
+ *
+ *   POST_COMMIT  PHASE2B_POST_COMMIT_RECOVERY is present. A candidate branch
+ *                and commit may be published.
+ *   NO_WRITE     PHASE2B_NO_WRITE_PERFORMED is present. The adapter reached its
+ *                own exit path with nothing committed, so the clean-no-op
+ *                wording is earned rather than inferred.
+ *   UNKNOWN      neither. The log is empty, truncated, or the process died
+ *                before it could say — a SIGKILL from OOM or the job timeout
+ *                after `git push` succeeded but before `gh pr create` returned
+ *                looks exactly like this. Absence of the recovery marker is NOT
+ *                proof that no branch exists, so this state must never claim it.
+ *
+ * This asymmetry is the whole point: silence can only ever mean UNKNOWN.
+ */
+export function resolveArtifactState(log) {
+  if (detectPostCommitRecovery(log) !== null) return ARTIFACT_POST_COMMIT;
+  if (typeof log === 'string' && log.includes(FAILURE_SIGNAL.noWriteMarker)) return ARTIFACT_NO_WRITE;
+  return ARTIFACT_UNKNOWN;
+}
+
 export function detectPostCommitRecovery(log) {
   if (typeof log !== 'string') return null;
   const match = log.match(/PHASE2B_POST_COMMIT_RECOVERY:\s*(.+)/);
@@ -146,16 +189,25 @@ export function parseOpenFailureIssueProbe(probe, { key, limit = null } = {}) {
     throw new Error('PHASE2B_FAILURE_SIGNAL_PROBE_UNREADABLE: probe did not return JSON');
   }
   if (!Array.isArray(parsed)) throw new Error('PHASE2B_FAILURE_SIGNAL_PROBE_UNREADABLE: expected a JSON array');
-  // `gh issue list --limit N` caps how many issues are FETCHED, so a full page
-  // is not evidence that nothing further matches: an older issue carrying this
-  // marker could sit just outside it, and reading that as proven absence is
-  // exactly how a duplicate gets created. A result that reaches the limit is
-  // therefore refused rather than trusted.
   if (limit !== null && parsed.length >= limit) {
     throw new Error(`PHASE2B_FAILURE_SIGNAL_PROBE_TRUNCATED: ${parsed.length} open labelled issues reached the probe limit of ${limit}`);
   }
+
+  // Every record is validated before any is matched. A record whose body cannot
+  // be read is not evidence that it lacks the marker — it is evidence that this
+  // probe cannot answer the question, and silently filtering it out would read
+  // an unreadable issue as "not the signal issue" and open a duplicate.
+  for (const record of parsed) {
+    if (!record || typeof record !== 'object' || Array.isArray(record)) {
+      throw new Error('PHASE2B_FAILURE_SIGNAL_PROBE_UNREADABLE: malformed issue record');
+    }
+    if (typeof record.body !== 'string') {
+      throw new Error(`PHASE2B_FAILURE_SIGNAL_PROBE_UNREADABLE: issue #${record.number ?? '?'} has no readable body`);
+    }
+  }
+
   const marker = keyMarker(key);
-  const matching = parsed.filter((record) => typeof record?.body === 'string' && record.body.includes(marker));
+  const matching = parsed.filter((record) => record.body.includes(marker));
   if (!matching.length) return null;
   if (matching.length > 1) {
     throw new Error(`PHASE2B_FAILURE_SIGNAL_AMBIGUOUS: ${matching.length} open issues carry ${marker}`);
@@ -167,34 +219,85 @@ export function parseOpenFailureIssueProbe(probe, { key, limit = null } = {}) {
   if (typeof record.url !== 'string' || !record.url) {
     throw new Error('PHASE2B_FAILURE_SIGNAL_PROBE_UNREADABLE: missing issue url');
   }
-  const comments = Array.isArray(record.comments) ? record.comments : [];
-  // Dedupe markers live in the body AND in comments, so a truncated comment
-  // connection would hide a recorded commit and re-add the same recurrence or
-  // recovery correction on every later run, defeating the per-commit ceiling.
-  if (comments.length >= FAILURE_SIGNAL.commentPageLimit) {
-    throw new Error(`PHASE2B_FAILURE_SIGNAL_COMMENTS_TRUNCATED: issue #${record.number} returned ${comments.length} comments, reaching the unpaginated page limit of ${FAILURE_SIGNAL.commentPageLimit}`);
+  // Comments deliberately absent here. They are fetched separately and
+  // provably completely — see parseCommentPage()/assertCommentSetComplete() —
+  // and attached with withComments() before any dedupe decision is taken.
+  return Object.freeze({ number: record.number, url: record.url, body: record.body, comments: null });
+}
+
+/**
+ * One page of an explicitly paginated comments read. Fails closed on a failed
+ * command, non-JSON, a non-array page, or any comment whose body is unreadable:
+ * a page we cannot parse is not an empty page.
+ */
+export function parseCommentPage(probe, { page = 1 } = {}) {
+  if (!Number.isInteger(page) || page < 1) throw new Error('PHASE2B_FAILURE_SIGNAL_COMMENT_PAGE_INVALID');
+  if (!probe || probe.status !== 0) {
+    const detail = [probe?.stderr, probe?.stdout].filter((part) => typeof part === 'string' && part.trim()).join(' ').trim();
+    throw new Error(`PHASE2B_FAILURE_SIGNAL_COMMENT_PROBE_FAILED: page ${page} exit ${probe?.status ?? 'unknown'}${detail ? `: ${detail.slice(0, 200)}` : ''}`);
   }
-  for (const comment of comments) {
-    if (!comment || typeof comment.body !== 'string') {
-      throw new Error('PHASE2B_FAILURE_SIGNAL_PROBE_UNREADABLE: malformed comment record');
+  if (typeof probe.stdout !== 'string') throw new Error(`PHASE2B_FAILURE_SIGNAL_COMMENT_PAGE_UNREADABLE: page ${page} produced no output`);
+  let parsed;
+  try {
+    parsed = JSON.parse(probe.stdout);
+  } catch {
+    throw new Error(`PHASE2B_FAILURE_SIGNAL_COMMENT_PAGE_UNREADABLE: page ${page} did not return JSON`);
+  }
+  if (!Array.isArray(parsed)) throw new Error(`PHASE2B_FAILURE_SIGNAL_COMMENT_PAGE_UNREADABLE: page ${page} is not a JSON array`);
+  return parsed.map((comment, index) => {
+    if (!comment || typeof comment !== 'object' || Array.isArray(comment) || typeof comment.body !== 'string') {
+      throw new Error(`PHASE2B_FAILURE_SIGNAL_COMMENT_PAGE_UNREADABLE: page ${page} comment ${index} has no readable body`);
     }
-  }
-  return Object.freeze({
-    number: record.number,
-    url: record.url,
-    body: record.body,
-    comments: comments.map((comment) => comment.body),
+    return comment.body;
   });
 }
 
-/** Commits already recorded on an open signal issue, body and comments alike. */
+/**
+ * Completeness is PROVEN, not assumed: the last page fetched must be shorter
+ * than the per_page we asked for, which is the only observation that can mean
+ * "there is no next page". A run that exhausts the page cap has not proven it,
+ * so it fails closed rather than deduping against a partial comment set.
+ */
+export function assertCommentSetComplete({ pageSizes = [], perPage, pageCap } = {}) {
+  if (!Number.isInteger(perPage) || perPage < 1) throw new Error('PHASE2B_FAILURE_SIGNAL_COMMENT_PER_PAGE_INVALID');
+  if (!Number.isInteger(pageCap) || pageCap < 1) throw new Error('PHASE2B_FAILURE_SIGNAL_COMMENT_PAGE_CAP_INVALID');
+  if (!pageSizes.length) throw new Error('PHASE2B_FAILURE_SIGNAL_COMMENTS_UNREAD: no comment page was read');
+  if (pageSizes.length > pageCap) {
+    throw new Error(`PHASE2B_FAILURE_SIGNAL_COMMENTS_UNBOUNDED: exceeded the ${pageCap}-page cap`);
+  }
+  for (const [index, size] of pageSizes.entries()) {
+    if (!Number.isInteger(size) || size < 0 || size > perPage) {
+      throw new Error(`PHASE2B_FAILURE_SIGNAL_COMMENT_PAGE_UNREADABLE: page ${index + 1} returned ${size} of at most ${perPage}`);
+    }
+  }
+  if (pageSizes[pageSizes.length - 1] === perPage) {
+    throw new Error(`PHASE2B_FAILURE_SIGNAL_COMMENTS_INCOMPLETE: page ${pageSizes.length} was full, so a further page may exist`);
+  }
+  return true;
+}
+
+/** Attach a provably complete comment set to a probed issue. */
+export function withComments(issue, comments) {
+  if (!issue) throw new Error('PHASE2B_FAILURE_SIGNAL_ISSUE_REQUIRED');
+  if (!Array.isArray(comments) || comments.some((body) => typeof body !== 'string')) {
+    throw new Error('PHASE2B_FAILURE_SIGNAL_COMMENTS_UNREADABLE');
+  }
+  return Object.freeze({ ...issue, comments: [...comments] });
+}
+
 function markedCommits(issue, prefix) {
   if (!issue) return [];
+  // `comments: null` means the set was never attached, which is not the same as
+  // "no comments". Reading it as empty would hide recorded markers and re-add a
+  // recurrence or correction on every run, so an unattached set fails closed.
+  if (!Array.isArray(issue.comments)) throw new Error('PHASE2B_FAILURE_SIGNAL_COMMENTS_UNATTACHED');
+  if (typeof issue.body !== 'string') throw new Error('PHASE2B_FAILURE_SIGNAL_BODY_UNREADABLE');
   const pattern = new RegExp(`<!--\\s*${prefix}:\\s*([a-f0-9]{40})\\s*-->`, 'g');
-  const haystack = [issue.body ?? '', ...(issue.comments ?? [])].join('\n');
+  const haystack = [issue.body, ...issue.comments].join('\n');
   return [...new Set([...haystack.matchAll(pattern)].map((match) => match[1]))].sort();
 }
 
+/** Commits already recorded on an open signal issue, body and comments alike. */
 export function recordedCommits(issue) {
   return markedCommits(issue, FAILURE_SIGNAL.commitMarkerPrefix);
 }
@@ -221,23 +324,33 @@ function contextLines({ failureClass, commit, runId, runAttempt }, repository) {
 export function buildIssueBody(context, { repository = null, key } = {}) {
   const resolved = requireContext(context);
   const recovery = detectPostCommitRecovery(context?.log ?? '');
-  // Only a pre-commit refusal may claim nothing was created. Past the commit a
-  // candidate branch may already be pushed, and saying otherwise would send an
-  // investigator to rerun the repair on top of it.
-  const disposition = recovery
+  const artifactState = resolveArtifactState(context?.log ?? '');
+  const disposition = artifactState === ARTIFACT_POST_COMMIT
     ? [
-      'The remediation adapter failed AFTER committing its candidate, so this is',
-      'NOT a clean no-op: a candidate branch and commit may already exist on the',
-      'remote. Do not rerun the repair before inspecting that state. `main` was',
-      'not modified and nothing was deployed.',
+      'Artifact state: **POST_COMMIT**. The remediation adapter failed AFTER',
+      'committing its candidate, so this is NOT a clean no-op: a candidate branch',
+      'and commit may already exist on the remote. Do not rerun the repair before',
+      'inspecting that state. `main` was not modified and nothing was deployed.',
       '',
       `> ${recovery}`,
     ]
-    : [
-      'The remediation adapter refused to produce a repair before committing',
-      'anything. It fails closed by design, so no branch, no commit and no draft',
-      'pull request were created and no published surface changed.',
-    ];
+    : artifactState === ARTIFACT_NO_WRITE
+      ? [
+        'Artifact state: **NO_WRITE**. The adapter reached its own exit path with',
+        'nothing committed, so this is a proven clean refusal: no branch, no commit',
+        'and no draft pull request were created, and no published surface changed.',
+      ]
+      : [
+        'Artifact state: **UNKNOWN**. The run left no terminal statement about what',
+        'it had written — the log is empty or truncated, or the process was killed',
+        '(out of memory, or the job timeout) before it could report. A push may have',
+        'succeeded before it died, so this issue does NOT claim that no branch or',
+        'commit exists.',
+        '',
+        'Inspect the remote branch and pull-request state for this commit BEFORE',
+        'rerunning the repair. `main` is never modified by this adapter and nothing',
+        'is deployed by it, but a candidate branch may be published.',
+      ];
   return [
     keyMarker(key ?? failureSignalKey(resolved.failureClass)),
     commitMarker(resolved.commit),
@@ -264,6 +377,7 @@ export function buildIssueBody(context, { repository = null, key } = {}) {
 export function buildRecurrenceComment(context, { repository = null, escalation = false } = {}) {
   const resolved = requireContext(context);
   const recovery = detectPostCommitRecovery(context?.log ?? '');
+  const artifactState = resolveArtifactState(context?.log ?? '');
   return [
     commitMarker(resolved.commit),
     ...(recovery ? [recoveryMarker(resolved.commit)] : []),
@@ -272,9 +386,12 @@ export function buildRecurrenceComment(context, { repository = null, escalation 
       ? 'CORRECTION for a commit already recorded above: a later run on this same'
         + ' commit failed AFTER committing, so the earlier note understates what exists.'
       : 'Same failure class reproduced on a further commit.',
+    `Artifact state: **${artifactState}**.`,
     ...(recovery
       ? ['', 'A candidate branch and commit may exist on the remote. Inspect before', 'rerunning. `main` was not modified and nothing was deployed.', '', `> ${recovery}`]
-      : []),
+      : artifactState === ARTIFACT_UNKNOWN
+        ? ['', 'This run left no terminal statement about what it had written, so a', 'candidate branch may be published. Inspect before rerunning.']
+        : []),
     '',
     ...contextLines(resolved, repository),
     '',

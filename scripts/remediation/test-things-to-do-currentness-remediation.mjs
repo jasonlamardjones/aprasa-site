@@ -1,3 +1,43 @@
+// --- Comment completeness is PROVEN, not assumed -------------------------
+// Dedupe markers live in the body AND in comments, so a partial comment read
+// hides a recorded commit and re-adds the same recurrence or correction forever.
+// The previous approach mirrored gh's nested comments(first: N) page size as a
+// local constant, which fails in the UNSAFE direction: if gh's page size shrank
+// below ours, a truncated read would stop looking truncated. Comments are now
+// fetched through an explicitly paginated path whose completeness is proven by a
+// terminating short page.
+assert.equal(FAILURE_SIGNAL.commentsPerPage, 100);
+assert.ok(Number.isInteger(FAILURE_SIGNAL.commentPageCap) && FAILURE_SIGNAL.commentPageCap > 0);
+assert.equal(FAILURE_SIGNAL.commentPageLimit, undefined,
+  'the mirrored nested page-size constant must be gone');
+
+const commentPage = (bodies) => ({ status: 0, stderr: '', stdout: JSON.stringify(bodies.map((body) => ({ body }))) });
+assert.deepEqual(parseCommentPage(commentPage(['a', 'b']), { page: 1 }), ['a', 'b']);
+assert.deepEqual(parseCommentPage(commentPage([]), { page: 2 }), []);
+// A page we cannot read is not an empty page.
+assert.throws(() => parseCommentPage({ status: 1, stderr: 'gh: HTTP 502' }, { page: 1 }), /FAILURE_SIGNAL_COMMENT_PROBE_FAILED/);
+assert.throws(() => parseCommentPage(undefined, { page: 1 }), /FAILURE_SIGNAL_COMMENT_PROBE_FAILED/);
+assert.throws(() => parseCommentPage({ status: 0, stdout: 'not json' }, { page: 1 }), /FAILURE_SIGNAL_COMMENT_PAGE_UNREADABLE/);
+assert.throws(() => parseCommentPage({ status: 0, stdout: '{}' }, { page: 1 }), /FAILURE_SIGNAL_COMMENT_PAGE_UNREADABLE/);
+assert.throws(() => parseCommentPage({ status: 0, stdout: '[null]' }, { page: 1 }), /FAILURE_SIGNAL_COMMENT_PAGE_UNREADABLE/);
+assert.throws(() => parseCommentPage({ status: 0, stdout: '[{"body":5}]' }, { page: 1 }), /FAILURE_SIGNAL_COMMENT_PAGE_UNREADABLE/);
+assert.throws(() => parseCommentPage(commentPage([]), { page: 0 }), /FAILURE_SIGNAL_COMMENT_PAGE_INVALID/);
+
+const perPage = FAILURE_SIGNAL.commentsPerPage;
+const cap = FAILURE_SIGNAL.commentPageCap;
+// A short final page is the only proof there is no next page.
+assert.equal(assertCommentSetComplete({ pageSizes: [0], perPage, pageCap: cap }), true);
+assert.equal(assertCommentSetComplete({ pageSizes: [perPage, 7], perPage, pageCap: cap }), true);
+// A FULL final page proves nothing, so it must refuse rather than dedupe.
+assert.throws(() => assertCommentSetComplete({ pageSizes: [perPage], perPage, pageCap: cap }), /FAILURE_SIGNAL_COMMENTS_INCOMPLETE/);
+assert.throws(() => assertCommentSetComplete({ pageSizes: [perPage, perPage], perPage, pageCap: cap }), /FAILURE_SIGNAL_COMMENTS_INCOMPLETE/);
+// Exhausting the page cap has not proven completeness either.
+assert.throws(() => assertCommentSetComplete({ pageSizes: Array(cap + 1).fill(perPage), perPage, pageCap: cap }), /FAILURE_SIGNAL_COMMENTS_UNBOUNDED/);
+assert.throws(() => assertCommentSetComplete({ pageSizes: [], perPage, pageCap: cap }), /FAILURE_SIGNAL_COMMENTS_UNREAD/);
+// A page longer than we asked for means the read is not what we think it is.
+assert.throws(() => assertCommentSetComplete({ pageSizes: [perPage + 1], perPage, pageCap: cap }), /FAILURE_SIGNAL_COMMENT_PAGE_UNREADABLE/);
+
+
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -36,9 +76,21 @@ import {
   failureIssueTitle,
   failureSignalKey,
   keyMarker,
+  parseCommentPage,
   parseOpenFailureIssueProbe,
   recordedCommits,
+  resolveArtifactState,
+  assertCommentSetComplete,
+  withComments,
+  ARTIFACT_POST_COMMIT,
+  ARTIFACT_NO_WRITE,
+  ARTIFACT_UNKNOWN,
 } from './lib/phase2b-failure-signal.mjs';
+
+const runnerSourceForGuard = fs.readFileSync(
+  path.join(path.dirname(fileURLToPath(import.meta.url)), 'run-things-to-do-currentness-remediation.mjs'),
+  'utf8',
+);
 
 const SHA = 'd5e017484bcd15514cc2ec46f870babe54febfa6';
 const OTHER_SHA = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -169,6 +221,30 @@ assert.ok(!reviewDueAllowed.includes('things-to-do/month-precision-one/index.htm
   'a CURRENT -> REVIEW_DUE record must not gain detail authority');
 assert.throws(() => resolvePreviewTransition({ records: previewRecords, fromAsOf: 'nope', toAsOf: '2026-10-02' }), /PREVIEW_BASELINE_AS_OF_UNREADABLE/);
 assert.throws(() => resolvePreviewTransition({ records: previewRecords, fromAsOf: '2026-10-01', toAsOf: null }), /PREVIEW_TARGET_AS_OF_UNREADABLE/);
+
+// --- A transition must run forwards --------------------------------------
+// A backwards transition inverts every set below it: records would cross OUT of
+// EXPIRED, collect Home and detail authority, and be regenerated as current —
+// the currentness repairer publishing a currentness regression, with every
+// downstream gate passing because all of them derive from this same transition.
+// So it is refused BEFORE any authority is derived.
+assert.doesNotThrow(() => resolvePreviewTransition({ records: previewRecords, fromAsOf: '2026-10-01', toAsOf: '2026-10-02' }),
+  'a forward transition is accepted');
+assert.doesNotThrow(() => resolvePreviewTransition({ records: previewRecords, fromAsOf: '2026-10-01', toAsOf: '2026-10-01' }),
+  'an equal-date transition stays permitted');
+assert.throws(() => resolvePreviewTransition({ records: previewRecords, fromAsOf: '2026-10-02', toAsOf: '2026-10-01' }),
+  /PHASE2B_AS_OF_REGRESSION_REFUSED/);
+assert.throws(() => resolvePreviewTransition({ records: previewRecords, fromAsOf: '2026-11-16', toAsOf: '2026-09-13' }),
+  /PHASE2B_AS_OF_REGRESSION_REFUSED/);
+// Refused before any authority is derived: the guard lives in the one function
+// that produces every downstream set, so no write set can outlive it.
+assert.throws(() => {
+  const backwards = resolvePreviewTransition({ records: previewRecords, fromAsOf: '2026-10-02', toAsOf: '2026-10-01' });
+  return expectedWriteSetForTransition({ driftIds: ['expiring-two'], ...backwards });
+}, /PHASE2B_AS_OF_REGRESSION_REFUSED/);
+// The adapter must derive its transition through that guarded function.
+assert.ok(runnerSourceForGuard.includes('resolvePreviewTransition('),
+  'the adapter must resolve its transition through the guarded resolver');
 
 const allowed = expectedWriteSetForTransition({
   driftIds: ['expiring-two'],
@@ -392,6 +468,22 @@ assert.equal(
   'PHASE2B_UNEXPECTED_FILE_CHANGE',
 );
 assert.equal(classifyFailure('PHASE2B_POST_COMMIT_RECOVERY only'), FAILURE_SIGNAL.unclassified);
+// Disposition markers describe what EXISTS, not what failed. The exit handler
+// flushes before the uncaught-exception report, so the no-write marker often
+// appears FIRST in the log — classifying on it would key dedupe on the
+// disposition and collapse every distinct refusal into a single issue.
+assert.equal(classifyFailure(`${FAILURE_SIGNAL.noWriteMarker}: x\nPHASE2B_MAIN_MOVED: y`), 'PHASE2B_MAIN_MOVED');
+assert.equal(classifyFailure(`${FAILURE_SIGNAL.noWriteMarker}: x\nPHASE2B_DRIFT_DISAPPEARED: y`), 'PHASE2B_DRIFT_DISAPPEARED');
+assert.notEqual(
+  failureSignalKey(classifyFailure(`${FAILURE_SIGNAL.noWriteMarker}: x\nPHASE2B_MAIN_MOVED: y`)),
+  failureSignalKey(classifyFailure(`${FAILURE_SIGNAL.noWriteMarker}: x\nPHASE2B_DRIFT_DISAPPEARED: y`)),
+  'distinct refusals must keep distinct dedupe keys behind the disposition marker',
+);
+assert.equal(classifyFailure(`${FAILURE_SIGNAL.noWriteMarker}: only`), FAILURE_SIGNAL.unclassified);
+assert.equal(
+  classifyFailure(`${FAILURE_SIGNAL.noWriteMarker}: x\nPHASE2B_POST_COMMIT_RECOVERY: y\nPHASE2B_UNEXPECTED_FILE_CHANGE: z`),
+  'PHASE2B_UNEXPECTED_FILE_CHANGE',
+);
 // A canonical-generation refusal keys on its own class, not on the raw command
 // failure build-all would otherwise report.
 assert.equal(
@@ -428,8 +520,28 @@ assert.equal(detectPostCommitRecovery('PHASE2B_POST_COMMIT_RECOVERY: Candidate a
   'Candidate abc is already pushed on feature/x');
 assert.equal(detectPostCommitRecovery('PHASE2B_MAIN_MOVED'), null);
 assert.equal(detectPostCommitRecovery(null), null);
-assert.ok(issueBody.includes('no branch, no commit and no draft'),
-  'a pre-commit refusal states the clean no-op plainly');
+// THREE-STATE DISPOSITION. A log carrying neither terminal marker is UNKNOWN:
+// the process may have been killed after a successful push, so the body must not
+// claim absence. Only a positive PHASE2B_NO_WRITE_PERFORMED earns that wording.
+assert.equal(resolveArtifactState(failContext.log), ARTIFACT_UNKNOWN);
+assert.ok(!issueBody.includes('no branch, no commit'),
+  'a log with no terminal marker must NOT claim that nothing was created');
+assert.ok(issueBody.includes('Artifact state: **UNKNOWN**'));
+assert.ok(issueBody.includes('Inspect the remote branch and pull-request state'));
+
+const noWriteLog = `PHASE2B_MAIN_MOVED: main moved\n${FAILURE_SIGNAL.noWriteMarker}: the adapter reached its exit path with nothing committed.`;
+assert.equal(resolveArtifactState(noWriteLog), ARTIFACT_NO_WRITE);
+const noWriteBody = buildIssueBody({ ...failContext, log: noWriteLog }, { repository: 'o/r', key: failKey });
+assert.ok(noWriteBody.includes('Artifact state: **NO_WRITE**'));
+assert.ok(noWriteBody.includes('no branch, no commit'),
+  'a PROVEN pre-write refusal still states the clean no-op');
+assert.equal(resolveArtifactState(''), ARTIFACT_UNKNOWN, 'an empty log is UNKNOWN, never a clean no-op');
+assert.equal(resolveArtifactState(null), ARTIFACT_UNKNOWN);
+// Post-commit evidence outranks everything.
+assert.equal(
+  resolveArtifactState(`${FAILURE_SIGNAL.noWriteMarker}: x\nPHASE2B_POST_COMMIT_RECOVERY: candidate pushed`),
+  ARTIFACT_POST_COMMIT,
+);
 const recoveryBody = buildIssueBody(
   { ...failContext, log: 'PHASE2B_UNEXPECTED_FILE_CHANGE: x\nPHASE2B_POST_COMMIT_RECOVERY: Candidate abc is already pushed on feature/x; create/inspect one draft PR only.' },
   { repository: 'o/r', key: failKey },
@@ -437,9 +549,10 @@ const recoveryBody = buildIssueBody(
 assert.ok(!recoveryBody.includes('no branch, no commit'),
   'a post-commit failure must NOT assert that no branch or commit exists');
 assert.ok(recoveryBody.includes('may already exist on the'), 'it must warn a candidate may exist remotely');
-assert.ok(recoveryBody.includes('Do not rerun the repair before inspecting'), 'it must warn against a blind rerun');
+assert.ok(recoveryBody.includes('Do not rerun the repair before'), 'it must warn against a blind rerun');
 assert.ok(recoveryBody.includes('Candidate abc is already pushed'), 'it must carry the adapter recovery detail');
 assert.ok(recoveryBody.includes('`main` was'), 'it must still state that main is untouched');
+assert.ok(recoveryBody.includes('Artifact state: **POST_COMMIT**'));
 // The recurrence comment carries the same warning when applicable.
 const recoveryComment = buildRecurrenceComment(
   { ...otherCommitContext, log: 'PHASE2B_POST_COMMIT_RECOVERY: Candidate def was committed locally but not safely published.' },
@@ -486,7 +599,7 @@ assert.equal(classifyFailure(unclassifiedPre.log), classifyFailure(unclassifiedP
   'both dispositions must classify identically, which is what made this suppressible');
 const preKey = failureSignalKey(FAILURE_SIGNAL.unclassified);
 const preIssueBody = buildIssueBody(unclassifiedPre, { repository: 'o/r', key: preKey });
-assert.ok(preIssueBody.includes('no branch, no commit'), 'the pre-commit record states the clean no-op');
+assert.equal(resolveArtifactState(unclassifiedPre.log), ARTIFACT_UNKNOWN);
 assert.deepEqual(recordedRecoveryCommits({ body: preIssueBody, comments: [] }), [],
   'a pre-commit record carries no recovery marker');
 let escalating = { number: 9, url: 'https://github.com/o/r/issues/9', body: preIssueBody, comments: [] };
@@ -540,12 +653,20 @@ assert.equal(
   null,
 );
 const found = parseOpenFailureIssueProbe(
-  issueProbe({ stdout: JSON.stringify([{ number: 7, url: 'https://github.com/o/r/issues/7', body: issueBody, comments: [{ body: comment }] }]) }),
+  issueProbe({ stdout: JSON.stringify([{ number: 7, url: 'https://github.com/o/r/issues/7', body: issueBody }]) }),
   { key: failKey },
 );
 assert.equal(found.number, 7);
-assert.deepEqual(found.comments, [comment]);
-assert.deepEqual(recordedCommits(found), [SHA, OTHER_SHA].sort());
+// The probe deliberately returns NO comment set: comments are read separately
+// and provably completely. An unattached set must never read as "no comments",
+// because that would hide recorded markers and re-comment on every run.
+assert.equal(found.comments, null);
+assert.throws(() => recordedCommits(found), /FAILURE_SIGNAL_COMMENTS_UNATTACHED/);
+const attached = withComments(found, [comment]);
+assert.deepEqual(attached.comments, [comment]);
+assert.deepEqual(recordedCommits(attached), [SHA, OTHER_SHA].sort());
+assert.throws(() => withComments(found, null), /FAILURE_SIGNAL_COMMENTS_UNREADABLE/);
+assert.throws(() => withComments(found, [1]), /FAILURE_SIGNAL_COMMENTS_UNREADABLE/);
 assert.throws(() => parseOpenFailureIssueProbe(
   issueProbe({ stdout: JSON.stringify([{ number: 7, url: 'u', body: issueBody, comments: [] }, { number: 8, url: 'u2', body: issueBody, comments: [] }]) }),
   { key: failKey },
@@ -554,34 +675,26 @@ assert.throws(() => parseOpenFailureIssueProbe(
   issueProbe({ stdout: JSON.stringify([{ url: 'u', body: issueBody, comments: [] }]) }), { key: failKey },
 ), /FAILURE_SIGNAL_PROBE_UNREADABLE/);
 assert.throws(() => parseOpenFailureIssueProbe(issueProbe({}), {}), /FAILURE_SIGNAL_KEY_REQUIRED/);
+// Malformed required fields must fail closed, never read as "no open issue".
+// A record whose body cannot be read is not evidence that it lacks the marker.
+assert.throws(() => parseOpenFailureIssueProbe(issueProbe({ stdout: JSON.stringify([{ number: 7, url: 'u', body: null }]) }), { key: failKey }),
+  /FAILURE_SIGNAL_PROBE_UNREADABLE/);
+assert.throws(() => parseOpenFailureIssueProbe(issueProbe({ stdout: JSON.stringify([{ number: 7, url: 'u' }]) }), { key: failKey }),
+  /FAILURE_SIGNAL_PROBE_UNREADABLE/);
+assert.throws(() => parseOpenFailureIssueProbe(issueProbe({ stdout: '[null]' }), { key: failKey }), /FAILURE_SIGNAL_PROBE_UNREADABLE/);
+assert.throws(() => parseOpenFailureIssueProbe(issueProbe({ stdout: '[[]]' }), { key: failKey }), /FAILURE_SIGNAL_PROBE_UNREADABLE/);
+// An unreadable body on an UNRELATED labelled issue still refuses: any of them
+// could be the signal issue, so none may be silently skipped.
+assert.throws(
+  () => parseOpenFailureIssueProbe(issueProbe({ stdout: JSON.stringify([{ number: 1, url: 'u', body: null }, { number: 7, url: 'u7', body: keyMarker(failKey) }]) }), { key: failKey }),
+  /FAILURE_SIGNAL_PROBE_UNREADABLE/,
+);
 // `gh issue list --limit N` caps how many issues are FETCHED, so a full page is
 // not proof that no older issue carries this marker. A truncated result is
 // refused rather than read as absence, which is how a duplicate would be born.
 const filler = (n) => JSON.stringify(Array.from({ length: n }, (_, i) => ({ number: i + 1, url: `u${i}`, body: 'unrelated', comments: [] })));
 assert.throws(() => parseOpenFailureIssueProbe(issueProbe({ stdout: filler(100) }), { key: failKey, limit: 100 }), /FAILURE_SIGNAL_PROBE_TRUNCATED/);
 assert.equal(parseOpenFailureIssueProbe(issueProbe({ stdout: filler(99) }), { key: failKey, limit: 100 }), null);
-// The same rule one level down. Dedupe markers live in the body AND in comments,
-// and `gh issue list --json comments` requests an unpaginated
-// comments(first: 100) connection — --limit bounds ISSUES, not comments. A
-// filled comment page would hide a recorded commit and re-add the same
-// recurrence or recovery correction on every run, defeating the per-commit
-// ceiling, so it is refused rather than trusted.
-const withComments = (n) => JSON.stringify([{
-  number: 7,
-  url: 'https://github.com/o/r/issues/7',
-  body: keyMarker(failKey),
-  comments: Array.from({ length: n }, (_, i) => ({ body: `comment ${i}` })),
-}]);
-assert.equal(FAILURE_SIGNAL.commentPageLimit, 100);
-assert.throws(
-  () => parseOpenFailureIssueProbe(issueProbe({ stdout: withComments(FAILURE_SIGNAL.commentPageLimit) }), { key: failKey, limit: 100 }),
-  /PHASE2B_FAILURE_SIGNAL_COMMENTS_TRUNCATED/,
-);
-assert.equal(
-  parseOpenFailureIssueProbe(issueProbe({ stdout: withComments(FAILURE_SIGNAL.commentPageLimit - 1) }), { key: failKey, limit: 100 }).comments.length,
-  FAILURE_SIGNAL.commentPageLimit - 1,
-);
-
 // 10. HEALTHY RUN — the signal is reachable only from the workflow's
 // `if: failure()` step, so a green run cannot produce a notification. Proved on
 // the workflow source, since that gate is the mechanism.
@@ -625,6 +738,45 @@ for (const forbidden of ['pr', 'push', 'merge']) {
   assert.ok(!signalSource.includes(`'${forbidden}',`), `the failure signal must not invoke gh ${forbidden}`);
 }
 assert.ok(!/writeFileSync/.test(signalSource), 'the failure signal must not write repository files');
+
+// The adapter must make the POSITIVE no-write claim itself, and early enough to
+// cover the common refusals. Authorization and the drift gates throw long before
+// the staging phase, so a handler installed after them would leave an ordinary
+// refusal indistinguishable from a killed process — which is the whole defect
+// this guard exists to prevent.
+assert.ok(runnerSourceForGuard.includes("process.on('exit'"), 'the adapter must emit a terminal artifact-state marker');
+assert.ok(runnerSourceForGuard.includes('FAILURE_SIGNAL.noWriteMarker'), 'it must emit the shared no-write marker constant');
+const handlerAt = runnerSourceForGuard.indexOf("process.on('exit'");
+const firstThrowAt = runnerSourceForGuard.indexOf("throw new Error('PHASE2B_REPORT_PATH_REQUIRED')");
+assert.ok(handlerAt > -1 && firstThrowAt > -1 && handlerAt < firstThrowAt,
+  'the exit handler must be registered before the first statement that can throw');
+assert.ok(/let repairCommitted = false;[\s\S]{0,900}?process\.on\('exit'/.test(runnerSourceForGuard),
+  'the handler must read a flag declared alongside it, so an early throw cannot hit a temporal dead zone');
+assert.ok(runnerSourceForGuard.includes('repairCommitted = true;'), 'the flag must be set when the repair commit lands');
+
+// The full-build cleanliness gate is a PRODUCTION PREREQUISITE of this repair:
+// the adapter drives build-all and refuses any diff its transition cannot
+// explain, so pre-existing drift between main and canonical generation would
+// make every future repair abort silently. The gate must not quietly disappear.
+const ttdWorkflow = fs.readFileSync(
+  path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '.github', 'workflows', 'validate-things-to-do.yml'),
+  'utf8',
+);
+assert.ok(ttdWorkflow.includes('Verify main is generation-clean under the canonical build-all pathway'),
+  'the full-build generation-cleanliness gate must exist');
+assert.ok(/node scripts\/build-all\.mjs --as-of="\$AS_OF"/.test(ttdWorkflow),
+  'the gate must run canonical build-all at the governed tracked as_of, deterministically');
+const gateStep = ttdWorkflow.slice(ttdWorkflow.indexOf('Verify main is generation-clean'));
+assert.ok(gateStep.includes('git status --porcelain'),
+  'the gate must assert on git status, which covers tracked changes AND new untracked output');
+assert.ok(gateStep.includes('git clean -fd'), 'the gate must establish a clean baseline first');
+assert.ok(/Baseline is not clean/.test(gateStep), 'the gate must refuse to run against a dirty baseline');
+// The separate LIVE EMAR check must survive: the gate pins build-all's own
+// training check to the governed date, and must not replace the live one.
+assert.ok(/validate-training-opportunities-currentness\.mjs --as-of="\$AS_OF_EMAR"/.test(ttdWorkflow),
+  'the live EMAR/Kre+ currentness check must remain, separately');
+assert.ok(ttdWorkflow.includes('git diff --exit-code -- index.html sitemap.xml things-to-do/'),
+  'the incumbent committed-surfaces gate must not be weakened');
 // The reporter must pass its own probe limit through, or the guard is inert.
 assert.ok(/limit: PROBE_LIMIT/.test(signalSource), 'the reporter must hand its probe limit to the parser');
 // The recovery disposition must not be inert in production. The previous round
@@ -649,14 +801,24 @@ assert.ok(!liveRecoveryBody.includes('no branch, no commit'),
 assert.ok(liveRecoveryBody.includes('Candidate abc is already pushed on feature/y.'),
   'the live body must carry the adapter recovery detail');
 const livePlainBody = buildIssueBody(asReporterBuilds('PHASE2B_MAIN_MOVED'), { repository: 'o/r', key: failureSignalKey('PHASE2B_MAIN_MOVED') });
-assert.ok(livePlainBody.includes('no branch, no commit'),
-  'a pre-commit refusal still states the clean no-op through the same path');
+assert.ok(!livePlainBody.includes('no branch, no commit'),
+  'a plain log through the reporter path is UNKNOWN, not a claimed clean no-op');
+const liveNoWriteBody = buildIssueBody(asReporterBuilds(noWriteLog), { repository: 'o/r', key: failureSignalKey(classifyFailure(noWriteLog)) });
+assert.ok(liveNoWriteBody.includes('no branch, no commit'),
+  'a proven no-write refusal states the clean no-op through the reporter path too');
 
 assert.ok(/'--limit', String\(PROBE_LIMIT\)/.test(signalSource), 'the reporter must use one limit for gh and the parser');
 // The reporter must pass the escalation flag through, or the correction reads as
 // an ordinary recurrence.
 assert.ok(/escalation: resolvedDecision\.escalation/.test(signalSource),
   'the reporter must hand the escalation flag to the recurrence comment');
+// The reporter must actually drive that paginated path, and must not ask the
+// issue-list probe for comments again.
+assert.ok(/per_page=\$\{FAILURE_SIGNAL\.commentsPerPage\}&page=\$\{page\}/.test(signalSource),
+  'the reporter must request comments with an explicit per_page and page');
+assert.ok(signalSource.includes('assertCommentSetComplete('), 'the reporter must prove comment completeness');
+assert.ok(signalSource.includes("'--json', 'number,url,body',"), 'the issue probe must not request nested comments');
+assert.ok(!/--json', 'number,url,body,comments/.test(signalSource));
 // Every reachable decision must say which rule fired, CREATE included — three
 // reported statuses, three reasons.
 assert.equal((signalSource.match(/reason: resolvedDecision\.reason/g) ?? []).length, 3,

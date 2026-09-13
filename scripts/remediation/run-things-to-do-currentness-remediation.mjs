@@ -22,6 +22,7 @@ import {
   parseValidatorDriftIds,
   resolvePreviewTransition,
 } from './lib/things-to-do-currentness-remediation.mjs';
+import { FAILURE_SIGNAL } from './lib/phase2b-failure-signal.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(scriptDir, '..', '..');
@@ -266,6 +267,27 @@ function reportBody(auth, changed, validations, candidateSha, transition) {
   ].join('\n');
 }
 
+// Positive terminal evidence for the failure signal.
+//
+// The signal must never infer "nothing was written" from the ABSENCE of a
+// post-commit recovery marker: a process killed by OOM or the job timeout after
+// `git push` succeeded and before `gh pr create` returned emits no marker at
+// all, and reading that silence as a clean no-op is what sends someone to rerun
+// on top of a live candidate. So the clean case states itself, here, instead.
+//
+// Registered BEFORE the first statement that can throw — authorization and the
+// drift gates refuse far earlier than the staging phase, and those refusals are
+// the common case, so a handler installed further down would leave them
+// indistinguishable from a killed process. It reads only this flag, declared
+// alongside it, so it cannot hit a temporal-dead-zone error when the module body
+// throws early. Only a surviving process reaches it; a killed one stays UNKNOWN.
+let repairCommitted = false;
+process.on('exit', (code) => {
+  if (code === 0) return;
+  if (repairCommitted) return;
+  console.error(`${FAILURE_SIGNAL.noWriteMarker}: the adapter reached its exit path with nothing committed.`);
+});
+
 const reportPathArg = arg('report');
 const repository = arg('repository', 'jasonlamardjones/aprasa-site');
 const workflowRunId = arg('workflow-run-id');
@@ -337,6 +359,7 @@ const stagingRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aprasa-phase2b-stage-
 let promotion = null;
 let committed = false;
 let candidateSha = null;
+
 try {
   fs.cpSync(root, stagingRoot, { recursive: true, filter: (src) => path.basename(src) !== '.git' });
   git(stagingRoot, ['init', '-q', '-b', 'staging']);
@@ -381,6 +404,7 @@ try {
   git(root, ['config', 'user.email', 'automation@aprasa.org']);
   git(root, ['commit', '-m', `Automated repair: Things-to-Do currentness ${auth.asOf}`]);
   committed = true;
+  repairCommitted = true;
   candidateSha = git(root, ['rev-parse', 'HEAD']).stdout.trim();
   acceptPromotion(promotion);
   promotion = null;
