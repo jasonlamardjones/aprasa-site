@@ -46,7 +46,11 @@ const RAW_TEXT = new Set(['script', 'style']);
 // survives is reported by `hasUndecodedReference` so the caller can refuse the
 // page rather than quietly compare the wrong string. A governed page has no
 // business carrying an entity-encoded id at all.
-const NUMERIC_REFERENCE = /&#(x[0-9a-f]+|[0-9]+);/gi;
+// The trailing semicolon is OPTIONAL on a numeric reference, measured against
+// Chromium rather than assumed: id="i18n&#45strings" and id="i18n&#x2Dstrings"
+// both resolve to the id "i18n-strings" in the DOM. Requiring the semicolon
+// left exactly the demonstrated attack working, one character shorter.
+const NUMERIC_REFERENCE = /&#(x[0-9a-f]+|[0-9]+);?/gi;
 const PREDEFINED = {amp: '&', lt: '<', gt: '>', quot: '"', apos: "'"};
 const NAMED_REFERENCE = /&([a-z][a-z0-9]{1,31});/gi;
 
@@ -61,7 +65,7 @@ function decodeReferences(value) {
 
 /** True when a value still holds a reference this module could not decode. */
 export function hasUndecodedReference(value) {
-  return /&(#[0-9a-fx]+|[a-z][a-z0-9]{1,31});/i.test(value);
+  return /&(#[0-9a-fx]+;?|[a-z][a-z0-9]{1,31};)/i.test(value);
 }
 
 /**

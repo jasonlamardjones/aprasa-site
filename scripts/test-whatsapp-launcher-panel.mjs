@@ -493,14 +493,50 @@ check('the contact-config id always belongs to a JSON script element',
   shadowedIslands.length ? `shadowed in: ${shadowedIslands.join(', ')}` : undefined);
 // The separator-aware search is only worth anything if it actually matches the
 // formatted spelling; assert it against the config's own display value.
-// Character references in attribute values: the DOM decodes them, so an
-// encoded duplicate id is a duplicate. Asserted directly against the parser.
+// --- Parser parity with a real browser ------------------------------------
+// The point of this module is to resolve elements the way getElementById does.
+// "The way getElementById does" is a measurable fact, not a thing to reason
+// about, so each expected count below was MEASURED against Chromium via
+// document.querySelectorAll('[id="i18n-strings"]') on the same markup, and the
+// parser agreed on all twenty.
+//
+// The measurement cannot run here - CI installs no browser - so the measured
+// answers are pinned instead. If a future change makes the parser disagree
+// with one of these, it has stopped modelling the DOM, which is the only thing
+// it is for. Re-measure rather than adjust an expectation to fit.
+//
+// Two results worth keeping visible because they are counter-intuitive:
+//   * a numeric reference decodes WITHOUT its trailing semicolon, so
+//     id="i18n&#45strings" IS id="i18n-strings" to the DOM;
+//   * a double-encoded &amp;#45; does NOT decode, so it stays a distinct id.
 {
-  const canonical = '<script type="application/json" id="i18n-strings">{}</script>';
-  check('an entity-encoded duplicate id is seen as a duplicate',
-    findElementsById(`<div id="i18n&#45;strings"></div>${canonical}`, 'i18n-strings').length === 2);
-  check('a hex-encoded duplicate id is seen as a duplicate',
-    findElementsById(`<div id="i18n&#x2D;strings"></div>${canonical}`, 'i18n-strings').length === 2);
+  const ISLAND = '<script type="application/json" id="i18n-strings">{}</script>';
+  const MEASURED = [
+    ['canonical only', ISLAND, 1],
+    ['decimal reference with semicolon', `<div id="i18n&#45;strings"></div>${ISLAND}`, 2],
+    ['decimal reference without semicolon', `<div id="i18n&#45strings"></div>${ISLAND}`, 2],
+    ['hex reference with semicolon', `<div id="i18n&#x2D;strings"></div>${ISLAND}`, 2],
+    ['hex reference without semicolon', `<div id="i18n&#x2Dstrings"></div>${ISLAND}`, 2],
+    ['uppercase X hex reference', `<div id="i18n&#X2D;strings"></div>${ISLAND}`, 2],
+    ['leading zeros', `<div id="i18n&#0000045;strings"></div>${ISLAND}`, 2],
+    ['double-encoded reference stays distinct', `<div id="i18n&amp;#45;strings"></div>${ISLAND}`, 1],
+    ['named reference to a non-ASCII hyphen stays distinct', `<div id="i18n&hyphen;strings"></div>${ISLAND}`, 1],
+    ['plain duplicate div', `<div id="i18n-strings"></div>${ISLAND}`, 2],
+    ['single-quoted id', `<div id='i18n-strings'></div>${ISLAND}`, 2],
+    ['unquoted id', `<div id=i18n-strings></div>${ISLAND}`, 2],
+    ['duplicate attribute keeps the first', `<div id="i18n-strings" id="other"></div>${ISLAND}`, 2],
+    ['inside an HTML comment', `<!-- <div id="i18n-strings"></div> -->${ISLAND}`, 1],
+    ['inside a template', `<template><div id="i18n-strings"></div></template>${ISLAND}`, 1],
+    ['inside a script string literal', `<script>const s='<div id="i18n-strings">';</script>${ISLAND}`, 1],
+    ['inside a style body', `<style>/* <div id="i18n-strings"> */</style>${ISLAND}`, 1],
+    ['attribute value containing >', `<div data-x="a>b" id="i18n-strings"></div>${ISLAND}`, 2],
+    ['closing tag with a space', '<script type="application/json" id="i18n-strings">{}</script >', 1],
+    ['uppercase tag and attribute name', `<DIV ID="i18n-strings"></DIV>${ISLAND}`, 2],
+  ];
+  for (const [label, html, expected] of MEASURED) {
+    const found = findElementsById(html, 'i18n-strings').length;
+    check(`parser matches the DOM: ${label}`, found === expected, `found ${found}, browser gives ${expected}`);
+  }
   check('an undecodable reference in an id is reported',
     hasUndecodedReference('i18n&nbsp;strings') && !hasUndecodedReference('i18n-strings'));
 }
