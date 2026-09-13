@@ -334,6 +334,11 @@ for (const [name, source] of [['prasa-launch.js', launcherJs], ['mindelo-essenti
     /names\.length !== 1 \|\| names\[0\] !== "text"/.test(source));
   check(`${name} authorizes only governed prefill text`,
     /governedPrefillValues\(\)\.has\(url\.searchParams\.get\("text"\)\)/.test(source));
+  // Neither shape changes which account WhatsApp opens, but neither is one of
+  // the two authorized forms, and embedded credentials are the classic
+  // deceptive spelling of a trusted host. The guard refuses both.
+  check(`${name} rejects embedded credentials and a fragment`,
+    /if \(url\.username \|\| url\.password \|\| url\.hash\) return false;/.test(source));
   check(`${name} falls back to the short link without a selection`,
     /: GOVERNED_WHATSAPP_URL;/.test(source));
   check(`${name} blocks an unauthorized destination at activation`,

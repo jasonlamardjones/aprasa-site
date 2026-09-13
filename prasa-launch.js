@@ -716,6 +716,12 @@
       return false;
     }
     if (url.origin !== base.origin || url.pathname !== base.pathname) return false;
+    // Nothing else may ride along. Neither embedded credentials nor a fragment
+    // changes which account WhatsApp opens, but both are shapes this launcher
+    // never produces, and "https://someone@wa.me/..." is exactly the deceptive
+    // form a governed destination should refuse to be mistaken for. The two
+    // authorized forms carry no userinfo and no fragment.
+    if (url.username || url.password || url.hash) return false;
     // Exactly one parameter, and it must be a governed prefill. An extra
     // parameter, a different parameter, or unapproved text is not authorized.
     const names = Array.from(url.searchParams.keys());
