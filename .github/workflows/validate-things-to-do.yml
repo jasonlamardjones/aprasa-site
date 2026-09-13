@@ -14,6 +14,7 @@ on:
       - 'scripts/build-mindelo-pt.mjs'
       - 'scripts/lib/canonical-links.mjs'
       - 'prasa-launch.js'
+      - 'prasa-launch.css'
       - 'about/**'
       - 'pt/about/**'
       - 'mindelo-essentials/**'

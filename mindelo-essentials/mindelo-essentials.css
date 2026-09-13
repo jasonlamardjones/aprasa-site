@@ -326,7 +326,13 @@ body.dialog-open .floating-utilities { display: none; }
    selected-intent accent. */
 .launcher-panel {
   width: min(20rem, calc(100vw - 2rem));
-  max-height: min(26rem, calc(100vh - 9rem));
+  /* Leave room for everything stacked beneath the panel: cluster gap + the
+     3.25rem launcher + cluster gap + the 5.4rem Up/Down column + the 1rem
+     bottom offset = 10.75rem. The old 9rem limit predates the vertical stack
+     and pushed the panel's heading above the viewport on short and landscape
+     phones. dvh where supported, so mobile browser chrome is accounted for. */
+  max-height: min(26rem, calc(100vh - 12rem));
+  max-height: min(26rem, calc(100dvh - 12rem));
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: .95rem 1rem 1rem;

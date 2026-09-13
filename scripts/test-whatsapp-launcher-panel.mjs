@@ -201,6 +201,14 @@ for (const css of ['prasa-launch.css', 'mindelo-essentials/mindelo-essentials.cs
     rules.some((rule) => /flex-direction:\s*column/.test(rule)),
     rules.length ? rules.map((r) => r.replace(/\s+/g, ' ')).join(' | ') : 'no .floating-nav-controls rule');
   check(`${css} keeps the 44px nav hit area`, /\.floating-utility-nav::after \{[\s\S]*?width: 44px;[\s\S]*?height: 44px;/.test(text));
+  // The panel sits above the whole stack, so its height limit must reserve the
+  // space everything below it occupies: cluster gap + launcher + cluster gap +
+  // the Up/Down column + the bottom offset = 10.75rem. At the old 9rem the
+  // panel's heading rendered above the viewport on landscape and short phones.
+  const panelLimit = text.match(/max-height:\s*min\([^,]+,\s*calc\(100d?vh - ([\d.]+)rem\)\)/);
+  check(`${css} reserves viewport height for the full control stack`,
+    !!panelLimit && parseFloat(panelLimit[1]) >= 11,
+    panelLimit ? `reserves only ${panelLimit[1]}rem, needs >= 11rem` : 'no panel max-height limit found');
   check(`${css} gives the launcher a light separation ring`,
     /\.floating-utility-whatsapp \{[\s\S]*?box-shadow:[\s\S]*?rgba\(246,240,226,/.test(text));
 }
