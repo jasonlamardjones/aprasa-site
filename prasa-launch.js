@@ -849,12 +849,29 @@
       return targets.find(({target}) => target.getBoundingClientRect().top > 1) || null;
     }
 
+    // Hiding the control a keyboard user just activated would drop focus to the
+    // document, stranding them at the top of the tab order away from the
+    // position they just scrolled to. If the button losing visibility is the
+    // focused one, hand focus to the nearest surviving control first.
+    function keepFocusOnStack(hiding, wasFocused) {
+      // wasFocused is sampled BEFORE the element is hidden: by the time it is
+      // hidden the browser has already reset activeElement to <body>, so
+      // re-reading it here would always miss.
+      if (!hiding.hidden || wasFocused !== hiding) return;
+      const launcher = cluster.querySelector(".floating-utility-whatsapp");
+      const next = [hiding === up ? down : up, launcher].find((el) => el && !el.hidden);
+      next?.focus();
+    }
+
     function update() {
+      const wasFocused = document.activeElement;
       up.hidden = window.scrollY <= 0;
+      if (wasFocused === up) keepFocusOnStack(up, wasFocused);
 
       if (!sectionAware) {
         // Nothing left to scroll: the only reason to hide the paging Down.
         down.hidden = atDocumentBottom();
+        if (wasFocused === down) keepFocusOnStack(down, wasFocused);
         return;
       }
 
@@ -864,6 +881,7 @@
       // to leave Down showing with nowhere left to go.
       const hide = !next || atDocumentBottom();
       down.hidden = hide;
+      if (wasFocused === down) keepFocusOnStack(down, wasFocused);
       if (!hide) {
         down.setAttribute("aria-label", next.label);
         down.title = next.label;

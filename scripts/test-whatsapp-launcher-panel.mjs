@@ -227,6 +227,20 @@ for (const [name, source] of [['prasa-launch.js', launcherJs], ['mindelo-essenti
   check(`${name} navigation reads no element text content`, !/textContent/.test(nav.replace(/anchor\.textContent/g, '')),
     nav.match(/.{0,40}textContent.{0,40}/)?.[0]);
 }
+// Hiding the control a keyboard user just activated must not strand focus on
+// <body>. The guard has to use focus sampled BEFORE hiding — once hidden the
+// browser has already reset activeElement — so assert that shape explicitly.
+for (const [name, source] of [['prasa-launch.js', launcherJs], ['mindelo-essentials.js', mindeloJs]]) {
+  check(`${name} hands focus on before hiding an activated control`,
+    /keepFocusOnStack\(/.test(source));
+  check(`${name} samples focus before hiding, not after`,
+    /const wasFocused = document\.activeElement;/.test(source)
+    && /keepFocusOnStack\((?:up|down), wasFocused\)/.test(source)
+    && /wasFocused !== hiding/.test(source));
+  check(`${name} falls back to the sibling control then the launcher`,
+    /hiding === up \? down : up/.test(source) && /floating-utility-whatsapp/.test(source));
+}
+
 // The stack is one vertical column, in CSS, on both stylesheets.
 for (const css of ['prasa-launch.css', 'mindelo-essentials/mindelo-essentials.css']) {
   const text = read(css);

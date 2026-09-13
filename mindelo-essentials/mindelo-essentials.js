@@ -470,9 +470,25 @@
       window.scrollTo({top: Math.min(window.scrollY + step, limit), behavior: behavior()});
     });
 
+    // Hiding the control a keyboard user just activated would drop focus to the
+    // document; hand it to the nearest surviving control instead. Mirrors
+    // prasa-launch.js.
+    function keepFocusOnStack(hiding, wasFocused) {
+      // wasFocused is sampled BEFORE the element is hidden: by the time it is
+      // hidden the browser has already reset activeElement to <body>, so
+      // re-reading it here would always miss.
+      if (!hiding.hidden || wasFocused !== hiding) return;
+      const launcher = cluster.querySelector(".floating-utility-whatsapp");
+      const next = [hiding === up ? down : up, launcher].find((el) => el && !el.hidden);
+      next?.focus();
+    }
+
     function update() {
+      const wasFocused = document.activeElement;
       up.hidden = window.scrollY <= 0;
       down.hidden = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2;
+      if (wasFocused === up) keepFocusOnStack(up, wasFocused);
+      if (wasFocused === down) keepFocusOnStack(down, wasFocused);
     }
     let scheduled = false;
     const scheduleUpdate = () => {
