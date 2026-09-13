@@ -696,7 +696,15 @@ html[lang="pt"] img.lang-only-pt { display: block; }
 }
 .floating-utilities > *,
 .floating-nav-controls { pointer-events: auto; }
-.floating-nav-controls { display: flex; gap: .4rem; }
+/* Vertical utility stack: WhatsApp, then Up, then Down, in one narrow
+   right-edge column. The controls were previously a horizontal row beneath the
+   launcher, which ate page width on a phone for no benefit. */
+.floating-nav-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: .4rem;
+}
 .floating-utility {
   display: inline-flex;
   align-items: center;
@@ -707,6 +715,9 @@ html[lang="pt"] img.lang-only-pt { display: block; }
   font-family: var(--sans);
   line-height: 1;
 }
+/* The WhatsApp launcher is a <button> (it toggles the panel rather than
+   navigating), so it needs the button resets the anchor never did. */
+button.floating-utility { cursor: pointer; }
 a.floating-utility { text-decoration: none; }
 .floating-utility[hidden] { display: none; }
 .floating-utility-icon { display: block; }
@@ -718,12 +729,21 @@ a.floating-utility { text-decoration: none; }
   background: var(--green);
   color: var(--white);
   border-color: var(--green);
-  box-shadow: 0 .35rem 1.1rem rgba(17,17,17,.18);
+  /* Two layers, and the first is the point: a cream hairline ring sitting just
+     outside the disc. Over a cream section it is cream-on-cream and effectively
+     invisible, so nothing reads as a glowing CTA; over the deep-green footer it
+     is the only thing separating a green disc from a green ground. One
+     treatment, no section detection, no JS. */
+  box-shadow:
+    0 0 0 1.5px rgba(246,240,226,.55),
+    0 .35rem 1.1rem rgba(17,17,17,.2);
 }
 .floating-utility-whatsapp .floating-utility-icon { width: 1.7rem; height: 1.7rem; }
 .floating-utility-whatsapp:hover {
   color: var(--white);
-  box-shadow: 0 .45rem 1.35rem rgba(17,17,17,.26);
+  box-shadow:
+    0 0 0 1.5px rgba(246,240,226,.7),
+    0 .45rem 1.35rem rgba(17,17,17,.28);
 }
 
 /* Secondary controls: lighter, smaller chevrons. The visible disc is compact
@@ -737,7 +757,12 @@ a.floating-utility { text-decoration: none; }
   background: var(--white);
   color: var(--green);
   border-color: rgba(30,61,46,.22);
-  box-shadow: 0 .2rem .65rem rgba(17,17,17,.12);
+  /* Lighter equivalent of the launcher's ring, for stack coherence. The disc is
+     already white, so this only has to keep the edge from dissolving into a
+     dark ground. */
+  box-shadow:
+    0 0 0 1px rgba(246,240,226,.4),
+    0 .2rem .65rem rgba(17,17,17,.14);
   cursor: pointer;
 }
 .floating-utility-nav::after {
@@ -753,6 +778,106 @@ a.floating-utility { text-decoration: none; }
 .floating-utility-nav:hover { background: var(--cream); }
 
 body.dialog-open .floating-utilities { display: none; }
+
+/* On-site chat-style panel opened by the floating WhatsApp launcher.
+   Anchored to the launcher inside the fixed cluster, deliberately small: it is
+   a guidance card, not a modal, and never covers the viewport. Colours are the
+   incumbent tokens — deep green ground, cream surface, ochre only as the
+   selected-intent accent. */
+.launcher-panel {
+  width: min(20rem, calc(100vw - 2rem));
+  /* Leave room for everything stacked beneath the panel: cluster gap + the
+     3.25rem launcher + cluster gap + the 5.4rem Up/Down column + the 1rem
+     bottom offset = 10.75rem. The old 9rem limit predates the vertical stack
+     and pushed the panel's heading above the viewport on short and landscape
+     phones. dvh where supported, so mobile browser chrome is accounted for. */
+  max-height: min(26rem, calc(100vh - 12rem));
+  max-height: min(26rem, calc(100dvh - 12rem));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: .95rem 1rem 1rem;
+  background: var(--cream);
+  color: var(--ink);
+  border: 1px solid rgba(30,61,46,.28);
+  border-radius: var(--radius);
+  box-shadow: 0 .8rem 2rem rgba(17,17,17,.22);
+  text-align: left;
+}
+.launcher-panel:focus-visible { outline: 3px solid var(--green); outline-offset: 3px; }
+.launcher-panel-title {
+  margin: 0 0 .2rem;
+  font-family: var(--serif);
+  font-size: 1rem;
+  line-height: 1.25;
+  color: var(--green);
+}
+.launcher-panel-intro {
+  margin: 0 0 .7rem;
+  font-size: .85rem;
+  line-height: 1.4;
+}
+.launcher-panel-actions {
+  display: grid;
+  gap: .35rem;
+  margin: 0 0 .8rem;
+}
+.launcher-quick-action {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: .5rem .65rem;
+  background: var(--white);
+  color: var(--green);
+  border: 1px solid rgba(30,61,46,.22);
+  border-radius: 8px;
+  font-family: var(--sans);
+  font-size: .82rem;
+  line-height: 1.3;
+  text-align: left;
+  cursor: pointer;
+}
+.launcher-quick-action:hover { border-color: rgba(30,61,46,.45); }
+/* Selected intent. This is local panel state only — it records what the
+   visitor wants to talk about so the panel can reflect it back, and changes
+   nothing about the outbound destination. */
+.launcher-quick-action[aria-pressed="true"] {
+  background: rgba(192,135,46,.14);
+  border-color: var(--ochre);
+  font-weight: 600;
+}
+.launcher-panel-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: .55rem .9rem;
+  background: var(--green);
+  color: var(--cream);
+  border: 1px solid var(--green);
+  border-radius: 999px;
+  font-size: .86rem;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+}
+.launcher-panel-cta:hover { color: var(--cream); text-decoration: underline; }
+.launcher-panel-close {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin-top: .3rem;
+  padding: .4rem;
+  background: none;
+  color: var(--green);
+  border: 0;
+  font-family: var(--sans);
+  font-size: .82rem;
+  text-decoration: underline;
+  text-underline-offset: .18em;
+  cursor: pointer;
+}
+.launcher-panel-close:hover { text-decoration-thickness: .13em; }
+
 
 @media (max-width: 24rem) {
   .floating-utilities {

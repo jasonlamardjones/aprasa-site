@@ -17,6 +17,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { t } from './lib/locale.mjs';
+import { RUNTIME_STRING_KEYS, LAUNCHER_PANEL_KEYS, NAV_CONTROL_KEYS, applyRuntimeStrings } from './lib/runtime-strings.mjs';
 import { localizeStaticHtml } from './lib/static-page-transform.mjs';
 import { deepenSharedAssetPaths } from './lib/asset-paths.mjs';
 import { normalizeCanonicalHomeLinks } from './lib/canonical-links.mjs';
@@ -193,38 +194,28 @@ function applyAboutFounderFixup(html, locale) {
 
 // Governed runtime strings for prasa-launch.js.
 //
-// prasa-launch.js injects editorial fallback media labels into Home's card
-// grids at runtime, so the static-page localizer never sees that copy and a
-// live audit found it rendering in English on PT Home. This writes the
-// governed values for the page's own locale into the same
+// prasa-launch.js renders copy the static-page localizer never sees, because
+// the runtime injects it after the page is built: the editorial media-fallback
+// labels on Home's card grids, and the on-site panel the floating WhatsApp
+// launcher opens. A live audit previously found the media-fallback labels
+// rendering in English on PT Home for exactly that reason. The builder writes
+// the governed values for the page's OWN locale into the
 // <script type="application/json" id="i18n-strings"> block Mindelo Essentials
 // already uses for its runtime copy; prasa-launch.js reads them from there and
-// falls back to its own English defaults when the block is absent.
+// never translates.
 //
-// Only keys with an approved governed value are emitted. Every runtime string
-// the fallback layer renders now has one: the editorial "section thumbnail"
-// note used by the Trainings and Organizations shelves shipped unresolved in
-// the collection-hub tranche and was approved by Project 09 afterwards
-// (system.media_fallback.section_note, r14). A key with no approved value must
-// be left out of this map rather than translated here.
-const RUNTIME_STRING_KEYS = {
-  mediaFallbackLabel: 'system.media_fallback.label',
-  mediaFallbackNote: 'system.media_fallback.note',
-  sectionThumbnailNote: 'system.media_fallback.section_note',
-  trainingsSectionLabel: 'home.training.title',
-  organizationsSectionLabel: 'home.organizations.title',
-};
-
-const RUNTIME_STRINGS_BLOCK = /<script type="application\/json" id="i18n-strings">[\s\S]*?<\/script>\n?/;
-
-function applyHomeRuntimeStrings(html, locale) {
-  const payload = {};
-  for (const [runtimeKey, localeKey] of Object.entries(RUNTIME_STRING_KEYS)) {
-    payload[runtimeKey] = t(localeKey, locale);
-  }
-  const block = `<script type="application/json" id="i18n-strings">${JSON.stringify(payload)}</script>\n`;
-  if (RUNTIME_STRINGS_BLOCK.test(html)) return html.replace(RUNTIME_STRINGS_BLOCK, block);
-  return html.replace('</head>', `${block}</head>`);
+// The key map lives in scripts/lib/runtime-strings.mjs so Home, About, the
+// Things-to-Do templates and the detail pages cannot drift apart on which keys
+// a surface carries. Only keys with an approved governed value are emitted; a
+// key with no approved Portuguese value must be left out rather than
+// translated here.
+//
+// Reach: the media-fallback copy is Home-only, but the launcher initializes on
+// every surface carrying the governed WhatsApp anchor, so the panel keys must
+// reach every page this builder owns — not just Home. Home therefore gets the
+// full set and every other page gets the launcher set.
+function runtimeKeysFor(name) {
+  return name === 'home' ? RUNTIME_STRING_KEYS : {...LAUNCHER_PANEL_KEYS, ...NAV_CONTROL_KEYS};
 }
 
 // localizeStaticHtml deliberately treats <script> content as opaque raw
@@ -260,7 +251,7 @@ function buildPage({ name, enPath, ptPath, canonicalEn, canonicalPt, enHrefFromR
   //    page's own same-locale collection route. Idempotent, and it changes no
   //    canonical tag and adds no redirect.
   enSource = normalizeCanonicalHomeLinks(enSource, { collectionHref });
-  if (name === 'home') enSource = applyHomeRuntimeStrings(enSource, 'en');
+  enSource = applyRuntimeStrings(enSource, 'en', runtimeKeysFor(name));
 
   // 1. Inject bounded EN infrastructure (hreflang + lang-switch) into the EN
   //    source in place, if not already present (idempotent).
@@ -288,7 +279,7 @@ function buildPage({ name, enPath, ptPath, canonicalEn, canonicalPt, enHrefFromR
   ptSource = applyHomeHeroFixups(ptSource, name === 'home' ? 'pt' : 'en');
   ptSource = applyAboutFounderFixup(ptSource, name === 'about' ? 'pt' : 'en');
   ptSource = applyHomeStructuredDataFixup(ptSource, name === 'home' ? 'pt' : 'en');
-  if (name === 'home') ptSource = applyHomeRuntimeStrings(ptSource, 'pt');
+  ptSource = applyRuntimeStrings(ptSource, 'pt', runtimeKeysFor(name));
 
   const { html: rawLocalized, unmatchedEnglish } = localizeStaticHtml(ptSource, 'pt');
   const localized = rawLocalized.replaceAll('<!--i18n:skip-->', '').replaceAll('<!--/i18n:skip-->', '');

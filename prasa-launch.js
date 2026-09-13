@@ -511,6 +511,46 @@
 
   const GOVERNED_WHATSAPP_URL = "https://wa.me/message/GC3C5Q4MSF37I1";
 
+  // Governed launcher-panel copy. This IIFE is a separate scope from the
+  // dialog module above, so it reads the same governed
+  // <script type="application/json" id="i18n-strings"> island itself rather
+  // than sharing that module's STRINGS.
+  //
+  // The defaults below are the governed ENGLISH values and are the fallback
+  // for any surface without the block. This file never carries a translation:
+  // a Portuguese value reaches it only through the island, which
+  // scripts/build-static-pages.mjs, scripts/generate-things-to-do.mjs and
+  // scripts/build-mindelo-pt.mjs write for the page's own locale.
+  const RUNTIME_STRINGS_DEFAULTS = {
+    launcherHeader: "Message A PRASA",
+    launcherIntro: "How can we help?",
+    launcherQuickActionShare: "Share an event or opportunity",
+    launcherQuickActionCorrection: "Report a correction or issue",
+    launcherQuickActionQuestion: "Ask a question",
+    launcherQuickActionSubmissions: "Learn how submissions work",
+    launcherPrimaryAction: "Open WhatsApp",
+    launcherSecondaryAction: "Close",
+    navBackToTop: "Back to top",
+    navScrollDown: "Scroll down",
+  };
+
+  const STRINGS = (() => {
+    const resolved = {...RUNTIME_STRINGS_DEFAULTS};
+    let supplied = null;
+    try {
+      const node = document.getElementById("i18n-strings");
+      if (!node) return resolved;
+      supplied = JSON.parse(node.textContent || "{}");
+    } catch {
+      return resolved;
+    }
+    for (const key of Object.keys(RUNTIME_STRINGS_DEFAULTS)) {
+      const value = supplied?.[key];
+      if (typeof value === "string" && value.length > 0) resolved[key] = value;
+    }
+    return resolved;
+  })();
+
   function normalizeUrl(value) {
     try {
       return new URL(value, window.location.href).href;
@@ -589,26 +629,161 @@
     });
   }
 
+  // The launcher is a toggle, not an outbound link: activating it opens the
+  // on-site panel below. The single outbound navigation point is the panel's
+  // governed "Open WhatsApp" action, which carries the governed destination
+  // resolved and asserted above. Nothing here transmits anything to WhatsApp,
+  // and a selected quick action is local panel state only.
+  const PANEL_ID = "prasa-launcher-panel";
+  const PANEL_TITLE_ID = "prasa-launcher-panel-title";
+
+  const QUICK_ACTION_KEYS = [
+    "launcherQuickActionShare",
+    "launcherQuickActionCorrection",
+    "launcherQuickActionQuestion",
+    "launcherQuickActionSubmissions",
+  ];
+
   function createWhatsAppControl(sourceAnchor) {
     const label = (sourceAnchor.textContent || "").trim();
     if (!label) return null;
 
-    const link = document.createElement("a");
-    link.className = "floating-utility floating-utility-whatsapp";
-    link.href = sourceAnchor.href;
-    if (sourceAnchor.target) link.target = sourceAnchor.target;
-    if (sourceAnchor.rel) link.rel = sourceAnchor.rel;
-    link.setAttribute("aria-label", label);
-    link.title = label;
-    link.append(createWhatsAppIcon());
-    return link;
+    // The incumbent anchor label is governed and already localized per page,
+    // so it stays the launcher's accessible name exactly as before.
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "floating-utility floating-utility-whatsapp";
+    button.setAttribute("aria-label", label);
+    button.title = label;
+    button.setAttribute("aria-expanded", "false");
+    button.setAttribute("aria-controls", PANEL_ID);
+    button.append(createWhatsAppIcon());
+    return button;
   }
 
-  function createHomeNavigationControls(cluster) {
-    const nav = document.querySelector(".home-page-nav");
-    if (!nav) return;
+  function createQuickAction(label) {
+    const action = document.createElement("button");
+    action.type = "button";
+    action.className = "launcher-quick-action";
+    action.setAttribute("aria-pressed", "false");
+    action.textContent = label;
+    return action;
+  }
 
-    const targets = Array.from(nav.querySelectorAll('a[href^="#"]'))
+  function createPanel(sourceAnchor) {
+    const panel = document.createElement("div");
+    panel.className = "launcher-panel";
+    panel.id = PANEL_ID;
+    panel.hidden = true;
+    panel.tabIndex = -1;
+    panel.setAttribute("role", "dialog");
+    panel.setAttribute("aria-labelledby", PANEL_TITLE_ID);
+
+    // A paragraph rather than a heading: the panel is appended to the end of
+    // the document, and a real heading there would land in the page outline
+    // after the footer. aria-labelledby gives it the accessible name instead.
+    const title = document.createElement("p");
+    title.className = "launcher-panel-title";
+    title.id = PANEL_TITLE_ID;
+    title.textContent = STRINGS.launcherHeader;
+
+    const intro = document.createElement("p");
+    intro.className = "launcher-panel-intro";
+    intro.textContent = STRINGS.launcherIntro;
+
+    const actions = document.createElement("div");
+    actions.className = "launcher-panel-actions";
+    const quickActions = QUICK_ACTION_KEYS.map((key) => createQuickAction(STRINGS[key]));
+    for (const action of quickActions) {
+      action.addEventListener("click", () => {
+        const selected = action.getAttribute("aria-pressed") === "true";
+        // Single-select: the panel records one intent at a time. This is local
+        // state that changes nothing about the outbound destination.
+        for (const other of quickActions) other.setAttribute("aria-pressed", "false");
+        action.setAttribute("aria-pressed", selected ? "false" : "true");
+      });
+      actions.append(action);
+    }
+
+    const cta = document.createElement("a");
+    cta.className = "launcher-panel-cta";
+    cta.href = sourceAnchor.href;
+    if (sourceAnchor.target) cta.target = sourceAnchor.target;
+    if (sourceAnchor.rel) cta.rel = sourceAnchor.rel;
+    cta.textContent = STRINGS.launcherPrimaryAction;
+
+    const close = document.createElement("button");
+    close.type = "button";
+    close.className = "launcher-panel-close";
+    close.textContent = STRINGS.launcherSecondaryAction;
+
+    panel.append(title, intro, actions, cta, close);
+    return {panel, close};
+  }
+
+  function wireLauncher(button, panel, close) {
+    const isOpen = () => !panel.hidden;
+
+    function openPanel() {
+      panel.hidden = false;
+      button.setAttribute("aria-expanded", "true");
+      // Move focus into the panel so its name is announced, without trapping
+      // it: Tab continues through the panel and back out to the page.
+      panel.focus();
+    }
+
+    function closePanel(returnFocus) {
+      if (!isOpen()) return;
+      panel.hidden = true;
+      button.setAttribute("aria-expanded", "false");
+      if (returnFocus) button.focus();
+    }
+
+    button.addEventListener("click", () => {
+      if (isOpen()) closePanel(true);
+      else openPanel();
+    });
+    close.addEventListener("click", () => closePanel(true));
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape" || !isOpen()) return;
+      closePanel(true);
+    });
+
+    // Dismiss on an outside pointer press. Focus is not returned here: the
+    // visitor's attention has already moved elsewhere on the page.
+    document.addEventListener("pointerdown", (event) => {
+      if (!isOpen()) return;
+      if (panel.contains(event.target) || button.contains(event.target)) return;
+      closePanel(false);
+    });
+  }
+
+  // Floating navigation controls.
+  //
+  // Reach: Up is available on every surface. Its label is the governed
+  // ui.back_to_top value delivered through the runtime-strings block, rather
+  // than the in-page "Back to top" anchor the Home-only version borrowed from
+  // — Mindelo Essentials carries no such anchor, so borrowing would have left
+  // that surface without the control.
+  //
+  // Down targeting is per-surface, and deliberately not a landmark model:
+  //   - Home has a governed in-page nav (.home-page-nav) whose anchors name
+  //     real sections, so Down steps through those, exactly as before.
+  //   - No other surface has one. Their DOM does not support a reliable
+  //     landmark mapping either: the Things-to-Do hub's only regions are
+  //     individual event cards, a detail page has exactly one region, and on
+  //     About and Mindelo the section headings sit at varying depths behind
+  //     wrappers. Mapping any of that would mean targeting on editorial copy,
+  //     which is brittle by construction. Those surfaces page the viewport
+  //     instead, named by the governed ui.scroll_down string — a model that
+  //     reads no page content at all and so cannot be broken by an edit.
+  const VIEWPORT_PAGE_OVERLAP = 0.12;
+
+  function homeNavTargets() {
+    const nav = document.querySelector(".home-page-nav");
+    if (!nav) return [];
+    return Array.from(nav.querySelectorAll('a[href^="#"]'))
       .map((anchor) => {
         const id = anchor.getAttribute("href")?.slice(1);
         const target = id ? document.getElementById(id) : null;
@@ -616,11 +791,18 @@
         return target && label ? {target, label} : null;
       })
       .filter(Boolean);
-    if (!targets.length) return;
+  }
 
-    const backTop = document.querySelector("a.back-top[href^=\"#\"]");
-    const upLabel = (backTop?.textContent || "").trim();
+  function atDocumentBottom() {
+    const scrollBottom = window.scrollY + window.innerHeight;
+    return scrollBottom >= document.documentElement.scrollHeight - 2;
+  }
+
+  function createNavigationControls(cluster) {
+    const upLabel = STRINGS.navBackToTop;
     if (!upLabel) return;
+
+    const targets = homeNavTargets();
 
     const navGroup = document.createElement("div");
     navGroup.className = "floating-nav-controls";
@@ -632,23 +814,75 @@
     up.title = upLabel;
     up.append(createChevronIcon(CHEVRON_UP));
 
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const behavior = () => reducedMotion.matches ? "auto" : "smooth";
+
+    up.addEventListener("click", () => {
+      window.scrollTo({top: 0, behavior: behavior()});
+    });
+
+    // Down is section-aware where a governed in-page nav supplies both the
+    // targets and their names, and pages the viewport everywhere else. Both
+    // forms exist on every surface now; only the targeting and the name differ.
+    const sectionAware = targets.length > 0;
     const down = document.createElement("button");
     down.type = "button";
     down.className = "floating-utility floating-utility-nav";
     down.append(createChevronIcon(CHEVRON_DOWN));
-
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const behavior = () => reducedMotion.matches ? "auto" : "smooth";
+    if (!sectionAware) {
+      down.setAttribute("aria-label", STRINGS.navScrollDown);
+      down.title = STRINGS.navScrollDown;
+    }
+    down.addEventListener("click", () => {
+      if (sectionAware) {
+        nextTarget()?.target.scrollIntoView({behavior: behavior(), block: "start"});
+        return;
+      }
+      // One viewport per press, with a small overlap so the line you were
+      // reading stays on screen. Clamped to the document bottom.
+      const step = window.innerHeight * (1 - VIEWPORT_PAGE_OVERLAP);
+      const limit = document.documentElement.scrollHeight - window.innerHeight;
+      window.scrollTo({top: Math.min(window.scrollY + step, limit), behavior: behavior()});
+    });
 
     function nextTarget() {
       return targets.find(({target}) => target.getBoundingClientRect().top > 1) || null;
     }
 
+    // Hiding the control a keyboard user just activated would drop focus to the
+    // document, stranding them at the top of the tab order away from the
+    // position they just scrolled to. If the button losing visibility is the
+    // focused one, hand focus to the nearest surviving control first.
+    function keepFocusOnStack(hiding, wasFocused) {
+      // wasFocused is sampled BEFORE the element is hidden: by the time it is
+      // hidden the browser has already reset activeElement to <body>, so
+      // re-reading it here would always miss.
+      if (!hiding.hidden || wasFocused !== hiding) return;
+      const launcher = cluster.querySelector(".floating-utility-whatsapp");
+      const next = [hiding === up ? down : up, launcher].find((el) => el && !el.hidden);
+      next?.focus();
+    }
+
     function update() {
+      const wasFocused = document.activeElement;
       up.hidden = window.scrollY <= 0;
+      if (wasFocused === up) keepFocusOnStack(up, wasFocused);
+
+      if (!sectionAware) {
+        // Nothing left to scroll: the only reason to hide the paging Down.
+        down.hidden = atDocumentBottom();
+        if (wasFocused === down) keepFocusOnStack(down, wasFocused);
+        return;
+      }
+
       const next = nextTarget();
-      down.hidden = !next;
-      if (next) {
+      // Hidden once there is no further section AND once the document itself
+      // has no more to scroll: a final section taller than the viewport used
+      // to leave Down showing with nowhere left to go.
+      const hide = !next || atDocumentBottom();
+      down.hidden = hide;
+      if (wasFocused === down) keepFocusOnStack(down, wasFocused);
+      if (!hide) {
         down.setAttribute("aria-label", next.label);
         down.title = next.label;
       } else {
@@ -656,13 +890,6 @@
         down.removeAttribute("title");
       }
     }
-
-    up.addEventListener("click", () => {
-      window.scrollTo({top: 0, behavior: behavior()});
-    });
-    down.addEventListener("click", () => {
-      nextTarget()?.target.scrollIntoView({behavior: behavior(), block: "start"});
-    });
 
     let scheduled = false;
     const scheduleUpdate = () => {
@@ -690,13 +917,18 @@
     const whatsApp = createWhatsAppControl(sourceAnchor);
     if (!whatsApp) return;
 
+    const {panel, close} = createPanel(sourceAnchor);
+    wireLauncher(whatsApp, panel, close);
+
     const cluster = document.createElement("div");
     cluster.className = "floating-utilities";
     cluster.dataset.floatingUtilities = "";
     cluster.setAttribute("role", "group");
     cluster.setAttribute("aria-label", "A PRASA");
-    cluster.append(whatsApp);
-    createHomeNavigationControls(cluster);
+    // Panel first: the cluster is a bottom-anchored column, so this places the
+    // panel above the launcher that opens it.
+    cluster.append(panel, whatsApp);
+    createNavigationControls(cluster);
     document.body.append(cluster);
   }
 

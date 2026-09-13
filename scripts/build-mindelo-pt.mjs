@@ -17,6 +17,7 @@ import { t } from './lib/locale.mjs';
 import { localizeStaticHtml } from './lib/static-page-transform.mjs';
 import { deepenSharedAssetPaths } from './lib/asset-paths.mjs';
 import { normalizeCanonicalHomeLinks } from './lib/canonical-links.mjs';
+import { LAUNCHER_PANEL_KEYS, NAV_CONTROL_KEYS, resolveRuntimeStrings } from './lib/runtime-strings.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
@@ -125,7 +126,8 @@ function collectCanonicalIdentityStrings() {
 
 // Runtime strings mindelo-essentials.js needs at runtime (search result
 // count pluralization, map guidance/fallback text, marker accessible-name
-// templates) — embedded as a JSON island rather than hardcoded in the
+// templates) plus the governed floating-launcher panel copy — embedded as a
+// JSON island rather than hardcoded in the
 // shared JS file, so the same script renders correct EN or PT text based
 // on which page loaded it. The r3 delta governs the marker accessible-name
 // templates and fallback names in full; the {name} placeholder is
@@ -140,6 +142,12 @@ function runtimeStringsScript(locale) {
     markerDirectoryAccessibleNameTemplate: t('mindelo.map.marker.directory_accessible_name', locale),
     markerOrientationDefaultName: t('mindelo.map.marker.orientation_default_name', locale),
     markerDirectoryDefaultName: t('mindelo.map.marker.directory_default_name', locale),
+    // Mindelo Essentials carries the governed WhatsApp anchor, so
+    // mindelo-essentials.js initializes the same floating launcher and the
+    // same on-site panel as every other surface. The panel's governed copy
+    // therefore belongs in this block too, from the shared key map in
+    // scripts/lib/runtime-strings.mjs — the one source both runtimes read.
+    ...resolveRuntimeStrings({...LAUNCHER_PANEL_KEYS, ...NAV_CONTROL_KEYS}, locale),
   };
   return `<script type="application/json" id="i18n-strings">${JSON.stringify(strings)}</script>`;
 }

@@ -1,0 +1,50 @@
+{
+  "package_id": "aprasa-pt-ui-scroll-down",
+  "revision_class": "ADDITIVE_RUNTIME_KEYS",
+  "source_revision": "P09-PT-UI-SCROLL-DOWN-2026-09-13-r1",
+  "previous_revision": "P09-PT-RUNTIME-WHATSAPP-LAUNCHER-2026-09-12-r1",
+  "revision_type": "RUNTIME_FLOATING_NAV_CONTROL",
+  "semantic_authority": "Project 03 — A PRASA Business, Brand & Administration",
+  "linguistic_authority": "Project 09 — READY_FOR_PROJECT_04_IMPLEMENTATION (approved EN/PT strings)",
+  "target_language": "pt",
+  "target_variant": "European Portuguese appropriate to Cabo Verde",
+  "project_09_status": "approved",
+  "project_09_verdict": "READY_FOR_PROJECT_04_IMPLEMENTATION",
+  "intent": "Supplies the approved English and Portuguese values for the floating Down control's accessible name on the public surfaces that carry no governed in-page section nav (About, Mindelo Essentials, the Things-to-Do hub and Things-to-Do detail pages). Home keeps its existing section-aware Down and does not use this key. The control is injected at runtime by prasa-launch.js and mindelo-essentials.js, so the static-page localizer never sees it; the value reaches the runtime through the governed <script type=\"application/json\" id=\"i18n-strings\"> block. Strictly additive: it introduces no change to any previously approved key and alters no lifecycle, publication, currentness or media policy.",
+  "declared_new_row_count_in_handoff": 1,
+  "actual_row_objects_supplied": 1,
+  "missing_or_unaccounted_row_count": 0,
+  "supplied_rows_approved": 1,
+  "review_required": 0,
+  "semantic_escalations_required": 0,
+  "semantic_change": false,
+  "source_english_changed": false,
+  "localization_architecture_reopened": false,
+  "duplicate_keys": [],
+  "placeholder_mismatches": [],
+  "a_prasa_to_a_praca_violations": [],
+  "linguistic_refinements": [],
+  "blocking_issue": null,
+  "change_control_status": {
+    "new_keys_introduced": 1,
+    "existing_keys_overridden": 0,
+    "english_source_values_modified": 0,
+    "lifecycle_or_publication_state_modified": 0,
+    "protected_identities_modified": 0,
+    "additional_languages_authorized": 0
+  },
+  "rows": [
+    {
+      "key": "ui.scroll_down",
+      "source_revision": "P09-PT-UI-SCROLL-DOWN-2026-09-13-r1",
+      "source_en": "Scroll down",
+      "pt": "Descer",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "context_notes": "Accessible name of the floating Down control on surfaces with no governed in-page section nav. The control pages the viewport downward and stops at the document bottom; it targets no editorial content and depends on no page copy.",
+      "linguistic_notes": "Project 09 identity policy as supplied: TRANSLATE. Carries no protected brand string and no placeholder."
+    }
+  ]
+}
