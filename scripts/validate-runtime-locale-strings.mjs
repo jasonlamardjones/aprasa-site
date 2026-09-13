@@ -30,7 +30,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { t, hasKey } from './lib/locale.mjs';
-import { findElementsById, isJsonIsland } from './lib/html-islands.mjs';
+import { findElementsById, isJsonIsland, hasUndecodedReference } from './lib/html-islands.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const errors = [];
@@ -133,6 +133,16 @@ function readBlock(relative) {
   }
   if (!isJsonIsland(islands[0])) {
     errors.push(`${relative}: the runtime-strings id belongs to <${islands[0].tag}>, not a JSON script element`);
+    return null;
+  }
+  // The DOM decodes character references in attribute values. If one survives
+  // decoding here, this check and the browser are comparing different strings -
+  // refuse the page rather than guess which.
+  const encodedIds = [...html.matchAll(/\sid\s*=\s*(?:"([^"]*)"|'([^']*)')/g)]
+    .map((match) => match[1] ?? match[2])
+    .filter((value) => hasUndecodedReference(value));
+  if (encodedIds.length) {
+    errors.push(`${relative}: undecodable character reference in an id: ${JSON.stringify(encodedIds)}`);
     return null;
   }
   try {

@@ -15,7 +15,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { t } from './lib/locale.mjs';
 import { LAUNCHER_PANEL_KEYS, PREFILL_KEYS, QUICK_ACTION_PREFILL } from './lib/runtime-strings.mjs';
-import { findElementsById, isJsonIsland } from './lib/html-islands.mjs';
+import { findElementsById, isJsonIsland, hasUndecodedReference } from './lib/html-islands.mjs';
 
 // Read an island the way the runtime does: by id, first in document order.
 // Every read below goes through this, so a check can never be parsing a
@@ -92,6 +92,13 @@ for (const rel of surfaces) {
   // is what the runtime would receive. The element must BE the governed island.
   check(`${rel} runtime-strings id belongs to a JSON script element`,
     isJsonIsland(stringIslands[0]), stringIslands[0] && `found <${stringIslands[0].tag}>`);
+  // A governed page has no business carrying an entity-encoded id. If one
+  // survives decoding, refuse rather than compare a string the DOM will not see.
+  const encodedIds = [...html.matchAll(/\sid\s*=\s*(?:"([^"]*)"|'([^']*)')/g)]
+    .map((m) => m[1] ?? m[2])
+    .filter((value) => hasUndecodedReference(value));
+  check(`${rel} carries no undecodable character reference in an id`,
+    encodedIds.length === 0, encodedIds.length ? `found ${JSON.stringify(encodedIds)}` : undefined);
   if (!stringIslands.length) continue;
   let block;
   try { block = JSON.parse(stringIslands[0].content); } catch (error) {
@@ -486,6 +493,18 @@ check('the contact-config id always belongs to a JSON script element',
   shadowedIslands.length ? `shadowed in: ${shadowedIslands.join(', ')}` : undefined);
 // The separator-aware search is only worth anything if it actually matches the
 // formatted spelling; assert it against the config's own display value.
+// Character references in attribute values: the DOM decodes them, so an
+// encoded duplicate id is a duplicate. Asserted directly against the parser.
+{
+  const canonical = '<script type="application/json" id="i18n-strings">{}</script>';
+  check('an entity-encoded duplicate id is seen as a duplicate',
+    findElementsById(`<div id="i18n&#45;strings"></div>${canonical}`, 'i18n-strings').length === 2);
+  check('a hex-encoded duplicate id is seen as a duplicate',
+    findElementsById(`<div id="i18n&#x2D;strings"></div>${canonical}`, 'i18n-strings').length === 2);
+  check('an undecodable reference in an id is reported',
+    hasUndecodedReference('i18n&nbsp;strings') && !hasUndecodedReference('i18n-strings'));
+}
+
 check('the scan recognizes the formatted spelling of the number',
   FORMATTED.test(CONTACT.display), `display ${JSON.stringify(CONTACT.display)} not matched`);
 // The normalization is only worth anything if it actually normalizes. These

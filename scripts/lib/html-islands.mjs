@@ -34,8 +34,39 @@ const ATTRIBUTE = /([a-zA-Z_:][-\w:.]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`
 // const sample = '<div id="contact-config">' must not register as a duplicate.
 const RAW_TEXT = new Set(['script', 'style']);
 
+// An HTML parser DECODES character references in attribute values, so
+// id="i18n&#45;strings" is the element id "i18n-strings" to the browser and to
+// querySelectorAll - while the undecoded source spelling matches nothing here.
+// Left undecoded, an encoded duplicate id makes the runtime see two elements
+// and refuse both (Portuguese copy silently falling back to English) while
+// every build-time check still passes.
+//
+// Numeric references are decoded in full. Named references are not a table
+// here: the five XML predefined names are decoded, and anything else that
+// survives is reported by `hasUndecodedReference` so the caller can refuse the
+// page rather than quietly compare the wrong string. A governed page has no
+// business carrying an entity-encoded id at all.
+const NUMERIC_REFERENCE = /&#(x[0-9a-f]+|[0-9]+);/gi;
+const PREDEFINED = {amp: '&', lt: '<', gt: '>', quot: '"', apos: "'"};
+const NAMED_REFERENCE = /&([a-z][a-z0-9]{1,31});/gi;
+
+function decodeReferences(value) {
+  return value
+    .replace(NUMERIC_REFERENCE, (whole, code) => {
+      const point = code[0].toLowerCase() === 'x' ? parseInt(code.slice(1), 16) : parseInt(code, 10);
+      return Number.isFinite(point) && point >= 0 && point <= 0x10ffff ? String.fromCodePoint(point) : whole;
+    })
+    .replace(NAMED_REFERENCE, (whole, name) => PREDEFINED[name.toLowerCase()] ?? whole);
+}
+
+/** True when a value still holds a reference this module could not decode. */
+export function hasUndecodedReference(value) {
+  return /&(#[0-9a-fx]+|[a-z][a-z0-9]{1,31});/i.test(value);
+}
+
 /**
- * Attribute name -> value, lower-cased names, order- and quote-independent.
+ * Attribute name -> value, lower-cased names, order- and quote-independent,
+ * with character references decoded so comparisons see what the DOM sees.
  * On a malformed tag that repeats an attribute the HTML parser keeps the FIRST
  * occurrence, so this does too: with <div id="contact-config" id="other"> the
  * DOM holds a contact-config element, and a parser that kept the last would
@@ -46,7 +77,7 @@ export function parseAttributes(raw) {
   for (const match of raw.matchAll(ATTRIBUTE)) {
     const name = match[1].toLowerCase();
     if (name in attributes) continue;
-    attributes[name] = match[2] ?? match[3] ?? match[4] ?? '';
+    attributes[name] = decodeReferences(match[2] ?? match[3] ?? match[4] ?? '');
   }
   return attributes;
 }

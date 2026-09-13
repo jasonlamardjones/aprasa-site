@@ -2194,10 +2194,18 @@ const assembled = (() => {
 // are strict mode, so ANY later `keys[...] = ...` throws wherever it is
 // written, which is the invariant this is actually trying to state.
 //
-// Shallow by design. Adding or removing keys is what the counts describe, and
-// that is what this stops; a row mutated in place is caught by the independent
-// re-tally before the write, which is why both exist.
+// Deep, not shallow. An earlier version of this froze only the map, on the
+// reasoning that the pre-write re-tally would catch a row mutated in place.
+// That reasoning was wrong, and wrong in the most damaging direction: the
+// re-tally inspects only scope_status and translation_status, so
+// `keys[k].pt = "..."` after this point changed GOVERNED PORTUGUESE COPY, kept
+// every count identical, and was serialized without a word.
+//
+// So every row is frozen too. The map cannot gain or lose keys, and no row can
+// have its values, provenance or notes rewritten after the point the counts
+// describe it.
 Object.freeze(keys);
+for (const row of Object.values(keys)) Object.freeze(row);
 
 const output = {
   provenance: {
