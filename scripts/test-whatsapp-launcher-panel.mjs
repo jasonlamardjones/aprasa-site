@@ -324,8 +324,27 @@ function walk(dir, out = []) {
 }
 
 const digits = CONTACT.whatsapp_business_number;
+
+// Searching for the bare digit string is not enough. The number a maintainer
+// is most likely to write by hand is the VISIBLE one - the spelling this
+// config carries as `display`, with its spaces and leading plus - in a badge,
+// a page, or documentation. (It is deliberately not quoted here: this file is
+// scanned too, and writing it out would trip the very check below. That it
+// WOULD trip it is the point.) That is exactly the second, independently
+// maintained copy the
+// single-source rule exists to prevent, and the unformatted search walks
+// straight past it.
+//
+// So the digits are matched separator-tolerantly: the same digits in the same
+// order, allowing the characters a human formats a phone number with between
+// them. Built from `digits` rather than written out, so it cannot drift from
+// the config.
+const SEPARATORS = '[\\s\\-().\u00a0]{0,3}';
+const FORMATTED = new RegExp(digits.split('').join(SEPARATORS));
+
 const scanned = walk('');
 const offenders = [];
+const duplicateIslands = [];
 for (const rel of scanned) {
   if (rel === 'data/contact-channels.json') continue;
   let source;
@@ -334,12 +353,27 @@ for (const rel of scanned) {
   } catch {
     continue;
   }
-  // In HTML the derived island is legitimate; everything outside it is not.
-  if (rel.endsWith('.html')) source = source.replace(CONTACT_ISLAND, '');
-  if (source.includes(digits)) offenders.push(rel);
+  if (rel.endsWith('.html')) {
+    // The derived island is legitimate - but exactly ONE of it. Stripping every
+    // match while the assertions below parse only the first would let a second,
+    // hand-authored island carry the number invisibly: the strip would remove
+    // it and nothing would ever look at it.
+    const islands = source.match(CONTACT_ISLAND) || [];
+    if (islands.length > 1) duplicateIslands.push(`${rel} (${islands.length})`);
+    // Strip only the first, so any further island is scanned like page text.
+    source = source.replace(new RegExp(CONTACT_ISLAND.source), '');
+  }
+  if (source.includes(digits) || FORMATTED.test(source)) offenders.push(rel);
 }
 check('the canonical number is restated nowhere outside its governed config',
   offenders.length === 0, offenders.length ? `found in: ${offenders.join(', ')}` : undefined);
+check('no page carries more than one contact-config island',
+  duplicateIslands.length === 0,
+  duplicateIslands.length ? `duplicated in: ${duplicateIslands.join(', ')}` : undefined);
+// The separator-aware search is only worth anything if it actually matches the
+// formatted spelling; assert it against the config's own display value.
+check('the scan recognizes the formatted spelling of the number',
+  FORMATTED.test(CONTACT.display), `display ${JSON.stringify(CONTACT.display)} not matched`);
 // The scan is only worth anything if it actually reached the source tree.
 check('the single-source scan covered the repository',
   scanned.length > 100 && scanned.includes('prasa-launch.js')
