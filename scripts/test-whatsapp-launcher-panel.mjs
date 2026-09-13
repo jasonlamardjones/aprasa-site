@@ -288,19 +288,35 @@ check('config short_link is the incumbent governed short code',
 // -- and in HTML they may appear ONLY inside that island, so a hand-authored
 // page cannot carry them either.
 const SKIP_DIRS = new Set(['.git', 'node_modules', 'validation-artifacts', '.netlify']);
-// Only genuinely binary formats are skipped. SVG is deliberately NOT in this
-// list: it is text/XML and can carry the digits in a <text> node, a link,
-// metadata or a comment, so a contact badge with an independently maintained
-// number would otherwise sit outside the single-source contract.
-const BINARY = /\.(png|jpe?g|gif|webp|avif|ico|pdf|woff2?|ttf|eot|mp4|webm|mp3|zip|gz)$/i;
 const CONTACT_ISLAND = /<script type="application\/json" id="contact-config">[\s\S]*?<\/script>/g;
+
+// Binary files are identified by CONTENT, not by extension. An extension
+// allow/deny list is the same shape of mistake as enumerating URL components:
+// it has to stay exhaustive forever, and the entry it is missing is exactly
+// where the thing hides. Classifying .svg as binary was that mistake in this
+// very check - SVG is text/XML and can carry the digits in a <text> node, a
+// link, metadata or a comment.
+//
+// A NUL byte in the first 8 KiB is the same heuristic git and grep use to call
+// a file binary, and it needs no list: a text format nobody anticipated is
+// scanned by default rather than skipped by default.
+function isBinary(rel) {
+  const fd = fs.openSync(path.join(root, rel), 'r');
+  try {
+    const buffer = Buffer.alloc(8192);
+    const bytes = fs.readSync(fd, buffer, 0, 8192, 0);
+    return buffer.subarray(0, bytes).includes(0);
+  } finally {
+    fs.closeSync(fd);
+  }
+}
 
 function walk(dir, out = []) {
   for (const entry of fs.readdirSync(path.join(root, dir || '.'), {withFileTypes: true})) {
     const rel = dir ? `${dir}/${entry.name}` : entry.name;
     if (entry.isDirectory()) {
       if (!SKIP_DIRS.has(entry.name)) walk(rel, out);
-    } else if (entry.isFile() && !BINARY.test(entry.name)) {
+    } else if (entry.isFile() && !isBinary(rel)) {
       out.push(rel);
     }
   }
