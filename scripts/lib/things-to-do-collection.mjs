@@ -62,7 +62,7 @@ import { isPubliclyCurrent } from './things-to-do-currentness.mjs';
 //   * the breadcrumb on things-to-do/water-adventure-activities-mindelo/ and
 //     things-to-do/street-art-mindelo/, each of which carries a note saying so.
 //
-// enableHub() performs all five, so if republication ever grows a sixth step
+// enableHub() performs all of them, so if republication ever grows another step
 // the negative-coverage cases stop getting a valid published baseline and fail
 // — which is the alarm we want, rather than discovering it at reactivation.
 //

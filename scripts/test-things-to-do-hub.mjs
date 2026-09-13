@@ -104,13 +104,41 @@ function enableHub(dir) {
   fs.writeFileSync(file, source.replace(disabled, enabled));
 
   // 2. The Home call to action, in the authored EN source.
+  //
+  // It belongs at the END OF THE THINGS-TO-DO SHELF, and the closing-tag
+  // sequence that ends that shelf is NOT unique: it ends six sections in
+  // index.html, the first of them the hero. Matching the sequence alone would
+  // restore the call to action in the wrong section, and the CTA assertion —
+  // which reads the page, not the section — would still pass, so the sandbox
+  // would quietly stop being a faithful reactivation. The shelf is therefore
+  // located first and the sequence is accepted only as that shelf's own close.
   const homeFile = path.join(dir, 'index.html');
   const home = fs.readFileSync(homeFile, 'utf8');
+  const shelfOpen = '<section class="shelf" id="things-to-do"';
+  const shelfStart = home.indexOf(shelfOpen);
+  if (shelfStart === -1) {
+    throw new Error('enableHub: Home Things-to-Do shelf not found — update this helper');
+  }
   const anchor = '      </div>\n    </div>\n  </section>';
-  if (!home.includes(anchor)) {
+  const anchorAt = home.indexOf(anchor, shelfStart);
+  if (anchorAt === -1) {
     throw new Error('enableHub: Home Things-to-Do section anchor not found — update this helper');
   }
-  fs.writeFileSync(homeFile, home.replace(anchor, `      </div>\n${HOME_HUB_CTA}    </div>\n  </section>`));
+  // The anchor's own </section> must be the shelf's closing tag; anything else
+  // means the match belongs to a later section.
+  if (home.indexOf('</section>', shelfStart) !== anchorAt + anchor.indexOf('</section>')) {
+    throw new Error('enableHub: Home Things-to-Do section anchor is not the shelf close — update this helper');
+  }
+  const restored =
+    home.slice(0, anchorAt) +
+    `      </div>\n${HOME_HUB_CTA}    </div>\n  </section>` +
+    home.slice(anchorAt + anchor.length);
+  // Prove the restored call to action really is inside the shelf.
+  const ctaAt = restored.indexOf(HOME_HUB_CTA.trim());
+  if (ctaAt < shelfStart || ctaAt > restored.indexOf('</section>', shelfStart)) {
+    throw new Error('enableHub: restored Home call to action landed outside the Things-to-Do shelf');
+  }
+  fs.writeFileSync(homeFile, restored);
 
   // 3. The breadcrumb on the two hand-authored detail pages.
   for (const relative of AUTHORED_DETAIL_PAGES) {

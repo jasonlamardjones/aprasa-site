@@ -237,8 +237,16 @@ jobs:
           # sandbox and asserts membership and ordering against the real
           # renderer. What CI loses here is the cross-date shell spot-check, not
           # the rule.
+          # Publication state is read from the governed flag, not inferred
+          # from the generator's output. Inferring it from the file would make
+          # check_hub_present vacuous in exactly the case it exists for: a
+          # published hub that the generator failed to emit would look
+          # "unpublished" and the assertion would stand down instead of
+          # failing. Resolved once, here, rather than per assertion.
+          HUB_PUBLISHED=$(node -e 'import("./scripts/lib/things-to-do-collection.mjs").then((m) => process.stdout.write(m.THINGS_TO_DO_HUB_PUBLIC ? "true" : "false"))')
+          echo "Collection hub publication state: $HUB_PUBLISHED"
           hub_published() {
-            [ -f things-to-do/index.html ]
+            [ "$HUB_PUBLISHED" = "true" ]
           }
           check_home_present() {
             if ! grep -q "<h3>$2</h3>" index.html; then
@@ -268,7 +276,14 @@ jobs:
           }
           # While the hub is unpublished, its absence is itself the assertion:
           # a generator run at ANY as-of date must not put it back.
+          #
+          # Gated on the same flag as its positive counterparts, so that
+          # flipping THINGS_TO_DO_HUB_PUBLIC to true really does hand the
+          # cross-date coverage back to check_hub_present/check_hub_absent.
+          # Without this, republication would leave the workflow red on the
+          # very files it is supposed to require.
           refute_hub_surfaces() {
+            ! hub_published || return 0
             for surface in things-to-do/index.html pt/things-to-do/index.html; do
               if [ -f "$surface" ]; then
                 echo "$surface was emitted as of $1 while the collection hub is unpublished."
