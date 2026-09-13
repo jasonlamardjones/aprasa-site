@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { isExpired } from './lib/things-to-do-currentness.mjs';
-import { hubOutputPath } from './lib/things-to-do-collection.mjs';
+import { hubOutputPath, THINGS_TO_DO_HUB_PUBLIC } from './lib/things-to-do-collection.mjs';
 
 const root = process.cwd();
 const manifestPath = path.join(root, 'internal', 'provider-media-manifest.json');
@@ -65,6 +65,16 @@ for (const record of manifest.records) {
   const titleHeading = `<h3>${escapeHtml(record.title)}</h3>`;
   const appearsOnHome = html.includes(titleHeading);
   const appearsOnHub = hubHtml.includes(titleHeading);
+  // While the collection hub is temporarily unpublished, Home carries only the
+  // approved preview, so an eligible record beyond it is surfaced ONLY by its
+  // own detail page. That page is still public at its unchanged canonical
+  // route, so it counts as a surface here — otherwise this validator would
+  // report a record as unsurfaced when it is simply not in the preview.
+  const appearsOnDetail = !THINGS_TO_DO_HUB_PUBLIC
+    && Boolean(canonicalEventByManifestTitle.get(record.title)?.detail_page)
+    && fs.existsSync(path.join(root, canonicalEventByManifestTitle.get(record.title).detail_page, 'index.html'))
+    && fs.readFileSync(path.join(root, canonicalEventByManifestTitle.get(record.title).detail_page, 'index.html'), 'utf8')
+      .includes(`<h1>${escapeHtml(record.title)}</h1>`);
   const canonicalEvent = record.section === 'things-to-do'
     ? canonicalEventByManifestTitle.get(record.title)
     : null;
@@ -74,8 +84,8 @@ for (const record of manifest.records) {
     && isExpired(canonicalEvent, asOf)
   );
 
-  if (!appearsOnHome && !appearsOnHub && !isExpiredDatedEvent) {
-    errors.push(`${label}: card title not found in index.html or ${hubOutputPath('en')}`);
+  if (!appearsOnHome && !appearsOnHub && !appearsOnDetail && !isExpiredDatedEvent) {
+    errors.push(`${label}: card title not found in index.html${THINGS_TO_DO_HUB_PUBLIC ? `, ${hubOutputPath('en')}` : ''} or its own detail page`);
   }
   if (!record.source_url) errors.push(`${label}: missing source_url`);
   if (!allowedTypes.has(record.media_type)) errors.push(`${label}: invalid media_type ${record.media_type}`);

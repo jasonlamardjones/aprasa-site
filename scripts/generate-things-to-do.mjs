@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { t, hasKey } from './lib/locale.mjs';
 import { bodyParagraphs, factKeyBase } from './lib/things-to-do-keys.mjs';
 import { currentnessState, isExpired as recordIsExpired, EXPIRED, REVIEW_DUE } from './lib/things-to-do-currentness.mjs';
-import { HOME_PREVIEW_LIMIT, collectionRecords, homePreviewIds, hubOutputPath, hubCanonical } from './lib/things-to-do-collection.mjs';
+import { HOME_PREVIEW_LIMIT, THINGS_TO_DO_HUB_PUBLIC, collectionRecords, homePreviewIds, hubOutputPath, hubCanonical } from './lib/things-to-do-collection.mjs';
 import { LAUNCHER_SURFACE_KEYS, resolveRuntimeStrings, renderRuntimeStringsBlock } from './lib/runtime-strings.mjs';
 import { renderContactConfigBlock } from './lib/contact-channels.mjs';
 
@@ -414,6 +414,30 @@ function detailPageLinks(record) {
   };
 }
 
+// The breadcrumb is the detail page's return control into its parent
+// collection. While the hub is unpublished it has no parent to return to, so
+// it is suppressed rather than repointed.
+//
+// It is NOT silently aimed at Home instead: its label is the governed
+// `things.shared.back_to_things` ("← Things to Do" / "← O que fazer"), which
+// names the collection. Pointing that label at Home would tell a visitor they
+// are going somewhere they are not, and giving it an honest Home label would
+// need Portuguese copy this tranche has no authority to invent. Suppressing it
+// costs nothing navigationally — the site header on every detail page already
+// carries a same-locale Home link — and it restores intact, label and all,
+// when THINGS_TO_DO_HUB_PUBLIC goes back to true.
+//
+// If a visible Home return is wanted DURING dormancy, that needs a governed
+// Home-return label from Project 09; it is reported as a dependency, not
+// invented here.
+function renderDetailBreadcrumb(links) {
+  if (!THINGS_TO_DO_HUB_PUBLIC) return '';
+  return `    <nav class="breadcrumb" aria-label="${escapeHtml(CHROME.breadcrumbAria)}">
+      <a href="${links.collection}">${escapeHtml(CHROME.backToThings)}</a>
+    </nav>
+`;
+}
+
 function renderDetailPage(record, loc) {
   const expired = isExpired(record);
   const canonicalEn = `https://aprasa.org/${record.detail_page}`;
@@ -483,10 +507,7 @@ ${renderSchema(record, loc, expired)}
 
 <main id="main">
   <div class="container record-page">
-    <nav class="breadcrumb" aria-label="${escapeHtml(CHROME.breadcrumbAria)}">
-      <a href="${links.collection}">${escapeHtml(CHROME.backToThings)}</a>
-    </nav>
-    <article class="dialog-record record-article" data-event-id="${escapeHtml(record.id)}">${media}${pastStatus}
+${renderDetailBreadcrumb(links)}    <article class="dialog-record record-article" data-event-id="${escapeHtml(record.id)}">${media}${pastStatus}
       <p class="provider">${escapeHtml(record.provider)}</p>
       <h1>${escapeHtml(loc.title)}</h1>
       <dl class="detail-list">${renderFacts(loc.facts)}</dl>
@@ -798,7 +819,14 @@ if (write && homeExists) {
 // by CI's "committed surfaces match canonical generation" gate rather than
 // shipping unnoticed.
 const hubRelativePath = hubOutputPath(locale);
-if (requestedId) {
+if (!THINGS_TO_DO_HUB_PUBLIC) {
+  // Dormant, not deleted — see THINGS_TO_DO_HUB_PUBLIC in
+  // scripts/lib/things-to-do-collection.mjs. renderHubPage() above is still
+  // reachable and still tested; it simply is not written to a public route
+  // while the hub is unpublished. Nothing else about the collection changes:
+  // membership, ordering and every detail page are produced exactly as before.
+  console.log(`Skipped ${hubRelativePath}: the collection hub is temporarily unpublished (THINGS_TO_DO_HUB_PUBLIC=false).`);
+} else if (requestedId) {
   console.log(`Skipped ${hubRelativePath}: --id runs are single-record and do not rewrite the whole-collection hub.`);
 } else if (write) {
   const hubTarget = path.join(root, hubRelativePath);

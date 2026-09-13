@@ -24,6 +24,7 @@ import {
   homePreviewRecords,
   hubCanonical,
   hubOutputPath,
+  THINGS_TO_DO_HUB_PUBLIC,
 } from './lib/things-to-do-collection.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -77,20 +78,46 @@ for (const [locale, homeFile] of [['en', 'index.html'], ['pt', 'pt/index.html']]
   if (order.length > HOME_PREVIEW_LIMIT) {
     errors.push(`${homeFile}: Home shows ${order.length} generated cards; the approved preview is at most ${HOME_PREVIEW_LIMIT}`);
   }
-  // Home must offer the approved same-locale route into the full collection.
+  // The Home route into the full collection exists only while the collection
+  // is published. While it is dormant the call to action must be ABSENT: a
+  // link inviting visitors into a 404 is worse than no link.
   const hubAction = t('home.things.hub_action', locale);
-  if (!html.includes(hubAction)) {
-    errors.push(`${homeFile}: approved hub call to action "${hubAction}" is missing`);
-  }
-  if (!html.includes('href="things-to-do/"')) {
-    errors.push(`${homeFile}: hub call to action does not link to the same-locale collection route`);
+  if (THINGS_TO_DO_HUB_PUBLIC) {
+    if (!html.includes(hubAction)) {
+      errors.push(`${homeFile}: approved hub call to action "${hubAction}" is missing`);
+    }
+    if (!html.includes('href="things-to-do/"')) {
+      errors.push(`${homeFile}: hub call to action does not link to the same-locale collection route`);
+    }
+  } else {
+    if (html.includes(hubAction)) {
+      errors.push(`${homeFile}: hub call to action "${hubAction}" is still present while the collection hub is unpublished`);
+    }
+    if (html.includes('href="things-to-do/"')) {
+      errors.push(`${homeFile}: Home still links to the unpublished collection route things-to-do/`);
+    }
   }
 }
 
 // --- Hub surfaces -----------------------------------------------------------
+// While the collection is dormant the only thing to prove about the hub
+// surfaces is that they are GENUINELY ABSENT — not present-but-noindexed, not
+// a placeholder. The rendering contract below (membership, ordering, empty
+// state, canonical/hreflang) is not deleted: it is retained for republication
+// and is exercised meanwhile by scripts/test-things-to-do-hub.mjs, which
+// renders the hub in memory with the flag enabled.
 const renderedByLocale = {};
 
-for (const locale of ['en', 'pt']) {
+if (!THINGS_TO_DO_HUB_PUBLIC) {
+  for (const locale of ['en', 'pt']) {
+    const relative = hubOutputPath(locale);
+    if (fs.existsSync(path.join(root, relative))) {
+      errors.push(`${relative}: collection hub is published while THINGS_TO_DO_HUB_PUBLIC is false`);
+    }
+  }
+}
+
+for (const locale of THINGS_TO_DO_HUB_PUBLIC ? ['en', 'pt'] : []) {
   const relative = hubOutputPath(locale);
   const html = read(relative);
   if (html === null) {
@@ -218,20 +245,41 @@ if (renderedByLocale.en && renderedByLocale.pt) {
   if (sitemap === null) errors.push('sitemap.xml does not exist');
   else {
     for (const locale of ['en', 'pt']) {
+      const listed = sitemap.includes(`<loc>${hubCanonical(locale)}</loc>`);
+      if (!THINGS_TO_DO_HUB_PUBLIC) {
+        // An unpublished route must not be advertised for crawling.
+        if (listed) {
+          errors.push(`sitemap.xml advertises the unpublished ${locale.toUpperCase()} collection hub route ${hubCanonical(locale)}`);
+        }
+        continue;
+      }
       if (!fs.existsSync(path.join(root, hubOutputPath(locale)))) continue;
-      if (!sitemap.includes(`<loc>${hubCanonical(locale)}</loc>`)) {
+      if (!listed) {
         errors.push(`sitemap.xml is missing the ${locale.toUpperCase()} collection hub route ${hubCanonical(locale)}`);
+      }
+    }
+    // Detail routes are unaffected by hub publication state and must remain.
+    // scripts/build-sitemap.mjs lists every dated-event record's detail route
+    // from the canonical corpus regardless of currentness (an expired event
+    // keeps a public, past-marked page), so that is what is asserted here.
+    for (const record of records) {
+      if (record.kind !== 'dated-event') continue;
+      const loc = `https://aprasa.org/${record.detail_page}`;
+      if (!sitemap.includes(`<loc>${loc}</loc>`)) {
+        errors.push(`sitemap.xml is missing the dated-event detail route ${loc}`);
       }
     }
   }
 }
 
 // --- Detail-page collection relationship ------------------------------------
-// Each detail page's breadcrumb carries the governed collection label and
-// RESOLVES to its own locale's collection route: EN -> /things-to-do/,
-// PT -> /pt/things-to-do/. The resolved route is checked rather than the
-// literal href, so the assertion holds whatever relative form is emitted and
-// catches a link that leaves the locale or points back at a Home fragment.
+// While the collection is PUBLISHED, each detail page's breadcrumb carries the
+// governed collection label and RESOLVES to its own locale's collection route.
+// While it is UNPUBLISHED, no detail page may carry a return control into that
+// route at all — a link whose label names a collection the visitor cannot
+// reach is worse than no link, and repointing the governed label at Home would
+// misdescribe where it goes. Detail pages keep their same-locale Home link in
+// the site header either way, so nobody is stranded.
 for (const record of records) {
   for (const [locale, prefix] of [['en', ''], ['pt', 'pt/']]) {
     const relative = `${prefix}${record.detail_page}index.html`;
@@ -239,6 +287,22 @@ for (const record of records) {
     if (html === null) continue;
     const label = t('things.shared.back_to_things', locale);
     const match = html.match(/<nav class="breadcrumb"[\s\S]*?<a href="([^"]+)">([^<]*)<\/a>/);
+
+    if (!THINGS_TO_DO_HUB_PUBLIC) {
+      if (match) {
+        errors.push(`${relative}: still carries a breadcrumb control into the unpublished collection route`);
+      }
+      if (html.includes(label)) {
+        errors.push(`${relative}: still carries the governed collection label ${JSON.stringify(label)} while the collection is unpublished`);
+      }
+      // The site header must still offer a same-locale Home route.
+      const homeHref = locale === 'pt' ? '../../../pt/' : '../../';
+      if (!html.includes(`href="${homeHref}"`)) {
+        errors.push(`${relative}: no same-locale Home link remains in the site header`);
+      }
+      continue;
+    }
+
     if (!match) {
       errors.push(`${relative}: no breadcrumb collection control found`);
       continue;
@@ -271,6 +335,8 @@ if (errors.length) {
 const reviewDue = records.filter((record) => isReviewDue(record, asOf)).length;
 const expired = records.filter((record) => currentnessState(record, asOf) === EXPIRED).length;
 console.log(
-  `[validate-things-to-do-hub] OK as of ${asOf} — ${eligible.length} eligible record(s) on both hubs`
+  `[validate-things-to-do-hub] OK as of ${asOf} — collection hub `
+  + `${THINGS_TO_DO_HUB_PUBLIC ? 'PUBLISHED' : 'TEMPORARILY UNPUBLISHED'}; `
+  + `${eligible.length} eligible record(s)`
   + ` (${reviewDue} review-due, ${expired} expired and absent), ${preview.length} on the Home preview.`
 );
