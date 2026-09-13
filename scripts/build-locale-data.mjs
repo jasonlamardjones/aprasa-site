@@ -2303,5 +2303,34 @@ const output = {
   keys,
 };
 
+// The audit counts must describe the artifact that actually ships. They are
+// tallied from `keys` at the point `assembled` is computed, so ANY merge added
+// below that point would leave every published count describing a smaller key
+// map than the one written here - silently, and in the direction that looks
+// correct. This series has already shipped that defect once, when an additive
+// overlay was merged after the tally; positional correctness alone did not
+// prevent it and will not prevent it again.
+//
+// Re-tallying immediately before the write makes the ordering enforced rather
+// than merely observed: move a merge below `assembled` and this fails.
+{
+  const shipped = Object.values(output.keys);
+  const required = shipped.filter((row) => row.scope_status === "REQUIRED_FOR_PT_LAUNCH").length;
+  const unchanged = shipped.filter((row) => row.scope_status === "INTENTIONALLY_UNCHANGED").length;
+  const approved = shipped.filter((row) => row.translation_status === "APPROVED").length;
+  if (output.counts.total_rows !== shipped.length) {
+    fail(`declared total_rows ${output.counts.total_rows} does not describe the ${shipped.length} keys being written; a merge ran after the tally`);
+  }
+  if (output.counts.required_for_pt_launch !== required) {
+    fail(`declared required_for_pt_launch ${output.counts.required_for_pt_launch} does not match the ${required} shipped`);
+  }
+  if (output.counts.intentionally_unchanged !== unchanged) {
+    fail(`declared intentionally_unchanged ${output.counts.intentionally_unchanged} does not match the ${unchanged} shipped`);
+  }
+  if (output.counts.approved_rows_total !== approved) {
+    fail(`declared approved_rows_total ${output.counts.approved_rows_total} does not match the ${approved} shipped`);
+  }
+}
+
 writeFileSync(OUT_PATH, JSON.stringify(output, null, 2) + "\n");
 console.log(`[build-locale-data] wrote ${Object.keys(keys).length} keys to ${path.relative(ROOT, OUT_PATH)} (r6 overrode ${delta6Overridden} PT values; r9 corrected ${delta9Corrected} EN/PT source values; event deltas added ${eventDeltaRequired + eventDeltaUnchanged} keys; r10 renamed ${r10Renamed.length} keys onto training.record.*; governed overrides applied ${governedOverrideCount} value(s) across ${governedOverrideResults.length} authorized package(s))`);
