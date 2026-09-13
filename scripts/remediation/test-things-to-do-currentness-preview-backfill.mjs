@@ -268,6 +268,16 @@ try {
     previewBefore: transition.previewBefore,
     previewAfter: transition.previewAfter,
   });
+  // Region authority is the drift IDs plus the records that ENTER or LEAVE the
+  // preview — never the ones retained on both sides. renderHomeArticle(record,
+  // loc) takes no asOf and reads only record fields, so a retained member's slot
+  // cannot move for a lifecycle reason; authorizing it would let unrelated drift
+  // inside that slot ride along on a repair.
+  assert.deepEqual(regionIds, [EXPIRING, PROMOTED].sort());
+  for (const retained of [ACTIVE, RETAINED]) {
+    assert.ok(!regionIds.includes(retained),
+      `${retained} is retained across the transition, so its Home slot must NOT be authorized`);
+  }
   for (const [file, beforeHtml] of homeBefore) {
     const afterHtml = fs.readFileSync(path.join(work, file), 'utf8');
     const regionDiff = homeRegionChange(beforeHtml, afterHtml);

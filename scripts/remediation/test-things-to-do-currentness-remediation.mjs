@@ -167,12 +167,34 @@ assert(expectedWriteSetForTransition({ driftIds: ['expiring-two'], stateChangedI
 assert.throws(() => expectedWriteSetForTransition({}), /WRITE_SET_TRANSITION_EMPTY/);
 assert.throws(() => expectedWriteSetForTransition({ driftIds: ['Bad_Id'] }), /WRITE_SET_ID_UNREADABLE/);
 assert.throws(() => expectedWriteSetForTransition({ driftIds: ['../escape'] }), /WRITE_SET_ID_UNREADABLE/);
-// Preview membership is still load-bearing: it bounds which Home SLOTS may move.
+// Preview membership is load-bearing, and bounded to a CHANGE in membership:
+// the records that enter or leave, never the ones retained on both sides.
+// renderHomeArticle(record, loc) takes no asOf and reads only record fields, so
+// a retained member's slot cannot move for a lifecycle reason — admitting it
+// would let unrelated drift inside that slot ride along.
 assert.deepEqual(
   homeRegionAuthorizedIds({ driftIds: ['expiring-two'], previewBefore: transition.previewBefore, previewAfter: transition.previewAfter }),
-  ['active-one', 'expiring-two', 'promoted-four', 'retained-three'],
+  ['expiring-two', 'promoted-four'],
+);
+for (const retained of ['active-one', 'retained-three']) {
+  assert.ok(!homeRegionAuthorizedIds({ driftIds: ['expiring-two'], previewBefore: transition.previewBefore, previewAfter: transition.previewAfter }).includes(retained),
+    `${retained} is retained on both sides, so its Home slot must NOT be authorized`);
+}
+// A drifted record outside the preview on both sides still needs its slot
+// emptied, which is why drift IDs are unioned in rather than derived.
+assert.deepEqual(
+  homeRegionAuthorizedIds({ driftIds: ['long-gone'], previewBefore: ['a-one'], previewAfter: ['a-one'] }),
+  ['long-gone'],
+);
+// A shrinking preview (a record leaves with nothing eligible to promote) is a
+// legitimate transition, not an error.
+assert.deepEqual(
+  homeRegionAuthorizedIds({ driftIds: ['leaver-one'], previewBefore: ['keeper-one', 'leaver-one'], previewAfter: ['keeper-one'] }),
+  ['leaver-one'],
 );
 assert.throws(() => homeRegionAuthorizedIds({}), /WRITE_SET_TRANSITION_EMPTY/);
+// A transition where membership does not move at all still refuses nothing-to-do.
+assert.throws(() => homeRegionAuthorizedIds({ previewBefore: ['a-one'], previewAfter: ['a-one'] }), /WRITE_SET_TRANSITION_EMPTY/);
 
 // --- Home bounded at region level ------------------------------------------
 // Canonical generation rewrites both Home files in full, so a file-level check
@@ -202,6 +224,12 @@ assert.throws(() => assertHomeRegionChangeBounded(homeWas, homeChrome, ['expirin
 // A slot belonging to a record outside the transition is refused too.
 assert.throws(() => assertHomeRegionChangeBounded(homeWas, homeNow, ['expiring-two'], 'index.html'),
   /PHASE2B_HOME_REGION_CHANGE_UNAUTHORIZED: index\.html: promoted-four/);
+// A retained member's slot moving is unrelated drift, and is now refused
+// because retained records carry no region authority.
+const homeRetainedDrift = homeHtml({ 'expiring-two': '', 'promoted-four': 'card-promoted', 'retained-three': 'edited' });
+const homeRetainedWas = homeHtml({ 'expiring-two': 'card-expiring', 'promoted-four': '', 'retained-three': 'card-retained' });
+assert.throws(() => assertHomeRegionChangeBounded(homeRetainedWas, homeRetainedDrift, ['expiring-two', 'promoted-four'], 'index.html'),
+  /PHASE2B_HOME_REGION_CHANGE_UNAUTHORIZED: index\.html: retained-three/);
 // A duplicated region makes membership ambiguous, so it fails closed.
 assert.throws(() => homeRegionChange(`${homeWas}\n${homeWas}`, homeNow), /PHASE2B_HOME_REGION_DUPLICATED/);
 

@@ -184,17 +184,20 @@ export function assertDriftShapeUnchanged(reportedIds, currentIds) {
 // Authority is split, because the two kinds of surface are reached by
 // different things:
 //
-//   HOME (index.html, pt/index.html) is reached by preview MEMBERSHIP. An
-//   expiry inside the three-card preview promotes the next eligible record,
-//   and the promoted record's Home slot must be backfilled — the exact case
-//   drift-id-only generation could not cover. File-level permission is not
-//   enough here: canonical generation rewrites both Home files in full, so a
-//   Home file that had drifted outside its generated-event regions would have
-//   that unrelated correction admitted by a file-level check alone. Home is
-//   therefore additionally bounded at REGION level by
-//   assertHomeRegionChangeBounded() below: content outside the
-//   generated-event regions must not move at all, and the regions that do
-//   move must belong to this transition.
+//   HOME (index.html, pt/index.html) is reached by a CHANGE in preview
+//   membership. An expiry inside the three-card preview promotes the next
+//   eligible record, and the promoted record's Home slot must be backfilled —
+//   the exact case drift-id-only generation could not cover. File-level
+//   permission is not enough here: canonical generation rewrites both Home
+//   files in full, so a Home file that had drifted outside its
+//   generated-event regions would have that unrelated correction admitted by a
+//   file-level check alone. Home is therefore additionally bounded at REGION
+//   level by assertHomeRegionChangeBounded() below: content outside the
+//   generated-event regions must not move at all, and the only regions that
+//   may move are the drift IDs plus the records that ENTER or LEAVE the
+//   preview. A record retained on both sides is excluded, because
+//   renderHomeArticle() reads only its canonical record and so cannot change
+//   for a lifecycle reason — see homeRegionAuthorizedIds().
 //
 //   DETAIL PAGES are reached by a record's OWN rendered currentness state,
 //   which is what their markup depends on. Preview membership is a Home-only
@@ -255,9 +258,28 @@ function assertReadableIds(ids, what) {
   return ids;
 }
 
-/** Records whose Home slot this transition may legitimately rewrite. */
+/**
+ * Records whose Home slot this transition may legitimately rewrite: the
+ * reported drift IDs plus the SYMMETRIC DIFFERENCE of preview membership — the
+ * records that enter or leave the preview — never the full union.
+ *
+ * renderHomeArticle(record, loc) takes no asOf and reads only record fields, so
+ * a record's rendered Home slot is a pure function of its canonical record. A
+ * record retained in the preview on BOTH sides therefore has no
+ * lifecycle-driven reason for its slot to move, and admitting it would let
+ * unrelated drift inside that slot ride along on a repair — the whole-collection
+ * build rewrites every slot, so the correction would pass unnoticed.
+ *
+ * Drift IDs are unioned in because a drifted record may be outside the preview
+ * on both sides (already expired at the tracked as_of) and still need its slot
+ * emptied.
+ */
 export function homeRegionAuthorizedIds({ driftIds = [], previewBefore = [], previewAfter = [] } = {}) {
-  const ids = [...new Set([...driftIds, ...previewBefore, ...previewAfter])].sort();
+  const before = new Set(previewBefore);
+  const after = new Set(previewAfter);
+  const entered = [...after].filter((id) => !before.has(id));
+  const left = [...before].filter((id) => !after.has(id));
+  const ids = [...new Set([...driftIds, ...entered, ...left])].sort();
   if (!ids.length) throw new Error('PHASE2B_WRITE_SET_TRANSITION_EMPTY');
   return assertReadableIds(ids, 'WRITE_SET');
 }
