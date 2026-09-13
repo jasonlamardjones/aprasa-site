@@ -72,7 +72,17 @@ const GOVERNED_NAV = {
   navScrollDown: 'ui.scroll_down',
 };
 
-const GOVERNED = { ...GOVERNED_MEDIA, ...GOVERNED_LAUNCHER, ...GOVERNED_NAV };
+// Quick-action starter messages (Project 09 r19). Delivered to every launcher
+// surface: the panel exists on all of them, so the prefill for each action must
+// resolve in that surface's own locale.
+const GOVERNED_PREFILL = {
+  prefillShare: 'runtime.whatsapp_launcher.prefill.share',
+  prefillCorrection: 'runtime.whatsapp_launcher.prefill.correction',
+  prefillQuestion: 'runtime.whatsapp_launcher.prefill.question',
+  prefillSubmissions: 'runtime.whatsapp_launcher.prefill.submissions',
+};
+
+const GOVERNED = { ...GOVERNED_MEDIA, ...GOVERNED_LAUNCHER, ...GOVERNED_NAV, ...GOVERNED_PREFILL };
 
 // Mindelo Essentials' own runtime strings, written into the same block by
 // scripts/build-mindelo-pt.mjs under that script's contract. Listed explicitly
@@ -205,7 +215,7 @@ for (const relative of surfaces) {
   // unchecked, which is precisely what the unknown-key rule below exists to
   // stop.
   const carriesMindeloRuntime = /mindelo-essentials\.js/.test(html);
-  const expected = { ...GOVERNED_LAUNCHER, ...GOVERNED_NAV, ...(isHome ? GOVERNED_MEDIA : {}) };
+  const expected = { ...GOVERNED_LAUNCHER, ...GOVERNED_NAV, ...GOVERNED_PREFILL, ...(isHome ? GOVERNED_MEDIA : {}) };
 
   const block = readBlock(relative);
   if (!block) continue;

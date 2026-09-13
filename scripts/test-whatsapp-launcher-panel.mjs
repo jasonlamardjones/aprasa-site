@@ -14,7 +14,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { t } from './lib/locale.mjs';
-import { LAUNCHER_PANEL_KEYS } from './lib/runtime-strings.mjs';
+import { LAUNCHER_PANEL_KEYS, PREFILL_KEYS, QUICK_ACTION_PREFILL } from './lib/runtime-strings.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const GOVERNED_WHATSAPP_URL = 'https://wa.me/message/GC3C5Q4MSF37I1';
@@ -29,6 +29,10 @@ function check(label, condition, detail) {
 }
 
 const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
+
+// The canonical number is read from the governed config, never restated here:
+// a copy in the tests would defeat the single-source rule it is meant to prove.
+const CONTACT = JSON.parse(read('data/contact-channels.json')).whatsapp;
 
 function walkHtml(dir, out = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -261,6 +265,83 @@ for (const css of ['prasa-launch.css', 'mindelo-essentials/mindelo-essentials.cs
     panelLimit ? `reserves only ${panelLimit[1]}rem, needs >= 11rem` : 'no panel max-height limit found');
   check(`${css} gives the launcher a light separation ring`,
     /\.floating-utility-whatsapp \{[\s\S]*?box-shadow:[\s\S]*?rgba\(246,240,226,/.test(text));
+}
+
+// --- 7c. WhatsApp quick-action prefill -------------------------------------
+console.log('[7c] governed prefill delivery, intent mapping and destination guard');
+
+// The number lives in exactly one place.
+check('config carries a canonical international number', /^[0-9]{8,15}$/.test(CONTACT.whatsapp_business_number),
+  JSON.stringify(CONTACT.whatsapp_business_number));
+check('config number_base_url derives from the number',
+  CONTACT.number_base_url === `https://wa.me/${CONTACT.whatsapp_business_number}`);
+check('config display and digits agree',
+  (CONTACT.display || '').replace(/\D/g, '') === CONTACT.whatsapp_business_number);
+check('config short_link is the incumbent governed short code',
+  CONTACT.short_link === GOVERNED_WHATSAPP_URL);
+// No independent literal of the number anywhere else.
+for (const [name, source] of [['prasa-launch.js', launcherJs], ['mindelo-essentials.js', mindeloJs],
+  ['test-whatsapp-launcher-panel.mjs', read('scripts/test-whatsapp-launcher-panel.mjs')]]) {
+  check(`${name} does not restate the canonical number`,
+    !source.includes(CONTACT.whatsapp_business_number));
+}
+
+// All four prefills reach every surface, in that surface's own locale.
+for (const rel of surfaces) {
+  const block = JSON.parse(read(rel).match(/id="i18n-strings">([\s\S]*?)<\/script>/)[1]);
+  const locale = rel.startsWith('pt/') ? 'pt' : 'en';
+  for (const [runtimeKey, localeKey] of Object.entries(PREFILL_KEYS)) {
+    check(`${rel} carries governed ${runtimeKey}`, block[runtimeKey] === t(localeKey, locale),
+      `got ${JSON.stringify(block[runtimeKey])}`);
+    if (locale === 'pt') {
+      check(`${rel} ${runtimeKey} is not the English fallback`, block[runtimeKey] !== t(localeKey, 'en'));
+    }
+  }
+  // The derived destinations island, from the one governed source.
+  const cfg = JSON.parse(read(rel).match(/id="contact-config">([\s\S]*?)<\/script>/)[1]);
+  check(`${rel} carries the governed short link`, cfg.shortLink === GOVERNED_WHATSAPP_URL);
+  check(`${rel} carries the derived number destination`, cfg.numberBaseUrl === CONTACT.number_base_url);
+  check(`${rel} exposes no other contact config`, Object.keys(cfg).sort().join(',') === 'numberBaseUrl,shortLink');
+}
+
+// Intent mapping: one action, one prefill, no cross-wiring.
+const mappingPairs = Object.entries(QUICK_ACTION_PREFILL);
+check('exactly four quick actions are mapped', mappingPairs.length === 4);
+check('every mapped prefill is a governed prefill key',
+  mappingPairs.every(([, prefill]) => prefill in PREFILL_KEYS));
+check('the mapping is injective (no two actions share a prefill)',
+  new Set(mappingPairs.map(([, p]) => p)).size === mappingPairs.length);
+for (const [action, prefill] of mappingPairs) {
+  const suffix = action.replace('launcherQuickAction', '').toLowerCase();
+  check(`${action} maps to the matching ${prefill}`, prefill.toLowerCase() === `prefill${suffix}`);
+  check(`${prefill} resolves to its own governed key`,
+    PREFILL_KEYS[prefill] === `runtime.whatsapp_launcher.prefill.${suffix}`);
+}
+
+// Runtime contract: encoding, the two authorized forms, and fail-closed.
+for (const [name, source] of [['prasa-launch.js', launcherJs], ['mindelo-essentials.js', mindeloJs]]) {
+  check(`${name} builds the destination with URLSearchParams, not concatenation`,
+    /url\.searchParams\.set\("text", message\)/.test(source));
+  check(`${name} never concatenates the text parameter by hand`,
+    !/\?text=/.test(source) && !/encodeURIComponent/.test(source));
+  check(`${name} reads the number from the config island only`,
+    /CONTACT\.numberBaseUrl/.test(source) && /getElementById\("contact-config"\)/.test(source));
+  check(`${name} rejects a config whose short link disagrees`,
+    /supplied\.shortLink !== GOVERNED_WHATSAPP_URL/.test(source));
+  check(`${name} validates the configured number destination shape`,
+    /\^https:\\\/\\\/wa\\\.me\\\/\[0-9\]\{8,15\}\$/.test(source));
+  check(`${name} authorizes exactly one text parameter`,
+    /names\.length !== 1 \|\| names\[0\] !== "text"/.test(source));
+  check(`${name} authorizes only governed prefill text`,
+    /governedPrefillValues\(\)\.has\(url\.searchParams\.get\("text"\)\)/.test(source));
+  check(`${name} falls back to the short link without a selection`,
+    /: GOVERNED_WHATSAPP_URL;/.test(source));
+  check(`${name} blocks an unauthorized destination at activation`,
+    /event\.preventDefault\(\);[\s\S]{0,120}GOVERNED_WHATSAPP_URL/.test(source));
+  check(`${name} excludes its own CTA from the incumbent anchor guard`,
+    /!anchor\.closest\("\[data-floating-utilities\]"\)/.test(source));
+  check(`${name} keeps the governed CTA accessible name`,
+    /launcherPrimaryAction/.test(source));
 }
 
 // --- 8. Generated output remains deterministic -----------------------------

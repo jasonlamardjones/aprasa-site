@@ -17,7 +17,8 @@ import { t } from './lib/locale.mjs';
 import { localizeStaticHtml } from './lib/static-page-transform.mjs';
 import { deepenSharedAssetPaths } from './lib/asset-paths.mjs';
 import { normalizeCanonicalHomeLinks } from './lib/canonical-links.mjs';
-import { LAUNCHER_PANEL_KEYS, NAV_CONTROL_KEYS, resolveRuntimeStrings } from './lib/runtime-strings.mjs';
+import { LAUNCHER_SURFACE_KEYS, resolveRuntimeStrings } from './lib/runtime-strings.mjs';
+import { applyContactConfig } from './lib/contact-channels.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
@@ -147,17 +148,19 @@ function runtimeStringsScript(locale) {
     // same on-site panel as every other surface. The panel's governed copy
     // therefore belongs in this block too, from the shared key map in
     // scripts/lib/runtime-strings.mjs — the one source both runtimes read.
-    ...resolveRuntimeStrings({...LAUNCHER_PANEL_KEYS, ...NAV_CONTROL_KEYS}, locale),
+    ...resolveRuntimeStrings(LAUNCHER_SURFACE_KEYS, locale),
   };
   return `<script type="application/json" id="i18n-strings">${JSON.stringify(strings)}</script>`;
 }
 
 function injectRuntimeStrings(html, locale) {
   const script = runtimeStringsScript(locale);
-  if (/id="i18n-strings"/.test(html)) {
-    return html.replace(/<script type="application\/json" id="i18n-strings">.*?<\/script>/, script);
-  }
-  return html.replace(/(<script defer(?:="")? src="mindelo-essentials\.js"><\/script>)/, `${script}\n$1`);
+  const withStrings = /id="i18n-strings"/.test(html)
+    ? html.replace(/<script type="application\/json" id="i18n-strings">.*?<\/script>/, script)
+    : html.replace(/(<script defer(?:="")? src="mindelo-essentials\.js"><\/script>)/, `${script}\n$1`);
+  // The derived WhatsApp destinations travel beside the governed strings, from
+  // the same single source in data/contact-channels.json.
+  return applyContactConfig(withStrings);
 }
 
 // --- Locale-independent EN/PT search index (spec 12K) ---

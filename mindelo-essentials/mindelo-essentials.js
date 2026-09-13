@@ -341,6 +341,27 @@
   const GOVERNED_WHATSAPP_URL = "https://wa.me/message/GC3C5Q4MSF37I1";
 
   // Solid WhatsApp mark (PR #88 treatment), knocked out via fill-rule="evenodd".
+  // Derived WhatsApp destinations from data/contact-channels.json, mirroring
+  // prasa-launch.js. The canonical number is never a literal here; without a
+  // consistent island, prefill is unavailable and the short link stands.
+  const CONTACT = (() => {
+    const inert = {numberBaseUrl: null};
+    try {
+      const node = document.getElementById("contact-config");
+      if (!node) return inert;
+      const supplied = JSON.parse(node.textContent || "{}");
+      if (supplied.shortLink !== GOVERNED_WHATSAPP_URL) {
+        console.warn("A PRASA WhatsApp prefill disabled: configured short link does not match the governed destination.");
+        return inert;
+      }
+      const base = typeof supplied.numberBaseUrl === "string" ? supplied.numberBaseUrl : "";
+      if (!/^https:\/\/wa\.me\/[0-9]{8,15}$/.test(base)) return inert;
+      return {numberBaseUrl: base};
+    } catch {
+      return inert;
+    }
+  })();
+
   const MINDELO_WHATSAPP_MARK = "M12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413A11.815 11.815 0 0 0 12.05 0Z M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.53-.011c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347Z";
 
   function normalizeUrl(value) {
@@ -352,7 +373,8 @@
   }
 
   function resolveGovernedWhatsAppSource() {
-    const whatsappAnchors = Array.from(document.querySelectorAll('a[href*="wa.me/"]'));
+    const whatsappAnchors = Array.from(document.querySelectorAll('a[href*="wa.me/"]'))
+      .filter((anchor) => !anchor.closest("[data-floating-utilities]"));
     if (!whatsappAnchors.length) return null;
 
     const destinations = new Set(whatsappAnchors.map((anchor) => normalizeUrl(anchor.getAttribute("href"))).filter(Boolean));
@@ -383,6 +405,10 @@
       launcherSecondaryAction: "Close",
       navBackToTop: "Back to top",
       navScrollDown: "Scroll down",
+      prefillShare: "Hi, I found A PRASA through aprasa.org and I’d like to share an event or opportunity.",
+      prefillCorrection: "Hi, I came from aprasa.org and I’d like to report a correction or issue I noticed on the website.",
+      prefillQuestion: "Hi, I came from aprasa.org and I have a question about something I found on the website.",
+      prefillSubmissions: "Hi, I came from aprasa.org and I’d like to learn how submissions to A PRASA work.",
     };
     try {
       const node = document.getElementById("i18n-strings");
@@ -509,12 +535,41 @@
 
   const PANEL_ID = "prasa-launcher-panel";
   const PANEL_TITLE_ID = "prasa-launcher-panel-title";
-  const QUICK_ACTION_KEYS = [
-    "launcherQuickActionShare",
-    "launcherQuickActionCorrection",
-    "launcherQuickActionQuestion",
-    "launcherQuickActionSubmissions",
+  const QUICK_ACTIONS = [
+    {labelKey: "launcherQuickActionShare", prefillKey: "prefillShare"},
+    {labelKey: "launcherQuickActionCorrection", prefillKey: "prefillCorrection"},
+    {labelKey: "launcherQuickActionQuestion", prefillKey: "prefillQuestion"},
+    {labelKey: "launcherQuickActionSubmissions", prefillKey: "prefillSubmissions"},
   ];
+
+  function governedPrefillValues() {
+    return new Set(QUICK_ACTIONS.map(({prefillKey}) => PANEL_STRINGS[prefillKey])
+      .filter((value) => typeof value === "string" && value.length > 0));
+  }
+
+  function prefillDestination(message) {
+    if (!CONTACT.numberBaseUrl || !message) return null;
+    const url = new URL(CONTACT.numberBaseUrl);
+    url.searchParams.set("text", message);
+    return url.href;
+  }
+
+  function isAuthorizedDestination(href) {
+    if (href === GOVERNED_WHATSAPP_URL) return true;
+    if (!CONTACT.numberBaseUrl) return false;
+    let url;
+    let base;
+    try {
+      url = new URL(href);
+      base = new URL(CONTACT.numberBaseUrl);
+    } catch {
+      return false;
+    }
+    if (url.origin !== base.origin || url.pathname !== base.pathname) return false;
+    const names = Array.from(url.searchParams.keys());
+    if (names.length !== 1 || names[0] !== "text") return false;
+    return governedPrefillValues().has(url.searchParams.get("text"));
+  }
 
   function initFloatingWhatsApp() {
     if (document.querySelector("[data-floating-utilities]")) return;
@@ -575,23 +630,15 @@
 
     const actions = document.createElement("div");
     actions.className = "launcher-panel-actions";
-    const quickActions = QUICK_ACTION_KEYS.map((key) => {
+    const quickActions = QUICK_ACTIONS.map(({labelKey, prefillKey}) => {
       const action = document.createElement("button");
       action.type = "button";
       action.className = "launcher-quick-action";
       action.setAttribute("aria-pressed", "false");
-      action.textContent = PANEL_STRINGS[key];
+      action.textContent = PANEL_STRINGS[labelKey];
+      action.dataset.prefillKey = prefillKey;
       return action;
     });
-    for (const action of quickActions) {
-      action.addEventListener("click", () => {
-        const selected = action.getAttribute("aria-pressed") === "true";
-        // Single-select local panel state. Nothing is transmitted to WhatsApp.
-        for (const other of quickActions) other.setAttribute("aria-pressed", "false");
-        action.setAttribute("aria-pressed", selected ? "false" : "true");
-      });
-      actions.append(action);
-    }
 
     const cta = document.createElement("a");
     cta.className = "launcher-panel-cta";
@@ -599,6 +646,31 @@
     if (sourceAnchor.target) cta.target = sourceAnchor.target;
     if (sourceAnchor.rel) cta.rel = sourceAnchor.rel;
     cta.textContent = PANEL_STRINGS.launcherPrimaryAction;
+
+    function selectedPrefillKey() {
+      return quickActions.find((b) => b.getAttribute("aria-pressed") === "true")?.dataset.prefillKey || null;
+    }
+    function syncDestination() {
+      const key = selectedPrefillKey();
+      const candidate = key ? prefillDestination(PANEL_STRINGS[key]) : null;
+      cta.href = candidate && isAuthorizedDestination(candidate) ? candidate : GOVERNED_WHATSAPP_URL;
+    }
+    for (const action of quickActions) {
+      action.addEventListener("click", () => {
+        const selected = action.getAttribute("aria-pressed") === "true";
+        for (const other of quickActions) other.setAttribute("aria-pressed", "false");
+        action.setAttribute("aria-pressed", selected ? "false" : "true");
+        syncDestination();
+      });
+      actions.append(action);
+    }
+    cta.addEventListener("click", (event) => {
+      if (isAuthorizedDestination(cta.href)) return;
+      event.preventDefault();
+      cta.href = GOVERNED_WHATSAPP_URL;
+      console.warn("A PRASA WhatsApp navigation blocked: destination is not one of the two governed forms.");
+    });
+    syncDestination();
 
     const close = document.createElement("button");
     close.type = "button";

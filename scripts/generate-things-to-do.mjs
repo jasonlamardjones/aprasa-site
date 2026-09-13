@@ -5,7 +5,8 @@ import { t, hasKey } from './lib/locale.mjs';
 import { bodyParagraphs, factKeyBase } from './lib/things-to-do-keys.mjs';
 import { currentnessState, isExpired as recordIsExpired, EXPIRED, REVIEW_DUE } from './lib/things-to-do-currentness.mjs';
 import { HOME_PREVIEW_LIMIT, collectionRecords, homePreviewIds, hubOutputPath, hubCanonical } from './lib/things-to-do-collection.mjs';
-import { LAUNCHER_PANEL_KEYS, NAV_CONTROL_KEYS, resolveRuntimeStrings, renderRuntimeStringsBlock } from './lib/runtime-strings.mjs';
+import { LAUNCHER_SURFACE_KEYS, resolveRuntimeStrings, renderRuntimeStringsBlock } from './lib/runtime-strings.mjs';
+import { renderContactConfigBlock } from './lib/contact-channels.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(scriptDir, '..');
@@ -40,7 +41,8 @@ const locale = localeArg ? localeArg.split('=')[1] : 'en';
 // needs the block for its OWN locale. The key map is shared with
 // scripts/build-static-pages.mjs via scripts/lib/runtime-strings.mjs.
 function runtimeStringsBlock() {
-  return renderRuntimeStringsBlock(resolveRuntimeStrings({...LAUNCHER_PANEL_KEYS, ...NAV_CONTROL_KEYS}, locale));
+  return renderRuntimeStringsBlock(resolveRuntimeStrings(LAUNCHER_SURFACE_KEYS, locale))
+    + renderContactConfigBlock();
 }
 if (locale !== 'en' && locale !== 'pt') {
   console.error(`Invalid --locale: ${locale} (expected "en" or "pt")`);
