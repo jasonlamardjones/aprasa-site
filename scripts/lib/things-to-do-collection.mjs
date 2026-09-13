@@ -66,6 +66,16 @@ import { isPubliclyCurrent } from './things-to-do-currentness.mjs';
 // the negative-coverage cases stop getting a valid published baseline and fail
 // — which is the alarm we want, rather than discovering it at reactivation.
 //
+// KNOWN GAP while dormant, deliberately left open here: the post-publication
+// live QA no longer exercises the two withdrawn routes (they leave the sitemap,
+// so they leave scripts/qa/lib/qa-targets.mjs's derived target set), which
+// means no live pass would notice a stale CDN still serving them. Closing it
+// needs a NEGATIVE live target — a route required to be absent — and that is a
+// new finding code in the governed QA contract (scripts/qa/lib/qa-contract.mjs),
+// not a publication change, so it belongs to the QA tranche rather than to this
+// one. Absence itself is proven in the repository: the files are deleted, the
+// routes are out of the sitemap, and no shipped page links to them.
+//
 // Reactivation is its own founder-approved tranche, not a side effect of some
 // later change.
 export const THINGS_TO_DO_HUB_PUBLIC = false;

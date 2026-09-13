@@ -11,7 +11,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { isExpired as recordIsExpired } from '../../lib/things-to-do-currentness.mjs';
-import { HUB_ROUTE, homePreviewIds } from '../../lib/things-to-do-collection.mjs';
+import { HUB_ROUTE, THINGS_TO_DO_HUB_PUBLIC, homePreviewIds } from '../../lib/things-to-do-collection.mjs';
 
 /** Public route of the collection hub in each locale. */
 export const EN_HUB_ROUTE = `/${HUB_ROUTE}`;
@@ -183,11 +183,28 @@ export function loadTargets(root, { affectedRoutes = [] } = {}) {
  */
 export function selectHttpRoutes(targets, mode) {
   if (mode !== 'IMMEDIATE_POST_DEPLOY') return targets.pageRoutes;
-  // The collection hubs are core public surfaces alongside the two Home
-  // surfaces: an eligible record beyond the Home preview is reachable only
-  // there, so a pass that skipped them could not tell "correctly previewed"
-  // from "lost".
-  const core = new Set(['/', '/pt/', EN_HUB_ROUTE, PT_HUB_ROUTE, ...targets.affectedRoutes]);
+  // While PUBLISHED, the collection hubs are core public surfaces alongside the
+  // two Home surfaces: an eligible record beyond the Home preview is reachable
+  // only there, so a pass that skipped them could not tell "correctly
+  // previewed" from "lost".
+  //
+  // They are TEMPORARILY UNPUBLISHED (THINGS_TO_DO_HUB_PUBLIC), so they are not
+  // in the sitemap, not in pageRoutes, and naming them here would be inert:
+  // the filter below keeps only routes pageRoutes already carries. They are
+  // therefore named only while published, so this reads as what it does.
+  //
+  // KNOWN GAP while dormant, deliberately NOT closed in this tranche: no live
+  // pass asserts that production STOPPED serving the two withdrawn routes, so
+  // a stale CDN could keep returning them unnoticed. Closing it needs a
+  // negative live target (a route required to be absent), which is a new
+  // finding code in the governed QA contract rather than a publication change.
+  // See the note on THINGS_TO_DO_HUB_PUBLIC.
+  const core = new Set([
+    '/',
+    '/pt/',
+    ...(THINGS_TO_DO_HUB_PUBLIC ? [EN_HUB_ROUTE, PT_HUB_ROUTE] : []),
+    ...targets.affectedRoutes,
+  ]);
   for (const target of targets.recordTargets) {
     // A published event that is current at the committed as_of is always worth
     // re-checking immediately, even when the merge diff did not name its file.

@@ -538,8 +538,12 @@ async function fetchAndCheckRoute(emit, { baseUrl, route, locale = null, kind = 
 
 function checkThingsToDoLiveContract(emit, { targets, bodies, baseUrl }) {
   const enHome = bodies.get('/');
-  // The EN collection hub carries the full eligible collection; Home carries
-  // the approved preview of it. Live record-presence is judged across both.
+  // While published, the EN collection hub carries the full eligible collection
+  // and Home carries the approved preview of it, so live record-presence is
+  // judged across both. The hub is temporarily unpublished, so it is not
+  // fetched and this is undefined; the `checkable` guard below already treats
+  // an unfetched hub as no evidence rather than as absence, which is why a
+  // record beyond the preview is skipped instead of reported missing.
   const enHub = bodies.get(EN_HUB_ROUTE);
   const sitemapBody = bodies.get('/sitemap.xml');
 
@@ -639,6 +643,10 @@ function checkThingsToDoLiveContract(emit, { targets, bodies, baseUrl }) {
     // collection. An eligible record beyond the preview is correctly absent
     // from Home and present on the hub, so "surfaced" means present on either
     // one — and an expired record must be on neither.
+    //
+    // While the hub is unpublished only Home remains, which narrows what this
+    // can conclude: a preview member is still fully judged, a record beyond the
+    // preview has no live surface to be judged on and is skipped.
     if (enHome !== undefined) {
       const onHome = htmlContains(enHome, (value) => `<h3>${value}</h3>`, record.title);
       const onHub = enHub === undefined ? false : htmlContains(enHub, (value) => `<h3>${value}</h3>`, record.title);
