@@ -1723,13 +1723,104 @@ await testCase('W3b a 200 that is not the collection surface is a WARNING, not a
   );
 });
 
-await testCase('W4 the intended absent response passes with no issue raised', async (assert) => {
+await testCase('W4 a direct 404 passes with no issue raised', async (assert) => {
   const { report } = await runAgainstFixture({});
   const checks = report.checks.filter((check) => check.id.startsWith('http:withdrawn:'));
   const issues = report.issues.filter((issue) => issue.code.startsWith('ROUTE_WITHDRAWN_'));
   assert(
-    checks.length === 2 && checks.every((check) => check.status === 'PASS' && check.observed === 404) && issues.length === 0,
+    checks.length === 2
+      && checks.every((check) => check.status === 'PASS'
+        && check.observed.status === 404
+        && check.observed.redirect_hops === 0
+        && check.observed.direct_absence_observed === true)
+      && issues.length === 0,
     JSON.stringify({ checks: checks.map((check) => [check.route, check.status, check.observed]), issues })
+  );
+});
+
+await testCase('W4a a direct 410 passes as well', async (assert) => {
+  const { report } = await runAgainstFixture({
+    mutate: (overrides) => overrides.set('/things-to-do/', { status: 410, body: 'gone' }),
+  });
+  const check = report.checks.find((candidate) => candidate.id === 'http:withdrawn:/things-to-do/');
+  const issues = report.issues.filter((issue) => issue.code.startsWith('ROUTE_WITHDRAWN_'));
+  assert(
+    check.status === 'PASS' && check.observed.status === 410 && check.observed.direct_absence_observed === true && issues.length === 0,
+    JSON.stringify({ check, issues })
+  );
+});
+
+await testCase('W4e a same-origin 301 to a 404 is unverified, not a pass', async (assert) => {
+  const { report } = await runAgainstFixture({
+    mutate: (overrides) => overrides.set('/things-to-do/', { status: 301, location: '/withdrawn-en/' }),
+  });
+  const issue = report.issues.find((candidate) => candidate.code === 'ROUTE_WITHDRAWN_ABSENCE_UNVERIFIED' && candidate.route === '/things-to-do/');
+  const check = report.checks.find((candidate) => candidate.id === 'http:withdrawn:/things-to-do/');
+  assert(
+    Boolean(issue)
+      && issue.severity === 'WARNING'
+      && issue.evidence.direct_absence_observed === false
+      && issue.evidence.original_route === '/things-to-do/'
+      && issue.evidence.final_status === 404
+      && issue.evidence.redirect_hops === 1
+      // The chain itself is recorded, not just its length.
+      && Array.isArray(issue.evidence.redirect_chain)
+      && issue.evidence.redirect_chain[0].status === 301
+      && issue.evidence.redirect_chain[0].to.endsWith('/withdrawn-en/')
+      && check.status === 'WARN'
+      && report.overall_status === 'DEGRADED',
+    JSON.stringify({ overall: report.overall_status, issue, check })
+  );
+});
+
+await testCase('W4f a same-origin 302 to a 410 is unverified too', async (assert) => {
+  const { report } = await runAgainstFixture({
+    mutate: (overrides) => {
+      overrides.set('/pt/things-to-do/', { status: 302, location: '/withdrawn-pt/' });
+      overrides.set('/withdrawn-pt/', { status: 410, body: 'gone' });
+    },
+  });
+  const issue = report.issues.find((candidate) => candidate.code === 'ROUTE_WITHDRAWN_ABSENCE_UNVERIFIED' && candidate.route === '/pt/things-to-do/');
+  assert(
+    Boolean(issue)
+      && issue.severity === 'WARNING'
+      && issue.evidence.direct_absence_observed === false
+      && issue.evidence.final_status === 410
+      && issue.evidence.redirect_chain[0].status === 302
+      && report.overall_status === 'DEGRADED',
+    JSON.stringify({ overall: report.overall_status, issue })
+  );
+});
+
+await testCase('W4g no redirect path ends in PASS while the hub is dormant', async (assert) => {
+  const paths = [
+    ['301 -> 404', (overrides) => overrides.set('/things-to-do/', { status: 301, location: '/withdrawn-en/' })],
+    ['302 -> 410', (overrides) => {
+      overrides.set('/things-to-do/', { status: 302, location: '/withdrawn-en/' });
+      overrides.set('/withdrawn-en/', { status: 410, body: 'gone' });
+    }],
+    ['301 -> unrelated 200', (overrides) => {
+      overrides.set('/things-to-do/', { status: 301, location: '/withdrawn-en/' });
+      overrides.set('/withdrawn-en/', { status: 200, body: '<!doctype html><title>elsewhere</title>' });
+    }],
+    ['302 -> the old collection page', (overrides) => {
+      overrides.set('/things-to-do/', { status: 302, location: '/withdrawn-en/' });
+      overrides.set('/withdrawn-en/', { status: 200, body: publishedHubBytes('en') });
+    }],
+  ];
+  const outcomes = [];
+  for (const [label, mutate] of paths) {
+    const { report } = await runAgainstFixture({ mutate });
+    const check = report.checks.find((candidate) => candidate.id === 'http:withdrawn:/things-to-do/');
+    outcomes.push([label, check?.status, report.overall_status]);
+  }
+  assert(
+    outcomes.every(([, status]) => status !== 'PASS')
+      && outcomes.every(([, , overall]) => overall !== 'HEALTHY')
+      // The collection page at the end of a redirect is still the collection
+      // page being served: that stays an ERROR, it is not softened to unverified.
+      && outcomes[3][1] === 'FAIL' && outcomes[3][2] === 'FAILED',
+    JSON.stringify(outcomes)
   );
 });
 

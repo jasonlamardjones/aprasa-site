@@ -573,12 +573,19 @@ const WITHDRAWN_ABSENT_STATUSES = Object.freeze([404, 410]);
  * expressed by reusing it: that function reports a non-200 as a defect, which
  * is the outcome required here.
  *
- * Four outcomes, separated because they are different claims with different
- * owners -- and because only the first is evidence of a successful unpublishing:
+ * Outcomes, separated because they are different claims with different owners
+ * -- and because only the first is evidence of a successful unpublishing:
  *
- *   404 / 410                                 -> PASS. Genuinely absent.
- *   200 still rendering the collection surface -> ERROR. The withdrawn page is
- *     publicly served: a stale edge, or a deploy that still carried the file.
+ *   404 / 410 answered DIRECTLY                -> PASS. Genuinely absent.
+ *   404 / 410 reached through a redirect       -> WARNING, inconclusive. The
+ *     withdrawn route still ANSWERS; something else is absent. The governed
+ *     model for this tranche is genuine absence with no redirect, so a route
+ *     that redirects has not been shown to be gone -- whatever the destination
+ *     says. Passing it would classify a redirect as a successful unpublishing.
+ *   200 still rendering the collection surface -> ERROR, redirect or not. A
+ *     request that ends on the collection page means that page is publicly
+ *     reachable, which is the defect this check exists for; demoting it to
+ *     "inconclusive" because a hop preceded it would understate it.
  *   200 that is something else                 -> WARNING. The route still
  *     answers where genuine absence was intended, but the old collection
  *     surface is not what is being served, so calling it the same defect would
@@ -588,6 +595,11 @@ const WITHDRAWN_ABSENT_STATUSES = Object.freeze([404, 410]);
  *   off-origin redirect                        -> WARNING, inconclusive. Not a
  *     claim that the page is served, and explicitly NOT a claim that it is
  *     gone.
+ *
+ * The absence statuses are therefore necessary but not sufficient: the check
+ * asks for the absence status AND an empty redirect chain, because those two
+ * together are what "this route is directly absent" means. No redirect
+ * allowance is inferred from the destination.
  *
  * The inconclusive case emits an issue rather than only a SKIP check on
  * purpose. Report status and workflow exit code are computed from issues alone,
@@ -634,29 +646,52 @@ async function checkWithdrawnRoute(emit, { baseUrl, route, locale, reason, local
   if (!response.ok) {
     inconclusive(
       response.networkError,
-      response.redirectBlocked ? { redirect_blocked: response.redirectBlocked, transmitted: false } : {},
+      {
+        direct_absence_observed: false,
+        original_route: route,
+        ...(response.redirectBlocked ? { redirect_blocked: response.redirectBlocked, transmitted: false } : {}),
+      },
       true
     );
     return;
   }
 
-  if (WITHDRAWN_ABSENT_STATUSES.includes(response.status)) {
-    emit.check({
-      id,
-      name,
-      status: 'PASS',
-      route,
-      locale,
-      observed: response.status,
-      expected,
-      duration_ms: response.duration_ms,
-      evidence,
-    });
-    return;
-  }
-
+  // A 200 is judged on what it serves, redirect or not: a request that ends on
+  // the collection page means that page is publicly reachable, which is the
+  // defect this check exists for, and demoting it to "inconclusive" merely
+  // because a hop preceded it would understate it.
+  const redirected = response.chain.length > 0;
   if (response.status !== 200) {
-    inconclusive(response.status, {}, response.status >= 500);
+    // Direct absence: the absence status AND no redirect. A same-origin
+    // redirect landing on 404 or 410 proves the DESTINATION is absent, not this
+    // route, which still answers -- so it is reported as unverified, never as a
+    // pass. No redirect allowance is inferred from where the chain ends.
+    if (WITHDRAWN_ABSENT_STATUSES.includes(response.status) && !redirected) {
+      emit.check({
+        id,
+        name,
+        status: 'PASS',
+        route,
+        locale,
+        observed: { status: response.status, redirect_hops: 0, direct_absence_observed: true },
+        expected,
+        duration_ms: response.duration_ms,
+        evidence: { ...evidence, direct_absence_observed: true },
+      });
+      return;
+    }
+    inconclusive(
+      redirected
+        ? `HTTP ${response.status} reached through ${response.chain.length} same-origin redirect hop(s); ${route} itself still answers`
+        : response.status,
+      {
+        direct_absence_observed: false,
+        original_route: route,
+        redirect_hops: response.chain.length,
+        final_status: response.status,
+      },
+      response.status >= 500
+    );
     return;
   }
 
@@ -684,7 +719,13 @@ async function checkWithdrawnRoute(emit, { baseUrl, route, locale, reason, local
       locale,
       observed: `HTTP 200 rendering the withdrawn collection surface (${matched.map((marker) => marker.key).join(', ')})`,
       expected,
-      evidence: { ...evidence, matched_keys: matched.map((marker) => marker.key) },
+      evidence: {
+        ...evidence,
+        matched_keys: matched.map((marker) => marker.key),
+        direct_absence_observed: false,
+        original_route: route,
+        redirect_hops: response.chain.length,
+      },
       resolver_class: 'DEPLOYMENT',
     }
     : {
@@ -696,7 +737,13 @@ async function checkWithdrawnRoute(emit, { baseUrl, route, locale, reason, local
       locale,
       observed: 'HTTP 200 without the withdrawn collection surface',
       expected,
-      evidence: { ...evidence, checked_keys: markers.map((marker) => marker.key) },
+      evidence: {
+        ...evidence,
+        checked_keys: markers.map((marker) => marker.key),
+        direct_absence_observed: false,
+        original_route: route,
+        redirect_hops: response.chain.length,
+      },
       resolver_class: 'DEPLOYMENT',
     });
 }
