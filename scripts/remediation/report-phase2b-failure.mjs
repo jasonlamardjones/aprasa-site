@@ -127,6 +127,7 @@ const created = gh(['issue', 'create',
 console.log(JSON.stringify({
   status: 'FAILURE_SIGNAL_CREATED',
   failure_class: resolvedDecision.failureClass,
+  reason: resolvedDecision.reason,
   issue_url: created,
   commit,
 }, null, 2));

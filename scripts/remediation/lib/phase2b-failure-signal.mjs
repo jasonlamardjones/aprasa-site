@@ -43,6 +43,12 @@ export const FAILURE_SIGNAL = Object.freeze({
   commitMarkerPrefix: 'phase2b-failure-commit',
   recoveryMarkerPrefix: 'phase2b-failure-recovery',
   unclassified: 'PHASE2B_UNCLASSIFIED_FAILURE',
+  // `gh issue list --json comments` requests a nested comments(first: 100)
+  // connection and does NOT paginate it; --limit bounds the number of ISSUES
+  // fetched, not comments. A result that fills this page therefore cannot prove
+  // a marker is absent, so it is refused rather than trusted — the same rule the
+  // issues-list probe already applies one level up.
+  commentPageLimit: 100,
 });
 
 const SHA_PATTERN = /^[a-f0-9]{40}$/;
@@ -162,6 +168,12 @@ export function parseOpenFailureIssueProbe(probe, { key, limit = null } = {}) {
     throw new Error('PHASE2B_FAILURE_SIGNAL_PROBE_UNREADABLE: missing issue url');
   }
   const comments = Array.isArray(record.comments) ? record.comments : [];
+  // Dedupe markers live in the body AND in comments, so a truncated comment
+  // connection would hide a recorded commit and re-add the same recurrence or
+  // recovery correction on every later run, defeating the per-commit ceiling.
+  if (comments.length >= FAILURE_SIGNAL.commentPageLimit) {
+    throw new Error(`PHASE2B_FAILURE_SIGNAL_COMMENTS_TRUNCATED: issue #${record.number} returned ${comments.length} comments, reaching the unpaginated page limit of ${FAILURE_SIGNAL.commentPageLimit}`);
+  }
   for (const comment of comments) {
     if (!comment || typeof comment.body !== 'string') {
       throw new Error('PHASE2B_FAILURE_SIGNAL_PROBE_UNREADABLE: malformed comment record');

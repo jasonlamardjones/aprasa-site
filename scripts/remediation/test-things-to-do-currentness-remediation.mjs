@@ -560,6 +560,27 @@ assert.throws(() => parseOpenFailureIssueProbe(issueProbe({}), {}), /FAILURE_SIG
 const filler = (n) => JSON.stringify(Array.from({ length: n }, (_, i) => ({ number: i + 1, url: `u${i}`, body: 'unrelated', comments: [] })));
 assert.throws(() => parseOpenFailureIssueProbe(issueProbe({ stdout: filler(100) }), { key: failKey, limit: 100 }), /FAILURE_SIGNAL_PROBE_TRUNCATED/);
 assert.equal(parseOpenFailureIssueProbe(issueProbe({ stdout: filler(99) }), { key: failKey, limit: 100 }), null);
+// The same rule one level down. Dedupe markers live in the body AND in comments,
+// and `gh issue list --json comments` requests an unpaginated
+// comments(first: 100) connection — --limit bounds ISSUES, not comments. A
+// filled comment page would hide a recorded commit and re-add the same
+// recurrence or recovery correction on every run, defeating the per-commit
+// ceiling, so it is refused rather than trusted.
+const withComments = (n) => JSON.stringify([{
+  number: 7,
+  url: 'https://github.com/o/r/issues/7',
+  body: keyMarker(failKey),
+  comments: Array.from({ length: n }, (_, i) => ({ body: `comment ${i}` })),
+}]);
+assert.equal(FAILURE_SIGNAL.commentPageLimit, 100);
+assert.throws(
+  () => parseOpenFailureIssueProbe(issueProbe({ stdout: withComments(FAILURE_SIGNAL.commentPageLimit) }), { key: failKey, limit: 100 }),
+  /PHASE2B_FAILURE_SIGNAL_COMMENTS_TRUNCATED/,
+);
+assert.equal(
+  parseOpenFailureIssueProbe(issueProbe({ stdout: withComments(FAILURE_SIGNAL.commentPageLimit - 1) }), { key: failKey, limit: 100 }).comments.length,
+  FAILURE_SIGNAL.commentPageLimit - 1,
+);
 
 // 10. HEALTHY RUN — the signal is reachable only from the workflow's
 // `if: failure()` step, so a green run cannot produce a notification. Proved on
@@ -636,5 +657,12 @@ assert.ok(/'--limit', String\(PROBE_LIMIT\)/.test(signalSource), 'the reporter m
 // an ordinary recurrence.
 assert.ok(/escalation: resolvedDecision\.escalation/.test(signalSource),
   'the reporter must hand the escalation flag to the recurrence comment');
+// Every reachable decision must say which rule fired, CREATE included — three
+// reported statuses, three reasons.
+assert.equal((signalSource.match(/reason: resolvedDecision\.reason/g) ?? []).length, 3,
+  'all three reported decision paths (CREATE, COMMENT, NONE) must emit reason');
+for (const status of ['FAILURE_SIGNAL_CREATED', 'FAILURE_SIGNAL_ALREADY_RECORDED', 'FAILURE_SIGNAL_RECOVERY_ESCALATED']) {
+  assert.ok(signalSource.includes(status), `the reporter must be able to report ${status}`);
+}
 
 console.log('Phase 2B currentness remediation unit tests passed.');
