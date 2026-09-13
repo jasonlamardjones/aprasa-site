@@ -51,6 +51,10 @@ export const LAUNCHER_PANEL_KEYS = {
 // the runtime that needs it.
 export const NAV_CONTROL_KEYS = {
   navBackToTop: 'ui.back_to_top',
+  // Names the Down control on surfaces with no governed in-page section nav,
+  // where it pages the viewport rather than stepping named sections. Home does
+  // not use it: its Down is named from its own nav anchors.
+  navScrollDown: 'ui.scroll_down',
 };
 
 export const RUNTIME_STRING_KEYS = { ...MEDIA_FALLBACK_KEYS, ...LAUNCHER_PANEL_KEYS, ...NAV_CONTROL_KEYS };

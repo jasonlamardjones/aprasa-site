@@ -27,7 +27,8 @@
       "data/locales/pt-overlay-r14-section-fallback-note.source.json",
       "data/locales/pt-overlay-r15-weekly-opportunity-2026-09.source.json",
       "data/locales/pt-overlay-r16-provider-media-alt.source.json",
-      "data/locales/pt-overlay-r17-runtime-whatsapp-launcher.source.json"
+      "data/locales/pt-overlay-r17-runtime-whatsapp-launcher.source.json",
+      "data/locales/pt-overlay-r18-ui-scroll-down.source.json"
     ],
     "base_revision": "P03-PT-SOURCE-2026-08-25-r2",
     "delta_revision": "P03-PT-SOURCE-2026-08-25-r3",
@@ -63,6 +64,10 @@
     "delta17_revision": "P09-PT-RUNTIME-WHATSAPP-LAUNCHER-2026-09-12-r1",
     "delta17_revision_class": "ADDITIVE_RUNTIME_KEYS",
     "delta17_row_count": 8,
+    "delta18_package_id": "aprasa-pt-ui-scroll-down",
+    "delta18_revision": "P09-PT-UI-SCROLL-DOWN-2026-09-13-r1",
+    "delta18_revision_class": "ADDITIVE_RUNTIME_KEYS",
+    "delta18_row_count": 1,
     "delta9_superseding_ruling": "P03-SINERGIA-CURRENTNESS-2026-09-01",
     "delta9_owning_project": "Project 03",
     "event_delta_packages": [
@@ -122,10 +127,10 @@
     "governed_override_authorization": "fixed code-side contract in scripts/build-locale-data.mjs (GOVERNED_OVERRIDE_CONTRACTS)"
   },
   "counts": {
-    "total_rows": 989,
-    "required_for_pt_launch": 961,
+    "total_rows": 990,
+    "required_for_pt_launch": 962,
     "intentionally_unchanged": 28,
-    "approved_rows_total": 989,
+    "approved_rows_total": 990,
     "r3_delta_rows": 21,
     "r4_delta_rows": 26,
     "r5_delta_rows": 2,
@@ -136,6 +141,7 @@
     "event_delta_rows": 51,
     "r16_delta_rows": 4,
     "r17_delta_rows": 8,
+    "r18_delta_rows": 1,
     "r10_renamed_rows": 76,
     "governed_override_rows": 6
   },
@@ -12040,6 +12046,18 @@
       "source_revision": "P09-PT-RUNTIME-WHATSAPP-LAUNCHER-2026-09-12-r1",
       "context_notes": "Secondary action of the launcher panel; dismisses it without leaving the page.",
       "linguistic_notes": "Project 09 identity policy as supplied: \"TRANSLATE — preserve A PRASA\". The protected brand string A PRASA is carried verbatim into the Portuguese value where the English carries it. WhatsApp is a third-party product name and is never translated."
+    },
+    "ui.scroll_down": {
+      "key": "ui.scroll_down",
+      "en": "Scroll down",
+      "pt": "Descer",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-UI-SCROLL-DOWN-2026-09-13-r1",
+      "context_notes": "Accessible name of the floating Down control on surfaces with no governed in-page section nav. The control pages the viewport downward and stops at the document bottom; it targets no editorial content and depends on no page copy.",
+      "linguistic_notes": "Project 09 identity policy as supplied: TRANSLATE. Carries no protected brand string and no placeholder."
     }
   }
 }

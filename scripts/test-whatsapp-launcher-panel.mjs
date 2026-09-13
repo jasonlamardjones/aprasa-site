@@ -175,6 +175,13 @@ for (const rel of surfaces) {
   check(`${rel} carries the governed Up label`,
     block.navBackToTop === t('ui.back_to_top', locale),
     `got ${JSON.stringify(block.navBackToTop)}`);
+  check(`${rel} carries the governed Down label`,
+    block.navScrollDown === t('ui.scroll_down', locale),
+    `got ${JSON.stringify(block.navScrollDown)}`);
+  if (locale === 'pt') {
+    check(`${rel} Down label is not the English fallback`,
+      block.navScrollDown !== t('ui.scroll_down', 'en'));
+  }
 }
 for (const [name, source] of [['prasa-launch.js', launcherJs], ['mindelo-essentials.js', mindeloJs]]) {
   check(`${name} names the Up control from the governed string, not page markup`,
@@ -184,13 +191,42 @@ for (const [name, source] of [['prasa-launch.js', launcherJs], ['mindelo-essenti
   check(`${name} throttles scroll updates through rAF`, /requestAnimationFrame/.test(source));
   check(`${name} honours reduced motion`, /prefers-reduced-motion: reduce/.test(source));
 }
-// Down is Home-only by construction: it requires .home-page-nav targets.
-check('prasa-launch.js gates Down on a governed in-page nav',
-  /if \(targets\.length\) \{/.test(launcherJs) && /\.home-page-nav/.test(launcherJs));
+// Down exists on every surface. Its TARGETING splits: section stepping where a
+// governed in-page nav supplies named targets, viewport paging everywhere else.
+check('prasa-launch.js splits Down targeting on the governed in-page nav',
+  /const sectionAware = targets\.length > 0;/.test(launcherJs) && /\.home-page-nav/.test(launcherJs));
+check('prasa-launch.js names the generic Down from the governed string',
+  /down\.setAttribute\("aria-label", STRINGS\.navScrollDown\)/.test(launcherJs));
+check('prasa-launch.js pages by viewport when not section-aware',
+  /window\.innerHeight \* \(1 - VIEWPORT_PAGE_OVERLAP\)/.test(launcherJs));
+check('prasa-launch.js clamps paging to the document bottom',
+  /Math\.min\(window\.scrollY \+ step, limit\)/.test(launcherJs));
 check('prasa-launch.js hides Down at the document bottom',
   /atDocumentBottom\(\)/.test(launcherJs));
-check('mindelo-essentials.js ships no Down control (it has no governed in-page nav)',
-  !/CHEVRON_DOWN/.test(mindeloJs));
+check('mindelo-essentials.js ships a Down control',
+  /CHEVRON_DOWN/.test(mindeloJs) && /navScrollDown/.test(mindeloJs));
+check('mindelo-essentials.js pages by viewport and clamps to the bottom',
+  /window\.innerHeight \* \(1 - VIEWPORT_PAGE_OVERLAP\)/.test(mindeloJs)
+  && /Math\.min\(window\.scrollY \+ step, limit\)/.test(mindeloJs));
+check('mindelo-essentials.js hides Down at the document bottom',
+  /down\.hidden = window\.scrollY \+ window\.innerHeight >=/.test(mindeloJs));
+// The generic model must target no editorial content. Scoped to the navigation
+// code: elsewhere in these files the details dialog legitimately reads headings,
+// so a whole-file scan would be a false positive.
+function navigationSource(source) {
+  const start = source.indexOf('function createNavigationControls');
+  if (start === -1) return '';
+  const after = source.slice(start);
+  const end = after.indexOf('\n  }\n');
+  return end === -1 ? after : after.slice(0, end);
+}
+for (const [name, source] of [['prasa-launch.js', launcherJs], ['mindelo-essentials.js', mindeloJs]]) {
+  const nav = navigationSource(source);
+  check(`${name} exposes its navigation code to this check`, nav.length > 0);
+  check(`${name} navigation targets no headings`, !/h[123]/.test(nav), nav.match(/.{0,40}h[123].{0,40}/)?.[0]);
+  check(`${name} navigation reads no element text content`, !/textContent/.test(nav.replace(/anchor\.textContent/g, '')),
+    nav.match(/.{0,40}textContent.{0,40}/)?.[0]);
+}
 // The stack is one vertical column, in CSS, on both stylesheets.
 for (const css of ['prasa-launch.css', 'mindelo-essentials/mindelo-essentials.css']) {
   const text = read(css);

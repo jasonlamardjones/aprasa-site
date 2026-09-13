@@ -531,6 +531,7 @@
     launcherPrimaryAction: "Open WhatsApp",
     launcherSecondaryAction: "Close",
     navBackToTop: "Back to top",
+    navScrollDown: "Scroll down",
   };
 
   const STRINGS = (() => {
@@ -774,8 +775,9 @@
   //     individual event cards, a detail page has exactly one region, and on
   //     About and Mindelo the section headings sit at varying depths behind
   //     wrappers. Mapping any of that would mean targeting on editorial copy,
-  //     which is brittle by construction. Those surfaces therefore use the
-  //     generic viewport-paging model below.
+  //     which is brittle by construction. Those surfaces page the viewport
+  //     instead, named by the governed ui.scroll_down string — a model that
+  //     reads no page content at all and so cannot be broken by an edit.
   const VIEWPORT_PAGE_OVERLAP = 0.12;
 
   function homeNavTargets() {
@@ -819,20 +821,29 @@
       window.scrollTo({top: 0, behavior: behavior()});
     });
 
-    // Down is section-aware only where a governed in-page nav supplies both the
-    // targets and their names. Without one there is no governed name for a
-    // generic "page down" control, and an unnamed control is worse than no
-    // control, so Down is simply absent there until that string exists.
-    let down = null;
-    if (targets.length) {
-      down = document.createElement("button");
-      down.type = "button";
-      down.className = "floating-utility floating-utility-nav";
-      down.append(createChevronIcon(CHEVRON_DOWN));
-      down.addEventListener("click", () => {
-        nextTarget()?.target.scrollIntoView({behavior: behavior(), block: "start"});
-      });
+    // Down is section-aware where a governed in-page nav supplies both the
+    // targets and their names, and pages the viewport everywhere else. Both
+    // forms exist on every surface now; only the targeting and the name differ.
+    const sectionAware = targets.length > 0;
+    const down = document.createElement("button");
+    down.type = "button";
+    down.className = "floating-utility floating-utility-nav";
+    down.append(createChevronIcon(CHEVRON_DOWN));
+    if (!sectionAware) {
+      down.setAttribute("aria-label", STRINGS.navScrollDown);
+      down.title = STRINGS.navScrollDown;
     }
+    down.addEventListener("click", () => {
+      if (sectionAware) {
+        nextTarget()?.target.scrollIntoView({behavior: behavior(), block: "start"});
+        return;
+      }
+      // One viewport per press, with a small overlap so the line you were
+      // reading stays on screen. Clamped to the document bottom.
+      const step = window.innerHeight * (1 - VIEWPORT_PAGE_OVERLAP);
+      const limit = document.documentElement.scrollHeight - window.innerHeight;
+      window.scrollTo({top: Math.min(window.scrollY + step, limit), behavior: behavior()});
+    });
 
     function nextTarget() {
       return targets.find(({target}) => target.getBoundingClientRect().top > 1) || null;
@@ -840,7 +851,13 @@
 
     function update() {
       up.hidden = window.scrollY <= 0;
-      if (!down) return;
+
+      if (!sectionAware) {
+        // Nothing left to scroll: the only reason to hide the paging Down.
+        down.hidden = atDocumentBottom();
+        return;
+      }
+
       const next = nextTarget();
       // Hidden once there is no further section AND once the document itself
       // has no more to scroll: a final section taller than the viewport used
@@ -868,8 +885,7 @@
     window.addEventListener("scroll", scheduleUpdate, {passive: true});
     window.addEventListener("resize", scheduleUpdate);
 
-    navGroup.append(up);
-    if (down) navGroup.append(down);
+    navGroup.append(up, down);
     cluster.append(navGroup);
     update();
   }

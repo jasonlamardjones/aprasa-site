@@ -382,6 +382,7 @@
       launcherPrimaryAction: "Open WhatsApp",
       launcherSecondaryAction: "Close",
       navBackToTop: "Back to top",
+      navScrollDown: "Scroll down",
     };
     try {
       const node = document.getElementById("i18n-strings");
@@ -399,11 +400,16 @@
 
   // Chevron for the floating Up control, matching prasa-launch.js.
   const CHEVRON_UP = "M6 14.5 12 8.5l6 6";
+  const CHEVRON_DOWN = "M6 9.5l6 6 6-6";
+  // One viewport per press, less a small overlap so the line being read stays on screen.
+  const VIEWPORT_PAGE_OVERLAP = 0.12;
 
-  // Mindelo Essentials has no governed in-page section nav, so it carries the
-  // Up control only — see the reasoning in prasa-launch.js. Its label is the
-  // governed ui.back_to_top value from the runtime-strings island; this page
-  // has no in-page "Back to top" anchor to borrow one from.
+  // Mindelo Essentials has no governed in-page section nav, so its Down pages
+  // the viewport rather than stepping named sections — the same model
+  // prasa-launch.js uses off Home, and for the same reason: it reads no page
+  // content, so no edit can break it. Both labels come from the governed
+  // runtime-strings island (ui.back_to_top, ui.scroll_down); this page carries
+  // no in-page "Back to top" anchor to borrow one from.
   function createNavigationControls(cluster) {
     const upLabel = PANEL_STRINGS.navBackToTop;
     if (!upLabel) return;
@@ -433,13 +439,40 @@
     icon.append(chevron);
     up.append(icon);
 
+    const down = document.createElement("button");
+    down.type = "button";
+    down.className = "floating-utility floating-utility-nav";
+    down.setAttribute("aria-label", PANEL_STRINGS.navScrollDown);
+    down.title = PANEL_STRINGS.navScrollDown;
+    const downIcon = document.createElementNS(SVG_NS, "svg");
+    downIcon.setAttribute("class", "floating-utility-icon");
+    downIcon.setAttribute("viewBox", "0 0 24 24");
+    downIcon.setAttribute("aria-hidden", "true");
+    downIcon.setAttribute("focusable", "false");
+    const downChevron = document.createElementNS(SVG_NS, "path");
+    downChevron.setAttribute("d", CHEVRON_DOWN);
+    downChevron.setAttribute("fill", "none");
+    downChevron.setAttribute("stroke", "currentColor");
+    downChevron.setAttribute("stroke-width", "2.25");
+    downChevron.setAttribute("stroke-linecap", "round");
+    downChevron.setAttribute("stroke-linejoin", "round");
+    downIcon.append(downChevron);
+    down.append(downIcon);
+
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const behavior = () => reducedMotion.matches ? "auto" : "smooth";
     up.addEventListener("click", () => {
-      window.scrollTo({top: 0, behavior: reducedMotion.matches ? "auto" : "smooth"});
+      window.scrollTo({top: 0, behavior: behavior()});
+    });
+    down.addEventListener("click", () => {
+      const step = window.innerHeight * (1 - VIEWPORT_PAGE_OVERLAP);
+      const limit = document.documentElement.scrollHeight - window.innerHeight;
+      window.scrollTo({top: Math.min(window.scrollY + step, limit), behavior: behavior()});
     });
 
     function update() {
       up.hidden = window.scrollY <= 0;
+      down.hidden = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2;
     }
     let scheduled = false;
     const scheduleUpdate = () => {
@@ -453,7 +486,7 @@
     window.addEventListener("scroll", scheduleUpdate, {passive: true});
     window.addEventListener("resize", scheduleUpdate);
 
-    navGroup.append(up);
+    navGroup.append(up, down);
     cluster.append(navGroup);
     update();
   }

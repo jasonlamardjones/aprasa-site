@@ -75,6 +75,7 @@ const DELTA14_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r14-section-
 const DELTA15_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r15-weekly-opportunity-2026-09.source.json");
 const DELTA16_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r16-provider-media-alt.source.json");
 const DELTA17_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r17-runtime-whatsapp-launcher.source.json");
+const DELTA18_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r18-ui-scroll-down.source.json");
 const LOCALE_DIR = path.join(ROOT, "data", "locales");
 const OUT_PATH = path.join(ROOT, "data", "locales", "locale-data.generated.json");
 
@@ -1922,6 +1923,119 @@ if (delta17Unchanged !== EXPECTED_DELTA17.intentionally_unchanged) {
   fail(`r17 intentionally_unchanged mismatch: got ${delta17Unchanged}, expected ${EXPECTED_DELTA17.intentionally_unchanged}`);
 }
 
+// --- r18 delta: additive merge for the floating Down control's name --------
+// Supplies the approved EN/PT accessible name for the floating Down control on
+// surfaces with no governed in-page section nav. Home is unaffected: it keeps
+// its section-aware Down, named from its own nav anchors. Same strictly
+// additive lane as r17, and it may never reopen an existing key.
+const EXPECTED_DELTA18 = {
+  package_id: "aprasa-pt-ui-scroll-down",
+  revision_class: "ADDITIVE_RUNTIME_KEYS",
+  source_revision: "P09-PT-UI-SCROLL-DOWN-2026-09-13-r1",
+  previous_revision: "P09-PT-RUNTIME-WHATSAPP-LAUNCHER-2026-09-12-r1",
+  row_count: 1,
+  approved: 1,
+  required_for_pt_launch: 1,
+  intentionally_unchanged: 0,
+  review_required: 0,
+};
+
+const delta18 = JSON.parse(readFileSync(DELTA18_PATH, "utf8"));
+
+for (const field of ["package_id", "revision_class", "source_revision", "previous_revision"]) {
+  if (delta18[field] !== EXPECTED_DELTA18[field]) {
+    fail(`r18 ${field} mismatch: got ${JSON.stringify(delta18[field])}, expected ${JSON.stringify(EXPECTED_DELTA18[field])}`);
+  }
+}
+if (delta18.project_09_status !== "approved") {
+  fail(`r18 Project 09 status is not approved: ${JSON.stringify(delta18.project_09_status)}`);
+}
+if (!Array.isArray(delta18.rows) || delta18.rows.length !== EXPECTED_DELTA18.row_count) {
+  fail(`r18 row count mismatch: got ${delta18.rows?.length}, expected ${EXPECTED_DELTA18.row_count}`);
+}
+if (delta18.supplied_rows_approved !== EXPECTED_DELTA18.approved) {
+  fail(`r18 supplied_rows_approved mismatch: got ${delta18.supplied_rows_approved}`);
+}
+if (delta18.review_required !== EXPECTED_DELTA18.review_required
+  || delta18.blocking_issue != null
+  || delta18.semantic_escalations_required !== 0) {
+  fail("r18 has unresolved localization review state");
+}
+if (delta18.missing_or_unaccounted_row_count !== 0) {
+  fail(`r18 missing_or_unaccounted_row_count is non-zero: ${delta18.missing_or_unaccounted_row_count}`);
+}
+for (const listField of ["duplicate_keys", "placeholder_mismatches", "a_prasa_to_a_praca_violations"]) {
+  if ((delta18[listField] || []).length !== 0) fail(`r18 ${listField} is non-empty: ${JSON.stringify(delta18[listField])}`);
+}
+if (delta18.source_english_changed !== false || delta18.change_control_status?.existing_keys_overridden !== 0) {
+  fail("r18 declares a non-additive change (source_english_changed/existing_keys_overridden)");
+}
+if (delta18.change_control_status?.new_keys_introduced !== EXPECTED_DELTA18.row_count) {
+  fail(`r18 new_keys_introduced mismatch: got ${delta18.change_control_status?.new_keys_introduced}`);
+}
+if (delta18.change_control_status?.lifecycle_or_publication_state_modified !== 0) {
+  fail("r18 must not modify lifecycle or publication state");
+}
+if (delta18.semantic_change !== false) {
+  fail("r18 declares a semantic change; this package is runtime presentation copy only");
+}
+if (delta18.target_language !== "pt") {
+  fail(`r18 target_language mismatch: got ${JSON.stringify(delta18.target_language)}`);
+}
+
+let delta18Required = 0;
+let delta18Unchanged = 0;
+for (const row of delta18.rows) {
+  if (seen.has(row.key)) {
+    fail(`r18 key "${row.key}" collides with an existing key — r18 must be strictly additive, never reopen an existing key`);
+  }
+  seen.add(row.key);
+
+  if (row.record_id != null) fail(`r18 key "${row.key}" is record-scoped; this package carries no record copy`);
+  if (row.key !== "ui.scroll_down") {
+    fail(`r18 key "${row.key}" is outside the single authorized key ui.scroll_down`);
+  }
+  if (row.source_revision !== EXPECTED_DELTA18.source_revision) fail(`r18 ${row.key} source_revision mismatch`);
+  if (row.translation_status !== "APPROVED") fail(`r18 key "${row.key}" is not APPROVED (status: ${row.translation_status})`);
+
+  if (row.scope_status === "REQUIRED_FOR_PT_LAUNCH") delta18Required += 1;
+  else if (row.scope_status === "INTENTIONALLY_UNCHANGED") delta18Unchanged += 1;
+  else fail(`r18 key "${row.key}" has invalid scope_status`);
+
+  if (row.scope_status === "REQUIRED_FOR_PT_LAUNCH" && (row.pt == null || row.pt === "")) {
+    fail(`r18 REQUIRED_FOR_PT_LAUNCH key "${row.key}" has no PT value`);
+  }
+  if (!row.source_en) fail(`r18 key "${row.key}" is missing approved English text`);
+  const enPlaceholders = (row.source_en.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+  const ptPlaceholders = (row.pt.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+  if (JSON.stringify(enPlaceholders) !== JSON.stringify(ptPlaceholders)) {
+    fail(`r18 key "${row.key}" placeholder mismatch`);
+  }
+  if ([row.source_en, row.pt].some((value) => value.includes("A PRAÇA"))) {
+    fail(`r18 key "${row.key}" violates protected A PRASA brand spelling`);
+  }
+
+  keys[row.key] = {
+    key: row.key,
+    en: row.source_en,
+    pt: row.pt,
+    scope_status: row.scope_status,
+    identity_policy: row.identity_policy,
+    record_id: row.record_id,
+    translation_status: row.translation_status,
+    source_revision: row.source_revision,
+    context_notes: row.context_notes || "",
+    linguistic_notes: row.linguistic_notes || "",
+  };
+}
+
+if (delta18Required !== EXPECTED_DELTA18.required_for_pt_launch) {
+  fail(`r18 required_for_pt_launch mismatch: got ${delta18Required}`);
+}
+if (delta18Unchanged !== EXPECTED_DELTA18.intentionally_unchanged) {
+  fail(`r18 intentionally_unchanged mismatch: got ${delta18Unchanged}`);
+}
+
 // Aggregate tallies, read off the finished key map that is about to be written.
 const assembled = (() => {
   const values = Object.values(keys);
@@ -1959,6 +2073,7 @@ const output = {
       "data/locales/pt-overlay-r15-weekly-opportunity-2026-09.source.json",
       "data/locales/pt-overlay-r16-provider-media-alt.source.json",
       "data/locales/pt-overlay-r17-runtime-whatsapp-launcher.source.json",
+      "data/locales/pt-overlay-r18-ui-scroll-down.source.json",
     ],
     base_revision: pkg.source_revision,
     delta_revision: delta.source_revision,
@@ -1994,6 +2109,10 @@ const output = {
     delta17_revision: delta17.source_revision,
     delta17_revision_class: delta17.revision_class,
     delta17_row_count: delta17.rows.length,
+    delta18_package_id: delta18.package_id,
+    delta18_revision: delta18.source_revision,
+    delta18_revision_class: delta18.revision_class,
+    delta18_row_count: delta18.rows.length,
     delta9_superseding_ruling: delta9.superseding_ruling,
     delta9_owning_project: delta9.owning_project,
     event_delta_packages: eventDeltaPackages,
@@ -2037,6 +2156,7 @@ const output = {
     event_delta_rows: eventDeltaRequired + eventDeltaUnchanged,
     r16_delta_rows: delta16.rows.length,
     r17_delta_rows: delta17.rows.length,
+    r18_delta_rows: delta18.rows.length,
     r10_renamed_rows: r10Renamed.length,
     governed_override_rows: governedOverrideCount,
   },

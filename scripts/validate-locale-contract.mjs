@@ -56,11 +56,12 @@ for (const fileName of eventDeltaFiles) {
 // collection-hub keys, r14 the runtime section fallback note, and r15 the 96
 // presentation keys for the eight weekly fixed-window opportunity records; r16
 // adds four localized informative alt descriptions; r17 adds the 8 runtime
-// contact-panel strings the floating WhatsApp launcher renders — all required. ---
-if (keys.length !== 938 + eventDeltaRequired + eventDeltaUnchanged) fail(`expected ${938 + eventDeltaRequired + eventDeltaUnchanged} total keys including approved event deltas, got ${keys.length}`);
+// contact-panel strings the floating WhatsApp launcher renders, and r18 the
+// accessible name of the floating Down control off Home — all required. ---
+if (keys.length !== 939 + eventDeltaRequired + eventDeltaUnchanged) fail(`expected ${939 + eventDeltaRequired + eventDeltaUnchanged} total keys including approved event deltas, got ${keys.length}`);
 const required = keys.filter((k) => k.scope_status === "REQUIRED_FOR_PT_LAUNCH");
 const unchanged = keys.filter((k) => k.scope_status === "INTENTIONALLY_UNCHANGED");
-if (required.length !== 910 + eventDeltaRequired) fail(`expected ${910 + eventDeltaRequired} REQUIRED_FOR_PT_LAUNCH keys, got ${required.length}`);
+if (required.length !== 911 + eventDeltaRequired) fail(`expected ${911 + eventDeltaRequired} REQUIRED_FOR_PT_LAUNCH keys, got ${required.length}`);
 if (unchanged.length !== 28 + eventDeltaUnchanged) fail(`expected ${28 + eventDeltaUnchanged} INTENTIONALLY_UNCHANGED keys, got ${unchanged.length}`);
 if (data.provenance.delta_revision !== "P03-PT-SOURCE-2026-08-25-r3") {
   fail(`unexpected delta_revision: ${data.provenance.delta_revision}`);

@@ -69,6 +69,7 @@ const GOVERNED_LAUNCHER = {
 // with no in-page "Back to top" anchor to borrow a label from.
 const GOVERNED_NAV = {
   navBackToTop: 'ui.back_to_top',
+  navScrollDown: 'ui.scroll_down',
 };
 
 const GOVERNED = { ...GOVERNED_MEDIA, ...GOVERNED_LAUNCHER, ...GOVERNED_NAV };
