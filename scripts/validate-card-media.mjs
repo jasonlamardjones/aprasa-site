@@ -7,6 +7,7 @@ const root = process.cwd();
 const manifestPath = path.join(root, 'internal', 'provider-media-manifest.json');
 const htmlPath = path.join(root, 'index.html');
 const eventsPath = path.join(root, 'data', 'things-to-do-events.json');
+const trainingPath = path.join(root, 'data', 'training-opportunities.json');
 const currentnessPath = path.join(root, 'data', 'things-to-do-currentness.json');
 
 const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
@@ -19,6 +20,7 @@ const html = fs.readFileSync(htmlPath, 'utf8');
 const hubPath = path.join(root, hubOutputPath('en'));
 const hubHtml = fs.existsSync(hubPath) ? fs.readFileSync(hubPath, 'utf8') : '';
 const eventRecords = JSON.parse(fs.readFileSync(eventsPath, 'utf8')).records ?? [];
+const trainingRecords = JSON.parse(fs.readFileSync(trainingPath, 'utf8')).records ?? [];
 const currentness = JSON.parse(fs.readFileSync(currentnessPath, 'utf8'));
 const asOf = currentness.as_of;
 
@@ -60,6 +62,30 @@ const canonicalEventByManifestTitle = new Map(
   eventRecords.map((record) => [record.media_manifest_title, record])
 );
 
+// A governed training record removed from the current surface is the direct
+// counterpart of an expired dated event: its marker region on Home is emptied
+// by scripts/generate-training-opportunities.mjs, so its card title is
+// legitimately absent from every public surface. Unlike a dated event it has no
+// detail page of its own to fall back to, so without this the manifest entry
+// would read as unsurfaced the moment the record was retired.
+//
+// The manifest entry itself is deliberately RETAINED rather than deleted. The
+// media, its provenance and its verification date are governed evidence about
+// an asset that really was published; removing the record from discovery does
+// not unmake that history, and the things-to-do side already keeps its expired
+// entries for exactly this reason.
+//
+// Removed states are read from the canonical corpus's own publication_state
+// field. These are the same three tokens scripts/generate-training-opportunities.mjs
+// treats as removed when it clears a region; that generator resolves argv and
+// exits at import time, so it cannot be imported here to share the set.
+const TRAINING_REMOVED_STATES = new Set(['EXPIRED', 'WITHDRAWN', 'SUPERSEDED']);
+const canonicalTrainingByManifestTitle = new Map(
+  trainingRecords
+    .filter((record) => typeof record.media_manifest_title === 'string')
+    .map((record) => [record.media_manifest_title, record])
+);
+
 for (const record of manifest.records) {
   const label = `${record.section} :: ${record.title}`;
   const titleHeading = `<h3>${escapeHtml(record.title)}</h3>`;
@@ -83,8 +109,12 @@ for (const record of manifest.records) {
     && canonicalEvent.kind === 'dated-event'
     && isExpired(canonicalEvent, asOf)
   );
+  const isRemovedTrainingRecord = record.section === 'trainings-tools'
+    && TRAINING_REMOVED_STATES.has(
+      canonicalTrainingByManifestTitle.get(record.title)?.publication_state
+    );
 
-  if (!appearsOnHome && !appearsOnHub && !appearsOnDetail && !isExpiredDatedEvent) {
+  if (!appearsOnHome && !appearsOnHub && !appearsOnDetail && !isExpiredDatedEvent && !isRemovedTrainingRecord) {
     errors.push(`${label}: card title not found in index.html${THINGS_TO_DO_HUB_PUBLIC ? `, ${hubOutputPath('en')}` : ''} or its own detail page`);
   }
   if (!record.source_url) errors.push(`${label}: missing source_url`);
