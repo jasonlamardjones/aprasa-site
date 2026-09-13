@@ -57,7 +57,31 @@ export const NAV_CONTROL_KEYS = {
   navScrollDown: 'ui.scroll_down',
 };
 
-export const RUNTIME_STRING_KEYS = { ...MEDIA_FALLBACK_KEYS, ...LAUNCHER_PANEL_KEYS, ...NAV_CONTROL_KEYS };
+// Quick-action starter messages (Project 09 r19). One per governed quick
+// action, keyed so the runtime can look one up from the selected action's own
+// key without a second mapping table. There is deliberately no generic
+// fallback message: selecting nothing keeps the incumbent short link.
+export const PREFILL_KEYS = {
+  prefillShare: 'runtime.whatsapp_launcher.prefill.share',
+  prefillCorrection: 'runtime.whatsapp_launcher.prefill.correction',
+  prefillQuestion: 'runtime.whatsapp_launcher.prefill.question',
+  prefillSubmissions: 'runtime.whatsapp_launcher.prefill.submissions',
+};
+
+// Quick-action runtime key -> its prefill runtime key. The single place the
+// intent mapping is expressed; the runtimes and the tests both read it.
+export const QUICK_ACTION_PREFILL = {
+  launcherQuickActionShare: 'prefillShare',
+  launcherQuickActionCorrection: 'prefillCorrection',
+  launcherQuickActionQuestion: 'prefillQuestion',
+  launcherQuickActionSubmissions: 'prefillSubmissions',
+};
+
+export const RUNTIME_STRING_KEYS = { ...MEDIA_FALLBACK_KEYS, ...LAUNCHER_PANEL_KEYS, ...NAV_CONTROL_KEYS, ...PREFILL_KEYS };
+
+// Every surface that carries the launcher needs the panel copy, the nav-control
+// names and the prefill starters.
+export const LAUNCHER_SURFACE_KEYS = { ...LAUNCHER_PANEL_KEYS, ...NAV_CONTROL_KEYS, ...PREFILL_KEYS };
 
 export const RUNTIME_STRINGS_BLOCK = /<script type="application\/json" id="i18n-strings">[\s\S]*?<\/script>\n?/;
 

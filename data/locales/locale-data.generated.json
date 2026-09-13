@@ -28,7 +28,8 @@
       "data/locales/pt-overlay-r15-weekly-opportunity-2026-09.source.json",
       "data/locales/pt-overlay-r16-provider-media-alt.source.json",
       "data/locales/pt-overlay-r17-runtime-whatsapp-launcher.source.json",
-      "data/locales/pt-overlay-r18-ui-scroll-down.source.json"
+      "data/locales/pt-overlay-r18-ui-scroll-down.source.json",
+      "data/locales/pt-overlay-r19-runtime-whatsapp-prefill.source.json"
     ],
     "base_revision": "P03-PT-SOURCE-2026-08-25-r2",
     "delta_revision": "P03-PT-SOURCE-2026-08-25-r3",
@@ -68,6 +69,10 @@
     "delta18_revision": "P09-PT-UI-SCROLL-DOWN-2026-09-13-r1",
     "delta18_revision_class": "ADDITIVE_RUNTIME_KEYS",
     "delta18_row_count": 1,
+    "delta19_package_id": "aprasa-pt-runtime-whatsapp-prefill",
+    "delta19_revision": "P09-PT-RUNTIME-WHATSAPP-PREFILL-2026-09-13-r1",
+    "delta19_revision_class": "ADDITIVE_RUNTIME_KEYS",
+    "delta19_row_count": 4,
     "delta9_superseding_ruling": "P03-SINERGIA-CURRENTNESS-2026-09-01",
     "delta9_owning_project": "Project 03",
     "event_delta_packages": [
@@ -127,10 +132,10 @@
     "governed_override_authorization": "fixed code-side contract in scripts/build-locale-data.mjs (GOVERNED_OVERRIDE_CONTRACTS)"
   },
   "counts": {
-    "total_rows": 990,
-    "required_for_pt_launch": 962,
+    "total_rows": 994,
+    "required_for_pt_launch": 966,
     "intentionally_unchanged": 28,
-    "approved_rows_total": 990,
+    "approved_rows_total": 994,
     "r3_delta_rows": 21,
     "r4_delta_rows": 26,
     "r5_delta_rows": 2,
@@ -142,6 +147,7 @@
     "r16_delta_rows": 4,
     "r17_delta_rows": 8,
     "r18_delta_rows": 1,
+    "r19_delta_rows": 4,
     "r10_renamed_rows": 76,
     "governed_override_rows": 6
   },
@@ -12058,6 +12064,54 @@
       "source_revision": "P09-PT-UI-SCROLL-DOWN-2026-09-13-r1",
       "context_notes": "Accessible name of the floating Down control on surfaces with no governed in-page section nav. The control pages the viewport downward and stops at the document bottom; it targets no editorial content and depends on no page copy.",
       "linguistic_notes": "Project 09 identity policy as supplied: TRANSLATE. Carries no protected brand string and no placeholder."
+    },
+    "runtime.whatsapp_launcher.prefill.share": {
+      "key": "runtime.whatsapp_launcher.prefill.share",
+      "en": "Hi, I found A PRASA through aprasa.org and I’d like to share an event or opportunity.",
+      "pt": "Olá, encontrei A PRASA através de aprasa.org e gostaria de partilhar um evento ou uma oportunidade.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-RUNTIME-WHATSAPP-PREFILL-2026-09-13-r1",
+      "context_notes": "Starter message prefilled into the WhatsApp composer for the matching governed quick action.",
+      "linguistic_notes": "Project 09 identity policy as supplied: TRANSLATE — preserve A PRASA. The protected brand string and the aprasa.org source channel are carried verbatim into Portuguese."
+    },
+    "runtime.whatsapp_launcher.prefill.correction": {
+      "key": "runtime.whatsapp_launcher.prefill.correction",
+      "en": "Hi, I came from aprasa.org and I’d like to report a correction or issue I noticed on the website.",
+      "pt": "Olá, vim de aprasa.org e gostaria de comunicar uma correção ou um problema que encontrei no site.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-RUNTIME-WHATSAPP-PREFILL-2026-09-13-r1",
+      "context_notes": "Starter message prefilled into the WhatsApp composer for the matching governed quick action.",
+      "linguistic_notes": "Project 09 identity policy as supplied: TRANSLATE — preserve A PRASA. The protected brand string and the aprasa.org source channel are carried verbatim into Portuguese."
+    },
+    "runtime.whatsapp_launcher.prefill.question": {
+      "key": "runtime.whatsapp_launcher.prefill.question",
+      "en": "Hi, I came from aprasa.org and I have a question about something I found on the website.",
+      "pt": "Olá, vim de aprasa.org e tenho uma pergunta sobre algo que encontrei no site.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-RUNTIME-WHATSAPP-PREFILL-2026-09-13-r1",
+      "context_notes": "Starter message prefilled into the WhatsApp composer for the matching governed quick action.",
+      "linguistic_notes": "Project 09 identity policy as supplied: TRANSLATE — preserve A PRASA. The protected brand string and the aprasa.org source channel are carried verbatim into Portuguese."
+    },
+    "runtime.whatsapp_launcher.prefill.submissions": {
+      "key": "runtime.whatsapp_launcher.prefill.submissions",
+      "en": "Hi, I came from aprasa.org and I’d like to learn how submissions to A PRASA work.",
+      "pt": "Olá, vim de aprasa.org e gostaria de saber como funciona o processo de submissão à A PRASA.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-RUNTIME-WHATSAPP-PREFILL-2026-09-13-r1",
+      "context_notes": "Starter message prefilled into the WhatsApp composer for the matching governed quick action.",
+      "linguistic_notes": "Project 09 identity policy as supplied: TRANSLATE — preserve A PRASA. The protected brand string and the aprasa.org source channel are carried verbatim into Portuguese."
     }
   }
 }

@@ -50,18 +50,20 @@ for (const fileName of eventDeltaFiles) {
 
 // --- Overlay contract (counts) — combined r2 base (732) + r3 delta (21) + r4 delta (26)
 // + r5 delta (2) + r7 delta (19) + r8 delta (21) + r13 delta (8) + r14 delta (1)
-// + r15 delta (96) + r16 provider-media alt delta (4) + r17 contact-panel delta (8).
+// + r15 delta (96) + r16 provider-media alt delta (4) + r17 contact-panel delta (8)
+// + r18 Down-control delta (1) + r19 quick-action prefill delta (4).
 // The r6 brand-voice delta overrides 42 existing PT values and adds
 // no keys, so every count below is unchanged by it; r13 adds the 8 Things-to-Do
 // collection-hub keys, r14 the runtime section fallback note, and r15 the 96
 // presentation keys for the eight weekly fixed-window opportunity records; r16
 // adds four localized informative alt descriptions; r17 adds the 8 runtime
-// contact-panel strings the floating WhatsApp launcher renders, and r18 the
-// accessible name of the floating Down control off Home — all required. ---
-if (keys.length !== 939 + eventDeltaRequired + eventDeltaUnchanged) fail(`expected ${939 + eventDeltaRequired + eventDeltaUnchanged} total keys including approved event deltas, got ${keys.length}`);
+// contact-panel strings the floating WhatsApp launcher renders, r18 the
+// accessible name of the floating Down control off Home, and r19 the four
+// quick-action starter messages prefilled into WhatsApp — all required. ---
+if (keys.length !== 943 + eventDeltaRequired + eventDeltaUnchanged) fail(`expected ${943 + eventDeltaRequired + eventDeltaUnchanged} total keys including approved event deltas, got ${keys.length}`);
 const required = keys.filter((k) => k.scope_status === "REQUIRED_FOR_PT_LAUNCH");
 const unchanged = keys.filter((k) => k.scope_status === "INTENTIONALLY_UNCHANGED");
-if (required.length !== 911 + eventDeltaRequired) fail(`expected ${911 + eventDeltaRequired} REQUIRED_FOR_PT_LAUNCH keys, got ${required.length}`);
+if (required.length !== 915 + eventDeltaRequired) fail(`expected ${915 + eventDeltaRequired} REQUIRED_FOR_PT_LAUNCH keys, got ${required.length}`);
 if (unchanged.length !== 28 + eventDeltaUnchanged) fail(`expected ${28 + eventDeltaUnchanged} INTENTIONALLY_UNCHANGED keys, got ${unchanged.length}`);
 if (data.provenance.delta_revision !== "P03-PT-SOURCE-2026-08-25-r3") {
   fail(`unexpected delta_revision: ${data.provenance.delta_revision}`);

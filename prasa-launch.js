@@ -1,5 +1,24 @@
 (() => {
   "use strict";
+  // Resolve a governed JSON island the strict way. getElementById is NOT
+  // constrained by tag name, so an earlier <div id="contact-config"> holding
+  // JSON is what it returns even when every <script> on the page is correct -
+  // and the page would then hand this runtime an ungoverned destination. So:
+  // exactly one element may carry the id, and it must BE a JSON script.
+  // Anything else is refused and the caller falls back to governed defaults.
+  function governedIslandNode(id) {
+    const matches = document.querySelectorAll('[id="' + id + '"]');
+    if (matches.length !== 1) {
+      if (matches.length > 1) console.warn("A PRASA governed island ignored: " + matches.length + " elements carry id " + id + ".");
+      return null;
+    }
+    const node = matches[0];
+    if (node.tagName !== "SCRIPT" || (node.getAttribute("type") || "").toLowerCase() !== "application/json") {
+      console.warn("A PRASA governed island ignored: id " + id + " belongs to <" + node.tagName.toLowerCase() + ">, not a JSON script.");
+      return null;
+    }
+    return node;
+  }
 
   const dialog = document.getElementById("details-dialog");
   const dialogContent = document.getElementById("details-dialog-content");
@@ -47,7 +66,7 @@
   };
 
   function readRuntimeStrings() {
-    const node = document.getElementById("i18n-strings");
+    const node = governedIslandNode("i18n-strings");
     if (!node) return { ...RUNTIME_STRINGS_DEFAULTS };
     let supplied = null;
     try {
@@ -508,8 +527,57 @@
 
 (() => {
   "use strict";
+  // Resolve a governed JSON island the strict way. getElementById is NOT
+  // constrained by tag name, so an earlier <div id="contact-config"> holding
+  // JSON is what it returns even when every <script> on the page is correct -
+  // and the page would then hand this runtime an ungoverned destination. So:
+  // exactly one element may carry the id, and it must BE a JSON script.
+  // Anything else is refused and the caller falls back to governed defaults.
+  function governedIslandNode(id) {
+    const matches = document.querySelectorAll('[id="' + id + '"]');
+    if (matches.length !== 1) {
+      if (matches.length > 1) console.warn("A PRASA governed island ignored: " + matches.length + " elements carry id " + id + ".");
+      return null;
+    }
+    const node = matches[0];
+    if (node.tagName !== "SCRIPT" || (node.getAttribute("type") || "").toLowerCase() !== "application/json") {
+      console.warn("A PRASA governed island ignored: id " + id + " belongs to <" + node.tagName.toLowerCase() + ">, not a JSON script.");
+      return null;
+    }
+    return node;
+  }
 
   const GOVERNED_WHATSAPP_URL = "https://wa.me/message/GC3C5Q4MSF37I1";
+
+  // Derived WhatsApp destinations, written by the builder from the single
+  // governed source in data/contact-channels.json. The canonical number is
+  // never a literal in this file: if the island is absent or inconsistent,
+  // prefill is simply unavailable and every route falls back to the incumbent
+  // short link. That is the fail-closed direction.
+  const CONTACT = (() => {
+    const inert = {shortLink: GOVERNED_WHATSAPP_URL, numberBaseUrl: null};
+    let node = null;
+    try {
+      node = governedIslandNode("contact-config");
+      if (!node) return inert;
+      const supplied = JSON.parse(node.textContent || "{}");
+      // The short link the builder derived must be the one this file pins.
+      // Disagreement means the config and the runtime describe different
+      // accounts, which is exactly when not to guess.
+      if (supplied.shortLink !== GOVERNED_WHATSAPP_URL) {
+        console.warn("A PRASA WhatsApp prefill disabled: configured short link does not match the governed destination.");
+        return inert;
+      }
+      const base = typeof supplied.numberBaseUrl === "string" ? supplied.numberBaseUrl : "";
+      if (!/^https:\/\/wa\.me\/[0-9]{8,15}$/.test(base)) {
+        if (base) console.warn("A PRASA WhatsApp prefill disabled: configured number destination is not a wa.me number URL.");
+        return inert;
+      }
+      return {shortLink: GOVERNED_WHATSAPP_URL, numberBaseUrl: base};
+    } catch {
+      return inert;
+    }
+  })();
 
   // Governed launcher-panel copy. This IIFE is a separate scope from the
   // dialog module above, so it reads the same governed
@@ -532,13 +600,17 @@
     launcherSecondaryAction: "Close",
     navBackToTop: "Back to top",
     navScrollDown: "Scroll down",
+    prefillShare: "Hi, I found A PRASA through aprasa.org and I’d like to share an event or opportunity.",
+    prefillCorrection: "Hi, I came from aprasa.org and I’d like to report a correction or issue I noticed on the website.",
+    prefillQuestion: "Hi, I came from aprasa.org and I have a question about something I found on the website.",
+    prefillSubmissions: "Hi, I came from aprasa.org and I’d like to learn how submissions to A PRASA work.",
   };
 
   const STRINGS = (() => {
     const resolved = {...RUNTIME_STRINGS_DEFAULTS};
     let supplied = null;
     try {
-      const node = document.getElementById("i18n-strings");
+      const node = governedIslandNode("i18n-strings");
       if (!node) return resolved;
       supplied = JSON.parse(node.textContent || "{}");
     } catch {
@@ -560,7 +632,11 @@
   }
 
   function resolveGovernedWhatsAppSource() {
-    const whatsappAnchors = Array.from(document.querySelectorAll('a[href*="wa.me/"]'));
+    // Anchors this script created (the panel CTA) are excluded: they are our
+    // own governed output, not incumbent page markup, and the CTA legitimately
+    // carries the number-based form once an intent is selected.
+    const whatsappAnchors = Array.from(document.querySelectorAll('a[href*="wa.me/"]'))
+      .filter((anchor) => !anchor.closest("[data-floating-utilities]"));
     if (!whatsappAnchors.length) return null;
 
     const destinations = new Set(whatsappAnchors.map((anchor) => normalizeUrl(anchor.getAttribute("href"))).filter(Boolean));
@@ -637,12 +713,75 @@
   const PANEL_ID = "prasa-launcher-panel";
   const PANEL_TITLE_ID = "prasa-launcher-panel-title";
 
-  const QUICK_ACTION_KEYS = [
-    "launcherQuickActionShare",
-    "launcherQuickActionCorrection",
-    "launcherQuickActionQuestion",
-    "launcherQuickActionSubmissions",
+  // Quick action -> its governed prefill string. One entry per action; there is
+  // deliberately no generic fallback, so selecting nothing keeps the short link.
+  const QUICK_ACTIONS = [
+    {labelKey: "launcherQuickActionShare", prefillKey: "prefillShare"},
+    {labelKey: "launcherQuickActionCorrection", prefillKey: "prefillCorrection"},
+    {labelKey: "launcherQuickActionQuestion", prefillKey: "prefillQuestion"},
+    {labelKey: "launcherQuickActionSubmissions", prefillKey: "prefillSubmissions"},
   ];
+
+  const PREFILL_KEYS = QUICK_ACTIONS.map((action) => action.prefillKey);
+
+  /** The governed prefill values actually delivered to this page, as a set. */
+  function governedPrefillValues() {
+    return new Set(PREFILL_KEYS.map((key) => STRINGS[key]).filter((value) => typeof value === "string" && value.length > 0));
+  }
+
+  // Build the number-based destination for one governed prefill. Encoding is
+  // done by URLSearchParams, never by hand: the governed strings contain commas,
+  // apostrophes and accented characters, and the locale data stores them
+  // unencoded exactly as Project 09 approved them.
+  function prefillDestination(message) {
+    if (!CONTACT.numberBaseUrl || !message) return null;
+    const url = new URL(CONTACT.numberBaseUrl);
+    url.searchParams.set("text", message);
+    return url.href;
+  }
+
+  // The complete set of destinations this launcher may navigate to: the
+  // governed short link, plus one number-form URL per governed prefill actually
+  // delivered to this page. Nothing else is ever produced, so nothing else is
+  // ever authorized.
+  function authorizedDestinations() {
+    const destinations = new Set([GOVERNED_WHATSAPP_URL]);
+    for (const message of governedPrefillValues()) {
+      const href = prefillDestination(message);
+      if (href) destinations.add(href);
+    }
+    return destinations;
+  }
+
+  // Authorization is exact equality against that set, not a component-by-
+  // component inspection. Enumerating components means keeping the enumeration
+  // exhaustive forever, and the parts a check forgets to look at are exactly
+  // where something rides along: userinfo, a fragment, an explicit port, a
+  // second parameter, a reordered query. Comparing whole serializations has no
+  // such list to keep complete.
+  //
+  // A spelling the URL parser normalizes onto a member of the set - an
+  // upper-case host, an explicit :443 - is authorized, and correctly so: it
+  // serializes to the same string, so it IS the same destination, not a second
+  // form of one. Anything that does not serialize identically is refused.
+  //
+  // That includes a different-but-equivalent encoding of the same governed
+  // message: URLSearchParams spells a space as a plus sign, and a percent-
+  // encoded spelling of the identical text is refused rather than decoded and
+  // compared. This is deliberate. Only prefillDestination ever writes this
+  // href, so the launcher can never produce the refused spelling, and decoding
+  // before comparing would put us back to inspecting parts. A refusal costs
+  // nothing anyway: the fallback is the governed short link.
+  function isAuthorizedDestination(href) {
+    if (typeof href !== "string" || !href) return false;
+    let normalized;
+    try {
+      normalized = new URL(href).href;
+    } catch {
+      return false;
+    }
+    return authorizedDestinations().has(normalized);
+  }
 
   function createWhatsAppControl(sourceAnchor) {
     const label = (sourceAnchor.textContent || "").trim();
@@ -693,24 +832,75 @@
 
     const actions = document.createElement("div");
     actions.className = "launcher-panel-actions";
-    const quickActions = QUICK_ACTION_KEYS.map((key) => createQuickAction(STRINGS[key]));
-    for (const action of quickActions) {
-      action.addEventListener("click", () => {
-        const selected = action.getAttribute("aria-pressed") === "true";
-        // Single-select: the panel records one intent at a time. This is local
-        // state that changes nothing about the outbound destination.
-        for (const other of quickActions) other.setAttribute("aria-pressed", "false");
-        action.setAttribute("aria-pressed", selected ? "false" : "true");
-      });
-      actions.append(action);
-    }
+    const quickActions = QUICK_ACTIONS.map(({labelKey, prefillKey}) => {
+      const button = createQuickAction(STRINGS[labelKey]);
+      button.dataset.prefillKey = prefillKey;
+      return button;
+    });
 
     const cta = document.createElement("a");
     cta.className = "launcher-panel-cta";
     cta.href = sourceAnchor.href;
     if (sourceAnchor.target) cta.target = sourceAnchor.target;
     if (sourceAnchor.rel) cta.rel = sourceAnchor.rel;
+    // The accessible name stays the governed "Open WhatsApp": the starter
+    // message is what gets sent, not what the control is called.
     cta.textContent = STRINGS.launcherPrimaryAction;
+
+    // Selecting an intent only rewrites where this one link points. Nothing is
+    // sent, and no navigation happens, until the visitor activates it.
+    function selectedPrefillKey() {
+      return quickActions.find((button) => button.getAttribute("aria-pressed") === "true")?.dataset.prefillKey || null;
+    }
+
+    function syncDestination() {
+      const key = selectedPrefillKey();
+      const candidate = key ? prefillDestination(STRINGS[key]) : null;
+      // No selection, no governed message, or no usable config: the incumbent
+      // short link, unchanged.
+      cta.href = candidate && isAuthorizedDestination(candidate) ? candidate : GOVERNED_WHATSAPP_URL;
+    }
+
+    for (const action of quickActions) {
+      action.addEventListener("click", () => {
+        const selected = action.getAttribute("aria-pressed") === "true";
+        // Single-select: the panel records one intent at a time.
+        for (const other of quickActions) other.setAttribute("aria-pressed", "false");
+        action.setAttribute("aria-pressed", selected ? "false" : "true");
+        syncDestination();
+      });
+      actions.append(action);
+    }
+
+    // Repair, then block - and across every activation path, not click alone.
+    // A middle click dispatches auxclick, and the context menu's "open in new
+    // tab" follows the anchor's href directly without dispatching any
+    // cancellable activation event at all, so a click-only recheck leaves both
+    // of those open. The href is therefore REPAIRED on every event that can
+    // precede an activation (pointerdown and mousedown before a middle click,
+    // contextmenu before the menu is drawn and reads the href, focus and
+    // keydown before Enter, dragstart before a link drag), in the capture
+    // phase so it runs before anything else on the element; and it is
+    // additionally CANCELLED on the two activation events that are
+    // cancellable. By the time any path reads the href, it is already one of
+    // the governed destinations.
+    function enforceAuthorizedDestination() {
+      if (isAuthorizedDestination(cta.href)) return true;
+      cta.href = GOVERNED_WHATSAPP_URL;
+      console.warn("A PRASA WhatsApp navigation blocked: destination is not one of the two governed forms.");
+      return false;
+    }
+
+    for (const type of ["pointerdown", "mousedown", "touchstart", "contextmenu", "focus", "keydown", "dragstart"]) {
+      cta.addEventListener(type, enforceAuthorizedDestination, true);
+    }
+    for (const type of ["click", "auxclick"]) {
+      cta.addEventListener(type, (event) => {
+        if (!enforceAuthorizedDestination()) event.preventDefault();
+      });
+    }
+
+    syncDestination();
 
     const close = document.createElement("button");
     close.type = "button";

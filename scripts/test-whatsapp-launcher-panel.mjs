@@ -14,7 +14,20 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { t } from './lib/locale.mjs';
-import { LAUNCHER_PANEL_KEYS } from './lib/runtime-strings.mjs';
+import { LAUNCHER_PANEL_KEYS, PREFILL_KEYS, QUICK_ACTION_PREFILL } from './lib/runtime-strings.mjs';
+import { findElementsById, isJsonIsland, hasUndecodedReference } from './lib/html-islands.mjs';
+
+// Read an island the way the runtime does: by id, first in document order.
+// Every read below goes through this, so a check can never be parsing a
+// different element than getElementById would return.
+function island(rel, id) {
+  const found = findElementsById(read(rel), id)[0];
+  if (!found) throw new Error(`${rel} carries no #${id} element`);
+  return found;
+}
+function islandJson(rel, id) {
+  return JSON.parse(island(rel, id).content);
+}
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const GOVERNED_WHATSAPP_URL = 'https://wa.me/message/GC3C5Q4MSF37I1';
@@ -29,6 +42,10 @@ function check(label, condition, detail) {
 }
 
 const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
+
+// The canonical number is read from the governed config, never restated here:
+// a copy in the tests would defeat the single-source rule it is meant to prove.
+const CONTACT = JSON.parse(read('data/contact-channels.json')).whatsapp;
 
 function walkHtml(dir, out = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -63,11 +80,28 @@ console.log(`[1] governed runtime-key delivery across ${surfaces.length} launche
 check('at least the four Home/Mindelo surfaces plus the generated pages exist', surfaces.length >= 30,
   `found ${surfaces.length}`);
 for (const rel of surfaces) {
-  const match = read(rel).match(/<script type="application\/json" id="i18n-strings">([\s\S]*?)<\/script>/);
-  check(`${rel} carries the governed runtime-strings block`, !!match);
-  if (!match) continue;
+  const html = read(rel);
+  // Both islands must be unique per surface, not merely present. getElementById
+  // returns the FIRST in document order, so a second island placed ahead of the
+  // generated one is what the runtime would actually read.
+  const stringIslands = findElementsById(html, 'i18n-strings');
+  check(`${rel} carries the governed runtime-strings block`, stringIslands.length >= 1);
+  check(`${rel} carries exactly one element with that id`, stringIslands.length <= 1,
+    `found ${stringIslands.length}: ${stringIslands.map((e) => e.tag).join(', ')}`);
+  // getElementById is not constrained by tag: an earlier <div id="i18n-strings">
+  // is what the runtime would receive. The element must BE the governed island.
+  check(`${rel} runtime-strings id belongs to a JSON script element`,
+    isJsonIsland(stringIslands[0]), stringIslands[0] && `found <${stringIslands[0].tag}>`);
+  // A governed page has no business carrying an entity-encoded id. If one
+  // survives decoding, refuse rather than compare a string the DOM will not see.
+  const encodedIds = [...html.matchAll(/\sid\s*=\s*(?:"([^"]*)"|'([^']*)')/g)]
+    .map((m) => m[1] ?? m[2])
+    .filter((value) => hasUndecodedReference(value));
+  check(`${rel} carries no undecodable character reference in an id`,
+    encodedIds.length === 0, encodedIds.length ? `found ${JSON.stringify(encodedIds)}` : undefined);
+  if (!stringIslands.length) continue;
   let block;
-  try { block = JSON.parse(match[1]); } catch (error) {
+  try { block = JSON.parse(stringIslands[0].content); } catch (error) {
     check(`${rel} runtime-strings block is valid JSON`, false, error.message);
     continue;
   }
@@ -79,7 +113,7 @@ for (const rel of surfaces) {
 // --- 2. PT never receives EN panel copy ------------------------------------
 console.log('[2] no English panel copy on any PT surface');
 for (const rel of surfaces.filter((r) => r.startsWith('pt/'))) {
-  const block = JSON.parse(read(rel).match(/id="i18n-strings">([\s\S]*?)<\/script>/)[1]);
+  const block = islandJson(rel, 'i18n-strings');
   for (const [runtimeKey, localeKey] of Object.entries(LAUNCHER_PANEL_KEYS)) {
     const en = t(localeKey, 'en');
     const pt = t(localeKey, 'pt');
@@ -170,7 +204,7 @@ for (const [name, source] of [['prasa-launch.js', launcherJs], ['mindelo-essenti
 // both its targets and their names.
 console.log('[7b] navigation-control surface contract');
 for (const rel of surfaces) {
-  const block = JSON.parse(read(rel).match(/id="i18n-strings">([\s\S]*?)<\/script>/)[1]);
+  const block = islandJson(rel, 'i18n-strings');
   const locale = rel.startsWith('pt/') ? 'pt' : 'en';
   check(`${rel} carries the governed Up label`,
     block.navBackToTop === t('ui.back_to_top', locale),
@@ -263,13 +297,400 @@ for (const css of ['prasa-launch.css', 'mindelo-essentials/mindelo-essentials.cs
     /\.floating-utility-whatsapp \{[\s\S]*?box-shadow:[\s\S]*?rgba\(246,240,226,/.test(text));
 }
 
+// --- 7c. WhatsApp quick-action prefill -------------------------------------
+console.log('[7c] governed prefill delivery, intent mapping and destination guard');
+
+// The number lives in exactly one place.
+check('config carries a canonical international number', /^[0-9]{8,15}$/.test(CONTACT.whatsapp_business_number),
+  JSON.stringify(CONTACT.whatsapp_business_number));
+check('config number_base_url derives from the number',
+  CONTACT.number_base_url === `https://wa.me/${CONTACT.whatsapp_business_number}`);
+check('config display and digits agree',
+  (CONTACT.display || '').replace(/\D/g, '') === CONTACT.whatsapp_business_number);
+check('config short_link is the incumbent governed short code',
+  CONTACT.short_link === GOVERNED_WHATSAPP_URL);
+// No independent literal of the number anywhere else. This walks the whole
+// repository rather than a hand-listed set of files: a list has to be
+// remembered, and the single-source rule is worth nothing if introducing the
+// digits into a new generator, validator, fixture or data file leaves the
+// tripwire green. The only two places the digits may appear are the governed
+// config itself, and the derived #contact-config island inside generated HTML
+// -- and in HTML they may appear ONLY inside that island, so a hand-authored
+// page cannot carry them either.
+const SKIP_DIRS = new Set(['.git', 'node_modules', 'validation-artifacts', '.netlify']);
+
+// Binary files are identified by CONTENT, not by extension. An extension
+// allow/deny list is the same shape of mistake as enumerating URL components:
+// it has to stay exhaustive forever, and the entry it is missing is exactly
+// where the thing hides. Classifying .svg as binary was that mistake in this
+// very check - SVG is text/XML and can carry the digits in a <text> node, a
+// link, metadata or a comment.
+//
+// A NUL byte in the first 8 KiB is the same heuristic git and grep use to call
+// a file binary, and it needs no list: a text format nobody anticipated is
+// scanned by default rather than skipped by default.
+function isBinary(rel) {
+  const fd = fs.openSync(path.join(root, rel), 'r');
+  try {
+    const buffer = Buffer.alloc(8192);
+    const bytes = fs.readSync(fd, buffer, 0, 8192, 0);
+    return buffer.subarray(0, bytes).includes(0);
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
+function walk(dir, out = []) {
+  for (const entry of fs.readdirSync(path.join(root, dir || '.'), {withFileTypes: true})) {
+    const rel = dir ? `${dir}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) {
+      if (!SKIP_DIRS.has(entry.name)) walk(rel, out);
+    } else if (entry.isFile() && !isBinary(rel)) {
+      out.push(rel);
+    }
+  }
+  return out;
+}
+
+const digits = CONTACT.whatsapp_business_number;
+
+// Searching for the bare digit string is not enough. The number a maintainer
+// is most likely to write by hand is the VISIBLE one - the spelling this
+// config carries as `display`, with its spaces and leading plus - in a badge,
+// a page, or documentation. (It is deliberately not quoted here: this file is
+// scanned too, and writing it out would trip the very check below. That it
+// WOULD trip it is the point.) That is exactly the second, independently
+// maintained copy the
+// single-source rule exists to prevent, and the unformatted search walks
+// straight past it.
+//
+// So the digits are matched separator-tolerantly: the same digits in the same
+// order, allowing the characters a human formats a phone number with between
+// them. Built from `digits` rather than written out, so it cannot drift from
+// the config.
+//
+// Two normalizations run before matching, because the separator a maintainer
+// actually types is often not a literal character in the source:
+//
+//   * Character references. In HTML the visible number is plausibly written
+//     with &nbsp; or &#160; between groups, which is six-plus source
+//     characters INCLUDING LETTERS - no separator class can match that.
+//     Numeric references are decoded properly (they can encode digits, so
+//     they must not simply be dropped); named references are replaced with a
+//     space, which needs no table of entity names because no named reference
+//     produces a digit.
+//   * Unicode categories, not a hand-listed set of punctuation. \p{Zs} covers
+//     every space separator including NBSP, \p{Pd} every dash including the
+//     non-breaking hyphen U+2011 that word processors paste, and \p{Cf} every
+//     invisible formatting character including the soft hyphen. Listing
+//     characters individually is the enumeration mistake this review has
+//     already found twice.
+const NUMERIC_REFERENCE = /&#(x[0-9a-f]+|[0-9]+);/gi;
+const NAMED_REFERENCE = /&[a-z][a-z0-9]{1,31};/gi;
+
+// Any Unicode decimal digit -> its ASCII value. Derived, not tabulated, but the
+// derivation is run-relative rather than block-relative, and the difference
+// matters: SOME Nd BLOCKS ARE ADJACENT. Walking back to "the first code point
+// whose predecessor is not a digit" therefore does not find the block's zero -
+// U+116D0..U+116E3 is a single 20-long run of two blocks, and
+// U+1D7CE..U+1D7FF is a 50-long run of five mathematical digit blocks. A
+// backward walk crosses them and yields the wrong value, or no value at all.
+//
+// What IS reliable, verified against all 770 Nd code points in 72 maximal runs:
+// every run's length is a multiple of ten, and digits are laid out in aligned
+// groups of ten from the run's start. So the value is the offset into the run,
+// modulo ten.
+function toAsciiDigits(text) {
+  return text.replace(/\p{Nd}/gu, (character) => {
+    const code = character.codePointAt(0);
+    let start = code;
+    while (start > 0 && /\p{Nd}/u.test(String.fromCodePoint(start - 1))) start -= 1;
+    return String((code - start) % 10);
+  });
+}
+
+function normalizeForNumberSearch(source) {
+  const decoded = source
+    .replace(NUMERIC_REFERENCE, (_, code) => {
+      const value = code[0].toLowerCase() === 'x' ? parseInt(code.slice(1), 16) : parseInt(code, 10);
+      return Number.isFinite(value) && value >= 0 && value <= 0x10ffff ? String.fromCodePoint(value) : ' ';
+    })
+    .replace(NAMED_REFERENCE, ' ');
+  return toAsciiDigits(decoded.normalize('NFKC'));
+}
+
+// A visible number can also be split by MARKUP rather than by characters:
+// +238<span>597</span><span>97</span>. The tag names sit between the digits and
+// no separator class can match them, because they are not separators - they are
+// elements. So the scan also runs against the RENDERED text.
+//
+// This view is scoped to markup documents, and that is not the enumeration
+// mistake wearing a new hat. "Rendered text" is only defined for something that
+// gets rendered: a .mjs file is never parsed as markup, so stripping tag-shaped
+// substrings out of it invents text that does not exist anywhere. It also
+// invents matches: a pair of ordinary comparison operators in source code, with
+// the number's leading group on one side and its trailing group on the other,
+// reduces to those two groups separated by spaces - which reads as the governed
+// number and fails validation on an entirely unrelated source change. (Spelling
+// that example out here would itself trip the check below, which is the point.)
+//
+// Nothing loses coverage, because this is an ADDITIONAL view: the raw scan,
+// with entity decoding, digit canonicalization and the separator class, still
+// runs over every text file in the repository. Only the rendered view is
+// scoped, and only to the formats where rendering is a real thing.
+const MARKUP_FILE = /\.(html?|svg|xml|xhtml|md|markdown)$/i;
+// Requires a real tag name after "<", so a comparison operator is not a tag.
+const HTML_TAG = /<\/?[a-zA-Z][-\w:]*(?:\s[^<>]*)?\/?>/g;
+
+function stripTags(text) {
+  return text.replace(HTML_TAG, ' ');
+}
+
+const SEPARATORS = '[\\s\\p{Zs}\\p{Pd}\\p{Cf}().]{0,3}';
+const FORMATTED = new RegExp(digits.split('').join(SEPARATORS), 'u');
+
+const scanned = walk('');
+const offenders = [];
+const duplicateIslands = [];
+const shadowedIslands = [];
+for (const rel of scanned) {
+  if (rel === 'data/contact-channels.json') continue;
+  let source;
+  try {
+    source = read(rel);
+  } catch {
+    continue;
+  }
+  if (rel.endsWith('.html')) {
+    // The derived island is legitimate - but exactly ONE of it, and located the
+    // way the runtime locates it. Islands are matched by parsed tag and id, so
+    // attribute order, quote style and whitespace cannot spell one past this.
+    const islands = findElementsById(source, 'contact-config');
+    if (islands.length > 1) duplicateIslands.push(`${rel} (${islands.length}: ${islands.map((e) => e.tag).join(', ')})`);
+    if (islands.length && !isJsonIsland(islands[0])) {
+      shadowedIslands.push(`${rel} (<${islands[0].tag}> shadows the island)`);
+    }
+    // Strip exactly the one getElementById would return - the FIRST in document
+    // order. Any further island is then scanned as ordinary page text, and its
+    // digits are caught.
+    if (islands.length) source = source.replace(islands[0].raw, '');
+  }
+  const normalized = normalizeForNumberSearch(source);
+  let leaked = normalized.includes(digits) || FORMATTED.test(normalized);
+  if (!leaked && MARKUP_FILE.test(rel)) {
+    const rendered = normalizeForNumberSearch(stripTags(source));
+    leaked = rendered.includes(digits) || FORMATTED.test(rendered);
+  }
+  if (leaked) offenders.push(rel);
+}
+check('the canonical number is restated nowhere outside its governed config',
+  offenders.length === 0, offenders.length ? `found in: ${offenders.join(', ')}` : undefined);
+check('no page carries more than one element with the contact-config id',
+  duplicateIslands.length === 0,
+  duplicateIslands.length ? `duplicated in: ${duplicateIslands.join(', ')}` : undefined);
+check('the contact-config id always belongs to a JSON script element',
+  shadowedIslands.length === 0,
+  shadowedIslands.length ? `shadowed in: ${shadowedIslands.join(', ')}` : undefined);
+// The separator-aware search is only worth anything if it actually matches the
+// formatted spelling; assert it against the config's own display value.
+// --- Parser parity with a real browser ------------------------------------
+// The point of this module is to resolve elements the way getElementById does.
+// "The way getElementById does" is a measurable fact, not a thing to reason
+// about, so each expected count below was MEASURED against Chromium via
+// document.querySelectorAll('[id="i18n-strings"]') on the same markup, and the
+// parser agreed on all twenty.
+//
+// The measurement cannot run here - CI installs no browser - so the measured
+// answers are pinned instead. If a future change makes the parser disagree
+// with one of these, it has stopped modelling the DOM, which is the only thing
+// it is for. Re-measure rather than adjust an expectation to fit.
+//
+// Two results worth keeping visible because they are counter-intuitive:
+//   * a numeric reference decodes WITHOUT its trailing semicolon, so
+//     id="i18n&#45strings" IS id="i18n-strings" to the DOM;
+//   * a double-encoded &amp;#45; does NOT decode, so it stays a distinct id.
+{
+  const ISLAND = '<script type="application/json" id="i18n-strings">{}</script>';
+  const MEASURED = [
+    ['canonical only', ISLAND, 1],
+    ['decimal reference with semicolon', `<div id="i18n&#45;strings"></div>${ISLAND}`, 2],
+    ['decimal reference without semicolon', `<div id="i18n&#45strings"></div>${ISLAND}`, 2],
+    ['hex reference with semicolon', `<div id="i18n&#x2D;strings"></div>${ISLAND}`, 2],
+    ['hex reference without semicolon', `<div id="i18n&#x2Dstrings"></div>${ISLAND}`, 2],
+    ['uppercase X hex reference', `<div id="i18n&#X2D;strings"></div>${ISLAND}`, 2],
+    ['leading zeros', `<div id="i18n&#0000045;strings"></div>${ISLAND}`, 2],
+    ['double-encoded reference stays distinct', `<div id="i18n&amp;#45;strings"></div>${ISLAND}`, 1],
+    ['named reference to a non-ASCII hyphen stays distinct', `<div id="i18n&hyphen;strings"></div>${ISLAND}`, 1],
+    ['plain duplicate div', `<div id="i18n-strings"></div>${ISLAND}`, 2],
+    ['single-quoted id', `<div id='i18n-strings'></div>${ISLAND}`, 2],
+    ['unquoted id', `<div id=i18n-strings></div>${ISLAND}`, 2],
+    ['duplicate attribute keeps the first', `<div id="i18n-strings" id="other"></div>${ISLAND}`, 2],
+    ['inside an HTML comment', `<!-- <div id="i18n-strings"></div> -->${ISLAND}`, 1],
+    ['inside a template', `<template><div id="i18n-strings"></div></template>${ISLAND}`, 1],
+    ['inside a script string literal', `<script>const s='<div id="i18n-strings">';</script>${ISLAND}`, 1],
+    ['inside a style body', `<style>/* <div id="i18n-strings"> */</style>${ISLAND}`, 1],
+    ['attribute value containing >', `<div data-x="a>b" id="i18n-strings"></div>${ISLAND}`, 2],
+    ['closing tag with a space', '<script type="application/json" id="i18n-strings">{}</script >', 1],
+    ['uppercase tag and attribute name', `<DIV ID="i18n-strings"></DIV>${ISLAND}`, 2],
+  ];
+  for (const [label, html, expected] of MEASURED) {
+    const found = findElementsById(html, 'i18n-strings').length;
+    check(`parser matches the DOM: ${label}`, found === expected, `found ${found}, browser gives ${expected}`);
+  }
+  check('an undecodable reference in an id is reported',
+    hasUndecodedReference('i18n&nbsp;strings') && !hasUndecodedReference('i18n-strings'));
+}
+
+check('the scan recognizes the formatted spelling of the number',
+  FORMATTED.test(CONTACT.display), `display ${JSON.stringify(CONTACT.display)} not matched`);
+// The normalization is only worth anything if it actually normalizes. These
+// assert the two classes Codex demonstrated, built from `digits` so they
+// cannot drift from the config.
+const spaced = digits.slice(0, 3) + '\u00a0' + digits.slice(3);
+check('the scan sees a number separated by a non-breaking space',
+  FORMATTED.test(normalizeForNumberSearch(spaced)));
+check('the scan sees a number separated by a named character reference',
+  FORMATTED.test(normalizeForNumberSearch(digits.slice(0, 3) + '&nbsp;' + digits.slice(3))));
+check('the scan sees a number separated by a numeric character reference',
+  FORMATTED.test(normalizeForNumberSearch(digits.slice(0, 3) + '&#160;' + digits.slice(3))));
+check('the scan sees a number separated by a non-breaking hyphen',
+  FORMATTED.test(normalizeForNumberSearch(digits.slice(0, 3) + '\u2011' + digits.slice(3))));
+check('the scan sees digits written as numeric character references',
+  normalizeForNumberSearch(digits.split('').map((d) => `&#${d.charCodeAt(0)};`).join('')).includes(digits));
+// Compatibility and non-ASCII digit forms, all derived from `digits`.
+const fullwidth = digits.replace(/[0-9]/g, (d) => String.fromCodePoint(0xff10 + Number(d)));
+const arabicIndic = digits.replace(/[0-9]/g, (d) => String.fromCodePoint(0x0660 + Number(d)));
+const devanagari = digits.replace(/[0-9]/g, (d) => String.fromCodePoint(0x0966 + Number(d)));
+check('the scan sees fullwidth digits', normalizeForNumberSearch(fullwidth).includes(digits));
+check('the scan sees Arabic-Indic digits', normalizeForNumberSearch(arabicIndic).includes(digits));
+check('the scan sees Devanagari digits', normalizeForNumberSearch(devanagari).includes(digits));
+check('the scan sees superscript digits',
+  normalizeForNumberSearch('\u00b2\u00b3\u2078').includes('238'));
+// A visible number split across markup, which is what a reader actually sees.
+check('the scan sees a number split across markup',
+  FORMATTED.test(normalizeForNumberSearch(stripTags(
+    `${digits.slice(0, 3)}<span>${digits.slice(3, 6)}</span><span>${digits.slice(6)}</span>`))));
+// ...and does NOT invent one out of comparison operators in source code, which
+// is what stripping tag-shaped substrings out of non-markup would do.
+check('tag stripping does not invent a number from comparison operators',
+  !FORMATTED.test(normalizeForNumberSearch(stripTags(
+    `const low = ${digits.slice(0, 3)} < value; const high = value > ${digits.slice(3)};`))));
+check('the rendered view is scoped to markup documents',
+  MARKUP_FILE.test('a/b.html') && MARKUP_FILE.test('a/b.svg') && MARKUP_FILE.test('a/b.md')
+    && !MARKUP_FILE.test('a/b.mjs') && !MARKUP_FILE.test('a/b.json'));
+// Adjacent Nd blocks: the run-relative derivation must handle them.
+const mathBold = digits.replace(/[0-9]/g, (d) => String.fromCodePoint(0x1d7ce + Number(d)));
+const adjacentBlock = digits.replace(/[0-9]/g, (d) => String.fromCodePoint(0x116da + Number(d)));
+check('the scan sees mathematical digits from a multi-block Nd run',
+  normalizeForNumberSearch(mathBold).includes(digits));
+check('the scan sees digits from a block adjacent to another Nd block',
+  normalizeForNumberSearch(adjacentBlock).includes(digits));
+// The scan is only worth anything if it actually reached the source tree.
+check('the single-source scan covered the repository',
+  scanned.length > 100 && scanned.includes('prasa-launch.js')
+    && scanned.includes('mindelo-essentials/mindelo-essentials.js')
+    && scanned.includes('scripts/test-whatsapp-launcher-panel.mjs'),
+  `scanned ${scanned.length} file(s)`);
+// Text formats that look asset-shaped are the easy ones to skip by mistake.
+check('the scan reaches text assets such as SVG',
+  scanned.some((rel) => rel.endsWith('.svg')),
+  'no .svg file was scanned');
+
+// All four prefills reach every surface, in that surface's own locale.
+for (const rel of surfaces) {
+  const block = islandJson(rel, 'i18n-strings');
+  const locale = rel.startsWith('pt/') ? 'pt' : 'en';
+  for (const [runtimeKey, localeKey] of Object.entries(PREFILL_KEYS)) {
+    check(`${rel} carries governed ${runtimeKey}`, block[runtimeKey] === t(localeKey, locale),
+      `got ${JSON.stringify(block[runtimeKey])}`);
+    if (locale === 'pt') {
+      check(`${rel} ${runtimeKey} is not the English fallback`, block[runtimeKey] !== t(localeKey, 'en'));
+    }
+  }
+  // The derived destinations island, from the one governed source.
+  const cfg = islandJson(rel, 'contact-config');
+  check(`${rel} carries the governed short link`, cfg.shortLink === GOVERNED_WHATSAPP_URL);
+  check(`${rel} carries the derived number destination`, cfg.numberBaseUrl === CONTACT.number_base_url);
+  check(`${rel} exposes no other contact config`, Object.keys(cfg).sort().join(',') === 'numberBaseUrl,shortLink');
+}
+
+// Intent mapping: one action, one prefill, no cross-wiring.
+const mappingPairs = Object.entries(QUICK_ACTION_PREFILL);
+check('exactly four quick actions are mapped', mappingPairs.length === 4);
+check('every mapped prefill is a governed prefill key',
+  mappingPairs.every(([, prefill]) => prefill in PREFILL_KEYS));
+check('the mapping is injective (no two actions share a prefill)',
+  new Set(mappingPairs.map(([, p]) => p)).size === mappingPairs.length);
+for (const [action, prefill] of mappingPairs) {
+  const suffix = action.replace('launcherQuickAction', '').toLowerCase();
+  check(`${action} maps to the matching ${prefill}`, prefill.toLowerCase() === `prefill${suffix}`);
+  check(`${prefill} resolves to its own governed key`,
+    PREFILL_KEYS[prefill] === `runtime.whatsapp_launcher.prefill.${suffix}`);
+}
+
+// Runtime contract: encoding, the two authorized forms, and fail-closed.
+for (const [name, source] of [['prasa-launch.js', launcherJs], ['mindelo-essentials.js', mindeloJs]]) {
+  check(`${name} builds the destination with URLSearchParams, not concatenation`,
+    /url\.searchParams\.set\("text", message\)/.test(source));
+  check(`${name} never concatenates the text parameter by hand`,
+    !/\?text=/.test(source) && !/encodeURIComponent/.test(source));
+  check(`${name} reads the number from the config island only`,
+    /CONTACT\.numberBaseUrl/.test(source) && /governedIslandNode\("contact-config"\)/.test(source));
+  // getElementById is not tag-constrained, so the runtime must not trust what it
+  // returns: exactly one element may carry the id and it must BE a JSON script.
+  check(`${name} refuses a governed island that is not uniquely a JSON script`,
+    /const matches = document\.querySelectorAll\('\[id="' \+ id \+ '"\]'\);/.test(source)
+    && /if \(matches\.length !== 1\)/.test(source)
+    && /node\.tagName !== "SCRIPT"/.test(source)
+    && /"application\/json"/.test(source));
+  check(`${name} routes every governed island read through that check`,
+    !/getElementById\("contact-config"\)/.test(source)
+    && !/getElementById\("i18n-strings"\)/.test(source));
+  check(`${name} rejects a config whose short link disagrees`,
+    /supplied\.shortLink !== GOVERNED_WHATSAPP_URL/.test(source));
+  check(`${name} validates the configured number destination shape`,
+    /\^https:\\\/\\\/wa\\\.me\\\/\[0-9\]\{8,15\}\$/.test(source));
+  // Authorization is exact equality against the set of destinations this
+  // launcher can itself produce -- not an enumeration of URL components. An
+  // enumeration has to stay exhaustive forever, and userinfo, a fragment and an
+  // explicit port each slipped past the component form of this check.
+  check(`${name} builds the authorized set from the governed prefills`,
+    /function authorizedDestinations\(\)/.test(source)
+    && /new Set\(\[GOVERNED_WHATSAPP_URL\]\)/.test(source)
+    && /for \(const message of governedPrefillValues\(\)\)/.test(source));
+  check(`${name} authorizes by whole-URL serialization`,
+    /return authorizedDestinations\(\)\.has\(normalized\);/.test(source)
+    && /normalized = new URL\(href\)\.href;/.test(source));
+  check(`${name} no longer authorizes by component inspection`,
+    !/url\.origin !== base\.origin/.test(source)
+    && !/searchParams\.get\("text"\)/.test(source));
+  check(`${name} falls back to the short link without a selection`,
+    /: GOVERNED_WHATSAPP_URL;/.test(source));
+  // Click alone is not every activation path: a middle click dispatches
+  // auxclick, and the context menu's "open in new tab" follows the href with no
+  // cancellable event at all. The href is repaired ahead of the paths that
+  // cannot be cancelled, and cancelled on the two that can.
+  check(`${name} repairs the destination before every activation path`,
+    /for \(const type of \["pointerdown", "mousedown", "touchstart", "contextmenu", "focus", "keydown", "dragstart"\]\)/.test(source)
+    && /cta\.addEventListener\(type, enforceAuthorizedDestination, true\);/.test(source));
+  check(`${name} cancels both cancellable activation events`,
+    /for \(const type of \["click", "auxclick"\]\)/.test(source)
+    && /if \(!enforceAuthorizedDestination\(\)\) event\.preventDefault\(\);/.test(source));
+  check(`${name} reverts an unauthorized destination to the short link`,
+    /cta\.href = GOVERNED_WHATSAPP_URL;[\s\S]{0,200}return false;/.test(source));
+  check(`${name} excludes its own CTA from the incumbent anchor guard`,
+    /!anchor\.closest\("\[data-floating-utilities\]"\)/.test(source));
+  check(`${name} keeps the governed CTA accessible name`,
+    /launcherPrimaryAction/.test(source));
+}
+
 // --- 8. Generated output remains deterministic -----------------------------
 // The block is a JSON island: key order and spacing must be stable, or every
 // rebuild would churn 32 files. Assert the serialization is canonical rather
 // than re-running the generators here (build-all is exercised separately).
 console.log('[8] governed block serialization is canonical and stable');
 for (const rel of surfaces) {
-  const raw = read(rel).match(/id="i18n-strings">([\s\S]*?)<\/script>/)[1];
+  const raw = island(rel, 'i18n-strings').content;
   check(`${rel} block is emitted on a single line`, !/\n/.test(raw));
   // Byte-identical round-trip is the real determinism property: it proves the
   // block is canonical compact JSON.stringify output, so a rebuild cannot

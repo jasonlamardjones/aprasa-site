@@ -30,6 +30,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { t, hasKey } from './lib/locale.mjs';
+import { findElementsById, isJsonIsland, hasUndecodedReference } from './lib/html-islands.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const errors = [];
@@ -72,7 +73,17 @@ const GOVERNED_NAV = {
   navScrollDown: 'ui.scroll_down',
 };
 
-const GOVERNED = { ...GOVERNED_MEDIA, ...GOVERNED_LAUNCHER, ...GOVERNED_NAV };
+// Quick-action starter messages (Project 09 r19). Delivered to every launcher
+// surface: the panel exists on all of them, so the prefill for each action must
+// resolve in that surface's own locale.
+const GOVERNED_PREFILL = {
+  prefillShare: 'runtime.whatsapp_launcher.prefill.share',
+  prefillCorrection: 'runtime.whatsapp_launcher.prefill.correction',
+  prefillQuestion: 'runtime.whatsapp_launcher.prefill.question',
+  prefillSubmissions: 'runtime.whatsapp_launcher.prefill.submissions',
+};
+
+const GOVERNED = { ...GOVERNED_MEDIA, ...GOVERNED_LAUNCHER, ...GOVERNED_NAV, ...GOVERNED_PREFILL };
 
 // Mindelo Essentials' own runtime strings, written into the same block by
 // scripts/build-mindelo-pt.mjs under that script's contract. Listed explicitly
@@ -103,13 +114,39 @@ const runtime = fs.readFileSync(path.join(root, 'prasa-launch.js'), 'utf8');
 
 function readBlock(relative) {
   const html = fs.readFileSync(path.join(root, relative), 'utf8');
-  const match = html.match(/<script type="application\/json" id="i18n-strings">([\s\S]*?)<\/script>/);
-  if (!match) {
+  // Located by parsed tag and id, in document order - the way the runtime's
+  // getElementById locates it. An exact-order regex here would read a
+  // different element than the browser does the moment a second island is
+  // written with its attributes the other way round, which is precisely how a
+  // check can stay green while the page ships something else.
+  // Any element carrying the id, whatever its tag: getElementById is not
+  // constrained by tag name, so an earlier <div id="i18n-strings"> is what the
+  // runtime would receive even with every <script> spelled correctly.
+  const islands = findElementsById(html, 'i18n-strings');
+  if (!islands.length) {
     errors.push(`${relative}: governed runtime-strings block is missing`);
     return null;
   }
+  if (islands.length > 1) {
+    errors.push(`${relative}: ${islands.length} elements carry the runtime-strings id (${islands.map((e) => e.tag).join(', ')}); the runtime reads only the first`);
+    return null;
+  }
+  if (!isJsonIsland(islands[0])) {
+    errors.push(`${relative}: the runtime-strings id belongs to <${islands[0].tag}>, not a JSON script element`);
+    return null;
+  }
+  // The DOM decodes character references in attribute values. If one survives
+  // decoding here, this check and the browser are comparing different strings -
+  // refuse the page rather than guess which.
+  const encodedIds = [...html.matchAll(/\sid\s*=\s*(?:"([^"]*)"|'([^']*)')/g)]
+    .map((match) => match[1] ?? match[2])
+    .filter((value) => hasUndecodedReference(value));
+  if (encodedIds.length) {
+    errors.push(`${relative}: undecodable character reference in an id: ${JSON.stringify(encodedIds)}`);
+    return null;
+  }
   try {
-    return JSON.parse(match[1]);
+    return JSON.parse(islands[0].content);
   } catch (error) {
     errors.push(`${relative}: governed runtime-strings block is not valid JSON: ${error.message}`);
     return null;
@@ -205,7 +242,7 @@ for (const relative of surfaces) {
   // unchecked, which is precisely what the unknown-key rule below exists to
   // stop.
   const carriesMindeloRuntime = /mindelo-essentials\.js/.test(html);
-  const expected = { ...GOVERNED_LAUNCHER, ...GOVERNED_NAV, ...(isHome ? GOVERNED_MEDIA : {}) };
+  const expected = { ...GOVERNED_LAUNCHER, ...GOVERNED_NAV, ...GOVERNED_PREFILL, ...(isHome ? GOVERNED_MEDIA : {}) };
 
   const block = readBlock(relative);
   if (!block) continue;

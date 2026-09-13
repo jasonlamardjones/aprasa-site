@@ -1,0 +1,27 @@
+{
+  "_comment": [
+    "Authoritative A PRASA contact-channel configuration.",
+    "",
+    "This file is the single source for the canonical WhatsApp Business number.",
+    "The number must never be repeated as an independent literal in runtime code,",
+    "generators or tests: every derived URL is built from the value here, and the",
+    "tests assert against this file rather than a copy of it.",
+    "",
+    "Two destination forms are authorized for this one account, and only two:",
+    "  short_link  - the incumbent governed short code. Used when the visitor opens",
+    "                the panel without selecting a quick action. Unchanged since the",
+    "                floating launcher shipped.",
+    "  number      - the canonical international digits, used to build",
+    "                https://wa.me/<number>?text=<governed prefill> when a quick",
+    "                action IS selected.",
+    "Both resolve to the same A PRASA WhatsApp Business account."
+  ],
+  "whatsapp": {
+    "whatsapp_business_number": "2385979776",
+    "display": "+238 597 97 76",
+    "short_link": "https://wa.me/message/GC3C5Q4MSF37I1",
+    "number_base_url": "https://wa.me/2385979776",
+    "source": "Founder-supplied A PRASA WhatsApp Business profile screenshot, 13 September 2026",
+    "verified_on": "2026-09-13"
+  }
+}

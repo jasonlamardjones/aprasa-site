@@ -76,6 +76,7 @@ const DELTA15_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r15-weekly-o
 const DELTA16_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r16-provider-media-alt.source.json");
 const DELTA17_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r17-runtime-whatsapp-launcher.source.json");
 const DELTA18_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r18-ui-scroll-down.source.json");
+const DELTA19_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r19-runtime-whatsapp-prefill.source.json");
 const LOCALE_DIR = path.join(ROOT, "data", "locales");
 const OUT_PATH = path.join(ROOT, "data", "locales", "locale-data.generated.json");
 
@@ -2036,6 +2037,139 @@ if (delta18Unchanged !== EXPECTED_DELTA18.intentionally_unchanged) {
   fail(`r18 intentionally_unchanged mismatch: got ${delta18Unchanged}`);
 }
 
+// --- r19 delta: additive merge for the WhatsApp quick-action prefills -------
+// Four starter messages, one per governed quick action. There is deliberately
+// no fifth generic message: a visitor who selects nothing keeps the incumbent
+// short-link destination. Same strictly additive lane as r17/r18.
+const EXPECTED_DELTA19 = {
+  package_id: "aprasa-pt-runtime-whatsapp-prefill",
+  revision_class: "ADDITIVE_RUNTIME_KEYS",
+  source_revision: "P09-PT-RUNTIME-WHATSAPP-PREFILL-2026-09-13-r1",
+  previous_revision: "P09-PT-UI-SCROLL-DOWN-2026-09-13-r1",
+  row_count: 4,
+  approved: 4,
+  required_for_pt_launch: 4,
+  intentionally_unchanged: 0,
+  review_required: 0,
+};
+
+// The four authorized keys, pinned. A fifth prefill would be an ungoverned
+// generic message, which this tranche explicitly refuses.
+const DELTA19_KEYS = new Set([
+  "runtime.whatsapp_launcher.prefill.share",
+  "runtime.whatsapp_launcher.prefill.correction",
+  "runtime.whatsapp_launcher.prefill.question",
+  "runtime.whatsapp_launcher.prefill.submissions",
+]);
+
+const delta19 = JSON.parse(readFileSync(DELTA19_PATH, "utf8"));
+
+for (const field of ["package_id", "revision_class", "source_revision", "previous_revision"]) {
+  if (delta19[field] !== EXPECTED_DELTA19[field]) {
+    fail(`r19 ${field} mismatch: got ${JSON.stringify(delta19[field])}, expected ${JSON.stringify(EXPECTED_DELTA19[field])}`);
+  }
+}
+if (delta19.project_09_status !== "approved") {
+  fail(`r19 Project 09 status is not approved: ${JSON.stringify(delta19.project_09_status)}`);
+}
+if (!Array.isArray(delta19.rows) || delta19.rows.length !== EXPECTED_DELTA19.row_count) {
+  fail(`r19 row count mismatch: got ${delta19.rows?.length}, expected ${EXPECTED_DELTA19.row_count}`);
+}
+if (delta19.supplied_rows_approved !== EXPECTED_DELTA19.approved) {
+  fail(`r19 supplied_rows_approved mismatch: got ${delta19.supplied_rows_approved}`);
+}
+if (delta19.review_required !== EXPECTED_DELTA19.review_required
+  || delta19.blocking_issue != null
+  || delta19.semantic_escalations_required !== 0) {
+  fail("r19 has unresolved localization review state");
+}
+if (delta19.missing_or_unaccounted_row_count !== 0) {
+  fail(`r19 missing_or_unaccounted_row_count is non-zero: ${delta19.missing_or_unaccounted_row_count}`);
+}
+for (const listField of ["duplicate_keys", "placeholder_mismatches", "a_prasa_to_a_praca_violations"]) {
+  if ((delta19[listField] || []).length !== 0) fail(`r19 ${listField} is non-empty: ${JSON.stringify(delta19[listField])}`);
+}
+if (delta19.source_english_changed !== false || delta19.change_control_status?.existing_keys_overridden !== 0) {
+  fail("r19 declares a non-additive change (source_english_changed/existing_keys_overridden)");
+}
+if (delta19.change_control_status?.new_keys_introduced !== EXPECTED_DELTA19.row_count) {
+  fail(`r19 new_keys_introduced mismatch: got ${delta19.change_control_status?.new_keys_introduced}`);
+}
+if (delta19.change_control_status?.lifecycle_or_publication_state_modified !== 0) {
+  fail("r19 must not modify lifecycle or publication state");
+}
+if (delta19.semantic_change !== false) {
+  fail("r19 declares a semantic change; this package is runtime presentation copy only");
+}
+if (delta19.target_language !== "pt") {
+  fail(`r19 target_language mismatch: got ${JSON.stringify(delta19.target_language)}`);
+}
+
+let delta19Required = 0;
+let delta19Unchanged = 0;
+const delta19Seen = new Set();
+for (const row of delta19.rows) {
+  if (seen.has(row.key)) {
+    fail(`r19 key "${row.key}" collides with an existing key — r19 must be strictly additive`);
+  }
+  seen.add(row.key);
+
+  if (row.record_id != null) fail(`r19 key "${row.key}" is record-scoped; this package carries no record copy`);
+  if (!DELTA19_KEYS.has(row.key)) {
+    fail(`r19 key "${row.key}" is outside the four authorized quick-action prefill keys`);
+  }
+  if (delta19Seen.has(row.key)) fail(`r19 declares "${row.key}" more than once`);
+  delta19Seen.add(row.key);
+  if (row.source_revision !== EXPECTED_DELTA19.source_revision) fail(`r19 ${row.key} source_revision mismatch`);
+  if (row.translation_status !== "APPROVED") fail(`r19 key "${row.key}" is not APPROVED`);
+
+  if (row.scope_status === "REQUIRED_FOR_PT_LAUNCH") delta19Required += 1;
+  else if (row.scope_status === "INTENTIONALLY_UNCHANGED") delta19Unchanged += 1;
+  else fail(`r19 key "${row.key}" has invalid scope_status`);
+
+  if (row.scope_status === "REQUIRED_FOR_PT_LAUNCH" && (row.pt == null || row.pt === "")) {
+    fail(`r19 REQUIRED_FOR_PT_LAUNCH key "${row.key}" has no PT value`);
+  }
+  if (!row.source_en) fail(`r19 key "${row.key}" is missing approved English text`);
+  const enPlaceholders = (row.source_en.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+  const ptPlaceholders = (row.pt.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+  if (JSON.stringify(enPlaceholders) !== JSON.stringify(ptPlaceholders)) {
+    fail(`r19 key "${row.key}" placeholder mismatch`);
+  }
+  if ([row.source_en, row.pt].some((value) => value.includes("A PRAÇA"))) {
+    fail(`r19 key "${row.key}" violates protected A PRASA brand spelling`);
+  }
+  // The governed source channel is part of the approved copy in both locales.
+  for (const [locale, value] of [["EN", row.source_en], ["PT", row.pt]]) {
+    if (!value.includes("aprasa.org")) {
+      fail(`r19 key "${row.key}" ${locale} value drops the governed aprasa.org source channel`);
+    }
+  }
+
+  keys[row.key] = {
+    key: row.key,
+    en: row.source_en,
+    pt: row.pt,
+    scope_status: row.scope_status,
+    identity_policy: row.identity_policy,
+    record_id: row.record_id,
+    translation_status: row.translation_status,
+    source_revision: row.source_revision,
+    context_notes: row.context_notes || "",
+    linguistic_notes: row.linguistic_notes || "",
+  };
+}
+
+for (const key of DELTA19_KEYS) {
+  if (!delta19Seen.has(key)) fail(`r19 is missing the authorized prefill key "${key}"`);
+}
+if (delta19Required !== EXPECTED_DELTA19.required_for_pt_launch) {
+  fail(`r19 required_for_pt_launch mismatch: got ${delta19Required}`);
+}
+if (delta19Unchanged !== EXPECTED_DELTA19.intentionally_unchanged) {
+  fail(`r19 intentionally_unchanged mismatch: got ${delta19Unchanged}`);
+}
+
 // Aggregate tallies, read off the finished key map that is about to be written.
 const assembled = (() => {
   const values = Object.values(keys);
@@ -2048,6 +2182,30 @@ const assembled = (() => {
   }
   return tally;
 })();
+
+// The key map is final at this point: `assembled` has just described it, and
+// every published count is derived from that description. Freezing it makes
+// that finality ENFORCED rather than merely intended.
+//
+// This matters because the previous attempt at this guard was itself
+// positional - it re-tallied before the write, so a merge appended between the
+// guard and writeFileSync would have been serialized while the counts
+// described the state before it. A frozen map has no such window: ES modules
+// are strict mode, so ANY later `keys[...] = ...` throws wherever it is
+// written, which is the invariant this is actually trying to state.
+//
+// Deep, not shallow. An earlier version of this froze only the map, on the
+// reasoning that the pre-write re-tally would catch a row mutated in place.
+// That reasoning was wrong, and wrong in the most damaging direction: the
+// re-tally inspects only scope_status and translation_status, so
+// `keys[k].pt = "..."` after this point changed GOVERNED PORTUGUESE COPY, kept
+// every count identical, and was serialized without a word.
+//
+// So every row is frozen too. The map cannot gain or lose keys, and no row can
+// have its values, provenance or notes rewritten after the point the counts
+// describe it.
+Object.freeze(keys);
+for (const row of Object.values(keys)) Object.freeze(row);
 
 const output = {
   provenance: {
@@ -2074,6 +2232,7 @@ const output = {
       "data/locales/pt-overlay-r16-provider-media-alt.source.json",
       "data/locales/pt-overlay-r17-runtime-whatsapp-launcher.source.json",
       "data/locales/pt-overlay-r18-ui-scroll-down.source.json",
+      "data/locales/pt-overlay-r19-runtime-whatsapp-prefill.source.json",
     ],
     base_revision: pkg.source_revision,
     delta_revision: delta.source_revision,
@@ -2113,6 +2272,10 @@ const output = {
     delta18_revision: delta18.source_revision,
     delta18_revision_class: delta18.revision_class,
     delta18_row_count: delta18.rows.length,
+    delta19_package_id: delta19.package_id,
+    delta19_revision: delta19.source_revision,
+    delta19_revision_class: delta19.revision_class,
+    delta19_row_count: delta19.rows.length,
     delta9_superseding_ruling: delta9.superseding_ruling,
     delta9_owning_project: delta9.owning_project,
     event_delta_packages: eventDeltaPackages,
@@ -2157,11 +2320,44 @@ const output = {
     r16_delta_rows: delta16.rows.length,
     r17_delta_rows: delta17.rows.length,
     r18_delta_rows: delta18.rows.length,
+    r19_delta_rows: delta19.rows.length,
     r10_renamed_rows: r10Renamed.length,
     governed_override_rows: governedOverrideCount,
   },
   keys,
 };
+
+// The audit counts must describe the artifact that actually ships. They are
+// tallied from `keys` at the point `assembled` is computed, so ANY merge added
+// below that point would leave every published count describing a smaller key
+// map than the one written here - silently, and in the direction that looks
+// correct. This series has already shipped that defect once, when an additive
+// overlay was merged after the tally; positional correctness alone did not
+// prevent it and will not prevent it again.
+//
+// Re-tallying immediately before the write makes the ordering enforced rather
+// than merely observed: move a merge below `assembled` and this fails.
+{
+  const shipped = Object.values(output.keys);
+  const required = shipped.filter((row) => row.scope_status === "REQUIRED_FOR_PT_LAUNCH").length;
+  const unchanged = shipped.filter((row) => row.scope_status === "INTENTIONALLY_UNCHANGED").length;
+  const approved = shipped.filter((row) => row.translation_status === "APPROVED").length;
+  if (output.counts.total_rows !== shipped.length) {
+    fail(`declared total_rows ${output.counts.total_rows} does not describe the ${shipped.length} keys being written; a merge ran after the tally`);
+  }
+  if (output.counts.required_for_pt_launch !== required) {
+    fail(`declared required_for_pt_launch ${output.counts.required_for_pt_launch} does not match the ${required} shipped`);
+  }
+  if (output.counts.intentionally_unchanged !== unchanged) {
+    fail(`declared intentionally_unchanged ${output.counts.intentionally_unchanged} does not match the ${unchanged} shipped`);
+  }
+  if (output.counts.approved_rows_total !== approved) {
+    fail(`declared approved_rows_total ${output.counts.approved_rows_total} does not match the ${approved} shipped`);
+  }
+}
+
+Object.freeze(output.counts);
+Object.freeze(output);
 
 writeFileSync(OUT_PATH, JSON.stringify(output, null, 2) + "\n");
 console.log(`[build-locale-data] wrote ${Object.keys(keys).length} keys to ${path.relative(ROOT, OUT_PATH)} (r6 overrode ${delta6Overridden} PT values; r9 corrected ${delta9Corrected} EN/PT source values; event deltas added ${eventDeltaRequired + eventDeltaUnchanged} keys; r10 renamed ${r10Renamed.length} keys onto training.record.*; governed overrides applied ${governedOverrideCount} value(s) across ${governedOverrideResults.length} authorized package(s))`);
