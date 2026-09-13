@@ -288,7 +288,11 @@ check('config short_link is the incumbent governed short code',
 // -- and in HTML they may appear ONLY inside that island, so a hand-authored
 // page cannot carry them either.
 const SKIP_DIRS = new Set(['.git', 'node_modules', 'validation-artifacts', '.netlify']);
-const BINARY = /\.(png|jpe?g|gif|webp|avif|svg|ico|pdf|woff2?|ttf|eot|mp4|webm|mp3|zip|gz)$/i;
+// Only genuinely binary formats are skipped. SVG is deliberately NOT in this
+// list: it is text/XML and can carry the digits in a <text> node, a link,
+// metadata or a comment, so a contact badge with an independently maintained
+// number would otherwise sit outside the single-source contract.
+const BINARY = /\.(png|jpe?g|gif|webp|avif|ico|pdf|woff2?|ttf|eot|mp4|webm|mp3|zip|gz)$/i;
 const CONTACT_ISLAND = /<script type="application\/json" id="contact-config">[\s\S]*?<\/script>/g;
 
 function walk(dir, out = []) {
@@ -326,6 +330,10 @@ check('the single-source scan covered the repository',
     && scanned.includes('mindelo-essentials/mindelo-essentials.js')
     && scanned.includes('scripts/test-whatsapp-launcher-panel.mjs'),
   `scanned ${scanned.length} file(s)`);
+// Text formats that look asset-shaped are the easy ones to skip by mistake.
+check('the scan reaches text assets such as SVG',
+  scanned.some((rel) => rel.endsWith('.svg')),
+  'no .svg file was scanned');
 
 // All four prefills reach every surface, in that surface's own locale.
 for (const rel of surfaces) {
