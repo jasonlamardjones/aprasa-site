@@ -1733,6 +1733,56 @@ await testCase('W4 the intended absent response passes with no issue raised', as
   );
 });
 
+await testCase('W4b a 5xx on a withdrawn route is inconclusive, never a pass', async (assert) => {
+  const { report } = await runAgainstFixture({
+    mutate: (overrides) => overrides.set('/things-to-do/', { status: 503, body: 'unavailable' }),
+  });
+  const issue = report.issues.find((candidate) => candidate.code === 'ROUTE_WITHDRAWN_ABSENCE_UNVERIFIED' && candidate.route === '/things-to-do/');
+  const check = report.checks.find((candidate) => candidate.id === 'http:withdrawn:/things-to-do/');
+  assert(
+    Boolean(issue)
+      && issue.severity === 'WARNING'
+      && issue.retryable === true
+      && check.status === 'WARN'
+      // The decisive part: unavailable is not absent, so the run cannot be HEALTHY.
+      && report.overall_status === 'DEGRADED',
+    JSON.stringify({ overall: report.overall_status, issue, check })
+  );
+});
+
+await testCase('W4c a withheld or unexpected status is inconclusive too', async (assert) => {
+  const { report } = await runAgainstFixture({
+    mutate: (overrides) => overrides.set('/pt/things-to-do/', { status: 403, body: 'forbidden' }),
+  });
+  const issue = report.issues.find((candidate) => candidate.code === 'ROUTE_WITHDRAWN_ABSENCE_UNVERIFIED' && candidate.route === '/pt/things-to-do/');
+  assert(
+    Boolean(issue) && issue.severity === 'WARNING' && issue.retryable === false && report.overall_status === 'DEGRADED',
+    JSON.stringify({ overall: report.overall_status, issue })
+  );
+});
+
+await testCase('W4d a refused off-origin redirect on a withdrawn route is inconclusive, not absence', async (assert) => {
+  const foreign = await startFixtureServer(new Map([['/gone/', { status: 200, body: 'foreign' }]]), { root: ROOT });
+  try {
+    const { report } = await runAgainstFixture({
+      mutate: (overrides) => overrides.set('/things-to-do/', { status: 302, location: `${foreign.origin}/gone/` }),
+    });
+    const issue = report.issues.find((candidate) => candidate.code === 'ROUTE_WITHDRAWN_ABSENCE_UNVERIFIED' && candidate.route === '/things-to-do/');
+    assert(
+      Boolean(issue)
+        && issue.severity === 'WARNING'
+        && issue.evidence.redirect_blocked?.reason === 'OFF_ORIGIN_REDIRECT'
+        && issue.evidence.transmitted === false
+        && report.overall_status === 'DEGRADED'
+        // The refused hop was never requested.
+        && foreign.received.length === 0,
+      JSON.stringify({ overall: report.overall_status, issue, foreignRequests: foreign.received.length })
+    );
+  } finally {
+    await foreign.close();
+  }
+});
+
 await testCase('W5 a republished hub empties the negative set and returns to positive QA', async (assert) => {
   const sandbox = republishedSandbox();
   try {

@@ -550,24 +550,49 @@ function hubSurfaceMarkers(localeData, locale) {
 }
 
 /**
+ * Statuses that mean a route is GENUINELY ABSENT.
+ *
+ * Deliberately narrow. "Not 200" is not the same claim as "gone": a 503 says
+ * the route is unavailable, a 403 says it is withheld, and a 500 says the host
+ * broke while answering for it. None of those establish that the withdrawn page
+ * has stopped being published, and treating them as a pass would let the report
+ * say HEALTHY about an unpublishing it never verified.
+ *
+ * 404 and 410 are the two that do make the claim -- absent, and permanently
+ * gone. The site's governed absence model is genuine absence on a static host,
+ * with no redirect and no custom 404, so 404 is what production is expected to
+ * answer here; 410 is accepted because it asserts the same thing more strongly
+ * and no rule in this repository forbids a host from using it.
+ */
+const WITHDRAWN_ABSENT_STATUSES = Object.freeze([404, 410]);
+
+/**
  * Prove that a withdrawn route is no longer publicly served.
  *
  * This is the negative counterpart of fetchAndCheckRoute(), and it cannot be
  * expressed by reusing it: that function reports a non-200 as a defect, which
- * is the outcome required here. The site's governed absence model is genuine
- * absence -- no redirect, no custom 404 -- so the static host answering
- * anything other than 200 is the pass condition, and the check does not depend
- * on which status a given host chooses.
+ * is the outcome required here.
  *
- * A 200 is separated into two outcomes rather than one, because they are
- * different failures with different owners:
+ * Four outcomes, separated because they are different claims with different
+ * owners -- and because only the first is evidence of a successful unpublishing:
  *
- *   the body still renders the collection surface  -> ERROR. The withdrawn page
- *     is publicly served: a stale edge, or a deploy that still carried the file.
- *   the body is something else                     -> WARNING. The route still
+ *   404 / 410                                 -> PASS. Genuinely absent.
+ *   200 still rendering the collection surface -> ERROR. The withdrawn page is
+ *     publicly served: a stale edge, or a deploy that still carried the file.
+ *   200 that is something else                 -> WARNING. The route still
  *     answers where genuine absence was intended, but the old collection
  *     surface is not what is being served, so calling it the same defect would
  *     overstate the evidence.
+ *   anything else -- 5xx, 403, an unexpected
+ *   status, a transport failure, a refused
+ *   off-origin redirect                        -> WARNING, inconclusive. Not a
+ *     claim that the page is served, and explicitly NOT a claim that it is
+ *     gone.
+ *
+ * The inconclusive case emits an issue rather than only a SKIP check on
+ * purpose. Report status and workflow exit code are computed from issues alone,
+ * so a check that is merely skipped leaves the run HEALTHY -- which would read
+ * as a verified unpublishing when nothing was verified at all.
  *
  * Read-only by construction: one GET per route, no body, no mutation, pinned to
  * the same allowed origin as every other request in this pass.
@@ -584,37 +609,54 @@ async function checkWithdrawnRoute(emit, { baseUrl, route, locale, reason, local
     withdrawn_reason: reason,
   };
   const name = 'withdrawn route is no longer publicly served';
+  const expected = `HTTP ${WITHDRAWN_ABSENT_STATUSES.join(' or ')} (genuine absence)`;
+  const id = `http:withdrawn:${route}`;
 
-  // A transport failure is not evidence of correct absence, and it is not
-  // evidence of the page being served either. It is reported as no evidence
-  // rather than as a pass, so a host that is simply unreachable can never look
-  // like a successful unpublishing.
-  if (!response.ok) {
-    emit.check({
-      id: `http:withdrawn:${route}`,
-      name,
-      status: 'SKIP',
+  const inconclusive = (observed, extra = {}, retryable = false) => {
+    emit.check({ id, name, status: 'WARN', route, locale, observed, expected, evidence: { ...evidence, ...extra } });
+    emit.issue({
+      code: 'ROUTE_WITHDRAWN_ABSENCE_UNVERIFIED',
+      severity: 'WARNING',
+      category: 'ROUTE',
+      check: name,
       route,
       locale,
-      observed: response.networkError,
-      expected: 'any non-200 status (genuine absence)',
+      observed,
+      expected,
+      evidence: { ...evidence, ...extra },
+      resolver_class: 'TECHNICAL',
+      retryable,
+    });
+  };
+
+  // A transport failure, or a redirect refused for leaving the pinned origin,
+  // is not evidence of absence and not evidence of the page being served.
+  if (!response.ok) {
+    inconclusive(
+      response.networkError,
+      response.redirectBlocked ? { redirect_blocked: response.redirectBlocked, transmitted: false } : {},
+      true
+    );
+    return;
+  }
+
+  if (WITHDRAWN_ABSENT_STATUSES.includes(response.status)) {
+    emit.check({
+      id,
+      name,
+      status: 'PASS',
+      route,
+      locale,
+      observed: response.status,
+      expected,
+      duration_ms: response.duration_ms,
       evidence,
     });
     return;
   }
 
   if (response.status !== 200) {
-    emit.check({
-      id: `http:withdrawn:${route}`,
-      name,
-      status: 'PASS',
-      route,
-      locale,
-      observed: response.status,
-      expected: 'any non-200 status (genuine absence)',
-      duration_ms: response.duration_ms,
-      evidence,
-    });
+    inconclusive(response.status, {}, response.status >= 500);
     return;
   }
 
@@ -622,13 +664,13 @@ async function checkWithdrawnRoute(emit, { baseUrl, route, locale, reason, local
   const matched = markers.filter((marker) => htmlContains(response.body ?? '', (value) => value, marker.value));
   const servesCollection = matched.length > 0;
   emit.check({
-    id: `http:withdrawn:${route}`,
+    id,
     name,
     status: servesCollection ? 'FAIL' : 'WARN',
     route,
     locale,
     observed: { status: 200, collection_surface: servesCollection, matched_keys: matched.map((marker) => marker.key) },
-    expected: 'any non-200 status (genuine absence)',
+    expected,
     duration_ms: response.duration_ms,
     evidence,
   });
@@ -641,7 +683,7 @@ async function checkWithdrawnRoute(emit, { baseUrl, route, locale, reason, local
       route,
       locale,
       observed: `HTTP 200 rendering the withdrawn collection surface (${matched.map((marker) => marker.key).join(', ')})`,
-      expected: 'any non-200 status (genuine absence)',
+      expected,
       evidence: { ...evidence, matched_keys: matched.map((marker) => marker.key) },
       resolver_class: 'DEPLOYMENT',
     }
@@ -653,7 +695,7 @@ async function checkWithdrawnRoute(emit, { baseUrl, route, locale, reason, local
       route,
       locale,
       observed: 'HTTP 200 without the withdrawn collection surface',
-      expected: 'any non-200 status (genuine absence)',
+      expected,
       evidence: { ...evidence, checked_keys: markers.map((marker) => marker.key) },
       resolver_class: 'DEPLOYMENT',
     });
