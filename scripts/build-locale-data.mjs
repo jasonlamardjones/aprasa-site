@@ -2183,6 +2183,22 @@ const assembled = (() => {
   return tally;
 })();
 
+// The key map is final at this point: `assembled` has just described it, and
+// every published count is derived from that description. Freezing it makes
+// that finality ENFORCED rather than merely intended.
+//
+// This matters because the previous attempt at this guard was itself
+// positional - it re-tallied before the write, so a merge appended between the
+// guard and writeFileSync would have been serialized while the counts
+// described the state before it. A frozen map has no such window: ES modules
+// are strict mode, so ANY later `keys[...] = ...` throws wherever it is
+// written, which is the invariant this is actually trying to state.
+//
+// Shallow by design. Adding or removing keys is what the counts describe, and
+// that is what this stops; a row mutated in place is caught by the independent
+// re-tally before the write, which is why both exist.
+Object.freeze(keys);
+
 const output = {
   provenance: {
     source_revision: eventDeltaPackages.at(-1)?.source_revision ?? delta8.source_revision,
@@ -2331,6 +2347,9 @@ const output = {
     fail(`declared approved_rows_total ${output.counts.approved_rows_total} does not match the ${approved} shipped`);
   }
 }
+
+Object.freeze(output.counts);
+Object.freeze(output);
 
 writeFileSync(OUT_PATH, JSON.stringify(output, null, 2) + "\n");
 console.log(`[build-locale-data] wrote ${Object.keys(keys).length} keys to ${path.relative(ROOT, OUT_PATH)} (r6 overrode ${delta6Overridden} PT values; r9 corrected ${delta9Corrected} EN/PT source values; event deltas added ${eventDeltaRequired + eventDeltaUnchanged} keys; r10 renamed ${r10Renamed.length} keys onto training.record.*; governed overrides applied ${governedOverrideCount} value(s) across ${governedOverrideResults.length} authorized package(s))`);
