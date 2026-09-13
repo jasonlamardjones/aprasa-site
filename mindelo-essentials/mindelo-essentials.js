@@ -554,27 +554,37 @@
     return url.href;
   }
 
+  // The complete set of destinations this launcher may navigate to: the
+  // governed short link, plus one number-form URL per governed prefill actually
+  // delivered to this page. Nothing else is ever produced, so nothing else is
+  // ever authorized. Mirrors prasa-launch.js.
+  function authorizedDestinations() {
+    const destinations = new Set([GOVERNED_WHATSAPP_URL]);
+    for (const message of governedPrefillValues()) {
+      const href = prefillDestination(message);
+      if (href) destinations.add(href);
+    }
+    return destinations;
+  }
+
+  // Exact equality against that set, not a component-by-component inspection:
+  // enumerating components means keeping the enumeration exhaustive forever,
+  // and the parts a check forgets to look at - userinfo, a fragment, an
+  // explicit port, a second parameter - are exactly where something rides
+  // along. A spelling the parser normalizes onto a member of the set is the
+  // same destination and is authorized; anything else is refused - including a
+  // percent-encoded spelling of an identical governed message, which is
+  // deliberate: only prefillDestination ever writes this href, and the fallback
+  // on refusal is the governed short link.
   function isAuthorizedDestination(href) {
-    if (href === GOVERNED_WHATSAPP_URL) return true;
-    if (!CONTACT.numberBaseUrl) return false;
-    let url;
-    let base;
+    if (typeof href !== "string" || !href) return false;
+    let normalized;
     try {
-      url = new URL(href);
-      base = new URL(CONTACT.numberBaseUrl);
+      normalized = new URL(href).href;
     } catch {
       return false;
     }
-    if (url.origin !== base.origin || url.pathname !== base.pathname) return false;
-    // Nothing else may ride along. Neither embedded credentials nor a fragment
-    // changes which account WhatsApp opens, but both are shapes this launcher
-    // never produces, and "https://someone@wa.me/..." is exactly the deceptive
-    // form a governed destination should refuse to be mistaken for. The two
-    // authorized forms carry no userinfo and no fragment.
-    if (url.username || url.password || url.hash) return false;
-    const names = Array.from(url.searchParams.keys());
-    if (names.length !== 1 || names[0] !== "text") return false;
-    return governedPrefillValues().has(url.searchParams.get("text"));
+    return authorizedDestinations().has(normalized);
   }
 
   function initFloatingWhatsApp() {
@@ -670,12 +680,33 @@
       });
       actions.append(action);
     }
-    cta.addEventListener("click", (event) => {
-      if (isAuthorizedDestination(cta.href)) return;
-      event.preventDefault();
+    // Repair, then block - and across every activation path, not click alone.
+    // A middle click dispatches auxclick, and the context menu's "open in new
+    // tab" follows the anchor's href directly without dispatching any
+    // cancellable activation event at all, so a click-only recheck leaves both
+    // of those open. The href is therefore REPAIRED on every event that can
+    // precede an activation (pointerdown and mousedown before a middle click,
+    // contextmenu before the menu is drawn and reads the href, focus and
+    // keydown before Enter, dragstart before a link drag), in the capture
+    // phase so it runs before anything else on the element; and it is
+    // additionally CANCELLED on the two activation events that are
+    // cancellable. By the time any path reads the href, it is already one of
+    // the governed destinations.
+    function enforceAuthorizedDestination() {
+      if (isAuthorizedDestination(cta.href)) return true;
       cta.href = GOVERNED_WHATSAPP_URL;
       console.warn("A PRASA WhatsApp navigation blocked: destination is not one of the two governed forms.");
-    });
+      return false;
+    }
+
+    for (const type of ["pointerdown", "mousedown", "touchstart", "contextmenu", "focus", "keydown", "dragstart"]) {
+      cta.addEventListener(type, enforceAuthorizedDestination, true);
+    }
+    for (const type of ["click", "auxclick"]) {
+      cta.addEventListener(type, (event) => {
+        if (!enforceAuthorizedDestination()) event.preventDefault();
+      });
+    }
     syncDestination();
 
     const close = document.createElement("button");

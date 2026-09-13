@@ -279,12 +279,53 @@ check('config display and digits agree',
   (CONTACT.display || '').replace(/\D/g, '') === CONTACT.whatsapp_business_number);
 check('config short_link is the incumbent governed short code',
   CONTACT.short_link === GOVERNED_WHATSAPP_URL);
-// No independent literal of the number anywhere else.
-for (const [name, source] of [['prasa-launch.js', launcherJs], ['mindelo-essentials.js', mindeloJs],
-  ['test-whatsapp-launcher-panel.mjs', read('scripts/test-whatsapp-launcher-panel.mjs')]]) {
-  check(`${name} does not restate the canonical number`,
-    !source.includes(CONTACT.whatsapp_business_number));
+// No independent literal of the number anywhere else. This walks the whole
+// repository rather than a hand-listed set of files: a list has to be
+// remembered, and the single-source rule is worth nothing if introducing the
+// digits into a new generator, validator, fixture or data file leaves the
+// tripwire green. The only two places the digits may appear are the governed
+// config itself, and the derived #contact-config island inside generated HTML
+// -- and in HTML they may appear ONLY inside that island, so a hand-authored
+// page cannot carry them either.
+const SKIP_DIRS = new Set(['.git', 'node_modules', 'validation-artifacts', '.netlify']);
+const BINARY = /\.(png|jpe?g|gif|webp|avif|svg|ico|pdf|woff2?|ttf|eot|mp4|webm|mp3|zip|gz)$/i;
+const CONTACT_ISLAND = /<script type="application\/json" id="contact-config">[\s\S]*?<\/script>/g;
+
+function walk(dir, out = []) {
+  for (const entry of fs.readdirSync(path.join(root, dir || '.'), {withFileTypes: true})) {
+    const rel = dir ? `${dir}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) {
+      if (!SKIP_DIRS.has(entry.name)) walk(rel, out);
+    } else if (entry.isFile() && !BINARY.test(entry.name)) {
+      out.push(rel);
+    }
+  }
+  return out;
 }
+
+const digits = CONTACT.whatsapp_business_number;
+const scanned = walk('');
+const offenders = [];
+for (const rel of scanned) {
+  if (rel === 'data/contact-channels.json') continue;
+  let source;
+  try {
+    source = read(rel);
+  } catch {
+    continue;
+  }
+  // In HTML the derived island is legitimate; everything outside it is not.
+  if (rel.endsWith('.html')) source = source.replace(CONTACT_ISLAND, '');
+  if (source.includes(digits)) offenders.push(rel);
+}
+check('the canonical number is restated nowhere outside its governed config',
+  offenders.length === 0, offenders.length ? `found in: ${offenders.join(', ')}` : undefined);
+// The scan is only worth anything if it actually reached the source tree.
+check('the single-source scan covered the repository',
+  scanned.length > 100 && scanned.includes('prasa-launch.js')
+    && scanned.includes('mindelo-essentials/mindelo-essentials.js')
+    && scanned.includes('scripts/test-whatsapp-launcher-panel.mjs'),
+  `scanned ${scanned.length} file(s)`);
 
 // All four prefills reach every surface, in that surface's own locale.
 for (const rel of surfaces) {
@@ -330,19 +371,34 @@ for (const [name, source] of [['prasa-launch.js', launcherJs], ['mindelo-essenti
     /supplied\.shortLink !== GOVERNED_WHATSAPP_URL/.test(source));
   check(`${name} validates the configured number destination shape`,
     /\^https:\\\/\\\/wa\\\.me\\\/\[0-9\]\{8,15\}\$/.test(source));
-  check(`${name} authorizes exactly one text parameter`,
-    /names\.length !== 1 \|\| names\[0\] !== "text"/.test(source));
-  check(`${name} authorizes only governed prefill text`,
-    /governedPrefillValues\(\)\.has\(url\.searchParams\.get\("text"\)\)/.test(source));
-  // Neither shape changes which account WhatsApp opens, but neither is one of
-  // the two authorized forms, and embedded credentials are the classic
-  // deceptive spelling of a trusted host. The guard refuses both.
-  check(`${name} rejects embedded credentials and a fragment`,
-    /if \(url\.username \|\| url\.password \|\| url\.hash\) return false;/.test(source));
+  // Authorization is exact equality against the set of destinations this
+  // launcher can itself produce -- not an enumeration of URL components. An
+  // enumeration has to stay exhaustive forever, and userinfo, a fragment and an
+  // explicit port each slipped past the component form of this check.
+  check(`${name} builds the authorized set from the governed prefills`,
+    /function authorizedDestinations\(\)/.test(source)
+    && /new Set\(\[GOVERNED_WHATSAPP_URL\]\)/.test(source)
+    && /for \(const message of governedPrefillValues\(\)\)/.test(source));
+  check(`${name} authorizes by whole-URL serialization`,
+    /return authorizedDestinations\(\)\.has\(normalized\);/.test(source)
+    && /normalized = new URL\(href\)\.href;/.test(source));
+  check(`${name} no longer authorizes by component inspection`,
+    !/url\.origin !== base\.origin/.test(source)
+    && !/searchParams\.get\("text"\)/.test(source));
   check(`${name} falls back to the short link without a selection`,
     /: GOVERNED_WHATSAPP_URL;/.test(source));
-  check(`${name} blocks an unauthorized destination at activation`,
-    /event\.preventDefault\(\);[\s\S]{0,120}GOVERNED_WHATSAPP_URL/.test(source));
+  // Click alone is not every activation path: a middle click dispatches
+  // auxclick, and the context menu's "open in new tab" follows the href with no
+  // cancellable event at all. The href is repaired ahead of the paths that
+  // cannot be cancelled, and cancelled on the two that can.
+  check(`${name} repairs the destination before every activation path`,
+    /for \(const type of \["pointerdown", "mousedown", "touchstart", "contextmenu", "focus", "keydown", "dragstart"\]\)/.test(source)
+    && /cta\.addEventListener\(type, enforceAuthorizedDestination, true\);/.test(source));
+  check(`${name} cancels both cancellable activation events`,
+    /for \(const type of \["click", "auxclick"\]\)/.test(source)
+    && /if \(!enforceAuthorizedDestination\(\)\) event\.preventDefault\(\);/.test(source));
+  check(`${name} reverts an unauthorized destination to the short link`,
+    /cta\.href = GOVERNED_WHATSAPP_URL;[\s\S]{0,200}return false;/.test(source));
   check(`${name} excludes its own CTA from the incumbent anchor guard`,
     /!anchor\.closest\("\[data-floating-utilities\]"\)/.test(source));
   check(`${name} keeps the governed CTA accessible name`,
