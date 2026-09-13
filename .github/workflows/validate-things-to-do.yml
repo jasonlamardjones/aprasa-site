@@ -37,6 +37,9 @@ on:
       - 'scripts/validate-card-media.mjs'
       - 'scripts/validate-canonical-internal-links.mjs'
       - 'scripts/validate-runtime-locale-strings.mjs'
+      - 'scripts/test-whatsapp-launcher-panel.mjs'
+      - 'scripts/lib/runtime-strings.mjs'
+      - 'mindelo-essentials/mindelo-essentials.js'
       - 'scripts/validate-training-opportunities-currentness.mjs'
       - 'scripts/validate-training-opportunities-data.mjs'
       - 'scripts/generate-training-opportunities.mjs'
@@ -148,6 +151,7 @@ jobs:
         run: |
           node scripts/validate-canonical-internal-links.mjs
           node scripts/validate-runtime-locale-strings.mjs
+          node scripts/test-whatsapp-launcher-panel.mjs
 
       - name: Validate committed current surfaces
         run: |
