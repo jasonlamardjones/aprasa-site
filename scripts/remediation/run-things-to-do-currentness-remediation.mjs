@@ -13,8 +13,10 @@ import {
   assertValidatorResults,
   assertWorkflowArtifactProvenance,
   assertDriftShapeUnchanged,
+  assertHomeRegionChangeBounded,
   authorizeReport,
   expectedWriteSetForTransition,
+  homeRegionAuthorizedIds,
   parseOpenPrProbe,
   parseRemoteBranchProbe,
   parseValidatorDriftIds,
@@ -244,6 +246,8 @@ function reportBody(auth, changed, validations, candidateSha, transition) {
     `- Canonical generation: \`scripts/build-all.mjs --as-of=${auth.asOf}\``,
     `- Home preview before: ${transition.previewBefore.map((id) => `\`${id}\``).join(', ') || '_none_'}`,
     `- Home preview after: ${transition.previewAfter.map((id) => `\`${id}\``).join(', ') || '_none_'}`,
+    `- Currentness state changed: ${transition.stateChangedIds.map((id) => `\`${id}\``).join(', ') || '_none_'}`,
+    '- Home bounded to generated-event regions: passed',
     '- Idempotence: passed',
     '- Merge authority: **none**',
     '- Deployment authority: **none**',
@@ -315,6 +319,18 @@ const allowedWriteSet = expectedWriteSetForTransition({
   driftIds: currentIds,
   previewBefore: previewTransition.previewBefore,
   previewAfter: previewTransition.previewAfter,
+  stateChangedIds: previewTransition.stateChangedIds,
+});
+// Home's generated-event regions are the only part of a Home surface this
+// repair has authority over, and canonical generation rewrites both Home files
+// in full. File-level permission alone would therefore let a Home surface that
+// had drifted outside those regions have the correction committed here, so Home
+// is bounded at region level as well.
+const HOME_SURFACES = ['index.html', 'pt/index.html'];
+const homeRegionIds = homeRegionAuthorizedIds({
+  driftIds: currentIds,
+  previewBefore: previewTransition.previewBefore,
+  previewAfter: previewTransition.previewAfter,
 });
 const stagingRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aprasa-phase2b-stage-'));
 let promotion = null;
@@ -329,8 +345,17 @@ try {
   git(stagingRoot, ['commit', '-q', '-m', 'staging baseline']);
 
   const before = inventory(stagingRoot);
+  const homeBefore = new Map(HOME_SURFACES.map((file) => [file, fs.readFileSync(path.join(stagingRoot, file), 'utf8')]));
   runCanonicalGeneration(stagingRoot, auth.asOf);
   const changed = assertBoundedWriteSet(changedFiles(before, inventory(stagingRoot)), allowedWriteSet);
+  for (const file of HOME_SURFACES) {
+    assertHomeRegionChangeBounded(
+      homeBefore.get(file),
+      fs.readFileSync(path.join(stagingRoot, file), 'utf8'),
+      homeRegionIds,
+      file,
+    );
+  }
   const validations = runIncumbentValidators(stagingRoot, auth.asOf);
 
   const idempotenceBefore = inventory(stagingRoot);

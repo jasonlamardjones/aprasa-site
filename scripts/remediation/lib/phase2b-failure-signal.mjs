@@ -93,7 +93,7 @@ function requireContext(context) {
  * parseRemoteBranchProbe/parseOpenPrProbe: only a successful command with a
  * well-formed result may report "no open signal issue".
  */
-export function parseOpenFailureIssueProbe(probe, { key } = {}) {
+export function parseOpenFailureIssueProbe(probe, { key, limit = null } = {}) {
   if (typeof key !== 'string' || !key) throw new Error('PHASE2B_FAILURE_SIGNAL_KEY_REQUIRED');
   if (!probe || probe.status !== 0) {
     const detail = [probe?.stderr, probe?.stdout].filter((part) => typeof part === 'string' && part.trim()).join(' ').trim();
@@ -107,6 +107,14 @@ export function parseOpenFailureIssueProbe(probe, { key } = {}) {
     throw new Error('PHASE2B_FAILURE_SIGNAL_PROBE_UNREADABLE: probe did not return JSON');
   }
   if (!Array.isArray(parsed)) throw new Error('PHASE2B_FAILURE_SIGNAL_PROBE_UNREADABLE: expected a JSON array');
+  // `gh issue list --limit N` caps how many issues are FETCHED, so a full page
+  // is not evidence that nothing further matches: an older issue carrying this
+  // marker could sit just outside it, and reading that as proven absence is
+  // exactly how a duplicate gets created. A result that reaches the limit is
+  // therefore refused rather than trusted.
+  if (limit !== null && parsed.length >= limit) {
+    throw new Error(`PHASE2B_FAILURE_SIGNAL_PROBE_TRUNCATED: ${parsed.length} open labelled issues reached the probe limit of ${limit}`);
+  }
   const marker = keyMarker(key);
   const matching = parsed.filter((record) => typeof record?.body === 'string' && record.body.includes(marker));
   if (!matching.length) return null;

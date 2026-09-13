@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { THINGS_TO_DO_HUB_PUBLIC, homePreviewIds, hubOutputPath } from '../../lib/things-to-do-collection.mjs';
+import { currentnessState } from '../../lib/things-to-do-currentness.mjs';
 
 export const PHASE2B_CONTRACT = Object.freeze({
   reportSchema: 'aprasa-post-publication-qa-report',
@@ -178,33 +179,43 @@ export function assertDriftShapeUnchanged(reportedIds, currentIds) {
 // The allowed write set is DERIVED from the lifecycle transition this repair
 // represents, never from a remembered file count. The Eclipse audit case
 // happened to settle on five files; that was a property of that one
-// transition, not the contract. A promotion whose incoming record also needs
-// its own detail page regenerated legitimately writes more, and a repair must
-// not be refused for it.
+// transition, not the contract.
 //
-// Three inputs define the transition, and nothing outside them is allowed:
+// Authority is split, because the two kinds of surface are reached by
+// different things:
 //
-//   driftIds       the records the currentness validator reported as drifted.
-//   previewBefore  Home preview membership at the currentness state that
-//                  produced the committed surfaces (the tracked as_of).
-//   previewAfter   Home preview membership at the repair's as_of. An expiry
-//                  inside the preview promotes the next eligible record into
-//                  it, and that record's Home slot must be backfilled — the
-//                  exact case the drift-id-only generation could not cover.
+//   HOME (index.html, pt/index.html) is reached by preview MEMBERSHIP. An
+//   expiry inside the three-card preview promotes the next eligible record,
+//   and the promoted record's Home slot must be backfilled — the exact case
+//   drift-id-only generation could not cover. File-level permission is not
+//   enough here: canonical generation rewrites both Home files in full, so a
+//   Home file that had drifted outside its generated-event regions would have
+//   that unrelated correction admitted by a file-level check alone. Home is
+//   therefore additionally bounded at REGION level by
+//   assertHomeRegionChangeBounded() below: content outside the
+//   generated-event regions must not move at all, and the regions that do
+//   move must belong to this transition.
 //
-// Membership on both sides comes from the incumbent selector
-// homePreviewIds() in scripts/lib/things-to-do-collection.mjs, so this adds no
-// currentness or ordering rule of its own.
+//   DETAIL PAGES are reached by a record's OWN rendered currentness state,
+//   which is what their markup depends on. Preview membership is a Home-only
+//   concept — a promoted record normally stays CURRENT across the transition
+//   and has no lifecycle-driven detail change — so admitting a detail page
+//   merely for entering or leaving the preview would let unrelated drift in
+//   that record's page ride along. Detail authority is therefore limited to
+//   records whose state actually moves: the reported drift IDs, plus any
+//   record whose currentnessState() differs between the two dates. Drift IDs
+//   are unioned in rather than derived, because a record already EXPIRED at
+//   the tracked as_of has no state CHANGE and is still exactly what needs
+//   regenerating.
 //
 // Generator-owned shared surfaces are admitted only where the transition can
 // actually reach them:
 //
 //   data/things-to-do-currentness.json  the as_of the repair advances.
-//   index.html, pt/index.html           the Home surface in both locales.
-//   the collection hub, both locales     a whole-collection currentness
-//                                        projection — admitted ONLY while
-//                                        THINGS_TO_DO_HUB_PUBLIC, since a
-//                                        dormant hub is not written at all.
+//   the collection hub, both locales    a whole-collection currentness
+//                                       projection — admitted ONLY while
+//                                       THINGS_TO_DO_HUB_PUBLIC, since a
+//                                       dormant hub is not written at all.
 //
 // sitemap.xml is deliberately NOT admitted. It is derived from record
 // existence, not from currentness, so a lifecycle transition cannot move it;
@@ -213,7 +224,10 @@ export function assertDriftShapeUnchanged(reportedIds, currentIds) {
 // remaining derived PT pages, Mindelo Essentials): reachable by the builders,
 // unreachable by this transition, therefore refused.
 
-/** Home preview membership either side of a currentness transition. */
+/**
+ * What a currentness transition moves: Home preview membership either side,
+ * and the records whose own rendered currentness state changes.
+ */
 export function resolvePreviewTransition({ records = [], fromAsOf, toAsOf } = {}) {
   if (typeof fromAsOf !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(fromAsOf)) {
     throw new Error('PHASE2B_PREVIEW_BASELINE_AS_OF_UNREADABLE');
@@ -221,17 +235,49 @@ export function resolvePreviewTransition({ records = [], fromAsOf, toAsOf } = {}
   if (typeof toAsOf !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(toAsOf)) {
     throw new Error('PHASE2B_PREVIEW_TARGET_AS_OF_UNREADABLE');
   }
+  const stateChangedIds = (records ?? [])
+    .filter((record) => currentnessState(record, fromAsOf) !== currentnessState(record, toAsOf))
+    .map((record) => record.id)
+    .sort();
   return Object.freeze({
     previewBefore: [...homePreviewIds(records, fromAsOf)].sort(),
     previewAfter: [...homePreviewIds(records, toAsOf)].sort(),
+    stateChangedIds,
   });
+}
+
+function assertReadableIds(ids, what) {
+  for (const id of ids) {
+    if (typeof id !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) {
+      throw new Error(`PHASE2B_${what}_ID_UNREADABLE: ${String(id)}`);
+    }
+  }
+  return ids;
+}
+
+/** Records whose Home slot this transition may legitimately rewrite. */
+export function homeRegionAuthorizedIds({ driftIds = [], previewBefore = [], previewAfter = [] } = {}) {
+  const ids = [...new Set([...driftIds, ...previewBefore, ...previewAfter])].sort();
+  if (!ids.length) throw new Error('PHASE2B_WRITE_SET_TRANSITION_EMPTY');
+  return assertReadableIds(ids, 'WRITE_SET');
+}
+
+/** Records whose detail pages this transition may legitimately rewrite. */
+export function detailAuthorizedIds({ driftIds = [], stateChangedIds = [] } = {}) {
+  const ids = [...new Set([...driftIds, ...stateChangedIds])].sort();
+  if (!ids.length) throw new Error('PHASE2B_WRITE_SET_TRANSITION_EMPTY');
+  return assertReadableIds(ids, 'WRITE_SET');
 }
 
 export function expectedWriteSetForTransition({
   driftIds = [],
   previewBefore = [],
   previewAfter = [],
+  stateChangedIds = [],
 } = {}) {
+  // Validates the Home side too, so an unreadable preview ID is refused even
+  // though preview membership contributes no detail path of its own.
+  homeRegionAuthorizedIds({ driftIds, previewBefore, previewAfter });
   const allowed = new Set([
     'data/things-to-do-currentness.json',
     'index.html',
@@ -241,16 +287,60 @@ export function expectedWriteSetForTransition({
     allowed.add(hubOutputPath('en'));
     allowed.add(hubOutputPath('pt'));
   }
-  const ids = [...new Set([...driftIds, ...previewBefore, ...previewAfter])];
-  if (!ids.length) throw new Error('PHASE2B_WRITE_SET_TRANSITION_EMPTY');
-  for (const id of ids) {
-    if (typeof id !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) {
-      throw new Error(`PHASE2B_WRITE_SET_ID_UNREADABLE: ${String(id)}`);
-    }
+  for (const id of detailAuthorizedIds({ driftIds, stateChangedIds })) {
     allowed.add(`things-to-do/${id}/index.html`);
     allowed.add(`pt/things-to-do/${id}/index.html`);
   }
   return [...allowed].sort();
+}
+
+// --- Home region containment ----------------------------------------------
+//
+// Home's generated-event regions are the ONLY part of a Home surface this
+// repair has authority over. Everything else on the page — chrome, prose,
+// hreflang, nav, the Home call to action — is hand-authored or owned by the
+// static-page localizer, and canonical generation rewriting a whole Home file
+// must not become a way to commit changes to it.
+
+const GENERATED_EVENT_REGION = /<!-- BEGIN GENERATED EVENT: ([a-z0-9]+(?:-[a-z0-9]+)*) -->[\s\S]*?<!-- END GENERATED EVENT: \1 -->/g;
+
+function regionMap(html) {
+  const regions = new Map();
+  for (const match of String(html ?? '').matchAll(GENERATED_EVENT_REGION)) {
+    if (regions.has(match[1])) throw new Error(`PHASE2B_HOME_REGION_DUPLICATED: ${match[1]}`);
+    regions.set(match[1], match[0]);
+  }
+  return regions;
+}
+
+function outsideRegions(html) {
+  return String(html ?? '').replace(GENERATED_EVENT_REGION, '<!-- GENERATED EVENT REGION: $1 -->');
+}
+
+/**
+ * Which generated-event regions moved between two Home revisions, and whether
+ * anything outside them moved. Pure, so the containment rule is testable
+ * without running a build.
+ */
+export function homeRegionChange(before, after) {
+  const beforeRegions = regionMap(before);
+  const afterRegions = regionMap(after);
+  const ids = [...new Set([...beforeRegions.keys(), ...afterRegions.keys()])].sort();
+  return Object.freeze({
+    changedIds: ids.filter((id) => beforeRegions.get(id) !== afterRegions.get(id)),
+    outsideChanged: outsideRegions(before) !== outsideRegions(after),
+  });
+}
+
+export function assertHomeRegionChangeBounded(before, after, authorizedIds, label = 'index.html') {
+  const { changedIds, outsideChanged } = homeRegionChange(before, after);
+  if (outsideChanged) throw new Error(`PHASE2B_HOME_CHANGE_OUTSIDE_GENERATED_REGIONS: ${label}`);
+  const allowed = new Set(authorizedIds);
+  const unauthorized = changedIds.filter((id) => !allowed.has(id));
+  if (unauthorized.length) {
+    throw new Error(`PHASE2B_HOME_REGION_CHANGE_UNAUTHORIZED: ${label}: ${unauthorized.join(', ')}`);
+  }
+  return changedIds;
 }
 
 export function assertBoundedWriteSet(actualFiles, allowedFiles) {

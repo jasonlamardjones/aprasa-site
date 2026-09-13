@@ -9,10 +9,14 @@ import {
   assertIdempotentChanges,
   assertSchemaValidation,
   assertValidatorResults,
+  assertHomeRegionChangeBounded,
   assertWorkflowArtifactProvenance,
   authorizeReport,
   capeVerdeDate,
+  detailAuthorizedIds,
   expectedWriteSetForTransition,
+  homeRegionAuthorizedIds,
+  homeRegionChange,
   parseObservedDriftIds,
   parseOpenPrProbe,
   parseRemoteBranchProbe,
@@ -121,6 +125,8 @@ const previewRecords = [
 const transition = resolvePreviewTransition({ records: previewRecords, fromAsOf: '2026-10-01', toAsOf: '2026-10-02' });
 assert.deepEqual(transition.previewBefore, ['active-one', 'expiring-two', 'retained-three']);
 assert.deepEqual(transition.previewAfter, ['active-one', 'promoted-four', 'retained-three']);
+// Only the expiring record's own state moves; the promoted record stays CURRENT.
+assert.deepEqual(transition.stateChangedIds, ['expiring-two']);
 assert.throws(() => resolvePreviewTransition({ records: previewRecords, fromAsOf: 'nope', toAsOf: '2026-10-02' }), /PREVIEW_BASELINE_AS_OF_UNREADABLE/);
 assert.throws(() => resolvePreviewTransition({ records: previewRecords, fromAsOf: '2026-10-01', toAsOf: null }), /PREVIEW_TARGET_AS_OF_UNREADABLE/);
 
@@ -128,15 +134,24 @@ const allowed = expectedWriteSetForTransition({
   driftIds: ['expiring-two'],
   previewBefore: transition.previewBefore,
   previewAfter: transition.previewAfter,
+  stateChangedIds: transition.stateChangedIds,
 });
-// The drifted record, both preview sides and the promoted record are all in.
-for (const id of ['expiring-two', 'active-one', 'retained-three', 'promoted-four']) {
-  assert(allowed.includes(`things-to-do/${id}/index.html`), `${id} EN detail must be permitted`);
-  assert(allowed.includes(`pt/things-to-do/${id}/index.html`), `${id} PT detail must be permitted`);
+// Authority is SPLIT. Detail pages follow a record's own rendered currentness
+// state, because that is what their markup depends on; preview membership is a
+// Home-only concept, so entering or leaving the preview must not by itself
+// authorize a detail page — otherwise unrelated drift in a promoted record's
+// page would ride along on a repair.
+assert(allowed.includes('things-to-do/expiring-two/index.html'));
+assert(allowed.includes('pt/things-to-do/expiring-two/index.html'));
+for (const id of ['active-one', 'retained-three', 'promoted-four', 'beyond-five']) {
+  assert(!allowed.includes(`things-to-do/${id}/index.html`), `${id} keeps its state: no EN detail authority`);
+  assert(!allowed.includes(`pt/things-to-do/${id}/index.html`), `${id} keeps its state: no PT detail authority`);
 }
-// A record the transition never touches stays out, and so does every shared
-// surface the transition cannot reach.
-assert(!allowed.includes('things-to-do/beyond-five/index.html'));
+// A record already EXPIRED at both dates has no state CHANGE, yet is exactly
+// what needs regenerating — hence drift IDs are unioned in, not derived.
+assert.deepEqual(detailAuthorizedIds({ driftIds: ['stale-one'], stateChangedIds: [] }), ['stale-one']);
+assert.deepEqual(detailAuthorizedIds({ driftIds: ['b-two'], stateChangedIds: ['a-one', 'b-two'] }), ['a-one', 'b-two']);
+// Shared surfaces the transition cannot reach stay out.
 assert(!allowed.includes('sitemap.xml'));
 assert(!allowed.includes('data/locales/locale-data.generated.json'));
 assert(allowed.includes('data/things-to-do-currentness.json'));
@@ -146,12 +161,49 @@ assert(allowed.includes('index.html') && allowed.includes('pt/index.html'));
 assert.equal(allowed.includes(hubOutputPath('en')), THINGS_TO_DO_HUB_PUBLIC);
 assert.equal(allowed.includes(hubOutputPath('pt')), THINGS_TO_DO_HUB_PUBLIC);
 // The audit's five-file Eclipse result is a property of one transition, not the
-// contract: a wider legitimate transition derives a wider set.
-assert(expectedWriteSetForTransition({ driftIds: ['expiring-two'], previewBefore: transition.previewBefore, previewAfter: transition.previewAfter }).length
-  > expectedWriteSetForTransition({ driftIds: ['expiring-two'], previewBefore: ['expiring-two'], previewAfter: ['expiring-two'] }).length);
+// contract: a transition that moves more records' state derives a wider set.
+assert(expectedWriteSetForTransition({ driftIds: ['expiring-two'], stateChangedIds: ['expiring-two', 'another-one'] }).length
+  > expectedWriteSetForTransition({ driftIds: ['expiring-two'], stateChangedIds: ['expiring-two'] }).length);
 assert.throws(() => expectedWriteSetForTransition({}), /WRITE_SET_TRANSITION_EMPTY/);
 assert.throws(() => expectedWriteSetForTransition({ driftIds: ['Bad_Id'] }), /WRITE_SET_ID_UNREADABLE/);
 assert.throws(() => expectedWriteSetForTransition({ driftIds: ['../escape'] }), /WRITE_SET_ID_UNREADABLE/);
+// Preview membership is still load-bearing: it bounds which Home SLOTS may move.
+assert.deepEqual(
+  homeRegionAuthorizedIds({ driftIds: ['expiring-two'], previewBefore: transition.previewBefore, previewAfter: transition.previewAfter }),
+  ['active-one', 'expiring-two', 'promoted-four', 'retained-three'],
+);
+assert.throws(() => homeRegionAuthorizedIds({}), /WRITE_SET_TRANSITION_EMPTY/);
+
+// --- Home bounded at region level ------------------------------------------
+// Canonical generation rewrites both Home files in full, so a file-level check
+// alone would admit a Home surface's unrelated drift. Content outside the
+// generated-event regions must not move, and the regions that do move must
+// belong to this transition.
+const homeHtml = (slots, chrome = 'chrome') => [
+  `<main id="main"><p>${chrome}</p>`,
+  ...Object.entries(slots).map(([id, body]) =>
+    `<!-- BEGIN GENERATED EVENT: ${id} -->${body}<!-- END GENERATED EVENT: ${id} -->`),
+  '</main>',
+].join('\n');
+
+const homeWas = homeHtml({ 'expiring-two': 'card-expiring', 'promoted-four': '' });
+const homeNow = homeHtml({ 'expiring-two': '', 'promoted-four': 'card-promoted' });
+assert.deepEqual(homeRegionChange(homeWas, homeNow), { changedIds: ['expiring-two', 'promoted-four'], outsideChanged: false });
+assert.deepEqual(homeRegionChange(homeWas, homeWas), { changedIds: [], outsideChanged: false });
+assert.deepEqual(
+  assertHomeRegionChangeBounded(homeWas, homeNow, ['expiring-two', 'promoted-four'], 'index.html'),
+  ['expiring-two', 'promoted-four'],
+);
+// Drift outside the regions is refused however small.
+const homeChrome = homeHtml({ 'expiring-two': '', 'promoted-four': 'card-promoted' }, 'hand-edited chrome');
+assert.equal(homeRegionChange(homeWas, homeChrome).outsideChanged, true);
+assert.throws(() => assertHomeRegionChangeBounded(homeWas, homeChrome, ['expiring-two', 'promoted-four'], 'pt/index.html'),
+  /PHASE2B_HOME_CHANGE_OUTSIDE_GENERATED_REGIONS: pt\/index\.html/);
+// A slot belonging to a record outside the transition is refused too.
+assert.throws(() => assertHomeRegionChangeBounded(homeWas, homeNow, ['expiring-two'], 'index.html'),
+  /PHASE2B_HOME_REGION_CHANGE_UNAUTHORIZED: index\.html: promoted-four/);
+// A duplicated region makes membership ambiguous, so it fails closed.
+assert.throws(() => homeRegionChange(`${homeWas}\n${homeWas}`, homeNow), /PHASE2B_HOME_REGION_DUPLICATED/);
 
 // assertBoundedWriteSet itself is unchanged: exact enforcement, both Homes
 // required, anything unlisted refused.
@@ -361,6 +413,12 @@ assert.throws(() => parseOpenFailureIssueProbe(
   issueProbe({ stdout: JSON.stringify([{ url: 'u', body: issueBody, comments: [] }]) }), { key: failKey },
 ), /FAILURE_SIGNAL_PROBE_UNREADABLE/);
 assert.throws(() => parseOpenFailureIssueProbe(issueProbe({}), {}), /FAILURE_SIGNAL_KEY_REQUIRED/);
+// `gh issue list --limit N` caps how many issues are FETCHED, so a full page is
+// not proof that no older issue carries this marker. A truncated result is
+// refused rather than read as absence, which is how a duplicate would be born.
+const filler = (n) => JSON.stringify(Array.from({ length: n }, (_, i) => ({ number: i + 1, url: `u${i}`, body: 'unrelated', comments: [] })));
+assert.throws(() => parseOpenFailureIssueProbe(issueProbe({ stdout: filler(100) }), { key: failKey, limit: 100 }), /FAILURE_SIGNAL_PROBE_TRUNCATED/);
+assert.equal(parseOpenFailureIssueProbe(issueProbe({ stdout: filler(99) }), { key: failKey, limit: 100 }), null);
 
 // 10. HEALTHY RUN — the signal is reachable only from the workflow's
 // `if: failure()` step, so a green run cannot produce a notification. Proved on
@@ -393,5 +451,8 @@ for (const forbidden of ['pr', 'push', 'merge']) {
   assert.ok(!signalSource.includes(`'${forbidden}',`), `the failure signal must not invoke gh ${forbidden}`);
 }
 assert.ok(!/writeFileSync/.test(signalSource), 'the failure signal must not write repository files');
+// The reporter must pass its own probe limit through, or the guard is inert.
+assert.ok(/limit: PROBE_LIMIT/.test(signalSource), 'the reporter must hand its probe limit to the parser');
+assert.ok(/'--limit', String\(PROBE_LIMIT\)/.test(signalSource), 'the reporter must use one limit for gh and the parser');
 
 console.log('Phase 2B currentness remediation unit tests passed.');

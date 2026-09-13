@@ -68,16 +68,22 @@ gh(['label', 'create', FAILURE_SIGNAL.label,
   '--description', 'Phase 2B bounded remediation refused to produce a repair',
 ], { allowFailure: true });
 
+// The probe limit is passed to the parser as well as to gh: a response that
+// fills the page cannot prove absence, so it is refused rather than read as
+// "no issue exists". In steady state this label carries one open issue per
+// live failure class, so reaching the limit means the tracker needs attention,
+// not that the signal should guess.
+const PROBE_LIMIT = 100;
 const probe = gh(['issue', 'list',
   '--repo', repository,
   '--label', FAILURE_SIGNAL.label,
   '--state', 'open',
-  '--limit', '100',
+  '--limit', String(PROBE_LIMIT),
   '--json', 'number,url,body,comments',
 ], { allowFailure: true });
 
 const decision = decideFailureSignal({ context, issue: null });
-const issue = parseOpenFailureIssueProbe(probe, { key: decision.key });
+const issue = parseOpenFailureIssueProbe(probe, { key: decision.key, limit: PROBE_LIMIT });
 const resolvedDecision = decideFailureSignal({ context, issue });
 
 if (resolvedDecision.action === 'NONE') {

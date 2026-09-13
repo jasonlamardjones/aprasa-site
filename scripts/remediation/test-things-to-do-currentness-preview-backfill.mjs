@@ -28,8 +28,11 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import {
   assertBoundedWriteSet,
+  assertHomeRegionChangeBounded,
   assertValidatorResults,
   expectedWriteSetForTransition,
+  homeRegionAuthorizedIds,
+  homeRegionChange,
   parseValidatorDriftIds,
   resolvePreviewTransition,
 } from './lib/things-to-do-currentness-remediation.mjs';
@@ -173,6 +176,10 @@ try {
   assert.deepEqual(transition.previewAfter, [ACTIVE, PROMOTED, RETAINED].sort());
   assert.ok(!transition.previewAfter.includes(EXPIRING), 'the expiring record must leave the preview');
   assert.ok(!transition.previewBefore.includes(PROMOTED), 'the promoted record must be absent before the transition');
+  // Only the expiring record's own currentness state moves. The promoted record
+  // stays CURRENT across the transition, which is why it earns a Home slot but
+  // no detail-page authority.
+  assert.deepEqual(transition.stateChangedIds, [EXPIRING]);
 
   nodeOk(work, 'scripts/build-all.mjs', [`--as-of=${BEFORE}`]);
   assert.deepEqual(homeCardIds(work, 'index.html'), [ACTIVE, EXPIRING, RETAINED]);
@@ -212,6 +219,9 @@ try {
 
   // --- 1. PREVIEW-BOUNDARY EXPIRY: canonical generation backfills ----------
   const baseline = inventory(work);
+  const homeBefore = new Map(['index.html', 'pt/index.html'].map(
+    (file) => [file, fs.readFileSync(path.join(work, file), 'utf8')],
+  ));
   runCanonicalGeneration(work, AFTER);
   const changed = changedFiles(baseline, inventory(work));
 
@@ -227,17 +237,58 @@ try {
     driftIds,
     previewBefore: transition.previewBefore,
     previewAfter: transition.previewAfter,
+    stateChangedIds: transition.stateChangedIds,
   });
-  for (const id of [ACTIVE, EXPIRING, RETAINED, PROMOTED]) {
+  assert.ok(allowed.includes('data/things-to-do-currentness.json'));
+  assert.ok(allowed.includes('index.html') && allowed.includes('pt/index.html'));
+  // Detail authority follows a record's OWN state change, not preview
+  // membership: the expiring record earns its detail pages, and the promoted
+  // record — CURRENT on both sides — does not.
+  for (const id of [EXPIRING]) {
     assert.ok(allowed.includes(`things-to-do/${id}/index.html`), `EN detail page for ${id} must be permitted`);
     assert.ok(allowed.includes(`pt/things-to-do/${id}/index.html`), `PT detail page for ${id} must be permitted`);
   }
-  assert.ok(allowed.includes('data/things-to-do-currentness.json'));
-  assert.ok(allowed.includes('index.html') && allowed.includes('pt/index.html'));
+  for (const id of [ACTIVE, RETAINED, PROMOTED]) {
+    assert.ok(!allowed.includes(`things-to-do/${id}/index.html`),
+      `${id} keeps its currentness state, so its detail page must NOT be authorized`);
+    assert.ok(!allowed.includes(`pt/things-to-do/${id}/index.html`),
+      `${id} keeps its currentness state, so its PT detail page must NOT be authorized`);
+  }
   // Derivation, not a remembered file count: the audit's five-file Eclipse
   // result is a property of one transition, never the contract.
   assert.ok(!allowed.includes('sitemap.xml'),
     'sitemap.xml is record-derived, not currentness-derived, so a transition must not admit it');
+
+  // --- Home bounded at REGION level, not only file level -------------------
+  // Canonical generation rewrites both Home files in full, so the file-level
+  // check alone would admit unrelated Home drift. Prove the real repair moves
+  // only the transition's own generated-event regions and nothing outside them.
+  const regionIds = homeRegionAuthorizedIds({
+    driftIds,
+    previewBefore: transition.previewBefore,
+    previewAfter: transition.previewAfter,
+  });
+  for (const [file, beforeHtml] of homeBefore) {
+    const afterHtml = fs.readFileSync(path.join(work, file), 'utf8');
+    const regionDiff = homeRegionChange(beforeHtml, afterHtml);
+    assert.equal(regionDiff.outsideChanged, false, `${file} must not change outside its generated-event regions`);
+    assert.deepEqual(regionDiff.changedIds, [EXPIRING, PROMOTED].sort(),
+      `${file} must move exactly the expiring and promoted slots`);
+    assert.deepEqual(assertHomeRegionChangeBounded(beforeHtml, afterHtml, regionIds, file), [EXPIRING, PROMOTED].sort());
+  }
+  // Unrelated Home drift outside the regions fails closed, and so does a region
+  // belonging to a record this transition never touched.
+  const [, firstHome] = [...homeBefore][0];
+  const driftedHome = firstHome.replace('<main id="main">', '<main id="main">\n      <!-- unrelated hand edit -->');
+  assert.notEqual(driftedHome, firstHome, 'the drift fixture must actually differ');
+  assert.throws(
+    () => assertHomeRegionChangeBounded(driftedHome, fs.readFileSync(path.join(work, 'index.html'), 'utf8'), regionIds, 'index.html'),
+    /PHASE2B_HOME_CHANGE_OUTSIDE_GENERATED_REGIONS/,
+  );
+  assert.throws(
+    () => assertHomeRegionChangeBounded(firstHome, fs.readFileSync(path.join(work, 'index.html'), 'utf8'), [EXPIRING], 'index.html'),
+    /PHASE2B_HOME_REGION_CHANGE_UNAUTHORIZED/,
+  );
 
   const bounded = assertBoundedWriteSet(changed, allowed);
   assert.deepEqual(bounded, changed);
@@ -290,6 +341,10 @@ try {
     'the adapter must derive its write set from the transition');
   assert.ok(runnerSource.includes('resolvePreviewTransition('),
     'the adapter must resolve preview membership either side of the transition');
+  assert.ok(runnerSource.includes('assertHomeRegionChangeBounded('),
+    'the adapter must bound Home at region level, not only at file level');
+  assert.ok(runnerSource.includes('stateChangedIds: previewTransition.stateChangedIds'),
+    'the adapter must derive detail authority from actual currentness state changes');
 
   console.log('Phase 2B preview-boundary backfill integration tests passed.');
 } finally {
