@@ -95,6 +95,7 @@ if (resolvedDecision.action === 'NONE') {
   console.log(JSON.stringify({
     status: 'FAILURE_SIGNAL_ALREADY_RECORDED',
     failure_class: resolvedDecision.failureClass,
+    reason: resolvedDecision.reason,
     issue_url: issue.url,
     commit,
   }, null, 2));
@@ -104,11 +105,12 @@ if (resolvedDecision.action === 'NONE') {
 if (resolvedDecision.action === 'COMMENT') {
   gh(['issue', 'comment', String(issue.number),
     '--repo', repository,
-    '--body', buildRecurrenceComment(context, { repository }),
+    '--body', buildRecurrenceComment(context, { repository, escalation: resolvedDecision.escalation }),
   ]);
   console.log(JSON.stringify({
-    status: 'FAILURE_SIGNAL_RECURRENCE_RECORDED',
+    status: resolvedDecision.escalation ? 'FAILURE_SIGNAL_RECOVERY_ESCALATED' : 'FAILURE_SIGNAL_RECURRENCE_RECORDED',
     failure_class: resolvedDecision.failureClass,
+    reason: resolvedDecision.reason,
     issue_url: issue.url,
     commit,
   }, null, 2));

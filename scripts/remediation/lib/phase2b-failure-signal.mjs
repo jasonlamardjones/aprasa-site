@@ -17,6 +17,14 @@
 //   * A repeat of the same failure class on a NEW commit adds exactly one
 //     comment. Growth is therefore bounded by distinct failing commits, not by
 //     firings, and a burst of identical retries cannot spam the issue.
+//   * One exception to that suppression, because commit identity alone is not
+//     the whole disposition: if a commit was first recorded as a PRE-commit
+//     refusal and a later run on that same commit reaches POST-commit recovery,
+//     the recorded text understates what exists — it still says no branch or
+//     commit was created while a candidate may now be pushed. That escalation
+//     adds one corrective comment. It is one-directional (pre -> post, never
+//     back) and recorded per commit, so the ceiling stays at two comments per
+//     commit and cannot oscillate.
 //
 // It never mutates public content: no generated surface, no canonical record,
 // no branch, no pull request. Issue text only.
@@ -33,6 +41,7 @@ export const FAILURE_SIGNAL = Object.freeze({
   label: 'phase-2b-remediation-failure',
   keyMarkerPrefix: 'phase2b-failure-signal',
   commitMarkerPrefix: 'phase2b-failure-commit',
+  recoveryMarkerPrefix: 'phase2b-failure-recovery',
   unclassified: 'PHASE2B_UNCLASSIFIED_FAILURE',
 });
 
@@ -90,6 +99,15 @@ export function keyMarker(key) {
 export function commitMarker(sha) {
   if (!SHA_PATTERN.test(sha ?? '')) throw new Error('PHASE2B_FAILURE_COMMIT_UNREADABLE');
   return `<!-- ${FAILURE_SIGNAL.commitMarkerPrefix}: ${sha} -->`;
+}
+
+/**
+ * Records that this commit's failure landed AFTER the commit, so the escalation
+ * is not re-reported on every later firing. Absent on pre-commit refusals.
+ */
+export function recoveryMarker(sha) {
+  if (!SHA_PATTERN.test(sha ?? '')) throw new Error('PHASE2B_FAILURE_COMMIT_UNREADABLE');
+  return `<!-- ${FAILURE_SIGNAL.recoveryMarkerPrefix}: ${sha} -->`;
 }
 
 function requireContext(context) {
@@ -158,11 +176,20 @@ export function parseOpenFailureIssueProbe(probe, { key, limit = null } = {}) {
 }
 
 /** Commits already recorded on an open signal issue, body and comments alike. */
-export function recordedCommits(issue) {
+function markedCommits(issue, prefix) {
   if (!issue) return [];
-  const pattern = new RegExp(`<!--\\s*${FAILURE_SIGNAL.commitMarkerPrefix}:\\s*([a-f0-9]{40})\\s*-->`, 'g');
+  const pattern = new RegExp(`<!--\\s*${prefix}:\\s*([a-f0-9]{40})\\s*-->`, 'g');
   const haystack = [issue.body ?? '', ...(issue.comments ?? [])].join('\n');
   return [...new Set([...haystack.matchAll(pattern)].map((match) => match[1]))].sort();
+}
+
+export function recordedCommits(issue) {
+  return markedCommits(issue, FAILURE_SIGNAL.commitMarkerPrefix);
+}
+
+/** Commits already recorded as having failed AFTER the repair commit. */
+export function recordedRecoveryCommits(issue) {
+  return markedCommits(issue, FAILURE_SIGNAL.recoveryMarkerPrefix);
 }
 
 export function failureIssueTitle(failureClass) {
@@ -202,6 +229,7 @@ export function buildIssueBody(context, { repository = null, key } = {}) {
   return [
     keyMarker(key ?? failureSignalKey(resolved.failureClass)),
     commitMarker(resolved.commit),
+    ...(recovery ? [recoveryMarker(resolved.commit)] : []),
     '',
     '## Phase 2B bounded currentness remediation failed',
     '',
@@ -221,15 +249,19 @@ export function buildIssueBody(context, { repository = null, key } = {}) {
   ].join('\n');
 }
 
-export function buildRecurrenceComment(context, { repository = null } = {}) {
+export function buildRecurrenceComment(context, { repository = null, escalation = false } = {}) {
   const resolved = requireContext(context);
   const recovery = detectPostCommitRecovery(context?.log ?? '');
   return [
     commitMarker(resolved.commit),
+    ...(recovery ? [recoveryMarker(resolved.commit)] : []),
     '',
-    'Same failure class reproduced on a further commit.',
+    escalation
+      ? 'CORRECTION for a commit already recorded above: a later run on this same'
+        + ' commit failed AFTER committing, so the earlier note understates what exists.'
+      : 'Same failure class reproduced on a further commit.',
     ...(recovery
-      ? ['', 'This occurrence failed AFTER committing, so a candidate branch may exist', 'on the remote. Inspect before rerunning.', '', `> ${recovery}`]
+      ? ['', 'A candidate branch and commit may exist on the remote. Inspect before', 'rerunning. `main` was not modified and nothing was deployed.', '', `> ${recovery}`]
       : []),
     '',
     ...contextLines(resolved, repository),
@@ -244,11 +276,19 @@ export function buildRecurrenceComment(context, { repository = null } = {}) {
 export function decideFailureSignal({ issue = null, context } = {}) {
   const resolved = requireContext(context);
   const key = failureSignalKey(resolved.failureClass);
+  const recovery = detectPostCommitRecovery(context?.log ?? '') !== null;
   if (!issue) {
-    return Object.freeze({ action: 'CREATE', key, failureClass: resolved.failureClass, issue: null });
+    return Object.freeze({ action: 'CREATE', key, failureClass: resolved.failureClass, issue: null, escalation: false, reason: 'NO_OPEN_SIGNAL' });
   }
   if (recordedCommits(issue).includes(resolved.commit)) {
-    return Object.freeze({ action: 'NONE', key, failureClass: resolved.failureClass, issue });
+    // Commit identity alone is not the whole disposition. A commit first
+    // recorded as a pre-commit refusal whose later run reaches post-commit
+    // recovery has left the recorded text understating what exists, so that
+    // one transition escalates rather than being suppressed.
+    if (recovery && !recordedRecoveryCommits(issue).includes(resolved.commit)) {
+      return Object.freeze({ action: 'COMMENT', key, failureClass: resolved.failureClass, issue, escalation: true, reason: 'RECOVERY_STATE_CHANGED' });
+    }
+    return Object.freeze({ action: 'NONE', key, failureClass: resolved.failureClass, issue, escalation: false, reason: 'ALREADY_RECORDED' });
   }
-  return Object.freeze({ action: 'COMMENT', key, failureClass: resolved.failureClass, issue });
+  return Object.freeze({ action: 'COMMENT', key, failureClass: resolved.failureClass, issue, escalation: false, reason: 'NEW_COMMIT' });
 }

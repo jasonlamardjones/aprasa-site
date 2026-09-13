@@ -31,6 +31,7 @@ import {
   buildRecurrenceComment,
   classifyFailure,
   detectPostCommitRecovery,
+  recordedRecoveryCommits,
   decideFailureSignal,
   failureIssueTitle,
   failureSignalKey,
@@ -444,8 +445,11 @@ const recoveryComment = buildRecurrenceComment(
   { ...otherCommitContext, log: 'PHASE2B_POST_COMMIT_RECOVERY: Candidate def was committed locally but not safely published.' },
   { repository: 'o/r' },
 );
-assert.ok(recoveryComment.includes('Inspect before rerunning.'));
-assert.ok(!buildRecurrenceComment(otherCommitContext, { repository: 'o/r' }).includes('Inspect before rerunning.'));
+assert.ok(recoveryComment.includes('A candidate branch and commit may exist'));
+assert.ok(recoveryComment.includes('Candidate def was committed locally but not safely published.'));
+const plainRecurrence = buildRecurrenceComment(otherCommitContext, { repository: 'o/r' });
+assert.ok(!plainRecurrence.includes('A candidate branch and commit may exist'));
+assert.ok(plainRecurrence.includes('Same failure class reproduced on a further commit.'));
 
 // The signal mutates no public content: it never names a generated surface,
 // a canonical record file, a branch or a pull request.
@@ -457,6 +461,8 @@ for (const token of ['index.html', 'data/things-to-do-events.json', 'feature/pha
 // already recorded does nothing at all.
 const openIssue = { number: 7, url: 'https://github.com/o/r/issues/7', body: issueBody, comments: [] };
 assert.equal(decideFailureSignal({ issue: openIssue, context: failContext }).action, 'NONE');
+assert.equal(decideFailureSignal({ issue: openIssue, context: failContext }).reason, 'ALREADY_RECORDED');
+assert.equal(decideFailureSignal({ issue: null, context: failContext }).reason, 'NO_OPEN_SIGNAL');
 assert.equal(decideFailureSignal({ issue: openIssue, context: { ...failContext, runId: '9999', runAttempt: '3' } }).action, 'NONE',
   'a retry of the same failure on the same commit must not add anything');
 
@@ -468,6 +474,47 @@ assert(comment.includes(OTHER_SHA));
 const updatedIssue = { ...openIssue, comments: [comment] };
 assert.equal(decideFailureSignal({ issue: updatedIssue, context: otherCommitContext }).action, 'NONE');
 assert.deepEqual(recordedCommits(updatedIssue), [SHA, OTHER_SHA].sort());
+// Commit identity alone is not the whole disposition. A commit first recorded as
+// a pre-commit refusal whose LATER run reaches post-commit recovery has left the
+// recorded text understating what exists — it still says no branch or commit was
+// created while a candidate may now be pushed. Both dispositions can classify
+// identically (an empty log and a bare recovery log are both UNCLASSIFIED), so
+// the commit check alone suppressed the correction.
+const unclassifiedPre = { failureClass: FAILURE_SIGNAL.unclassified, log: '', commit: SHA, runId: '1', runAttempt: '1' };
+const unclassifiedPost = { ...unclassifiedPre, log: 'PHASE2B_POST_COMMIT_RECOVERY: Candidate abc is already pushed on feature/x' };
+assert.equal(classifyFailure(unclassifiedPre.log), classifyFailure(unclassifiedPost.log),
+  'both dispositions must classify identically, which is what made this suppressible');
+const preKey = failureSignalKey(FAILURE_SIGNAL.unclassified);
+const preIssueBody = buildIssueBody(unclassifiedPre, { repository: 'o/r', key: preKey });
+assert.ok(preIssueBody.includes('no branch, no commit'), 'the pre-commit record states the clean no-op');
+assert.deepEqual(recordedRecoveryCommits({ body: preIssueBody, comments: [] }), [],
+  'a pre-commit record carries no recovery marker');
+let escalating = { number: 9, url: 'https://github.com/o/r/issues/9', body: preIssueBody, comments: [] };
+const escalated = decideFailureSignal({ issue: escalating, context: unclassifiedPost });
+assert.equal(escalated.action, 'COMMENT');
+assert.equal(escalated.reason, 'RECOVERY_STATE_CHANGED');
+assert.equal(escalated.escalation, true);
+const correction = buildRecurrenceComment(unclassifiedPost, { repository: 'o/r', escalation: true });
+assert.ok(correction.includes('CORRECTION for a commit already recorded'), 'the escalation must read as a correction');
+assert.ok(correction.includes('A candidate branch and commit may exist'), 'it must warn a candidate may exist');
+assert.ok(correction.includes('Candidate abc is already pushed'), 'it must carry the recovery detail');
+// Bounded: the escalation records itself, so it happens once per commit.
+escalating = { ...escalating, comments: [correction] };
+assert.deepEqual(recordedRecoveryCommits(escalating), [SHA]);
+assert.equal(decideFailureSignal({ issue: escalating, context: unclassifiedPost }).reason, 'ALREADY_RECORDED',
+  'a repeat post-commit failure on the same commit must not escalate twice');
+// One-directional: a later pre-commit failure on that commit does not re-comment.
+assert.equal(decideFailureSignal({ issue: escalating, context: unclassifiedPre }).reason, 'ALREADY_RECORDED',
+  'recovery state must not oscillate back to pre-commit');
+// An issue OPENED on a post-commit failure already carries the marker, so a
+// retry of that commit suppresses rather than escalating against itself.
+const postFirstBody = buildIssueBody(unclassifiedPost, { repository: 'o/r', key: preKey });
+assert.deepEqual(recordedRecoveryCommits({ body: postFirstBody, comments: [] }), [SHA]);
+assert.equal(
+  decideFailureSignal({ issue: { number: 10, url: 'u10', body: postFirstBody, comments: [] }, context: unclassifiedPost }).reason,
+  'ALREADY_RECORDED',
+);
+
 // A different failure class is a different signal, so it opens its own issue.
 const otherClass = decideFailureSignal({ issue: null, context: { ...failContext, log: 'PHASE2B_MAIN_MOVED' } });
 assert.equal(otherClass.action, 'CREATE');
@@ -585,5 +632,9 @@ assert.ok(livePlainBody.includes('no branch, no commit'),
   'a pre-commit refusal still states the clean no-op through the same path');
 
 assert.ok(/'--limit', String\(PROBE_LIMIT\)/.test(signalSource), 'the reporter must use one limit for gh and the parser');
+// The reporter must pass the escalation flag through, or the correction reads as
+// an ordinary recurrence.
+assert.ok(/escalation: resolvedDecision\.escalation/.test(signalSource),
+  'the reporter must hand the escalation flag to the recurrence comment');
 
 console.log('Phase 2B currentness remediation unit tests passed.');
