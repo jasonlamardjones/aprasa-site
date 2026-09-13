@@ -40,6 +40,14 @@ on:
       - 'scripts/test-whatsapp-launcher-panel.mjs'
       - 'scripts/lib/runtime-strings.mjs'
       - 'mindelo-essentials/mindelo-essentials.js'
+      # Every HTML route, at any depth. The launcher-surface checks walk the
+      # whole repository and are fail-closed — a page must carry the governed
+      # runtime-strings block or be explicitly exempted — but that walk only
+      # protects anything if the workflow actually starts. Enumerating today's
+      # HTML locations would leave a NEW route (say contact/index.html) able to
+      # ship without ever running it, which is the same fail-open hole one level
+      # up. The entries below stay because they also cover non-HTML assets.
+      - '**.html'
       - 'scripts/validate-training-opportunities-currentness.mjs'
       - 'scripts/validate-training-opportunities-data.mjs'
       - 'scripts/generate-training-opportunities.mjs'
