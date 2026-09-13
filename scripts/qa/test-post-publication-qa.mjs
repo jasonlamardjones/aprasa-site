@@ -7,6 +7,7 @@
 
 import fs from 'node:fs';
 import os from 'node:os';
+import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -78,6 +79,42 @@ function writeDeploymentFixture(dir, state, extra = {}) {
 }
 
 const targets = loadTargets(ROOT);
+const localeDataFixture = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'locales', 'locale-data.generated.json'), 'utf8'));
+
+/**
+ * A throwaway copy of the repository with the collection hub REPUBLISHED.
+ *
+ * THINGS_TO_DO_HUB_PUBLIC is a module constant, so the published branch of the
+ * target logic cannot be reached by passing a different root into loadTargets()
+ * from this process -- the flag would still be the dormant one. The sandbox is
+ * therefore a real republication (flag, both generators, the sitemap) and the
+ * assertion runs in a child process that imports the sandbox's own modules.
+ * Nothing here touches the working tree.
+ */
+function republishedSandbox() {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'aprasa-qa-republished-'));
+  fs.cpSync(ROOT, dir, {
+    recursive: true,
+    filter: (source) => !source.includes(`${path.sep}.git${path.sep}`)
+      && !source.endsWith(`${path.sep}.git`)
+      && !source.includes(`${path.sep}node_modules`),
+  });
+  const flagFile = path.join(dir, 'scripts', 'lib', 'things-to-do-collection.mjs');
+  const source = fs.readFileSync(flagFile, 'utf8');
+  const disabled = 'export const THINGS_TO_DO_HUB_PUBLIC = false;';
+  if (!source.includes(disabled)) throw new Error('republishedSandbox: publication flag declaration not found');
+  fs.writeFileSync(flagFile, source.replace(disabled, 'export const THINGS_TO_DO_HUB_PUBLIC = true;'));
+  const steps = [
+    ['generate-things-to-do.mjs', [`--as-of=${COMMITTED_AS_OF}`, '--locale=en', '--write']],
+    ['generate-things-to-do.mjs', [`--as-of=${COMMITTED_AS_OF}`, '--locale=pt', '--home=pt/index.html', '--write']],
+    ['build-sitemap.mjs', ['--write']],
+  ];
+  for (const [script, args] of steps) {
+    const result = spawnSync('node', [path.join(dir, 'scripts', script), ...args], { cwd: dir, encoding: 'utf8' });
+    if (result.status !== 0) throw new Error(`republishedSandbox: ${script} failed: ${result.stdout}${result.stderr}`);
+  }
+  return dir;
+}
 
 /**
  * Run the full HTTP-domain runner against a fixture site.
@@ -1604,6 +1641,156 @@ await testCase('AUDIT the loopback override is the only way off the production t
       && resolveBaseUrl(undefined).environment === 'production',
     JSON.stringify({ refusedWithFlag, refusedWithoutFlag })
   );
+});
+
+// ---------------------------------------------------------------------------
+// W. Withdrawn routes: the collection hubs while THINGS_TO_DO_HUB_PUBLIC is
+// false. These are NEGATIVE targets -- routes required to be absent -- and they
+// exist because every other target in this layer is derived from what the site
+// publishes, so an unpublished route would otherwise leave the target set at
+// the exact moment it needs watching.
+// ---------------------------------------------------------------------------
+const HUB_MARKERS = {
+  en: localeDataFixture.keys['things.hub.h1'].en,
+  pt: localeDataFixture.keys['things.hub.h1'].pt,
+};
+
+/** The withdrawn hub page as it was last published, for stale-edge cases. */
+function publishedHubBytes(locale) {
+  const title = HUB_MARKERS[locale];
+  return `<!doctype html><html lang="${locale}"><head><title>${title} | A PRASA</title></head>`
+    + `<body><main id="main"><div class="section-heading"><h1>${title}</h1></div>`
+    + '<div class="resource-grid things-grid">'
+    + '<article class="resource-card" data-event-id="sinergia-da-materia"><h3>SINERGIA DA MATÉRIA</h3></article>'
+    + '</div></main></body></html>';
+}
+
+await testCase('W1 dormant hub routes are live-QA targets even though absent from the sitemap', (assert) => {
+  const inSitemap = targets.sitemapRoutes.filter((route) => route === '/things-to-do/' || route === '/pt/things-to-do/');
+  const inPageRoutes = targets.pageRoutes.filter((page) => page.route === '/things-to-do/' || page.route === '/pt/things-to-do/');
+  const withdrawn = targets.withdrawnRoutes.map((entry) => entry.route);
+  assert(
+    inSitemap.length === 0 && inPageRoutes.length === 0 && withdrawn.length === 2,
+    JSON.stringify({ inSitemap, inPageRoutes: inPageRoutes.map((p) => p.route), withdrawn })
+  );
+});
+
+await testCase('W2 both locales are checked, and the check reaches production as a read', async (assert) => {
+  const { report, server } = await runAgainstFixture({ withServer: true });
+  const ids = report.checks.filter((check) => check.id.startsWith('http:withdrawn:')).map((check) => check.id);
+  const locales = report.checks
+    .filter((check) => check.id.startsWith('http:withdrawn:'))
+    .map((check) => check.locale)
+    .sort();
+  const requested = server.received.filter((entry) => entry.url === '/things-to-do/' || entry.url === '/pt/things-to-do/');
+  assert(
+    ids.includes('http:withdrawn:/things-to-do/')
+      && ids.includes('http:withdrawn:/pt/things-to-do/')
+      && JSON.stringify(locales) === JSON.stringify(['en', 'pt'])
+      && requested.length === 2
+      && requested.every((entry) => entry.method === 'GET'),
+    JSON.stringify({ ids, locales, requested })
+  );
+});
+
+await testCase('W3 a stale edge still serving the old collection page is an ERROR in both locales', async (assert) => {
+  const { report } = await runAgainstFixture({
+    mutate: (overrides) => {
+      overrides.set('/things-to-do/', { status: 200, body: publishedHubBytes('en') });
+      overrides.set('/pt/things-to-do/', { status: 200, body: publishedHubBytes('pt') });
+    },
+  });
+  const issues = report.issues.filter((issue) => issue.code === 'ROUTE_WITHDRAWN_STILL_SERVED');
+  const routes = issues.map((issue) => issue.route).sort();
+  assert(
+    issues.length === 2
+      && JSON.stringify(routes) === JSON.stringify(['/pt/things-to-do/', '/things-to-do/'])
+      && issues.every((issue) => issue.severity === 'ERROR' && issue.resolver_class === 'DEPLOYMENT')
+      && report.overall_status === 'FAILED',
+    JSON.stringify({ overall: report.overall_status, issues: issues.map((issue) => [issue.route, issue.severity, issue.observed]) })
+  );
+});
+
+await testCase('W3b a 200 that is not the collection surface is a WARNING, not an ERROR', async (assert) => {
+  const { report } = await runAgainstFixture({
+    mutate: (overrides) => overrides.set('/things-to-do/', { status: 200, body: '<!doctype html><title>Something else</title><p>not the hub</p>' }),
+  });
+  const warning = report.issues.find((issue) => issue.code === 'ROUTE_WITHDRAWN_STILL_ANSWERS');
+  const errors = report.issues.filter((issue) => issue.code === 'ROUTE_WITHDRAWN_STILL_SERVED');
+  assert(
+    Boolean(warning) && warning.severity === 'WARNING' && errors.length === 0 && report.overall_status === 'DEGRADED',
+    JSON.stringify({ overall: report.overall_status, warning, errors })
+  );
+});
+
+await testCase('W4 the intended absent response passes with no issue raised', async (assert) => {
+  const { report } = await runAgainstFixture({});
+  const checks = report.checks.filter((check) => check.id.startsWith('http:withdrawn:'));
+  const issues = report.issues.filter((issue) => issue.code.startsWith('ROUTE_WITHDRAWN_'));
+  assert(
+    checks.length === 2 && checks.every((check) => check.status === 'PASS' && check.observed === 404) && issues.length === 0,
+    JSON.stringify({ checks: checks.map((check) => [check.route, check.status, check.observed]), issues })
+  );
+});
+
+await testCase('W5 a republished hub empties the negative set and returns to positive QA', async (assert) => {
+  const sandbox = republishedSandbox();
+  try {
+    const probe = spawnSync('node', ['--input-type=module', '-e', `
+      const { loadTargets, selectHttpRoutes, selectWithdrawnRoutes } = await import('${path.join(sandbox, 'scripts', 'qa', 'lib', 'qa-targets.mjs')}');
+      const targets = loadTargets('${sandbox}');
+      const immediate = selectHttpRoutes(targets, 'IMMEDIATE_POST_DEPLOY').map((page) => page.route);
+      process.stdout.write(JSON.stringify({
+        withdrawn: selectWithdrawnRoutes(targets),
+        inSitemap: targets.sitemapRoutes.filter((route) => route.endsWith('/things-to-do/')),
+        pageRoutes: targets.pageRoutes.filter((page) => page.route.endsWith('/things-to-do/')).map((page) => page.route),
+        immediate: immediate.filter((route) => route.endsWith('/things-to-do/')),
+      }));
+    `], { encoding: 'utf8', cwd: sandbox });
+    const out = JSON.parse(probe.stdout || '{}');
+    assert(
+      probe.status === 0
+        && Array.isArray(out.withdrawn) && out.withdrawn.length === 0
+        && out.inSitemap.length === 2
+        && out.pageRoutes.length === 2
+        && out.immediate.length === 2,
+      `status=${probe.status} stderr=${probe.stderr} out=${JSON.stringify(out)}`
+    );
+  } finally {
+    fs.rmSync(sandbox, { recursive: true, force: true });
+  }
+});
+
+await testCase('W6 sitemap-derived QA for every other route is unchanged', async (assert) => {
+  const fromSitemap = new Set(targets.sitemapRoutes);
+  const derived = targets.pageRoutes.map((page) => page.route);
+  const unexpected = derived.filter((route) => !fromSitemap.has(route) && !fs.existsSync(path.join(ROOT, route.replace(/^\//, ''), 'index.html')));
+  const { report } = await runAgainstFixture({ skipSource: false });
+  assert(
+    unexpected.length === 0 && derived.length === fromSitemap.size && report.overall_status === 'HEALTHY',
+    JSON.stringify({ unexpected, derived: derived.length, sitemap: fromSitemap.size, overall: report.overall_status })
+  );
+});
+
+await testCase('W7 no canonical detail route is lost from the target set', (assert) => {
+  const events = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'things-to-do-events.json'), 'utf8'));
+  const canonical = (events.records ?? []).filter((record) => record.kind === 'dated-event').map((record) => `/${record.detail_page}`);
+  const covered = new Set(targets.pageRoutes.map((page) => page.route));
+  const missing = canonical.filter((route) => !covered.has(route));
+  assert(canonical.length > 0 && missing.length === 0, JSON.stringify({ canonical: canonical.length, missing }));
+});
+
+await testCase('W8 the withdrawn-route pass sends no request that could mutate anything', async (assert) => {
+  const { server } = await runAgainstFixture({
+    withServer: true,
+    mutate: (overrides) => {
+      overrides.set('/things-to-do/', { status: 200, body: publishedHubBytes('en') });
+      overrides.set('/pt/things-to-do/', { status: 200, body: publishedHubBytes('pt') });
+    },
+  });
+  const methods = new Set(server.received.map((entry) => entry.method));
+  const nonRead = [...methods].filter((method) => method !== 'GET' && method !== 'HEAD');
+  assert(nonRead.length === 0, JSON.stringify({ methods: [...methods], nonRead }));
 });
 
 // ---------------------------------------------------------------------------

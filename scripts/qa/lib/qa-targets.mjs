@@ -160,6 +160,27 @@ export function loadTargets(root, { affectedRoutes = [] } = {}) {
 
   const documents = ['/sitemap.xml', '/robots.txt'];
 
+  // Routes this repository has deliberately WITHDRAWN from publication.
+  //
+  // Everything else in this module derives targets from what the site
+  // publishes, so a withdrawn route disappears from the target set at exactly
+  // the moment it stops being published -- which would leave nothing asserting
+  // that production actually stopped serving it. A stale edge, or a deploy that
+  // still carried the file, could keep returning the old collection page and no
+  // live pass would say so.
+  //
+  // These are therefore NEGATIVE targets: routes required to be absent, checked
+  // precisely because the sitemap no longer names them. Publication state comes
+  // from the same governed flag the generator, the sitemap builder and the
+  // workflow read -- never a second definition -- so republication empties this
+  // list and the routes return to ordinary positive page QA.
+  const withdrawnRoutes = THINGS_TO_DO_HUB_PUBLIC
+    ? []
+    : [
+      { route: EN_HUB_ROUTE, locale: 'en', reason: 'THINGS_TO_DO_HUB_UNPUBLISHED' },
+      { route: PT_HUB_ROUTE, locale: 'pt', reason: 'THINGS_TO_DO_HUB_UNPUBLISHED' },
+    ];
+
   const normalizedAffected = affectedRoutes
     .map((route) => (route.startsWith('/') ? route : `/${route}`))
     .filter((route) => seen.has(route));
@@ -173,6 +194,7 @@ export function loadTargets(root, { affectedRoutes = [] } = {}) {
     documents,
     sitemapRoutes: sitemap,
     affectedRoutes: normalizedAffected,
+    withdrawnRoutes,
   };
 }
 
@@ -214,6 +236,19 @@ export function selectHttpRoutes(targets, mode) {
     }
   }
   return targets.pageRoutes.filter((page) => core.has(page.route));
+}
+
+/**
+ * The withdrawn routes a given mode must prove are no longer served.
+ *
+ * Every mode, deliberately. The positive surface is mode-scoped because it is
+ * large and a stale page is caught by the next run anyway; this set is two
+ * requests, and the thing it guards against -- a withdrawn page still public --
+ * is not something any mode should be willing to miss. It is empty whenever the
+ * hub is published, so this costs nothing once the hubs come back.
+ */
+export function selectWithdrawnRoutes(targets) {
+  return targets.withdrawnRoutes;
 }
 
 /**

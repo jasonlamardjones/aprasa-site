@@ -157,6 +157,13 @@ export const CATEGORIES = Object.freeze([
  */
 export const PROPAGATION_ELIGIBLE_CODES = Object.freeze([
   'ROUTE_NOT_FOUND',
+  // A withdrawn route still serving its old collection page is the stale-edge
+  // case exactly: the edge is holding the PREVIOUS deploy, in which that page
+  // still existed. It belongs here for the same reason ROUTE_NOT_FOUND does,
+  // pointing the other way -- one is a page not there yet, this is a page not
+  // gone yet. Its WARNING sibling ROUTE_WITHDRAWN_STILL_ANSWERS is deliberately
+  // absent: the grace window only ever applies to ERROR and CRITICAL.
+  'ROUTE_WITHDRAWN_STILL_SERVED',
   'ROUTE_UNEXPECTED_STATUS',
   'ROUTE_SERVER_ERROR',
   'ROUTE_UNREACHABLE',

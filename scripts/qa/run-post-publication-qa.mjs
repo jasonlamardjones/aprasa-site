@@ -28,7 +28,7 @@ import {
   MODES,
 } from './lib/qa-contract.mjs';
 import { loadSchema, validateAgainstSchema } from './lib/qa-schema.mjs';
-import { EN_HUB_ROUTE, loadTargets, selectBrowserRoutes, selectHttpRoutes, todayInCapeVerde } from './lib/qa-targets.mjs';
+import { EN_HUB_ROUTE, loadTargets, selectBrowserRoutes, selectHttpRoutes, selectWithdrawnRoutes, todayInCapeVerde } from './lib/qa-targets.mjs';
 import { fetchFollowing, isNormalizingRedirect } from './lib/qa-http.mjs';
 import { corroborateByContent, resolveDeploymentProvenance } from './lib/qa-deployment.mjs';
 import { runBrowserChecks, VIEWPORTS } from './lib/qa-browser.mjs';
@@ -532,6 +532,133 @@ async function fetchAndCheckRoute(emit, { baseUrl, route, locale = null, kind = 
   return response;
 }
 
+/**
+ * The governed strings that identify a rendered collection hub in one locale.
+ *
+ * Derived from the same locale data the renderer consumes, never a second copy
+ * of the copy: if the hub is ever republished with different governed wording,
+ * this follows it. Both keys are retained through the unpublishing precisely so
+ * the surface stays identifiable while dormant.
+ */
+function hubSurfaceMarkers(localeData, locale) {
+  const markers = [];
+  for (const key of ['things.hub.h1', 'things.hub.meta.title']) {
+    const value = localeData.keys?.[key]?.[locale];
+    if (typeof value === 'string' && value) markers.push({ key, value });
+  }
+  return markers;
+}
+
+/**
+ * Prove that a withdrawn route is no longer publicly served.
+ *
+ * This is the negative counterpart of fetchAndCheckRoute(), and it cannot be
+ * expressed by reusing it: that function reports a non-200 as a defect, which
+ * is the outcome required here. The site's governed absence model is genuine
+ * absence -- no redirect, no custom 404 -- so the static host answering
+ * anything other than 200 is the pass condition, and the check does not depend
+ * on which status a given host chooses.
+ *
+ * A 200 is separated into two outcomes rather than one, because they are
+ * different failures with different owners:
+ *
+ *   the body still renders the collection surface  -> ERROR. The withdrawn page
+ *     is publicly served: a stale edge, or a deploy that still carried the file.
+ *   the body is something else                     -> WARNING. The route still
+ *     answers where genuine absence was intended, but the old collection
+ *     surface is not what is being served, so calling it the same defect would
+ *     overstate the evidence.
+ *
+ * Read-only by construction: one GET per route, no body, no mutation, pinned to
+ * the same allowed origin as every other request in this pass.
+ */
+async function checkWithdrawnRoute(emit, { baseUrl, route, locale, reason, localeData }) {
+  const url = new URL(route, baseUrl).toString();
+  const response = await fetchFollowing(url, { allowedOrigin: new URL(baseUrl).origin });
+  const evidence = {
+    url,
+    final_url: response.url,
+    status: response.status,
+    attempts: response.attempts,
+    redirect_chain: response.chain,
+    withdrawn_reason: reason,
+  };
+  const name = 'withdrawn route is no longer publicly served';
+
+  // A transport failure is not evidence of correct absence, and it is not
+  // evidence of the page being served either. It is reported as no evidence
+  // rather than as a pass, so a host that is simply unreachable can never look
+  // like a successful unpublishing.
+  if (!response.ok) {
+    emit.check({
+      id: `http:withdrawn:${route}`,
+      name,
+      status: 'SKIP',
+      route,
+      locale,
+      observed: response.networkError,
+      expected: 'any non-200 status (genuine absence)',
+      evidence,
+    });
+    return;
+  }
+
+  if (response.status !== 200) {
+    emit.check({
+      id: `http:withdrawn:${route}`,
+      name,
+      status: 'PASS',
+      route,
+      locale,
+      observed: response.status,
+      expected: 'any non-200 status (genuine absence)',
+      duration_ms: response.duration_ms,
+      evidence,
+    });
+    return;
+  }
+
+  const markers = hubSurfaceMarkers(localeData, locale);
+  const matched = markers.filter((marker) => htmlContains(response.body ?? '', (value) => value, marker.value));
+  const servesCollection = matched.length > 0;
+  emit.check({
+    id: `http:withdrawn:${route}`,
+    name,
+    status: servesCollection ? 'FAIL' : 'WARN',
+    route,
+    locale,
+    observed: { status: 200, collection_surface: servesCollection, matched_keys: matched.map((marker) => marker.key) },
+    expected: 'any non-200 status (genuine absence)',
+    duration_ms: response.duration_ms,
+    evidence,
+  });
+  emit.issue(servesCollection
+    ? {
+      code: 'ROUTE_WITHDRAWN_STILL_SERVED',
+      severity: 'ERROR',
+      category: 'ROUTE',
+      check: name,
+      route,
+      locale,
+      observed: `HTTP 200 rendering the withdrawn collection surface (${matched.map((marker) => marker.key).join(', ')})`,
+      expected: 'any non-200 status (genuine absence)',
+      evidence: { ...evidence, matched_keys: matched.map((marker) => marker.key) },
+      resolver_class: 'DEPLOYMENT',
+    }
+    : {
+      code: 'ROUTE_WITHDRAWN_STILL_ANSWERS',
+      severity: 'WARNING',
+      category: 'ROUTE',
+      check: name,
+      route,
+      locale,
+      observed: 'HTTP 200 without the withdrawn collection surface',
+      expected: 'any non-200 status (genuine absence)',
+      evidence: { ...evidence, checked_keys: markers.map((marker) => marker.key) },
+      resolver_class: 'DEPLOYMENT',
+    });
+}
+
 // --------------------------------------------------------------------------
 // Live Things-to-Do + localization contracts
 // --------------------------------------------------------------------------
@@ -984,6 +1111,9 @@ export async function run(argv) {
     if (!bodies.has('/')) {
       const response = await fetchAndCheckRoute(httpEmit, { baseUrl, route: '/', locale: 'en', kind: 'page' });
       if (response) bodies.set('/', response.body);
+    }
+    for (const withdrawn of selectWithdrawnRoutes(targets)) {
+      await checkWithdrawnRoute(httpEmit, { baseUrl, ...withdrawn, localeData });
     }
     for (const asset of targets.assets) {
       await fetchAndCheckRoute(httpEmit, { baseUrl, route: asset, kind: 'asset' });
