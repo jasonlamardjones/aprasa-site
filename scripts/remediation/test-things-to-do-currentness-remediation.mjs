@@ -532,6 +532,18 @@ assert.ok(
 assert.equal(remediationWorkflow.split('report-phase2b-failure.mjs').length - 1, 1);
 // Issue text is the whole of the added authority.
 assert.ok(remediationWorkflow.includes('issues: write'));
+// The Phase 2B test workflow must not gate on a path list: the integration suite
+// drives build-all, whose children and their transitive inputs can move the
+// derived write set or Home containment without touching scripts/remediation/.
+// An enumerated list only moves that hole to the first path nobody listed.
+const testsWorkflow = fs.readFileSync(
+  path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '.github', 'workflows', 'phase-2b-currentness-tests.yml'),
+  'utf8',
+);
+assert.ok(!/^\s*paths:/m.test(testsWorkflow),
+  'the Phase 2B test workflow must run without a path filter, so a build-all child cannot skip the integration suite');
+assert.ok(testsWorkflow.includes('test-things-to-do-currentness-preview-backfill.mjs'),
+  'the Phase 2B test workflow must run the preview-boundary integration suite');
 for (const forbidden of ['pages: write', 'deployments: write', 'packages: write', 'id-token: write']) {
   assert.ok(!remediationWorkflow.includes(forbidden), `the workflow must not take ${forbidden}`);
 }
@@ -547,6 +559,31 @@ for (const forbidden of ['pr', 'push', 'merge']) {
 assert.ok(!/writeFileSync/.test(signalSource), 'the failure signal must not write repository files');
 // The reporter must pass its own probe limit through, or the guard is inert.
 assert.ok(/limit: PROBE_LIMIT/.test(signalSource), 'the reporter must hand its probe limit to the parser');
+// The recovery disposition must not be inert in production. The previous round
+// fixed buildIssueBody() but the reporter classified `log` out of the context
+// and then dropped it, so detectPostCommitRecovery() always saw '' and the body
+// always claimed absence — a guard that only ever passed because these tests
+// supplied `log` by hand. Assert the reporter's OWN context shape, then drive
+// the body through a context built exactly the way it builds one.
+const reporterContextMatch = signalSource.match(/const context = \{([^}]*)\};/);
+assert.ok(reporterContextMatch, 'the reporter must construct a failure context');
+const reporterContextKeys = reporterContextMatch[1].split(',').map((part) => part.trim().split(':')[0].trim()).filter(Boolean);
+for (const required of ['failureClass', 'log', 'commit', 'runId', 'runAttempt']) {
+  assert.ok(reporterContextKeys.includes(required),
+    `the reporter's failure context must carry ${required} (missing it silently disables the post-commit disposition)`);
+}
+// End-to-end through the reporter's context shape, not a hand-built one.
+const recoveryLog = 'PHASE2B_UNEXPECTED_FILE_CHANGE: x\nPHASE2B_POST_COMMIT_RECOVERY: Candidate abc is already pushed on feature/y.';
+const asReporterBuilds = (log) => ({ failureClass: classifyFailure(log), log, commit: SHA, runId: '4242', runAttempt: '1' });
+const liveRecoveryBody = buildIssueBody(asReporterBuilds(recoveryLog), { repository: 'o/r', key: failureSignalKey(classifyFailure(recoveryLog)) });
+assert.ok(!liveRecoveryBody.includes('no branch, no commit'),
+  'a post-commit failure must not claim absence when the context is built the way the reporter builds it');
+assert.ok(liveRecoveryBody.includes('Candidate abc is already pushed on feature/y.'),
+  'the live body must carry the adapter recovery detail');
+const livePlainBody = buildIssueBody(asReporterBuilds('PHASE2B_MAIN_MOVED'), { repository: 'o/r', key: failureSignalKey('PHASE2B_MAIN_MOVED') });
+assert.ok(livePlainBody.includes('no branch, no commit'),
+  'a pre-commit refusal still states the clean no-op through the same path');
+
 assert.ok(/'--limit', String\(PROBE_LIMIT\)/.test(signalSource), 'the reporter must use one limit for gh and the parser');
 
 console.log('Phase 2B currentness remediation unit tests passed.');

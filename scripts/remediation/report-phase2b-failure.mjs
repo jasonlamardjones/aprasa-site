@@ -55,7 +55,12 @@ if (logPath) {
   if (fs.existsSync(resolved)) log = fs.readFileSync(resolved, 'utf8');
 }
 const failureClass = classifyFailure(log);
-const context = { failureClass, commit, runId, runAttempt };
+// `log` must travel with the context, not just be classified out of it:
+// buildIssueBody()/buildRecurrenceComment() re-read it to decide whether this
+// failure landed after the commit, and without it they would always emit the
+// pre-commit disposition claiming no branch or commit exists — precisely the
+// claim that must not be made when a candidate may already be pushed.
+const context = { failureClass, log, commit, runId, runAttempt };
 
 // Dedupe is read by label, not by the search index: label listing is immediately
 // consistent, whereas `--search ... in:body` can lag behind a just-created issue
