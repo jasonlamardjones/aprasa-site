@@ -26,42 +26,104 @@
 // vacuous. Locating an element is not in that category.
 
 // Attribute values may contain ">", so quoted runs are consumed whole.
-const TAG = /<([a-zA-Z][-\w:]*)((?:[^>"']|"[^"]*"|'[^']*')*)>/g;
+const START_TAG = /^<([a-zA-Z][-\w:]*)((?:[^>"']|"[^"]*"|'[^']*')*)>/;
 const ATTRIBUTE = /([a-zA-Z_:][-\w:.]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/g;
 
-/** Attribute name -> value, lower-cased names, order- and quote-independent. */
+// Elements whose body is raw text, not markup. A tag-shaped string inside one
+// is data, never an element - which is why a JavaScript literal such as
+// const sample = '<div id="contact-config">' must not register as a duplicate.
+const RAW_TEXT = new Set(['script', 'style']);
+
+/**
+ * Attribute name -> value, lower-cased names, order- and quote-independent.
+ * On a malformed tag that repeats an attribute the HTML parser keeps the FIRST
+ * occurrence, so this does too: with <div id="contact-config" id="other"> the
+ * DOM holds a contact-config element, and a parser that kept the last would
+ * record it as "other" and miss the duplicate entirely.
+ */
 export function parseAttributes(raw) {
   const attributes = {};
   for (const match of raw.matchAll(ATTRIBUTE)) {
-    attributes[match[1].toLowerCase()] = match[2] ?? match[3] ?? match[4] ?? '';
+    const name = match[1].toLowerCase();
+    if (name in attributes) continue;
+    attributes[name] = match[2] ?? match[3] ?? match[4] ?? '';
   }
   return attributes;
 }
 
 /**
  * Every element carrying this id, ANY tag, in document order - the order
- * getElementById resolves. `content` is filled in for <script> elements only;
- * for anything else it is the element's start tag that matters, because the
- * finding is that the element exists at all.
+ * getElementById resolves.
+ *
+ * This walks the document rather than pattern-matching over it, because only a
+ * walk can tell an element from text that merely looks like one. Skipped, as a
+ * browser skips them: comment bodies, the raw-text bodies of <script> and
+ * <style>, and the CONTENTS of <template> (which parse into a separate
+ * fragment, so getElementById never returns anything inside one - though the
+ * <template> element itself is in the document and is reported).
  */
 export function findElementsById(html, id) {
   const found = [];
-  for (const match of html.matchAll(TAG)) {
-    const attributes = parseAttributes(match[2]);
-    if (attributes.id !== id) continue;
+  let index = 0;
+  let templateDepth = 0;
+
+  while (index < html.length) {
+    const open = html.indexOf('<', index);
+    if (open === -1) break;
+
+    if (html.startsWith('<!--', open)) {
+      const end = html.indexOf('-->', open + 4);
+      index = end === -1 ? html.length : end + 3;
+      continue;
+    }
+    if (html.startsWith('<!', open) || html.startsWith('<?', open)) {
+      const end = html.indexOf('>', open);
+      index = end === -1 ? html.length : end + 1;
+      continue;
+    }
+    if (html.startsWith('</', open)) {
+      const end = html.indexOf('>', open);
+      const name = html.slice(open + 2, end === -1 ? html.length : end).trim().toLowerCase();
+      if (name === 'template' && templateDepth > 0) templateDepth -= 1;
+      index = end === -1 ? html.length : end + 1;
+      continue;
+    }
+
+    const match = START_TAG.exec(html.slice(open));
+    if (!match) {
+      index = open + 1;
+      continue;
+    }
+
     const tag = match[1].toLowerCase();
+    const attributes = parseAttributes(match[2]);
+    const afterTag = open + match[0].length;
     let content = null;
     let raw = match[0];
-    if (tag === 'script') {
-      const closeStart = html.indexOf('</script', match.index);
-      if (closeStart !== -1) {
-        content = html.slice(match.index + match[0].length, closeStart);
+    let next = afterTag;
+
+    if (RAW_TEXT.has(tag)) {
+      const closeStart = html.toLowerCase().indexOf(`</${tag}`, afterTag);
+      if (closeStart === -1) {
+        content = html.slice(afterTag);
+        next = html.length;
+      } else {
+        content = html.slice(afterTag, closeStart);
         const closeEnd = html.indexOf('>', closeStart);
-        raw = html.slice(match.index, closeEnd === -1 ? closeStart : closeEnd + 1);
+        raw = html.slice(open, closeEnd === -1 ? closeStart : closeEnd + 1);
+        next = closeEnd === -1 ? closeStart : closeEnd + 1;
       }
     }
-    found.push({tag, attributes, content, raw, index: match.index});
+
+    // The <template> element itself is in the document; its contents are not.
+    if (templateDepth === 0 && attributes.id === id) {
+      found.push({tag, attributes, content, raw, index: open});
+    }
+    if (tag === 'template' && !match[2].trimEnd().endsWith('/')) templateDepth += 1;
+
+    index = next;
   }
+
   return found;
 }
 

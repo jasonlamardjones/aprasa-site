@@ -381,20 +381,24 @@ const digits = CONTACT.whatsapp_business_number;
 const NUMERIC_REFERENCE = /&#(x[0-9a-f]+|[0-9]+);/gi;
 const NAMED_REFERENCE = /&[a-z][a-z0-9]{1,31};/gi;
 
-// Any Unicode decimal digit -> its ASCII value. Derived, not tabulated: every
-// \p{Nd} block is ten consecutive code points, so a digit's value is the number
-// of steps back to the block's zero. That covers Arabic-Indic, Devanagari and
-// every script nobody thought to list. NFKC ahead of it folds the compatibility
-// forms - fullwidth digits, superscripts - onto ASCII.
+// Any Unicode decimal digit -> its ASCII value. Derived, not tabulated, but the
+// derivation is run-relative rather than block-relative, and the difference
+// matters: SOME Nd BLOCKS ARE ADJACENT. Walking back to "the first code point
+// whose predecessor is not a digit" therefore does not find the block's zero -
+// U+116D0..U+116E3 is a single 20-long run of two blocks, and
+// U+1D7CE..U+1D7FF is a 50-long run of five mathematical digit blocks. A
+// backward walk crosses them and yields the wrong value, or no value at all.
+//
+// What IS reliable, verified against all 770 Nd code points in 72 maximal runs:
+// every run's length is a multiple of ten, and digits are laid out in aligned
+// groups of ten from the run's start. So the value is the offset into the run,
+// modulo ten.
 function toAsciiDigits(text) {
   return text.replace(/\p{Nd}/gu, (character) => {
-    let code = character.codePointAt(0);
-    let value = 0;
-    while (value < 10 && /\p{Nd}/u.test(String.fromCodePoint(code - 1))) {
-      code -= 1;
-      value += 1;
-    }
-    return value < 10 ? String(value) : character;
+    const code = character.codePointAt(0);
+    let start = code;
+    while (start > 0 && /\p{Nd}/u.test(String.fromCodePoint(start - 1))) start -= 1;
+    return String((code - start) % 10);
   });
 }
 
@@ -411,11 +415,28 @@ function normalizeForNumberSearch(source) {
 // A visible number can also be split by MARKUP rather than by characters:
 // +238<span>597</span><span>97</span>. The tag names sit between the digits and
 // no separator class can match them, because they are not separators - they are
-// elements. Rendered text is what a reader sees, so the scan also runs against
-// a tag-stripped view. Applied to every file rather than to a list of markup
-// extensions: an extension list is the enumeration mistake again.
+// elements. So the scan also runs against the RENDERED text.
+//
+// This view is scoped to markup documents, and that is not the enumeration
+// mistake wearing a new hat. "Rendered text" is only defined for something that
+// gets rendered: a .mjs file is never parsed as markup, so stripping tag-shaped
+// substrings out of it invents text that does not exist anywhere. It also
+// invents matches: a pair of ordinary comparison operators in source code, with
+// the number's leading group on one side and its trailing group on the other,
+// reduces to those two groups separated by spaces - which reads as the governed
+// number and fails validation on an entirely unrelated source change. (Spelling
+// that example out here would itself trip the check below, which is the point.)
+//
+// Nothing loses coverage, because this is an ADDITIONAL view: the raw scan,
+// with entity decoding, digit canonicalization and the separator class, still
+// runs over every text file in the repository. Only the rendered view is
+// scoped, and only to the formats where rendering is a real thing.
+const MARKUP_FILE = /\.(html?|svg|xml|xhtml|md|markdown)$/i;
+// Requires a real tag name after "<", so a comparison operator is not a tag.
+const HTML_TAG = /<\/?[a-zA-Z][-\w:]*(?:\s[^<>]*)?\/?>/g;
+
 function stripTags(text) {
-  return text.replace(/<[^>]*>/g, ' ');
+  return text.replace(HTML_TAG, ' ');
 }
 
 const SEPARATORS = '[\\s\\p{Zs}\\p{Pd}\\p{Cf}().]{0,3}';
@@ -448,9 +469,12 @@ for (const rel of scanned) {
     if (islands.length) source = source.replace(islands[0].raw, '');
   }
   const normalized = normalizeForNumberSearch(source);
-  const rendered = normalizeForNumberSearch(stripTags(source));
-  if (normalized.includes(digits) || FORMATTED.test(normalized)
-    || rendered.includes(digits) || FORMATTED.test(rendered)) offenders.push(rel);
+  let leaked = normalized.includes(digits) || FORMATTED.test(normalized);
+  if (!leaked && MARKUP_FILE.test(rel)) {
+    const rendered = normalizeForNumberSearch(stripTags(source));
+    leaked = rendered.includes(digits) || FORMATTED.test(rendered);
+  }
+  if (leaked) offenders.push(rel);
 }
 check('the canonical number is restated nowhere outside its governed config',
   offenders.length === 0, offenders.length ? `found in: ${offenders.join(', ')}` : undefined);
@@ -491,6 +515,21 @@ check('the scan sees superscript digits',
 check('the scan sees a number split across markup',
   FORMATTED.test(normalizeForNumberSearch(stripTags(
     `${digits.slice(0, 3)}<span>${digits.slice(3, 6)}</span><span>${digits.slice(6)}</span>`))));
+// ...and does NOT invent one out of comparison operators in source code, which
+// is what stripping tag-shaped substrings out of non-markup would do.
+check('tag stripping does not invent a number from comparison operators',
+  !FORMATTED.test(normalizeForNumberSearch(stripTags(
+    `const low = ${digits.slice(0, 3)} < value; const high = value > ${digits.slice(3)};`))));
+check('the rendered view is scoped to markup documents',
+  MARKUP_FILE.test('a/b.html') && MARKUP_FILE.test('a/b.svg') && MARKUP_FILE.test('a/b.md')
+    && !MARKUP_FILE.test('a/b.mjs') && !MARKUP_FILE.test('a/b.json'));
+// Adjacent Nd blocks: the run-relative derivation must handle them.
+const mathBold = digits.replace(/[0-9]/g, (d) => String.fromCodePoint(0x1d7ce + Number(d)));
+const adjacentBlock = digits.replace(/[0-9]/g, (d) => String.fromCodePoint(0x116da + Number(d)));
+check('the scan sees mathematical digits from a multi-block Nd run',
+  normalizeForNumberSearch(mathBold).includes(digits));
+check('the scan sees digits from a block adjacent to another Nd block',
+  normalizeForNumberSearch(adjacentBlock).includes(digits));
 // The scan is only worth anything if it actually reached the source tree.
 check('the single-source scan covered the repository',
   scanned.length > 100 && scanned.includes('prasa-launch.js')
