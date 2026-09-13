@@ -532,6 +532,11 @@ assert.ok(!issueBody.includes('created no new branch'),
 assert.ok(issueBody.includes('Artifact state: **UNKNOWN**'));
 assert.ok(issueBody.includes('Inspect the remote branch and pull-request state'));
 
+// The one phrase that appears ONLY in the NO_WRITE disposition. Negative
+// assertions below discriminate against it, so they stay load-bearing: it is
+// asserted to exist in the NO_WRITE body, which is what makes its absence
+// elsewhere meaningful rather than vacuous.
+const NO_WRITE_SCOPED_CLAIM = 'created no new branch, no new';
 const noWriteLog = `PHASE2B_MAIN_MOVED: main moved\n${FAILURE_SIGNAL.noWriteMarker}: the adapter reached its exit path with nothing committed.`;
 assert.equal(resolveArtifactState(noWriteLog), ARTIFACT_NO_WRITE);
 const noWriteBody = buildIssueBody({ ...failContext, log: noWriteLog }, { repository: 'o/r', key: failKey });
@@ -562,8 +567,17 @@ const recoveryBody = buildIssueBody(
   { ...failContext, log: 'PHASE2B_UNEXPECTED_FILE_CHANGE: x\nPHASE2B_POST_COMMIT_RECOVERY: Candidate abc is already pushed on feature/x; create/inspect one draft PR only.' },
   { repository: 'o/r', key: failKey },
 );
-assert.ok(!recoveryBody.includes('no branch, no commit'),
-  'a post-commit failure must NOT assert that no branch or commit exists');
+// This guard used to assert the absence of wording the implementation no longer
+// contains anywhere, so it could not fail. It now discriminates against text
+// that DOES exist — the NO_WRITE branch's scoped claim — so a disposition
+// selector that mis-routed POST_COMMIT into the reassuring branch would fail
+// here, and it positively requires the conservative POST_COMMIT warning.
+assert.ok(NO_WRITE_SCOPED_CLAIM.length > 0 && noWriteBody.includes(NO_WRITE_SCOPED_CLAIM),
+  'the discriminating phrase must really exist in the NO_WRITE wording, or this guard is vacuous');
+assert.ok(!recoveryBody.includes(NO_WRITE_SCOPED_CLAIM),
+  'a post-commit failure must NOT render the NO_WRITE clean-refusal claim');
+assert.ok(recoveryBody.includes('NOT a clean no-op'),
+  'it must state positively that this is not a clean no-op');
 assert.ok(recoveryBody.includes('may already exist on the'), 'it must warn a candidate may exist remotely');
 assert.ok(recoveryBody.includes('Do not rerun the repair before'), 'it must warn against a blind rerun');
 assert.ok(recoveryBody.includes('Candidate abc is already pushed'), 'it must carry the adapter recovery detail');
@@ -862,14 +876,24 @@ for (const required of ['failureClass', 'log', 'commit', 'runId', 'runAttempt'])
 const recoveryLog = 'PHASE2B_UNEXPECTED_FILE_CHANGE: x\nPHASE2B_POST_COMMIT_RECOVERY: Candidate abc is already pushed on feature/y.';
 const asReporterBuilds = (log) => ({ failureClass: classifyFailure(log), log, commit: SHA, runId: '4242', runAttempt: '1' });
 const liveRecoveryBody = buildIssueBody(asReporterBuilds(recoveryLog), { repository: 'o/r', key: failureSignalKey(classifyFailure(recoveryLog)) });
-assert.ok(!liveRecoveryBody.includes('no branch, no commit'),
-  'a post-commit failure must not claim absence when the context is built the way the reporter builds it');
+// Same repair on the reporter-shaped path: discriminate against wording that
+// exists, and positively require the conservative warning and state line.
+assert.ok(!liveRecoveryBody.includes(NO_WRITE_SCOPED_CLAIM),
+  'a post-commit failure must not render the NO_WRITE claim when the context is built the way the reporter builds it');
+assert.ok(liveRecoveryBody.includes('Artifact state: **POST_COMMIT**'),
+  'the live body must state the POST_COMMIT artifact state');
+assert.ok(liveRecoveryBody.includes('Do not rerun the repair before'),
+  'the live body must warn against a blind rerun');
 assert.ok(liveRecoveryBody.includes('Candidate abc is already pushed on feature/y.'),
   'the live body must carry the adapter recovery detail');
 const livePlainBody = buildIssueBody(asReporterBuilds('PHASE2B_MAIN_MOVED'), { repository: 'o/r', key: failureSignalKey('PHASE2B_MAIN_MOVED') });
-assert.ok(!livePlainBody.includes('created no new branch'),
+assert.ok(!livePlainBody.includes(NO_WRITE_SCOPED_CLAIM),
   'a plain log through the reporter path is UNKNOWN, not a claimed clean no-op');
 assert.ok(livePlainBody.includes('Artifact state: **UNKNOWN**'));
+assert.ok(livePlainBody.includes('does NOT claim that no branch or'),
+  'the UNKNOWN body must positively disclaim the absence reading');
+assert.ok(livePlainBody.includes('Inspect the remote branch and pull-request state'),
+  'the UNKNOWN body must positively require inspection before a rerun');
 const liveNoWriteBody = buildIssueBody(asReporterBuilds(noWriteLog), { repository: 'o/r', key: failureSignalKey(classifyFailure(noWriteLog)) });
 assert.ok(liveNoWriteBody.includes('created no new branch, no new'),
   'a proven no-write refusal states its scoped claim through the reporter path too');

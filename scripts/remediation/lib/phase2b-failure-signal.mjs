@@ -12,19 +12,37 @@
 // commit context, updated rather than duplicated.
 //
 //   * A green run calls none of this, so it creates nothing.
-//   * A repeat of the same failure class on a commit already recorded on the
-//     open issue does nothing at all — no second issue, no further comment.
 //   * A repeat of the same failure class on a NEW commit adds exactly one
 //     comment. Growth is therefore bounded by distinct failing commits, not by
 //     firings, and a burst of identical retries cannot spam the issue.
-//   * One exception to that suppression, because commit identity alone is not
-//     the whole disposition: if a commit was first recorded as a PRE-commit
-//     refusal and a later run on that same commit reaches POST-commit recovery,
-//     the recorded text understates what exists — it still says no branch or
-//     commit was created while a candidate may now be pushed. That escalation
-//     adds one corrective comment. It is one-directional (pre -> post, never
-//     back) and recorded per commit, so the ceiling stays at two comments per
-//     commit and cannot oscillate.
+//
+// Commit identity alone is not the whole disposition, though, so each commit
+// also carries an ARTIFACT STATE describing what may exist on the remote after
+// that failure. It is a total order, and it only ever moves up:
+//
+//     NO_WRITE  <  UNKNOWN  <  POST_COMMIT
+//
+//   NO_WRITE     the adapter stated, on its own exit path, that it committed
+//                nothing. A claim about THAT RUN only.
+//   UNKNOWN      no terminal statement at all — a truncated log, or a process
+//                killed after a push may have published a candidate.
+//   POST_COMMIT  the adapter stated it failed after committing.
+//
+// For a commit already recorded on the open issue:
+//
+//   * same or LOWER state -> no new comment. A weaker later observation must
+//     never walk a published warning back down to a more reassuring one.
+//   * HIGHER state -> exactly one corrective comment recording the new state.
+//
+// Since the order has three rungs, that is at most TWO upward corrections after
+// the initial record, per commit, and the state can never oscillate downward.
+// Read-back takes the HIGHEST marker recorded for a commit, so monotonicity
+// holds when reading as well as when writing.
+//
+// Issue identity stays keyed to the FAILURE CLASS. Artifact state is per-commit
+// disposition metadata and never part of the dedupe key, so learning that more
+// exists corrects the existing issue instead of opening a second one for the
+// same failure.
 //
 // It never mutates public content: no generated surface, no canonical record,
 // no branch, no pull request. Issue text only.
