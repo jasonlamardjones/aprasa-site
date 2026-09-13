@@ -30,6 +30,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import { t } from './lib/locale.mjs';
+import { THINGS_TO_DO_HUB_PUBLIC, hubOutputPath, hubCanonical } from './lib/things-to-do-collection.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -56,12 +58,119 @@ function run(dir, script, args) {
   return { status: r.status, out: `${r.stdout || ''}${r.stderr || ''}` };
 }
 
+/**
+ * Reactivate the collection hub inside a sandbox — the WHOLE republication,
+ * not just the flag.
+ *
+ * The hub is temporarily unpublished in the repository
+ * (THINGS_TO_DO_HUB_PUBLIC in scripts/lib/things-to-do-collection.mjs), so the
+ * generator no longer emits it. Every hub assertion in this file is coverage of
+ * architecture we intend to REACTIVATE, not of something we removed, so rather
+ * than delete that coverage the sandbox republishes and exercises the real
+ * renderer end to end: membership, canonical ordering, the empty state,
+ * canonical/hreflang, EN/PT equivalence, determinism, and the negative gates.
+ *
+ * Three things have to be restored, and that is the point of doing it here
+ * rather than by flipping a boolean: republication is NOT flag-only.
+ *
+ *   1. the flag, which restores hub emission, the sitemap route and the
+ *      breadcrumb on GENERATED detail pages;
+ *   2. the Home call to action, which lives in the authored index.html;
+ *   3. the breadcrumb on the two HAND-AUTHORED detail pages, which no
+ *      generator owns.
+ *
+ * If a future change makes republication need a fourth step, this helper stops
+ * producing a valid published baseline and the negative-coverage cases below
+ * fail — which is the alarm we want, rather than discovering it at reactivation.
+ *
+ * Every edit is confined to the throwaway copy; the repository stays dormant.
+ */
+const HOME_HUB_CTA = '      <p><a class="primary-cta" href="things-to-do/">Explore Things to Do <span aria-hidden="true">\u2192</span></a></p>\n';
+const AUTHORED_DETAIL_PAGES = [
+  'things-to-do/water-adventure-activities-mindelo/index.html',
+  'things-to-do/street-art-mindelo/index.html',
+];
+
+function enableHub(dir) {
+  const file = path.join(dir, 'scripts', 'lib', 'things-to-do-collection.mjs');
+  const source = fs.readFileSync(file, 'utf8');
+  const disabled = 'export const THINGS_TO_DO_HUB_PUBLIC = false;';
+  const enabled = 'export const THINGS_TO_DO_HUB_PUBLIC = true;';
+  // Idempotent: the determinism cases generate twice into one sandbox.
+  if (source.includes(enabled)) return;
+  if (!source.includes(disabled)) {
+    throw new Error('enableHub: THINGS_TO_DO_HUB_PUBLIC declaration not found — update this helper');
+  }
+  fs.writeFileSync(file, source.replace(disabled, enabled));
+
+  // 2. The Home call to action, in the authored EN source.
+  //
+  // It belongs at the END OF THE THINGS-TO-DO SHELF, and the closing-tag
+  // sequence that ends that shelf is NOT unique: it ends six sections in
+  // index.html, the first of them the hero. Matching the sequence alone would
+  // restore the call to action in the wrong section, and the CTA assertion —
+  // which reads the page, not the section — would still pass, so the sandbox
+  // would quietly stop being a faithful reactivation. The shelf is therefore
+  // located first and the sequence is accepted only as that shelf's own close.
+  const homeFile = path.join(dir, 'index.html');
+  const home = fs.readFileSync(homeFile, 'utf8');
+  const shelfOpen = '<section class="shelf" id="things-to-do"';
+  const shelfStart = home.indexOf(shelfOpen);
+  if (shelfStart === -1) {
+    throw new Error('enableHub: Home Things-to-Do shelf not found — update this helper');
+  }
+  const anchor = '      </div>\n    </div>\n  </section>';
+  const anchorAt = home.indexOf(anchor, shelfStart);
+  if (anchorAt === -1) {
+    throw new Error('enableHub: Home Things-to-Do section anchor not found — update this helper');
+  }
+  // The anchor's own </section> must be the shelf's closing tag; anything else
+  // means the match belongs to a later section.
+  if (home.indexOf('</section>', shelfStart) !== anchorAt + anchor.indexOf('</section>')) {
+    throw new Error('enableHub: Home Things-to-Do section anchor is not the shelf close — update this helper');
+  }
+  const restored =
+    home.slice(0, anchorAt) +
+    `      </div>\n${HOME_HUB_CTA}    </div>\n  </section>` +
+    home.slice(anchorAt + anchor.length);
+  // Prove the restored call to action really is inside the shelf.
+  const ctaAt = restored.indexOf(HOME_HUB_CTA.trim());
+  if (ctaAt < shelfStart || ctaAt > restored.indexOf('</section>', shelfStart)) {
+    throw new Error('enableHub: restored Home call to action landed outside the Things-to-Do shelf');
+  }
+  fs.writeFileSync(homeFile, restored);
+
+  // 3. The breadcrumb on the two hand-authored detail pages.
+  for (const relative of AUTHORED_DETAIL_PAGES) {
+    const target = path.join(dir, relative);
+    const html = fs.readFileSync(target, 'utf8');
+    const marker = '    <!-- Collection breadcrumb removed while';
+    const start = html.indexOf(marker);
+    if (start === -1) throw new Error(`enableHub: dormancy note not found in ${relative} — update this helper`);
+    const end = html.indexOf('-->', start) + '-->\n'.length;
+    const nav = '    <nav class="breadcrumb" aria-label="Breadcrumb">\n      <a href="../">\u2190 Things to Do</a>\n    </nav>\n';
+    fs.writeFileSync(target, html.slice(0, start) + nav + html.slice(end));
+  }
+
+  // Propagate the restored EN copy into the PT surfaces the localizer owns.
+  const localized = run(dir, 'build-static-pages.mjs', ['--write']);
+  if (localized.status !== 0) throw new Error(`enableHub: PT localization failed: ${localized.out}`);
+}
+
 /** Full both-locale generation, exactly as scripts/build-all.mjs sequences it. */
 function generate(dir, asOf) {
+  enableHub(dir);
   const en = run(dir, 'generate-things-to-do.mjs', [`--as-of=${asOf}`, '--locale=en', '--write']);
   if (en.status !== 0) throw new Error(`EN generation failed: ${en.out}`);
   const pt = run(dir, 'generate-things-to-do.mjs', [`--as-of=${asOf}`, '--locale=pt', '--home=pt/index.html', '--write']);
   if (pt.status !== 0) throw new Error(`PT generation failed: ${pt.out}`);
+  // The sitemap is derived from what was just emitted, and while the hub is
+  // republished in this sandbox it must list the hub routes the validator now
+  // expects. The committed sitemap has no hub routes (the repository is
+  // dormant), so a sandbox that skipped this would fail on a stale artifact
+  // rather than on anything it is testing.
+  const sitemap = run(dir, 'build-sitemap.mjs', ['--write']);
+  if (sitemap.status !== 0) throw new Error(`sitemap generation failed: ${sitemap.out}`);
 }
 
 const cardIds = (html) => [...html.matchAll(/<article class="resource-card" data-event-id="([^"]+)"/g)].map((m) => m[1]);
@@ -367,11 +476,15 @@ function monthPrecisionIds(dir) {
       const html = read(dir, 'about/index.html');
       fs.writeFileSync(path.join(dir, 'about/index.html'), html.replace('href="../"', 'href="../index.html"'));
     }],
+    // Needs the REPUBLISHED state: detail pages carry no breadcrumb while the
+    // collection is dormant, so there is nothing to revert. The rule itself is
+    // retained for reactivation, so the case is kept and run against a
+    // republished sandbox rather than deleted.
     ['canonical-link gate rejects: a breadcrumb reverted to a Home fragment', 'validate-canonical-internal-links.mjs', (dir) => {
       const file = path.join('things-to-do', 'eclipse-yuran-henrique', 'index.html');
       const html = read(dir, file);
       fs.writeFileSync(path.join(dir, file), html.replace('<a href="../">', '<a href="../../index.html#things-to-do">'));
-    }],
+    }, { republished: true }],
     ['canonical-link gate rejects: an index.html URL in the sitemap', 'validate-canonical-internal-links.mjs', (dir) => {
       const xml = read(dir, 'sitemap.xml');
       fs.writeFileSync(path.join(dir, 'sitemap.xml'), xml.replace('<loc>https://aprasa.org/</loc>', '<loc>https://aprasa.org/index.html</loc>'));
@@ -411,9 +524,13 @@ function monthPrecisionIds(dir) {
     }],
   ];
 
-  for (const [name, validator, mutate] of auditMutations) {
+  for (const [name, validator, mutate, options = {}] of auditMutations) {
     const dir = sandbox();
     try {
+      if (options.republished) {
+        const asOfRepublished = JSON.parse(read(dir, 'data/things-to-do-currentness.json')).as_of;
+        generate(dir, asOfRepublished);
+      }
       const before = run(dir, validator, []);
       if (before.status !== 0) throw new Error(`baseline already fails ${validator}: ${before.out}`);
       mutate(dir);
@@ -421,6 +538,100 @@ function monthPrecisionIds(dir) {
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 7. Temporary unpublishing of the collection hub.
+//
+//    Everything above proves the hub still WORKS when republished. This
+//    section proves it is currently NOT published — the two claims the
+//    founder's approval actually rests on, kept apart so neither can quietly
+//    stand in for the other.
+// ---------------------------------------------------------------------------
+{
+  const asOf = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'things-to-do-currentness.json'), 'utf8')).as_of;
+
+  check('the repository declares the collection hub unpublished',
+    THINGS_TO_DO_HUB_PUBLIC === false, `THINGS_TO_DO_HUB_PUBLIC is ${THINGS_TO_DO_HUB_PUBLIC}`);
+
+  for (const locale of ['en', 'pt']) {
+    check(`${hubOutputPath(locale)} is absent from the committed tree`,
+      !fs.existsSync(path.join(ROOT, hubOutputPath(locale))));
+  }
+
+  // Absence must be genuine, not a stale artifact: a full generation must not
+  // put the hub back.
+  const dir = sandbox();
+  try {
+    const en = run(dir, 'generate-things-to-do.mjs', [`--as-of=${asOf}`, '--locale=en', '--write']);
+    const pt = run(dir, 'generate-things-to-do.mjs', [`--as-of=${asOf}`, '--locale=pt', '--home=pt/index.html', '--write']);
+    check('a dormant full generation exits cleanly', en.status === 0 && pt.status === 0);
+    for (const locale of ['en', 'pt']) {
+      check(`a dormant generation does not emit ${hubOutputPath(locale)}`,
+        !fs.existsSync(path.join(dir, hubOutputPath(locale))));
+    }
+    // ...and it must still produce every detail page and the Home preview.
+    const records = JSON.parse(read(dir, EVENTS)).records.filter((r) => r.kind === 'dated-event');
+    check('a dormant generation still writes every EN detail page',
+      records.every((r) => fs.existsSync(path.join(dir, r.detail_page, 'index.html'))));
+    check('a dormant generation still writes every PT detail page',
+      records.every((r) => fs.existsSync(path.join(dir, 'pt', r.detail_page, 'index.html'))));
+    check('a dormant generation still renders the Home preview',
+      cardIds(read(dir, 'index.html')).length > 0 && cardIds(read(dir, 'pt/index.html')).length > 0);
+
+    const sitemapRun = run(dir, 'build-sitemap.mjs', ['--write']);
+    check('a dormant sitemap build exits cleanly', sitemapRun.status === 0);
+    const sitemap = read(dir, 'sitemap.xml');
+    for (const locale of ['en', 'pt']) {
+      check(`the sitemap omits the unpublished ${locale.toUpperCase()} hub route`,
+        !sitemap.includes(`<loc>${hubCanonical(locale)}</loc>`));
+    }
+    check('the sitemap retains every dated-event detail route',
+      records.every((r) => sitemap.includes(`<loc>https://aprasa.org/${r.detail_page}</loc>`)));
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+
+  // No shipped surface may link into either unpublished route.
+  const htmlFiles = [];
+  (function walk(rel) {
+    for (const entry of fs.readdirSync(path.join(ROOT, rel || '.'), { withFileTypes: true })) {
+      if (entry.name === '.git' || entry.name === 'node_modules') continue;
+      const next = rel ? `${rel}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) walk(next);
+      else if (entry.name.endsWith('.html')) htmlFiles.push(next);
+    }
+  })('');
+  const linking = htmlFiles.filter((rel) => {
+    const html = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+    return /href="(?:\.\.\/)*(?:pt\/)?things-to-do\/"/.test(html) || html.includes('href="/things-to-do/"') || html.includes('href="/pt/things-to-do/"');
+  });
+  check('no shipped page links into either unpublished hub route',
+    linking.length === 0, linking.join(', '));
+
+  // The Home call to action is gone in BOTH locales, by governed label.
+  for (const [locale, homeFile] of [['en', 'index.html'], ['pt', 'pt/index.html']]) {
+    const html = fs.readFileSync(path.join(ROOT, homeFile), 'utf8');
+    check(`${homeFile} no longer carries the governed hub call to action`,
+      !html.includes(t('home.things.hub_action', locale)));
+  }
+
+  // Detail pages keep a same-locale Home route in the header, so suppressing
+  // the breadcrumb strands nobody.
+  for (const [locale, prefix, homeHref] of [['en', '', '../../'], ['pt', 'pt/', '../../../pt/']]) {
+    const sample = `${prefix}things-to-do/mon-pikenin/index.html`;
+    const html = fs.readFileSync(path.join(ROOT, sample), 'utf8');
+    check(`${sample} keeps a same-locale Home link in the header`,
+      html.includes(`href="${homeHref}"`));
+    check(`${sample} carries no collection breadcrumb while dormant`,
+      !html.includes('<nav class="breadcrumb"'));
+  }
+
+  // The governed hub copy is retained, not deleted — reactivation needs it.
+  for (const key of ['home.things.hub_action', 'things.hub.h1', 'things.hub.intro', 'things.hub.empty_state']) {
+    check(`governed key ${key} is retained for reactivation`,
+      Boolean(t(key, 'en')) && Boolean(t(key, 'pt')));
   }
 }
 

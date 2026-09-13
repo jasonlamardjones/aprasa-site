@@ -28,7 +28,7 @@ import {
   MODES,
 } from './lib/qa-contract.mjs';
 import { loadSchema, validateAgainstSchema } from './lib/qa-schema.mjs';
-import { EN_HUB_ROUTE, loadTargets, selectBrowserRoutes, selectHttpRoutes, todayInCapeVerde } from './lib/qa-targets.mjs';
+import { EN_HUB_ROUTE, loadTargets, selectBrowserRoutes, selectHttpRoutes, selectWithdrawnRoutes, todayInCapeVerde } from './lib/qa-targets.mjs';
 import { fetchFollowing, isNormalizingRedirect } from './lib/qa-http.mjs';
 import { corroborateByContent, resolveDeploymentProvenance } from './lib/qa-deployment.mjs';
 import { runBrowserChecks, VIEWPORTS } from './lib/qa-browser.mjs';
@@ -532,14 +532,234 @@ async function fetchAndCheckRoute(emit, { baseUrl, route, locale = null, kind = 
   return response;
 }
 
+/**
+ * The governed strings that identify a rendered collection hub in one locale.
+ *
+ * Derived from the same locale data the renderer consumes, never a second copy
+ * of the copy: if the hub is ever republished with different governed wording,
+ * this follows it. Both keys are retained through the unpublishing precisely so
+ * the surface stays identifiable while dormant.
+ */
+function hubSurfaceMarkers(localeData, locale) {
+  const markers = [];
+  for (const key of ['things.hub.h1', 'things.hub.meta.title']) {
+    const value = localeData.keys?.[key]?.[locale];
+    if (typeof value === 'string' && value) markers.push({ key, value });
+  }
+  return markers;
+}
+
+/**
+ * Statuses that mean a route is GENUINELY ABSENT.
+ *
+ * Deliberately narrow. "Not 200" is not the same claim as "gone": a 503 says
+ * the route is unavailable, a 403 says it is withheld, and a 500 says the host
+ * broke while answering for it. None of those establish that the withdrawn page
+ * has stopped being published, and treating them as a pass would let the report
+ * say HEALTHY about an unpublishing it never verified.
+ *
+ * 404 and 410 are the two that do make the claim -- absent, and permanently
+ * gone. The site's governed absence model is genuine absence on a static host,
+ * with no redirect and no custom 404, so 404 is what production is expected to
+ * answer here; 410 is accepted because it asserts the same thing more strongly
+ * and no rule in this repository forbids a host from using it.
+ */
+const WITHDRAWN_ABSENT_STATUSES = Object.freeze([404, 410]);
+
+/**
+ * Prove that a withdrawn route is no longer publicly served.
+ *
+ * This is the negative counterpart of fetchAndCheckRoute(), and it cannot be
+ * expressed by reusing it: that function reports a non-200 as a defect, which
+ * is the outcome required here.
+ *
+ * Outcomes, separated because they are different claims with different owners
+ * -- and because only the first is evidence of a successful unpublishing:
+ *
+ *   404 / 410 answered DIRECTLY                -> PASS. Genuinely absent.
+ *   404 / 410 reached through a redirect       -> WARNING, inconclusive. The
+ *     withdrawn route still ANSWERS; something else is absent. The governed
+ *     model for this tranche is genuine absence with no redirect, so a route
+ *     that redirects has not been shown to be gone -- whatever the destination
+ *     says. Passing it would classify a redirect as a successful unpublishing.
+ *   200 still rendering the collection surface -> ERROR, redirect or not. A
+ *     request that ends on the collection page means that page is publicly
+ *     reachable, which is the defect this check exists for; demoting it to
+ *     "inconclusive" because a hop preceded it would understate it.
+ *   200 that is something else                 -> WARNING. The route still
+ *     answers where genuine absence was intended, but the old collection
+ *     surface is not what is being served, so calling it the same defect would
+ *     overstate the evidence.
+ *   anything else -- 5xx, 403, an unexpected
+ *   status, a transport failure, a refused
+ *   off-origin redirect                        -> WARNING, inconclusive. Not a
+ *     claim that the page is served, and explicitly NOT a claim that it is
+ *     gone.
+ *
+ * The absence statuses are therefore necessary but not sufficient: the check
+ * asks for the absence status AND an empty redirect chain, because those two
+ * together are what "this route is directly absent" means. No redirect
+ * allowance is inferred from the destination.
+ *
+ * The inconclusive case emits an issue rather than only a SKIP check on
+ * purpose. Report status and workflow exit code are computed from issues alone,
+ * so a check that is merely skipped leaves the run HEALTHY -- which would read
+ * as a verified unpublishing when nothing was verified at all.
+ *
+ * Read-only by construction: one GET per route, no body, no mutation, pinned to
+ * the same allowed origin as every other request in this pass.
+ */
+async function checkWithdrawnRoute(emit, { baseUrl, route, locale, reason, localeData }) {
+  const url = new URL(route, baseUrl).toString();
+  const response = await fetchFollowing(url, { allowedOrigin: new URL(baseUrl).origin });
+  const evidence = {
+    url,
+    final_url: response.url,
+    status: response.status,
+    attempts: response.attempts,
+    redirect_chain: response.chain,
+    withdrawn_reason: reason,
+  };
+  const name = 'withdrawn route is no longer publicly served';
+  const expected = `HTTP ${WITHDRAWN_ABSENT_STATUSES.join(' or ')} (genuine absence)`;
+  const id = `http:withdrawn:${route}`;
+
+  const inconclusive = (observed, extra = {}, retryable = false) => {
+    emit.check({ id, name, status: 'WARN', route, locale, observed, expected, evidence: { ...evidence, ...extra } });
+    emit.issue({
+      code: 'ROUTE_WITHDRAWN_ABSENCE_UNVERIFIED',
+      severity: 'WARNING',
+      category: 'ROUTE',
+      check: name,
+      route,
+      locale,
+      observed,
+      expected,
+      evidence: { ...evidence, ...extra },
+      resolver_class: 'TECHNICAL',
+      retryable,
+    });
+  };
+
+  // A transport failure, or a redirect refused for leaving the pinned origin,
+  // is not evidence of absence and not evidence of the page being served.
+  if (!response.ok) {
+    inconclusive(
+      response.networkError,
+      {
+        direct_absence_observed: false,
+        original_route: route,
+        ...(response.redirectBlocked ? { redirect_blocked: response.redirectBlocked, transmitted: false } : {}),
+      },
+      true
+    );
+    return;
+  }
+
+  // A 200 is judged on what it serves, redirect or not: a request that ends on
+  // the collection page means that page is publicly reachable, which is the
+  // defect this check exists for, and demoting it to "inconclusive" merely
+  // because a hop preceded it would understate it.
+  const redirected = response.chain.length > 0;
+  if (response.status !== 200) {
+    // Direct absence: the absence status AND no redirect. A same-origin
+    // redirect landing on 404 or 410 proves the DESTINATION is absent, not this
+    // route, which still answers -- so it is reported as unverified, never as a
+    // pass. No redirect allowance is inferred from where the chain ends.
+    if (WITHDRAWN_ABSENT_STATUSES.includes(response.status) && !redirected) {
+      emit.check({
+        id,
+        name,
+        status: 'PASS',
+        route,
+        locale,
+        observed: { status: response.status, redirect_hops: 0, direct_absence_observed: true },
+        expected,
+        duration_ms: response.duration_ms,
+        evidence: { ...evidence, direct_absence_observed: true },
+      });
+      return;
+    }
+    inconclusive(
+      redirected
+        ? `HTTP ${response.status} reached through ${response.chain.length} same-origin redirect hop(s); ${route} itself still answers`
+        : response.status,
+      {
+        direct_absence_observed: false,
+        original_route: route,
+        redirect_hops: response.chain.length,
+        final_status: response.status,
+      },
+      response.status >= 500
+    );
+    return;
+  }
+
+  const markers = hubSurfaceMarkers(localeData, locale);
+  const matched = markers.filter((marker) => htmlContains(response.body ?? '', (value) => value, marker.value));
+  const servesCollection = matched.length > 0;
+  emit.check({
+    id,
+    name,
+    status: servesCollection ? 'FAIL' : 'WARN',
+    route,
+    locale,
+    observed: { status: 200, collection_surface: servesCollection, matched_keys: matched.map((marker) => marker.key) },
+    expected,
+    duration_ms: response.duration_ms,
+    evidence,
+  });
+  emit.issue(servesCollection
+    ? {
+      code: 'ROUTE_WITHDRAWN_STILL_SERVED',
+      severity: 'ERROR',
+      category: 'ROUTE',
+      check: name,
+      route,
+      locale,
+      observed: `HTTP 200 rendering the withdrawn collection surface (${matched.map((marker) => marker.key).join(', ')})`,
+      expected,
+      evidence: {
+        ...evidence,
+        matched_keys: matched.map((marker) => marker.key),
+        direct_absence_observed: false,
+        original_route: route,
+        redirect_hops: response.chain.length,
+      },
+      resolver_class: 'DEPLOYMENT',
+    }
+    : {
+      code: 'ROUTE_WITHDRAWN_STILL_ANSWERS',
+      severity: 'WARNING',
+      category: 'ROUTE',
+      check: name,
+      route,
+      locale,
+      observed: 'HTTP 200 without the withdrawn collection surface',
+      expected,
+      evidence: {
+        ...evidence,
+        checked_keys: markers.map((marker) => marker.key),
+        direct_absence_observed: false,
+        original_route: route,
+        redirect_hops: response.chain.length,
+      },
+      resolver_class: 'DEPLOYMENT',
+    });
+}
+
 // --------------------------------------------------------------------------
 // Live Things-to-Do + localization contracts
 // --------------------------------------------------------------------------
 
 function checkThingsToDoLiveContract(emit, { targets, bodies, baseUrl }) {
   const enHome = bodies.get('/');
-  // The EN collection hub carries the full eligible collection; Home carries
-  // the approved preview of it. Live record-presence is judged across both.
+  // While published, the EN collection hub carries the full eligible collection
+  // and Home carries the approved preview of it, so live record-presence is
+  // judged across both. The hub is temporarily unpublished, so it is not
+  // fetched and this is undefined; the `checkable` guard below already treats
+  // an unfetched hub as no evidence rather than as absence, which is why a
+  // record beyond the preview is skipped instead of reported missing.
   const enHub = bodies.get(EN_HUB_ROUTE);
   const sitemapBody = bodies.get('/sitemap.xml');
 
@@ -639,6 +859,10 @@ function checkThingsToDoLiveContract(emit, { targets, bodies, baseUrl }) {
     // collection. An eligible record beyond the preview is correctly absent
     // from Home and present on the hub, so "surfaced" means present on either
     // one — and an expired record must be on neither.
+    //
+    // While the hub is unpublished only Home remains, which narrows what this
+    // can conclude: a preview member is still fully judged, a record beyond the
+    // preview has no live surface to be judged on and is skipped.
     if (enHome !== undefined) {
       const onHome = htmlContains(enHome, (value) => `<h3>${value}</h3>`, record.title);
       const onHub = enHub === undefined ? false : htmlContains(enHub, (value) => `<h3>${value}</h3>`, record.title);
@@ -976,6 +1200,9 @@ export async function run(argv) {
     if (!bodies.has('/')) {
       const response = await fetchAndCheckRoute(httpEmit, { baseUrl, route: '/', locale: 'en', kind: 'page' });
       if (response) bodies.set('/', response.body);
+    }
+    for (const withdrawn of selectWithdrawnRoutes(targets)) {
+      await checkWithdrawnRoute(httpEmit, { baseUrl, ...withdrawn, localeData });
     }
     for (const asset of targets.assets) {
       await fetchAndCheckRoute(httpEmit, { baseUrl, route: asset, kind: 'asset' });

@@ -7,6 +7,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { THINGS_TO_DO_HUB_PUBLIC } from './lib/things-to-do-collection.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const write = process.argv.includes('--write');
@@ -21,7 +22,16 @@ const STATIC_EN_ROUTES = [
   // than derived: it is one crawlable collection surface per locale, not a
   // per-record route, and its PT counterpart is emitted by the same
   // ptRouteExists() check every other route uses.
-  '/things-to-do/',
+  //
+  // Included only while the hub is published. It is temporarily unpublished
+  // (THINGS_TO_DO_HUB_PUBLIC in scripts/lib/things-to-do-collection.mjs), so
+  // it is absent from the sitemap rather than advertising a route that
+  // returns 404. The PT counterpart needs no separate condition: ptRouteExists()
+  // looks for pt/things-to-do/index.html, which is no longer emitted.
+  //
+  // Only the COLLECTION route is affected. Every dated-event detail route
+  // below is derived from the canonical corpus and stays in the sitemap.
+  ...(THINGS_TO_DO_HUB_PUBLIC ? ['/things-to-do/'] : []),
   '/things-to-do/water-adventure-activities-mindelo/',
   '/things-to-do/street-art-mindelo/',
 ];

@@ -11,7 +11,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { isExpired as recordIsExpired } from '../../lib/things-to-do-currentness.mjs';
-import { HUB_ROUTE, homePreviewIds } from '../../lib/things-to-do-collection.mjs';
+import { HUB_ROUTE, THINGS_TO_DO_HUB_PUBLIC, homePreviewIds } from '../../lib/things-to-do-collection.mjs';
 
 /** Public route of the collection hub in each locale. */
 export const EN_HUB_ROUTE = `/${HUB_ROUTE}`;
@@ -160,6 +160,27 @@ export function loadTargets(root, { affectedRoutes = [] } = {}) {
 
   const documents = ['/sitemap.xml', '/robots.txt'];
 
+  // Routes this repository has deliberately WITHDRAWN from publication.
+  //
+  // Everything else in this module derives targets from what the site
+  // publishes, so a withdrawn route disappears from the target set at exactly
+  // the moment it stops being published -- which would leave nothing asserting
+  // that production actually stopped serving it. A stale edge, or a deploy that
+  // still carried the file, could keep returning the old collection page and no
+  // live pass would say so.
+  //
+  // These are therefore NEGATIVE targets: routes required to be absent, checked
+  // precisely because the sitemap no longer names them. Publication state comes
+  // from the same governed flag the generator, the sitemap builder and the
+  // workflow read -- never a second definition -- so republication empties this
+  // list and the routes return to ordinary positive page QA.
+  const withdrawnRoutes = THINGS_TO_DO_HUB_PUBLIC
+    ? []
+    : [
+      { route: EN_HUB_ROUTE, locale: 'en', reason: 'THINGS_TO_DO_HUB_UNPUBLISHED' },
+      { route: PT_HUB_ROUTE, locale: 'pt', reason: 'THINGS_TO_DO_HUB_UNPUBLISHED' },
+    ];
+
   const normalizedAffected = affectedRoutes
     .map((route) => (route.startsWith('/') ? route : `/${route}`))
     .filter((route) => seen.has(route));
@@ -173,6 +194,7 @@ export function loadTargets(root, { affectedRoutes = [] } = {}) {
     documents,
     sitemapRoutes: sitemap,
     affectedRoutes: normalizedAffected,
+    withdrawnRoutes,
   };
 }
 
@@ -183,11 +205,28 @@ export function loadTargets(root, { affectedRoutes = [] } = {}) {
  */
 export function selectHttpRoutes(targets, mode) {
   if (mode !== 'IMMEDIATE_POST_DEPLOY') return targets.pageRoutes;
-  // The collection hubs are core public surfaces alongside the two Home
-  // surfaces: an eligible record beyond the Home preview is reachable only
-  // there, so a pass that skipped them could not tell "correctly previewed"
-  // from "lost".
-  const core = new Set(['/', '/pt/', EN_HUB_ROUTE, PT_HUB_ROUTE, ...targets.affectedRoutes]);
+  // While PUBLISHED, the collection hubs are core public surfaces alongside the
+  // two Home surfaces: an eligible record beyond the Home preview is reachable
+  // only there, so a pass that skipped them could not tell "correctly
+  // previewed" from "lost".
+  //
+  // They are TEMPORARILY UNPUBLISHED (THINGS_TO_DO_HUB_PUBLIC), so they are not
+  // in the sitemap, not in pageRoutes, and naming them here would be inert:
+  // the filter below keeps only routes pageRoutes already carries. They are
+  // therefore named only while published, so this reads as what it does.
+  //
+  // KNOWN GAP while dormant, deliberately NOT closed in this tranche: no live
+  // pass asserts that production STOPPED serving the two withdrawn routes, so
+  // a stale CDN could keep returning them unnoticed. Closing it needs a
+  // negative live target (a route required to be absent), which is a new
+  // finding code in the governed QA contract rather than a publication change.
+  // See the note on THINGS_TO_DO_HUB_PUBLIC.
+  const core = new Set([
+    '/',
+    '/pt/',
+    ...(THINGS_TO_DO_HUB_PUBLIC ? [EN_HUB_ROUTE, PT_HUB_ROUTE] : []),
+    ...targets.affectedRoutes,
+  ]);
   for (const target of targets.recordTargets) {
     // A published event that is current at the committed as_of is always worth
     // re-checking immediately, even when the merge diff did not name its file.
@@ -197,6 +236,19 @@ export function selectHttpRoutes(targets, mode) {
     }
   }
   return targets.pageRoutes.filter((page) => core.has(page.route));
+}
+
+/**
+ * The withdrawn routes a given mode must prove are no longer served.
+ *
+ * Every mode, deliberately. The positive surface is mode-scoped because it is
+ * large and a stale page is caught by the next run anyway; this set is two
+ * requests, and the thing it guards against -- a withdrawn page still public --
+ * is not something any mode should be willing to miss. It is empty whenever the
+ * hub is published, so this costs nothing once the hubs come back.
+ */
+export function selectWithdrawnRoutes(targets) {
+  return targets.withdrawnRoutes;
 }
 
 /**

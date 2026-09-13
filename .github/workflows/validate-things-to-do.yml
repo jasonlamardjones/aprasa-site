@@ -221,10 +221,33 @@ jobs:
           git reset --hard HEAD
 
           # Home is the approved LIMITED PREVIEW (the first three eligible
-          # records in canonical order); the full eligible collection lives on
-          # the hub at things-to-do/index.html. An eligible record that is not
-          # in the preview is correctly absent from Home and present on the
-          # hub, so the two surfaces are asserted separately.
+          # records in canonical order). The full eligible collection used to
+          # live on the hub at things-to-do/index.html, and the two surfaces
+          # were asserted separately.
+          #
+          # The hub is TEMPORARILY UNPUBLISHED (THINGS_TO_DO_HUB_PUBLIC in
+          # scripts/lib/things-to-do-collection.mjs), so there is no hub file to
+          # grep and the hub assertions below stand down rather than fail on a
+          # missing file. They are kept, not deleted: they describe membership
+          # rules we intend to reactivate, and they resume automatically when
+          # the hub is republished.
+          #
+          # Hub membership is not left uncovered meanwhile —
+          # scripts/test-things-to-do-hub.mjs republishes the hub inside a
+          # sandbox and asserts membership and ordering against the real
+          # renderer. What CI loses here is the cross-date shell spot-check, not
+          # the rule.
+          # Publication state is read from the governed flag, not inferred
+          # from the generator's output. Inferring it from the file would make
+          # check_hub_present vacuous in exactly the case it exists for: a
+          # published hub that the generator failed to emit would look
+          # "unpublished" and the assertion would stand down instead of
+          # failing. Resolved once, here, rather than per assertion.
+          HUB_PUBLISHED=$(node -e 'import("./scripts/lib/things-to-do-collection.mjs").then((m) => process.stdout.write(m.THINGS_TO_DO_HUB_PUBLIC ? "true" : "false"))')
+          echo "Collection hub publication state: $HUB_PUBLISHED"
+          hub_published() {
+            [ "$HUB_PUBLISHED" = "true" ]
+          }
           check_home_present() {
             if ! grep -q "<h3>$2</h3>" index.html; then
               echo "$1 incorrectly absent from the Home preview as of $3."
@@ -238,16 +261,35 @@ jobs:
             fi
           }
           check_hub_present() {
+            hub_published || return 0
             if ! grep -q "<h3>$2</h3>" things-to-do/index.html; then
               echo "$1 incorrectly absent from the collection hub as of $3."
               exit 1
             fi
           }
           check_hub_absent() {
+            hub_published || return 0
             if grep -q "<h3>$2</h3>" things-to-do/index.html; then
               echo "$1 incorrectly present on the collection hub as of $3."
               exit 1
             fi
+          }
+          # While the hub is unpublished, its absence is itself the assertion:
+          # a generator run at ANY as-of date must not put it back.
+          #
+          # Gated on the same flag as its positive counterparts, so that
+          # flipping THINGS_TO_DO_HUB_PUBLIC to true really does hand the
+          # cross-date coverage back to check_hub_present/check_hub_absent.
+          # Without this, republication would leave the workflow red on the
+          # very files it is supposed to require.
+          refute_hub_surfaces() {
+            ! hub_published || return 0
+            for surface in things-to-do/index.html pt/things-to-do/index.html; do
+              if [ -f "$surface" ]; then
+                echo "$surface was emitted as of $1 while the collection hub is unpublished."
+                exit 1
+              fi
+            done
           }
           # The preview is capped at three generated cards. Every generated
           # Home card carries data-event-id, so this counts exactly those and
@@ -330,6 +372,7 @@ jobs:
               exit 1
             fi
             for surface in index.html pt/index.html things-to-do/index.html pt/things-to-do/index.html; do
+              [ -f "$surface" ] || continue
               if sinergia_region "$surface" | grep -Eq "$november_day"; then
                 echo "An exact November day was published for sinergia-da-materia in $surface as of $1."
                 exit 1
@@ -347,6 +390,7 @@ jobs:
           check_home_absent part-ilhas "PART_ILHAS — ciclo de conversas com Nuno Miranda" 2026-08-24
           check_home_absent arquitectura "Arquitectura da Imperfeição" 2026-08-24
           check_preview_cap 2026-08-24
+          refute_hub_surfaces 2026-08-24
           check_preview_matches_canonical 2026-08-24
           # First three eligible records in canonical order as of 2026-08-24.
           # cartinha-dholanda-mindelo-2026 sits at canonical index 3, ahead of
@@ -394,6 +438,7 @@ jobs:
           check_home_absent mon-pikenin "Mon Pikenin" 2026-08-30
           check_home_absent oficina "Exposição dos trabalhos finais do projeto Oficina Contemporânea Lata" 2026-08-30
           check_preview_cap 2026-08-30
+          refute_hub_surfaces 2026-08-30
           check_preview_matches_canonical 2026-08-30
           check_home_present cartinha "CARTINHA D’HOLANDA" 2026-08-30
           check_home_present eclipse "Exposição “Eclipse”" 2026-08-30
@@ -423,6 +468,7 @@ jobs:
           expect_currentness_exit 2026-09-01 0
           node scripts/validate-things-to-do-surface-equivalence.mjs --as-of=2026-09-01
           check_preview_cap 2026-09-01
+          refute_hub_surfaces 2026-09-01
           check_preview_matches_canonical 2026-09-01
           check_home_present sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-09-01
           check_hub_present sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-09-01
@@ -439,6 +485,7 @@ jobs:
           expect_currentness_exit 2026-10-31 0
           node scripts/validate-things-to-do-surface-equivalence.mjs --as-of=2026-10-31
           check_preview_cap 2026-10-31
+          refute_hub_surfaces 2026-10-31
           check_preview_matches_canonical 2026-10-31
           check_home_present sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-10-31
           check_home_present 50-anos "50 Anos de Memória, Criação e Resistência" 2026-10-31
@@ -455,6 +502,7 @@ jobs:
           # expected-exit assertion is why this does not make CI permanently red.
           node scripts/generate-things-to-do.mjs --as-of=2026-11-01 --write
           expect_currentness_exit 2026-11-01 3
+          refute_hub_surfaces 2026-11-01
           node scripts/validate-things-to-do-surface-equivalence.mjs --as-of=2026-11-01
           check_home_present sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-11-01
           # A review-due record stays an ordinary public card on the collection

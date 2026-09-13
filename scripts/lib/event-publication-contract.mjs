@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { THINGS_TO_DO_HUB_PUBLIC } from './things-to-do-collection.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -223,8 +224,12 @@ export function expectedDryRunChangedFiles(packet, { root = ROOT } = {}) {
     // eligible collection, so a full both-locale generator run rewrites both
     // hub surfaces alongside Home. They are generator-owned output of the same
     // canonical data, not a widening of what a packet may author.
-    'things-to-do/index.html',
-    'pt/things-to-do/index.html',
+    //
+    // Expected only while the hub is published. It is temporarily unpublished
+    // (THINGS_TO_DO_HUB_PUBLIC in ./things-to-do-collection.mjs), so the
+    // generator emits neither surface and a publication that listed them would
+    // fail its own changed-file scope check for files that can never change.
+    ...(THINGS_TO_DO_HUB_PUBLIC ? ['things-to-do/index.html', 'pt/things-to-do/index.html'] : []),
     `things-to-do/${id}/index.html`,
     `pt/things-to-do/${id}/index.html`
   ];
@@ -545,9 +550,8 @@ export function expectedChangedFiles(packet) {
     'index.html',
     'pt/index.html',
     // See expectedDryRunChangedFiles: a full generator run reconciles both
-    // collection-hub surfaces along with Home.
-    'things-to-do/index.html',
-    'pt/things-to-do/index.html',
+    // collection-hub surfaces along with Home — while the hub is published.
+    ...(THINGS_TO_DO_HUB_PUBLIC ? ['things-to-do/index.html', 'pt/things-to-do/index.html'] : []),
     `things-to-do/${id}/index.html`,
     `pt/things-to-do/${id}/index.html`,
     'sitemap.xml'

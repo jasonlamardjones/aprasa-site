@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { isExpired } from './lib/things-to-do-currentness.mjs';
-import { HOME_PREVIEW_LIMIT, homePreviewIds, hubOutputPath } from './lib/things-to-do-collection.mjs';
+import { HOME_PREVIEW_LIMIT, THINGS_TO_DO_HUB_PUBLIC, homePreviewIds, hubOutputPath } from './lib/things-to-do-collection.mjs';
 
 // EN public-surface equivalence for the canonical Things-to-Do corpus.
 //
@@ -40,12 +40,17 @@ const data = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
 const indexHtml = fs.readFileSync(indexPath, 'utf8');
 const errors = [];
 
-if (!fs.existsSync(hubPath)) {
+// While the collection hub is temporarily unpublished there is no hub surface
+// to be equivalent WITH, so the hub half of this validator stands down and the
+// Home/detail half continues unchanged. The hub assertions are retained for
+// republication rather than deleted — see THINGS_TO_DO_HUB_PUBLIC in
+// scripts/lib/things-to-do-collection.mjs.
+if (THINGS_TO_DO_HUB_PUBLIC && !fs.existsSync(hubPath)) {
   console.error(`Things to Do surface equivalence errors as of ${asOf}:`);
   console.error(`- collection hub does not exist at ${hubOutputPath('en')}`);
   process.exit(1);
 }
-const hubHtml = fs.readFileSync(hubPath, 'utf8');
+const hubHtml = THINGS_TO_DO_HUB_PUBLIC ? fs.readFileSync(hubPath, 'utf8') : null;
 const previewIds = homePreviewIds(data.records ?? [], asOf);
 
 // Every card the generator emits into a Home slot carries data-event-id, so
@@ -65,10 +70,15 @@ for (const record of data.records ?? []) {
   // The hub links each card by bare slug, since every detail page is a direct
   // child of the hub route.
   const hubHref = record.detail_page.replace(/^things-to-do\//, '');
-  const onHub = hubHtml.includes(`<h3>${record.title}</h3>`);
+  const onHub = hubHtml ? hubHtml.includes(`<h3>${record.title}</h3>`) : false;
 
   if (expired && onHome) errors.push(`${label}: expired record remains on Home as of ${asOf}`);
-  if (!expired && !onHome && !onHub) errors.push(`${label}: eligible record is on neither the Home preview nor the collection hub`);
+  // With the hub dormant, Home carries only the approved preview, so an
+  // eligible record outside that preview is correctly on neither surface. The
+  // record stays reachable at its own detail route, which is asserted below.
+  if (THINGS_TO_DO_HUB_PUBLIC && !expired && !onHome && !onHub) {
+    errors.push(`${label}: eligible record is on neither the Home preview nor the collection hub`);
+  }
 
   // Home preview membership.
   if (inPreview && !onHome) errors.push(`${label}: approved Home preview record missing from Home Things to Do markup`);
@@ -78,9 +88,12 @@ for (const record of data.records ?? []) {
   if (inPreview && record.media?.asset && !indexHtml.includes(record.media.asset)) errors.push(`${label}: preview media asset missing from Home markup`);
 
   // Collection hub membership (positive direction — see the header note).
-  if (!expired && !onHub) errors.push(`${label}: eligible record missing from the collection hub`);
-  if (!expired && !hubHtml.includes(`href="${hubHref}"`)) errors.push(`${label}: eligible detail route missing from the collection hub`);
-  if (!expired && record.media?.asset && !hubHtml.includes(record.media.asset)) errors.push(`${label}: eligible media asset missing from the collection hub`);
+  // Retained for republication; inert while the hub is unpublished.
+  if (hubHtml) {
+    if (!expired && !onHub) errors.push(`${label}: eligible record missing from the collection hub`);
+    if (!expired && !hubHtml.includes(`href="${hubHref}"`)) errors.push(`${label}: eligible detail route missing from the collection hub`);
+    if (!expired && record.media?.asset && !hubHtml.includes(record.media.asset)) errors.push(`${label}: eligible media asset missing from the collection hub`);
+  }
 
   if (!fs.existsSync(detailFile)) {
     errors.push(`${label}: detail page does not exist at ${record.detail_page}`);
