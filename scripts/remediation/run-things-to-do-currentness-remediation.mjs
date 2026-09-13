@@ -247,6 +247,7 @@ function reportBody(auth, changed, validations, candidateSha, transition) {
     `- Home preview before: ${transition.previewBefore.map((id) => `\`${id}\``).join(', ') || '_none_'}`,
     `- Home preview after: ${transition.previewAfter.map((id) => `\`${id}\``).join(', ') || '_none_'}`,
     `- Currentness state changed: ${transition.stateChangedIds.map((id) => `\`${id}\``).join(', ') || '_none_'}`,
+    `- Detail rendering changed: ${transition.detailRenderingChangedIds.map((id) => `\`${id}\``).join(', ') || '_none_'}`,
     '- Home bounded to generated-event regions: passed',
     '- Idempotence: passed',
     '- Merge authority: **none**',
@@ -319,7 +320,7 @@ const allowedWriteSet = expectedWriteSetForTransition({
   driftIds: currentIds,
   previewBefore: previewTransition.previewBefore,
   previewAfter: previewTransition.previewAfter,
-  stateChangedIds: previewTransition.stateChangedIds,
+  detailRenderingChangedIds: previewTransition.detailRenderingChangedIds,
 });
 // Home's generated-event regions are the only part of a Home surface this
 // repair has authority over, and canonical generation rewrites both Home files

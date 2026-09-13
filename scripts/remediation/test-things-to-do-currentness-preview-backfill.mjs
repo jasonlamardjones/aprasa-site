@@ -180,6 +180,9 @@ try {
   // stays CURRENT across the transition, which is why it earns a Home slot but
   // no detail-page authority.
   assert.deepEqual(transition.stateChangedIds, [EXPIRING]);
+  // Detail authority follows RENDERED currentness, which is narrower still:
+  // renderDetailPage() consults isExpired() alone.
+  assert.deepEqual(transition.detailRenderingChangedIds, [EXPIRING]);
 
   nodeOk(work, 'scripts/build-all.mjs', [`--as-of=${BEFORE}`]);
   assert.deepEqual(homeCardIds(work, 'index.html'), [ACTIVE, EXPIRING, RETAINED]);
@@ -237,7 +240,7 @@ try {
     driftIds,
     previewBefore: transition.previewBefore,
     previewAfter: transition.previewAfter,
-    stateChangedIds: transition.stateChangedIds,
+    detailRenderingChangedIds: transition.detailRenderingChangedIds,
   });
   assert.ok(allowed.includes('data/things-to-do-currentness.json'));
   assert.ok(allowed.includes('index.html') && allowed.includes('pt/index.html'));
@@ -353,8 +356,8 @@ try {
     'the adapter must resolve preview membership either side of the transition');
   assert.ok(runnerSource.includes('assertHomeRegionChangeBounded('),
     'the adapter must bound Home at region level, not only at file level');
-  assert.ok(runnerSource.includes('stateChangedIds: previewTransition.stateChangedIds'),
-    'the adapter must derive detail authority from actual currentness state changes');
+  assert.ok(runnerSource.includes('detailRenderingChangedIds: previewTransition.detailRenderingChangedIds'),
+    'the adapter must derive detail authority from actual detail-rendering changes');
 
   console.log('Phase 2B preview-boundary backfill integration tests passed.');
 } finally {

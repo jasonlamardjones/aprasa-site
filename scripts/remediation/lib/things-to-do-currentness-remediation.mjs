@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { THINGS_TO_DO_HUB_PUBLIC, homePreviewIds, hubOutputPath } from '../../lib/things-to-do-collection.mjs';
-import { currentnessState } from '../../lib/things-to-do-currentness.mjs';
+import { currentnessState, isExpired } from '../../lib/things-to-do-currentness.mjs';
 
 export const PHASE2B_CONTRACT = Object.freeze({
   reportSchema: 'aprasa-post-publication-qa-report',
@@ -199,17 +199,26 @@ export function assertDriftShapeUnchanged(reportedIds, currentIds) {
 //   renderHomeArticle() reads only its canonical record and so cannot change
 //   for a lifecycle reason — see homeRegionAuthorizedIds().
 //
-//   DETAIL PAGES are reached by a record's OWN rendered currentness state,
-//   which is what their markup depends on. Preview membership is a Home-only
-//   concept — a promoted record normally stays CURRENT across the transition
-//   and has no lifecycle-driven detail change — so admitting a detail page
-//   merely for entering or leaving the preview would let unrelated drift in
-//   that record's page ride along. Detail authority is therefore limited to
-//   records whose state actually moves: the reported drift IDs, plus any
-//   record whose currentnessState() differs between the two dates. Drift IDs
-//   are unioned in rather than derived, because a record already EXPIRED at
-//   the tracked as_of has no state CHANGE and is still exactly what needs
-//   regenerating.
+//   DETAIL PAGES are reached by a change in that record's own RENDERED
+//   currentness. Preview membership is a Home-only concept — a promoted
+//   record normally stays CURRENT across the transition — so admitting a
+//   detail page merely for entering or leaving the preview would let
+//   unrelated drift in that record's page ride along.
+//
+//   Rendered currentness is narrower than currentness state. renderDetailPage()
+//   consults isExpired() and nothing else: EXPIRED adds the past-event status
+//   line and changes the schema projection, while CURRENT and REVIEW_DUE
+//   render byte-identically (REVIEW_DUE reaches no detail markup at all — it
+//   appears only in the generator's dry-run disposition log). A boundary that
+//   moves a month-precision record CURRENT -> REVIEW_DUE therefore produces no
+//   detail change, so authorizing its page would admit unrelated drift for no
+//   lifecycle reason. Detail authority is limited to records CROSSING INTO OR
+//   OUT OF EXPIRED, plus the reported drift IDs — unioned in rather than
+//   derived, because a record already EXPIRED at the tracked as_of crosses
+//   nothing and is still exactly what needs regenerating.
+//
+//   If detail rendering ever gains a REVIEW_DUE dependence,
+//   detailRenderingChanged() below is the single place that has to learn it.
 //
 // Generator-owned shared surfaces are admitted only where the transition can
 // actually reach them:
@@ -228,8 +237,18 @@ export function assertDriftShapeUnchanged(reportedIds, currentIds) {
 // unreachable by this transition, therefore refused.
 
 /**
- * What a currentness transition moves: Home preview membership either side,
- * and the records whose own rendered currentness state changes.
+ * Whether a currentness transition changes what renderDetailPage() emits for
+ * this record. That function consults isExpired() alone, so only crossing into
+ * or out of EXPIRED can move a detail page; CURRENT <-> REVIEW_DUE cannot.
+ */
+export function detailRenderingChanged(record, fromAsOf, toAsOf) {
+  return isExpired(record, fromAsOf) !== isExpired(record, toAsOf);
+}
+
+/**
+ * What a currentness transition moves: Home preview membership either side, the
+ * records whose currentness state changes at all, and the narrower set whose
+ * DETAIL RENDERING changes.
  */
 export function resolvePreviewTransition({ records = [], fromAsOf, toAsOf } = {}) {
   if (typeof fromAsOf !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(fromAsOf)) {
@@ -238,14 +257,21 @@ export function resolvePreviewTransition({ records = [], fromAsOf, toAsOf } = {}
   if (typeof toAsOf !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(toAsOf)) {
     throw new Error('PHASE2B_PREVIEW_TARGET_AS_OF_UNREADABLE');
   }
+  // Reported for transparency in the repair's own report; authority comes from
+  // detailRenderingChangedIds, which is deliberately narrower.
   const stateChangedIds = (records ?? [])
     .filter((record) => currentnessState(record, fromAsOf) !== currentnessState(record, toAsOf))
+    .map((record) => record.id)
+    .sort();
+  const detailRenderingChangedIds = (records ?? [])
+    .filter((record) => detailRenderingChanged(record, fromAsOf, toAsOf))
     .map((record) => record.id)
     .sort();
   return Object.freeze({
     previewBefore: [...homePreviewIds(records, fromAsOf)].sort(),
     previewAfter: [...homePreviewIds(records, toAsOf)].sort(),
     stateChangedIds,
+    detailRenderingChangedIds,
   });
 }
 
@@ -284,9 +310,14 @@ export function homeRegionAuthorizedIds({ driftIds = [], previewBefore = [], pre
   return assertReadableIds(ids, 'WRITE_SET');
 }
 
-/** Records whose detail pages this transition may legitimately rewrite. */
-export function detailAuthorizedIds({ driftIds = [], stateChangedIds = [] } = {}) {
-  const ids = [...new Set([...driftIds, ...stateChangedIds])].sort();
+/**
+ * Records whose detail pages this transition may legitimately rewrite: the
+ * reported drift IDs plus those whose detail RENDERING changes. A record whose
+ * state moves without changing rendered output (CURRENT <-> REVIEW_DUE) is
+ * excluded — see the note on detail authority above.
+ */
+export function detailAuthorizedIds({ driftIds = [], detailRenderingChangedIds = [] } = {}) {
+  const ids = [...new Set([...driftIds, ...detailRenderingChangedIds])].sort();
   if (!ids.length) throw new Error('PHASE2B_WRITE_SET_TRANSITION_EMPTY');
   return assertReadableIds(ids, 'WRITE_SET');
 }
@@ -295,7 +326,7 @@ export function expectedWriteSetForTransition({
   driftIds = [],
   previewBefore = [],
   previewAfter = [],
-  stateChangedIds = [],
+  detailRenderingChangedIds = [],
 } = {}) {
   // Validates the Home side too, so an unreadable preview ID is refused even
   // though preview membership contributes no detail path of its own.
@@ -309,7 +340,7 @@ export function expectedWriteSetForTransition({
     allowed.add(hubOutputPath('en'));
     allowed.add(hubOutputPath('pt'));
   }
-  for (const id of detailAuthorizedIds({ driftIds, stateChangedIds })) {
+  for (const id of detailAuthorizedIds({ driftIds, detailRenderingChangedIds })) {
     allowed.add(`things-to-do/${id}/index.html`);
     allowed.add(`pt/things-to-do/${id}/index.html`);
   }

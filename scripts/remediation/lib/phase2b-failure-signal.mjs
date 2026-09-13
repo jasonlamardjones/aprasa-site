@@ -57,6 +57,21 @@ export function classifyFailure(log) {
   return match[0];
 }
 
+/**
+ * Whether the adapter failed AFTER committing the repair.
+ *
+ * The adapter's own recovery path raises PHASE2B_POST_COMMIT_RECOVERY when a
+ * failure lands past the commit — for example the push succeeded but creating
+ * the draft pull request did not. A candidate branch and commit may then exist
+ * remotely, so the issue must not tell an investigator that nothing was
+ * created: that reading invites a rerun on top of a live candidate.
+ */
+export function detectPostCommitRecovery(log) {
+  if (typeof log !== 'string') return null;
+  const match = log.match(/PHASE2B_POST_COMMIT_RECOVERY:\s*(.+)/);
+  return match ? match[1].trim().slice(0, 400) : null;
+}
+
 /** Stable dedupe key for one (workflow, failure class) pair. */
 export function failureSignalKey(failureClass) {
   if (typeof failureClass !== 'string' || !/^[A-Z0-9_]+$/.test(failureClass)) {
@@ -166,16 +181,34 @@ function contextLines({ failureClass, commit, runId, runAttempt }, repository) {
 
 export function buildIssueBody(context, { repository = null, key } = {}) {
   const resolved = requireContext(context);
+  const recovery = detectPostCommitRecovery(context?.log ?? '');
+  // Only a pre-commit refusal may claim nothing was created. Past the commit a
+  // candidate branch may already be pushed, and saying otherwise would send an
+  // investigator to rerun the repair on top of it.
+  const disposition = recovery
+    ? [
+      'The remediation adapter failed AFTER committing its candidate, so this is',
+      'NOT a clean no-op: a candidate branch and commit may already exist on the',
+      'remote. Do not rerun the repair before inspecting that state. `main` was',
+      'not modified and nothing was deployed.',
+      '',
+      `> ${recovery}`,
+    ]
+    : [
+      'The remediation adapter refused to produce a repair before committing',
+      'anything. It fails closed by design, so no branch, no commit and no draft',
+      'pull request were created and no published surface changed.',
+    ];
   return [
     keyMarker(key ?? failureSignalKey(resolved.failureClass)),
     commitMarker(resolved.commit),
     '',
     '## Phase 2B bounded currentness remediation failed',
     '',
-    'The remediation adapter refused to produce a repair. It fails closed by',
-    'design, so no branch, no commit and no draft pull request were created and',
-    'no published surface changed. This issue exists so the refusal is visible',
-    'without anyone having to notice a red Actions run.',
+    ...disposition,
+    '',
+    'This issue exists so the failure is visible without anyone having to notice',
+    'a red Actions run.',
     '',
     ...contextLines(resolved, repository),
     '',
@@ -190,10 +223,14 @@ export function buildIssueBody(context, { repository = null, key } = {}) {
 
 export function buildRecurrenceComment(context, { repository = null } = {}) {
   const resolved = requireContext(context);
+  const recovery = detectPostCommitRecovery(context?.log ?? '');
   return [
     commitMarker(resolved.commit),
     '',
     'Same failure class reproduced on a further commit.',
+    ...(recovery
+      ? ['', 'This occurrence failed AFTER committing, so a candidate branch may exist', 'on the remote. Inspect before rerunning.', '', `> ${recovery}`]
+      : []),
     '',
     ...contextLines(resolved, repository),
     '',

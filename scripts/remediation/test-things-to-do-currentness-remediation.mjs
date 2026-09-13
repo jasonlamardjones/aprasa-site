@@ -14,6 +14,7 @@ import {
   authorizeReport,
   capeVerdeDate,
   detailAuthorizedIds,
+  detailRenderingChanged,
   expectedWriteSetForTransition,
   homeRegionAuthorizedIds,
   homeRegionChange,
@@ -29,6 +30,7 @@ import {
   buildIssueBody,
   buildRecurrenceComment,
   classifyFailure,
+  detectPostCommitRecovery,
   decideFailureSignal,
   failureIssueTitle,
   failureSignalKey,
@@ -127,6 +129,43 @@ assert.deepEqual(transition.previewBefore, ['active-one', 'expiring-two', 'retai
 assert.deepEqual(transition.previewAfter, ['active-one', 'promoted-four', 'retained-three']);
 // Only the expiring record's own state moves; the promoted record stays CURRENT.
 assert.deepEqual(transition.stateChangedIds, ['expiring-two']);
+assert.deepEqual(transition.detailRenderingChangedIds, ['expiring-two']);
+
+// Rendered currentness is NARROWER than currentness state. renderDetailPage()
+// consults isExpired() alone, so CURRENT <-> REVIEW_DUE renders identically and
+// must not carry detail authority; only crossing into or out of EXPIRED can.
+const monthPrecision = {
+  id: 'month-precision-one',
+  kind: 'dated-event',
+  start_date: '2026-01-01',
+  end_precision: 'month',
+  end_month: '2026-11',
+  end_date: null,
+};
+const reviewDueTransition = resolvePreviewTransition({
+  records: [monthPrecision],
+  fromAsOf: '2026-10-31',
+  toAsOf: '2026-11-01',
+});
+assert.deepEqual(reviewDueTransition.stateChangedIds, ['month-precision-one'],
+  'the month boundary must register as a state change');
+assert.deepEqual(reviewDueTransition.detailRenderingChangedIds, [],
+  'CURRENT -> REVIEW_DUE renders no differently, so it carries no detail authority');
+assert.equal(detailRenderingChanged(monthPrecision, '2026-10-31', '2026-11-01'), false);
+const dayPrecision = { id: 'day-one', kind: 'dated-event', start_date: '2026-01-01', end_date: '2026-10-01' };
+assert.equal(detailRenderingChanged(dayPrecision, '2026-10-01', '2026-10-02'), true,
+  'crossing into EXPIRED does change detail rendering');
+assert.equal(detailRenderingChanged(dayPrecision, '2026-10-02', '2026-10-03'), false,
+  'already expired on both sides crosses nothing');
+// A non-rendering state move must not authorize that detail page.
+const reviewDueAllowed = expectedWriteSetForTransition({
+  driftIds: ['expiring-two'],
+  previewBefore: ['expiring-two'],
+  previewAfter: [],
+  detailRenderingChangedIds: reviewDueTransition.detailRenderingChangedIds,
+});
+assert.ok(!reviewDueAllowed.includes('things-to-do/month-precision-one/index.html'),
+  'a CURRENT -> REVIEW_DUE record must not gain detail authority');
 assert.throws(() => resolvePreviewTransition({ records: previewRecords, fromAsOf: 'nope', toAsOf: '2026-10-02' }), /PREVIEW_BASELINE_AS_OF_UNREADABLE/);
 assert.throws(() => resolvePreviewTransition({ records: previewRecords, fromAsOf: '2026-10-01', toAsOf: null }), /PREVIEW_TARGET_AS_OF_UNREADABLE/);
 
@@ -134,7 +173,7 @@ const allowed = expectedWriteSetForTransition({
   driftIds: ['expiring-two'],
   previewBefore: transition.previewBefore,
   previewAfter: transition.previewAfter,
-  stateChangedIds: transition.stateChangedIds,
+  detailRenderingChangedIds: transition.detailRenderingChangedIds,
 });
 // Authority is SPLIT. Detail pages follow a record's own rendered currentness
 // state, because that is what their markup depends on; preview membership is a
@@ -149,8 +188,8 @@ for (const id of ['active-one', 'retained-three', 'promoted-four', 'beyond-five'
 }
 // A record already EXPIRED at both dates has no state CHANGE, yet is exactly
 // what needs regenerating — hence drift IDs are unioned in, not derived.
-assert.deepEqual(detailAuthorizedIds({ driftIds: ['stale-one'], stateChangedIds: [] }), ['stale-one']);
-assert.deepEqual(detailAuthorizedIds({ driftIds: ['b-two'], stateChangedIds: ['a-one', 'b-two'] }), ['a-one', 'b-two']);
+assert.deepEqual(detailAuthorizedIds({ driftIds: ['stale-one'], detailRenderingChangedIds: [] }), ['stale-one']);
+assert.deepEqual(detailAuthorizedIds({ driftIds: ['b-two'], detailRenderingChangedIds: ['a-one', 'b-two'] }), ['a-one', 'b-two']);
 // Shared surfaces the transition cannot reach stay out.
 assert(!allowed.includes('sitemap.xml'));
 assert(!allowed.includes('data/locales/locale-data.generated.json'));
@@ -162,8 +201,8 @@ assert.equal(allowed.includes(hubOutputPath('en')), THINGS_TO_DO_HUB_PUBLIC);
 assert.equal(allowed.includes(hubOutputPath('pt')), THINGS_TO_DO_HUB_PUBLIC);
 // The audit's five-file Eclipse result is a property of one transition, not the
 // contract: a transition that moves more records' state derives a wider set.
-assert(expectedWriteSetForTransition({ driftIds: ['expiring-two'], stateChangedIds: ['expiring-two', 'another-one'] }).length
-  > expectedWriteSetForTransition({ driftIds: ['expiring-two'], stateChangedIds: ['expiring-two'] }).length);
+assert(expectedWriteSetForTransition({ driftIds: ['expiring-two'], detailRenderingChangedIds: ['expiring-two', 'another-one'] }).length
+  > expectedWriteSetForTransition({ driftIds: ['expiring-two'], detailRenderingChangedIds: ['expiring-two'] }).length);
 assert.throws(() => expectedWriteSetForTransition({}), /WRITE_SET_TRANSITION_EMPTY/);
 assert.throws(() => expectedWriteSetForTransition({ driftIds: ['Bad_Id'] }), /WRITE_SET_ID_UNREADABLE/);
 assert.throws(() => expectedWriteSetForTransition({ driftIds: ['../escape'] }), /WRITE_SET_ID_UNREADABLE/);
@@ -381,6 +420,33 @@ assert(issueBody.includes('4242'), 'the issue must carry run context');
 assert(issueBody.includes('PHASE2B_INCUMBENT_VALIDATOR_FAILED'), 'the issue must carry the failure class');
 assert(issueBody.includes('https://github.com/o/r/actions/runs/4242'));
 assert.equal(failureIssueTitle(created.failureClass), 'Phase 2B remediation failed: PHASE2B_INCUMBENT_VALIDATOR_FAILED');
+// A pre-commit refusal may say nothing was created; a POST-COMMIT failure may
+// not, because a candidate branch can already be pushed and telling an
+// investigator otherwise invites a rerun on top of it.
+assert.equal(detectPostCommitRecovery('PHASE2B_POST_COMMIT_RECOVERY: Candidate abc is already pushed on feature/x'),
+  'Candidate abc is already pushed on feature/x');
+assert.equal(detectPostCommitRecovery('PHASE2B_MAIN_MOVED'), null);
+assert.equal(detectPostCommitRecovery(null), null);
+assert.ok(issueBody.includes('no branch, no commit and no draft'),
+  'a pre-commit refusal states the clean no-op plainly');
+const recoveryBody = buildIssueBody(
+  { ...failContext, log: 'PHASE2B_UNEXPECTED_FILE_CHANGE: x\nPHASE2B_POST_COMMIT_RECOVERY: Candidate abc is already pushed on feature/x; create/inspect one draft PR only.' },
+  { repository: 'o/r', key: failKey },
+);
+assert.ok(!recoveryBody.includes('no branch, no commit'),
+  'a post-commit failure must NOT assert that no branch or commit exists');
+assert.ok(recoveryBody.includes('may already exist on the'), 'it must warn a candidate may exist remotely');
+assert.ok(recoveryBody.includes('Do not rerun the repair before inspecting'), 'it must warn against a blind rerun');
+assert.ok(recoveryBody.includes('Candidate abc is already pushed'), 'it must carry the adapter recovery detail');
+assert.ok(recoveryBody.includes('`main` was'), 'it must still state that main is untouched');
+// The recurrence comment carries the same warning when applicable.
+const recoveryComment = buildRecurrenceComment(
+  { ...otherCommitContext, log: 'PHASE2B_POST_COMMIT_RECOVERY: Candidate def was committed locally but not safely published.' },
+  { repository: 'o/r' },
+);
+assert.ok(recoveryComment.includes('Inspect before rerunning.'));
+assert.ok(!buildRecurrenceComment(otherCommitContext, { repository: 'o/r' }).includes('Inspect before rerunning.'));
+
 // The signal mutates no public content: it never names a generated surface,
 // a canonical record file, a branch or a pull request.
 for (const token of ['index.html', 'data/things-to-do-events.json', 'feature/phase2b-currentness-', 'pull/']) {
