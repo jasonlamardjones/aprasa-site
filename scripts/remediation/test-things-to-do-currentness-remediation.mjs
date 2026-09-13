@@ -12,12 +12,26 @@ import {
   assertWorkflowArtifactProvenance,
   authorizeReport,
   capeVerdeDate,
-  expectedWriteSetForIds,
+  expectedWriteSetForTransition,
   parseObservedDriftIds,
   parseOpenPrProbe,
   parseRemoteBranchProbe,
   parseValidatorDriftIds,
+  resolvePreviewTransition,
 } from './lib/things-to-do-currentness-remediation.mjs';
+import { THINGS_TO_DO_HUB_PUBLIC, hubOutputPath } from '../lib/things-to-do-collection.mjs';
+import {
+  FAILURE_SIGNAL,
+  buildIssueBody,
+  buildRecurrenceComment,
+  classifyFailure,
+  decideFailureSignal,
+  failureIssueTitle,
+  failureSignalKey,
+  keyMarker,
+  parseOpenFailureIssueProbe,
+  recordedCommits,
+} from './lib/phase2b-failure-signal.mjs';
 
 const SHA = 'd5e017484bcd15514cc2ec46f870babe54febfa6';
 const OTHER_SHA = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -92,16 +106,66 @@ assert.doesNotThrow(() => assertDriftShapeUnchanged(['b', 'a'], ['a', 'b']));
 assert.throws(() => assertDriftShapeUnchanged(['a'], []), /DRIFT_DISAPPEARED/);
 assert.throws(() => assertDriftShapeUnchanged(['a'], ['b']), /DRIFT_CHANGED_SHAPE/);
 
-const allowed = expectedWriteSetForIds(['foo-bar']);
-assert(allowed.includes('things-to-do/foo-bar/index.html'));
-assert(allowed.includes('pt/things-to-do/foo-bar/index.html'));
+// --- Derived bounded write set --------------------------------------------
+// The write set is derived from the lifecycle transition. A preview-boundary
+// expiry promotes a record, and the promoted record's surfaces must be
+// permitted even though it is not a drift ID — that omission is what made the
+// incumbent repair abort.
+const previewRecords = [
+  { id: 'active-one', kind: 'dated-event', end_date: '2026-12-31' },
+  { id: 'expiring-two', kind: 'dated-event', end_date: '2026-10-01' },
+  { id: 'retained-three', kind: 'dated-event', end_date: '2026-12-31' },
+  { id: 'promoted-four', kind: 'dated-event', end_date: '2026-12-31' },
+  { id: 'beyond-five', kind: 'dated-event', end_date: '2026-12-31' },
+];
+const transition = resolvePreviewTransition({ records: previewRecords, fromAsOf: '2026-10-01', toAsOf: '2026-10-02' });
+assert.deepEqual(transition.previewBefore, ['active-one', 'expiring-two', 'retained-three']);
+assert.deepEqual(transition.previewAfter, ['active-one', 'promoted-four', 'retained-three']);
+assert.throws(() => resolvePreviewTransition({ records: previewRecords, fromAsOf: 'nope', toAsOf: '2026-10-02' }), /PREVIEW_BASELINE_AS_OF_UNREADABLE/);
+assert.throws(() => resolvePreviewTransition({ records: previewRecords, fromAsOf: '2026-10-01', toAsOf: null }), /PREVIEW_TARGET_AS_OF_UNREADABLE/);
+
+const allowed = expectedWriteSetForTransition({
+  driftIds: ['expiring-two'],
+  previewBefore: transition.previewBefore,
+  previewAfter: transition.previewAfter,
+});
+// The drifted record, both preview sides and the promoted record are all in.
+for (const id of ['expiring-two', 'active-one', 'retained-three', 'promoted-four']) {
+  assert(allowed.includes(`things-to-do/${id}/index.html`), `${id} EN detail must be permitted`);
+  assert(allowed.includes(`pt/things-to-do/${id}/index.html`), `${id} PT detail must be permitted`);
+}
+// A record the transition never touches stays out, and so does every shared
+// surface the transition cannot reach.
+assert(!allowed.includes('things-to-do/beyond-five/index.html'));
+assert(!allowed.includes('sitemap.xml'));
+assert(!allowed.includes('data/locales/locale-data.generated.json'));
+assert(allowed.includes('data/things-to-do-currentness.json'));
+assert(allowed.includes('index.html') && allowed.includes('pt/index.html'));
+// The hub is a whole-collection currentness projection, so it is admitted
+// exactly while it is published and never while dormant.
+assert.equal(allowed.includes(hubOutputPath('en')), THINGS_TO_DO_HUB_PUBLIC);
+assert.equal(allowed.includes(hubOutputPath('pt')), THINGS_TO_DO_HUB_PUBLIC);
+// The audit's five-file Eclipse result is a property of one transition, not the
+// contract: a wider legitimate transition derives a wider set.
+assert(expectedWriteSetForTransition({ driftIds: ['expiring-two'], previewBefore: transition.previewBefore, previewAfter: transition.previewAfter }).length
+  > expectedWriteSetForTransition({ driftIds: ['expiring-two'], previewBefore: ['expiring-two'], previewAfter: ['expiring-two'] }).length);
+assert.throws(() => expectedWriteSetForTransition({}), /WRITE_SET_TRANSITION_EMPTY/);
+assert.throws(() => expectedWriteSetForTransition({ driftIds: ['Bad_Id'] }), /WRITE_SET_ID_UNREADABLE/);
+assert.throws(() => expectedWriteSetForTransition({ driftIds: ['../escape'] }), /WRITE_SET_ID_UNREADABLE/);
+
+// assertBoundedWriteSet itself is unchanged: exact enforcement, both Homes
+// required, anything unlisted refused.
+const simple = expectedWriteSetForTransition({ driftIds: ['foo-bar'] });
+assert(simple.includes('things-to-do/foo-bar/index.html'));
+assert(simple.includes('pt/things-to-do/foo-bar/index.html'));
 assert.deepEqual(
-  assertBoundedWriteSet(['index.html', 'pt/index.html', 'things-to-do/foo-bar/index.html'], allowed),
+  assertBoundedWriteSet(['index.html', 'pt/index.html', 'things-to-do/foo-bar/index.html'], simple),
   ['index.html', 'pt/index.html', 'things-to-do/foo-bar/index.html'],
 );
-assert.throws(() => assertBoundedWriteSet(['index.html', 'pt/index.html', 'unrelated.txt'], allowed), /UNEXPECTED_FILE_CHANGE/);
-assert.throws(() => assertBoundedWriteSet(['pt/index.html'], allowed), /EN_HOME_NOT_REPAIRED/);
-assert.throws(() => assertBoundedWriteSet(['index.html'], allowed), /PT_HOME_NOT_REPAIRED/);
+assert.throws(() => assertBoundedWriteSet(['index.html', 'pt/index.html', 'unrelated.txt'], simple), /UNEXPECTED_FILE_CHANGE/);
+assert.throws(() => assertBoundedWriteSet(['pt/index.html'], simple), /EN_HOME_NOT_REPAIRED/);
+assert.throws(() => assertBoundedWriteSet(['index.html'], simple), /PT_HOME_NOT_REPAIRED/);
+assert.throws(() => assertBoundedWriteSet([], simple), /EMPTY_REPAIR_DIFF/);
 
 assert.doesNotThrow(() => assertValidatorResults([{ step: 'ok', status: 0 }]));
 assert.throws(() => assertValidatorResults([{ step: 'bad', status: 1 }]), /INCUMBENT_VALIDATOR_FAILED/);
@@ -191,5 +255,143 @@ assert.ok(!/--global|--system|GIT_CONFIG_GLOBAL/.test(runnerSource), 'no global/
 for (const call of runnerSource.match(/\['config',[^\]]*\]/g) ?? []) {
   assert.ok(/^\['config', 'user\.(name|email)', '[^']+'\]$/.test(call), `unexpected git config call: ${call}`);
 }
+
+// --- Failure visibility ----------------------------------------------------
+// No GitHub call appears anywhere in this suite: the decision is a pure
+// function, so a simulated failure is proved without creating a real issue.
+
+// The failure class is the adapter's own refusal code, not an incidental line.
+assert.equal(classifyFailure('PHASE2B_INCUMBENT_VALIDATOR_FAILED: surface equivalence (exit 1)'), 'PHASE2B_INCUMBENT_VALIDATOR_FAILED');
+assert.equal(classifyFailure('Error: something\n  at x\nPHASE2B_MAIN_MOVED\n'), 'PHASE2B_MAIN_MOVED');
+assert.equal(classifyFailure('node: command not found'), FAILURE_SIGNAL.unclassified);
+assert.equal(classifyFailure(''), FAILURE_SIGNAL.unclassified);
+assert.equal(classifyFailure(null), FAILURE_SIGNAL.unclassified);
+// POST_COMMIT_RECOVERY is guidance appended to a real failure, never the class.
+assert.equal(
+  classifyFailure('PHASE2B_POST_COMMIT_RECOVERY: Candidate ... \nPHASE2B_UNEXPECTED_FILE_CHANGE: x'),
+  'PHASE2B_UNEXPECTED_FILE_CHANGE',
+);
+assert.equal(classifyFailure('PHASE2B_POST_COMMIT_RECOVERY only'), FAILURE_SIGNAL.unclassified);
+// A canonical-generation refusal keys on its own class, not on the raw command
+// failure build-all would otherwise report.
+assert.equal(
+  classifyFailure('PHASE2B_CANONICAL_GENERATION_FAILED: node scripts/build-all.mjs --as-of=2026-09-13 failed (1)'),
+  'PHASE2B_CANONICAL_GENERATION_FAILED',
+);
+
+// The dedupe key is stable per failure class and distinct across classes.
+const failKey = failureSignalKey('PHASE2B_INCUMBENT_VALIDATOR_FAILED');
+assert.equal(failKey, failureSignalKey('PHASE2B_INCUMBENT_VALIDATOR_FAILED'));
+assert.notEqual(failKey, failureSignalKey('PHASE2B_MAIN_MOVED'));
+assert.throws(() => failureSignalKey('not a class'), /FAILURE_CLASS_UNREADABLE/);
+
+const failContext = { log: 'PHASE2B_INCUMBENT_VALIDATOR_FAILED: surface equivalence', commit: SHA, runId: '4242', runAttempt: '1' };
+const otherCommitContext = { ...failContext, commit: OTHER_SHA, runId: '4243' };
+
+// 9. FAILURE SIGNAL — a simulated failure with nothing open creates one issue.
+const created = decideFailureSignal({ issue: null, context: failContext });
+assert.equal(created.action, 'CREATE');
+assert.equal(created.failureClass, 'PHASE2B_INCUMBENT_VALIDATOR_FAILED');
+assert.equal(created.key, failKey);
+
+const issueBody = buildIssueBody(failContext, { repository: 'o/r', key: failKey });
+assert(issueBody.includes(keyMarker(failKey)), 'the issue must carry its dedupe marker');
+assert(issueBody.includes(SHA), 'the issue must carry commit context');
+assert(issueBody.includes('4242'), 'the issue must carry run context');
+assert(issueBody.includes('PHASE2B_INCUMBENT_VALIDATOR_FAILED'), 'the issue must carry the failure class');
+assert(issueBody.includes('https://github.com/o/r/actions/runs/4242'));
+assert.equal(failureIssueTitle(created.failureClass), 'Phase 2B remediation failed: PHASE2B_INCUMBENT_VALIDATOR_FAILED');
+// The signal mutates no public content: it never names a generated surface,
+// a canonical record file, a branch or a pull request.
+for (const token of ['index.html', 'data/things-to-do-events.json', 'feature/phase2b-currentness-', 'pull/']) {
+  assert(!issueBody.includes(token), `the failure signal must not reference ${token}`);
+}
+
+// 7-repeat. DUPLICATE SUPPRESSION for the signal: the same class on a commit
+// already recorded does nothing at all.
+const openIssue = { number: 7, url: 'https://github.com/o/r/issues/7', body: issueBody, comments: [] };
+assert.equal(decideFailureSignal({ issue: openIssue, context: failContext }).action, 'NONE');
+assert.equal(decideFailureSignal({ issue: openIssue, context: { ...failContext, runId: '9999', runAttempt: '3' } }).action, 'NONE',
+  'a retry of the same failure on the same commit must not add anything');
+
+// A new failing commit adds exactly one comment, then suppresses further ones.
+const recurrence = decideFailureSignal({ issue: openIssue, context: otherCommitContext });
+assert.equal(recurrence.action, 'COMMENT');
+const comment = buildRecurrenceComment(otherCommitContext, { repository: 'o/r' });
+assert(comment.includes(OTHER_SHA));
+const updatedIssue = { ...openIssue, comments: [comment] };
+assert.equal(decideFailureSignal({ issue: updatedIssue, context: otherCommitContext }).action, 'NONE');
+assert.deepEqual(recordedCommits(updatedIssue), [SHA, OTHER_SHA].sort());
+// A different failure class is a different signal, so it opens its own issue.
+const otherClass = decideFailureSignal({ issue: null, context: { ...failContext, log: 'PHASE2B_MAIN_MOVED' } });
+assert.equal(otherClass.action, 'CREATE');
+assert.notEqual(otherClass.key, failKey);
+
+// Context that cannot be read is refused rather than guessed at.
+assert.throws(() => decideFailureSignal({ context: { ...failContext, commit: 'short' } }), /FAILURE_COMMIT_UNREADABLE/);
+assert.throws(() => decideFailureSignal({ context: { ...failContext, runId: null } }), /FAILURE_RUN_CONTEXT_UNREADABLE/);
+
+// The open-issue probe is dedupe authority, so it is fail-closed exactly like
+// the branch and pull-request probes: a probe that did not demonstrably succeed
+// must never read as "no issue exists".
+const issueProbe = (overrides) => ({ status: 0, stdout: '[]', stderr: '', ...overrides });
+assert.equal(parseOpenFailureIssueProbe(issueProbe({}), { key: failKey }), null);
+assert.throws(() => parseOpenFailureIssueProbe(issueProbe({ status: 1, stderr: 'gh: HTTP 502' }), { key: failKey }), /FAILURE_SIGNAL_PROBE_FAILED/);
+assert.throws(() => parseOpenFailureIssueProbe(issueProbe({ status: null, stderr: 'spawn ENOENT' }), { key: failKey }), /FAILURE_SIGNAL_PROBE_FAILED/);
+assert.throws(() => parseOpenFailureIssueProbe(undefined, { key: failKey }), /FAILURE_SIGNAL_PROBE_FAILED/);
+assert.throws(() => parseOpenFailureIssueProbe(issueProbe({ stdout: 'not json' }), { key: failKey }), /FAILURE_SIGNAL_PROBE_UNREADABLE/);
+assert.throws(() => parseOpenFailureIssueProbe(issueProbe({ stdout: '{}' }), { key: failKey }), /FAILURE_SIGNAL_PROBE_UNREADABLE/);
+// An issue carrying another class's marker is not this signal.
+assert.equal(
+  parseOpenFailureIssueProbe(issueProbe({ stdout: JSON.stringify([{ number: 3, url: 'u', body: keyMarker(otherClass.key), comments: [] }]) }), { key: failKey }),
+  null,
+);
+const found = parseOpenFailureIssueProbe(
+  issueProbe({ stdout: JSON.stringify([{ number: 7, url: 'https://github.com/o/r/issues/7', body: issueBody, comments: [{ body: comment }] }]) }),
+  { key: failKey },
+);
+assert.equal(found.number, 7);
+assert.deepEqual(found.comments, [comment]);
+assert.deepEqual(recordedCommits(found), [SHA, OTHER_SHA].sort());
+assert.throws(() => parseOpenFailureIssueProbe(
+  issueProbe({ stdout: JSON.stringify([{ number: 7, url: 'u', body: issueBody, comments: [] }, { number: 8, url: 'u2', body: issueBody, comments: [] }]) }),
+  { key: failKey },
+), /FAILURE_SIGNAL_AMBIGUOUS/);
+assert.throws(() => parseOpenFailureIssueProbe(
+  issueProbe({ stdout: JSON.stringify([{ url: 'u', body: issueBody, comments: [] }]) }), { key: failKey },
+), /FAILURE_SIGNAL_PROBE_UNREADABLE/);
+assert.throws(() => parseOpenFailureIssueProbe(issueProbe({}), {}), /FAILURE_SIGNAL_KEY_REQUIRED/);
+
+// 10. HEALTHY RUN — the signal is reachable only from the workflow's
+// `if: failure()` step, so a green run cannot produce a notification. Proved on
+// the workflow source, since that gate is the mechanism.
+const remediationWorkflow = fs.readFileSync(
+  path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '.github', 'workflows', 'phase-2b-things-to-do-currentness.yml'),
+  'utf8',
+);
+assert.ok(remediationWorkflow.includes('report-phase2b-failure.mjs'), 'the workflow must invoke the failure signal');
+const signalStep = remediationWorkflow.slice(remediationWorkflow.indexOf('Record durable Phase 2B failure signal'));
+assert.ok(signalStep.includes('if: failure()'), 'the failure signal must be gated on failure()');
+assert.ok(
+  signalStep.indexOf('if: failure()') < signalStep.indexOf('report-phase2b-failure.mjs'),
+  'the failure gate must precede the signal invocation',
+);
+// The gate is the ONLY way in: nothing else in the workflow runs it.
+assert.equal(remediationWorkflow.split('report-phase2b-failure.mjs').length - 1, 1);
+// Issue text is the whole of the added authority.
+assert.ok(remediationWorkflow.includes('issues: write'));
+for (const forbidden of ['pages: write', 'deployments: write', 'packages: write', 'id-token: write']) {
+  assert.ok(!remediationWorkflow.includes(forbidden), `the workflow must not take ${forbidden}`);
+}
+const signalSource = fs.readFileSync(
+  path.join(path.dirname(fileURLToPath(import.meta.url)), 'report-phase2b-failure.mjs'),
+  'utf8',
+);
+// The signal reporter touches issues only — no git, no branch, no pull request.
+assert.ok(!/spawnSync\('git'/.test(signalSource) && !signalSource.includes("'git',"), 'the failure signal must not run git');
+for (const forbidden of ['pr', 'push', 'merge']) {
+  assert.ok(!signalSource.includes(`'${forbidden}',`), `the failure signal must not invoke gh ${forbidden}`);
+}
+assert.ok(!/writeFileSync/.test(signalSource), 'the failure signal must not write repository files');
 
 console.log('Phase 2B currentness remediation unit tests passed.');

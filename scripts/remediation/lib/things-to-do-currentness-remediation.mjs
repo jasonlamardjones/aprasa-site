@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { THINGS_TO_DO_HUB_PUBLIC, homePreviewIds, hubOutputPath } from '../../lib/things-to-do-collection.mjs';
 
 export const PHASE2B_CONTRACT = Object.freeze({
   reportSchema: 'aprasa-post-publication-qa-report',
@@ -172,13 +173,80 @@ export function assertDriftShapeUnchanged(reportedIds, currentIds) {
   }
 }
 
-export function expectedWriteSetForIds(ids) {
+// --- Derived bounded write set -------------------------------------------
+//
+// The allowed write set is DERIVED from the lifecycle transition this repair
+// represents, never from a remembered file count. The Eclipse audit case
+// happened to settle on five files; that was a property of that one
+// transition, not the contract. A promotion whose incoming record also needs
+// its own detail page regenerated legitimately writes more, and a repair must
+// not be refused for it.
+//
+// Three inputs define the transition, and nothing outside them is allowed:
+//
+//   driftIds       the records the currentness validator reported as drifted.
+//   previewBefore  Home preview membership at the currentness state that
+//                  produced the committed surfaces (the tracked as_of).
+//   previewAfter   Home preview membership at the repair's as_of. An expiry
+//                  inside the preview promotes the next eligible record into
+//                  it, and that record's Home slot must be backfilled — the
+//                  exact case the drift-id-only generation could not cover.
+//
+// Membership on both sides comes from the incumbent selector
+// homePreviewIds() in scripts/lib/things-to-do-collection.mjs, so this adds no
+// currentness or ordering rule of its own.
+//
+// Generator-owned shared surfaces are admitted only where the transition can
+// actually reach them:
+//
+//   data/things-to-do-currentness.json  the as_of the repair advances.
+//   index.html, pt/index.html           the Home surface in both locales.
+//   the collection hub, both locales     a whole-collection currentness
+//                                        projection — admitted ONLY while
+//                                        THINGS_TO_DO_HUB_PUBLIC, since a
+//                                        dormant hub is not written at all.
+//
+// sitemap.xml is deliberately NOT admitted. It is derived from record
+// existence, not from currentness, so a lifecycle transition cannot move it;
+// if it moves, that is unrelated repository drift and must fail closed.
+// Likewise every other file canonical generation touches (locale data, the
+// remaining derived PT pages, Mindelo Essentials): reachable by the builders,
+// unreachable by this transition, therefore refused.
+
+/** Home preview membership either side of a currentness transition. */
+export function resolvePreviewTransition({ records = [], fromAsOf, toAsOf } = {}) {
+  if (typeof fromAsOf !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(fromAsOf)) {
+    throw new Error('PHASE2B_PREVIEW_BASELINE_AS_OF_UNREADABLE');
+  }
+  if (typeof toAsOf !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(toAsOf)) {
+    throw new Error('PHASE2B_PREVIEW_TARGET_AS_OF_UNREADABLE');
+  }
+  return Object.freeze({
+    previewBefore: [...homePreviewIds(records, fromAsOf)].sort(),
+    previewAfter: [...homePreviewIds(records, toAsOf)].sort(),
+  });
+}
+
+export function expectedWriteSetForTransition({
+  driftIds = [],
+  previewBefore = [],
+  previewAfter = [],
+} = {}) {
   const allowed = new Set([
     'data/things-to-do-currentness.json',
     'index.html',
     'pt/index.html',
   ]);
+  if (THINGS_TO_DO_HUB_PUBLIC) {
+    allowed.add(hubOutputPath('en'));
+    allowed.add(hubOutputPath('pt'));
+  }
+  const ids = [...new Set([...driftIds, ...previewBefore, ...previewAfter])];
+  if (!ids.length) throw new Error('PHASE2B_WRITE_SET_TRANSITION_EMPTY');
   for (const id of ids) {
+    if (typeof id !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) {
+      throw new Error(`PHASE2B_WRITE_SET_ID_UNREADABLE: ${String(id)}`);
+    }
     allowed.add(`things-to-do/${id}/index.html`);
     allowed.add(`pt/things-to-do/${id}/index.html`);
   }

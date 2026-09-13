@@ -7,6 +7,15 @@ on:
       - 'scripts/qa/qa-report.schema.json'
       - 'scripts/qa/lib/qa-schema.mjs'
       - '.github/workflows/phase-2b-*.yml'
+      # The integration suite below drives the real canonical generation
+      # pathway, so a change to any of its inputs can move Phase 2B behaviour
+      # without touching scripts/remediation/ at all.
+      - 'scripts/build-all.mjs'
+      - 'scripts/generate-things-to-do.mjs'
+      - 'scripts/lib/things-to-do-collection.mjs'
+      - 'scripts/lib/things-to-do-currentness.mjs'
+      - 'data/things-to-do-events.json'
+      - 'data/things-to-do-currentness.json'
   push:
     branches:
       - main
@@ -15,6 +24,15 @@ on:
       - 'scripts/qa/qa-report.schema.json'
       - 'scripts/qa/lib/qa-schema.mjs'
       - '.github/workflows/phase-2b-*.yml'
+      # The integration suite below drives the real canonical generation
+      # pathway, so a change to any of its inputs can move Phase 2B behaviour
+      # without touching scripts/remediation/ at all.
+      - 'scripts/build-all.mjs'
+      - 'scripts/generate-things-to-do.mjs'
+      - 'scripts/lib/things-to-do-collection.mjs'
+      - 'scripts/lib/things-to-do-currentness.mjs'
+      - 'data/things-to-do-events.json'
+      - 'data/things-to-do-currentness.json'
 
 permissions:
   contents: read
@@ -22,7 +40,7 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -31,7 +49,14 @@ jobs:
       - name: Syntax checks
         run: |
           node --check scripts/remediation/lib/things-to-do-currentness-remediation.mjs
+          node --check scripts/remediation/lib/phase2b-failure-signal.mjs
           node --check scripts/remediation/run-things-to-do-currentness-remediation.mjs
+          node --check scripts/remediation/report-phase2b-failure.mjs
           node --check scripts/remediation/test-things-to-do-currentness-remediation.mjs
+          node --check scripts/remediation/test-things-to-do-currentness-preview-backfill.mjs
       - name: Unit tests
         run: node scripts/remediation/test-things-to-do-currentness-remediation.mjs
+      # Drives real canonical generation against a synthetic preview-boundary
+      # expiry in a sandbox. Creates no GitHub issue and touches no tracked file.
+      - name: Preview-backfill integration tests
+        run: node scripts/remediation/test-things-to-do-currentness-preview-backfill.mjs

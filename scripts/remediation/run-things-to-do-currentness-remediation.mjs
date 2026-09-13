@@ -14,10 +14,11 @@ import {
   assertWorkflowArtifactProvenance,
   assertDriftShapeUnchanged,
   authorizeReport,
-  expectedWriteSetForIds,
+  expectedWriteSetForTransition,
   parseOpenPrProbe,
   parseRemoteBranchProbe,
   parseValidatorDriftIds,
+  resolvePreviewTransition,
 } from './lib/things-to-do-currentness-remediation.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
@@ -77,6 +78,21 @@ function changedFiles(before, after) {
   return [...names].filter((name) => before.get(name) !== after.get(name)).sort();
 }
 
+function currentnessAsOf(dir) {
+  const file = path.join(dir, 'data', 'things-to-do-currentness.json');
+  const asOf = JSON.parse(fs.readFileSync(file, 'utf8')).as_of;
+  if (typeof asOf !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(asOf)) {
+    throw new Error('PHASE2B_TRACKED_AS_OF_UNREADABLE');
+  }
+  return asOf;
+}
+
+function canonicalRecords(dir) {
+  const records = JSON.parse(fs.readFileSync(path.join(dir, 'data', 'things-to-do-events.json'), 'utf8')).records;
+  if (!Array.isArray(records) || !records.length) throw new Error('PHASE2B_CANONICAL_RECORDS_UNREADABLE');
+  return records;
+}
+
 function writeCurrentnessAsOf(dir, asOf) {
   const file = path.join(dir, 'data', 'things-to-do-currentness.json');
   const doc = JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -84,11 +100,47 @@ function writeCurrentnessAsOf(dir, asOf) {
   fs.writeFileSync(file, `${JSON.stringify(doc, null, 2)}\n`);
 }
 
-function runCanonicalGeneration(dir, asOf, ids) {
+// Canonical generation, not drift-id-only generation.
+//
+// The previous behaviour ran the generator once per reported drift ID with
+// --id. That is a single-record operation: it rewrites that record's detail
+// pages and clears that record's own Home slot, and touches no other slot. It
+// therefore cannot express the one thing a preview-boundary expiry requires.
+// When an expired record leaves the three-card Home preview, the next eligible
+// canonical record is promoted into it, and the promoted record's Home slot has
+// to be FILLED — by a pass that knows about that record. A --id run for the
+// expired record alone leaves that slot empty, Home ships two cards instead of
+// three, surface equivalence fails, and the whole repair aborts with
+// PHASE2B_INCUMBENT_VALIDATOR_FAILED having produced nothing. That is the
+// defect this replaces.
+//
+// scripts/build-all.mjs is the repository's single canonical orchestrator and
+// already encodes the EN -> PT ordering invariant that makes Home coherent in
+// both locales (read its header comment before changing anything here). Driving
+// it is reuse, not duplication: re-deriving that ordering inside the remediation
+// adapter would create exactly the second copy that ordering comment exists to
+// prevent. It is deterministic under an explicit --as-of and idempotent, both
+// of which the audit proved and the gates below re-prove on every run.
+//
+// Authority and lifecycle semantics are unchanged. This alters HOW MUCH of the
+// canonical pathway runs, never what currentness means: eligibility is still
+// isPubliclyCurrent(), preview membership is still the first three eligible
+// records in canonical order, and the tracked as_of is still the only input
+// this repair advances. Breadth is contained by the derived bounded write set,
+// not by the narrowness of the generator invocation — so if canonical
+// generation reaches anything the lifecycle transition cannot explain, the
+// repair fails closed instead of carrying it.
+function runCanonicalGeneration(dir, asOf) {
   writeCurrentnessAsOf(dir, asOf);
-  for (const id of ids) {
-    node(dir, 'scripts/generate-things-to-do.mjs', [`--as-of=${asOf}`, `--id=${id}`, '--locale=en', '--write']);
-    node(dir, 'scripts/generate-things-to-do.mjs', [`--as-of=${asOf}`, `--id=${id}`, '--locale=pt', '--home=pt/index.html', '--write']);
+  try {
+    node(dir, 'scripts/build-all.mjs', [`--as-of=${asOf}`]);
+  } catch (error) {
+    // build-all's own last step is a currentness gate, so it can refuse as well
+    // as generate. Either way the repair is over — but it must end with a
+    // Phase 2B failure class rather than a raw command failure, so the durable
+    // failure signal keys on something meaningful instead of falling back to
+    // PHASE2B_UNCLASSIFIED_FAILURE.
+    throw new Error(`PHASE2B_CANONICAL_GENERATION_FAILED: ${error.message}`);
   }
 }
 
@@ -177,7 +229,7 @@ function acceptPromotion(promotion) {
   fs.rmSync(promotion.backupRoot, { recursive: true, force: true });
 }
 
-function reportBody(auth, changed, validations, candidateSha) {
+function reportBody(auth, changed, validations, candidateSha, transition) {
   return [
     '## Phase 2B bounded currentness repair',
     '',
@@ -189,7 +241,9 @@ function reportBody(auth, changed, validations, candidateSha) {
     `- Repair identity: \`${auth.repairIdentity}\``,
     `- Candidate: \`${candidateSha}\``,
     `- Revalidated drift IDs: ${auth.reportedIds.map((id) => `\`${id}\``).join(', ')}`,
-    '- Canonical generator: `scripts/generate-things-to-do.mjs`',
+    `- Canonical generation: \`scripts/build-all.mjs --as-of=${auth.asOf}\``,
+    `- Home preview before: ${transition.previewBefore.map((id) => `\`${id}\``).join(', ') || '_none_'}`,
+    `- Home preview after: ${transition.previewAfter.map((id) => `\`${id}\``).join(', ') || '_none_'}`,
     '- Idempotence: passed',
     '- Merge authority: **none**',
     '- Deployment authority: **none**',
@@ -246,7 +300,22 @@ const currentIds = parseValidatorDriftIds(currentness.stderr);
 assertDriftShapeUnchanged(auth.reportedIds, currentIds);
 assertGeneratorOwnsIds(currentIds);
 
-const allowedWriteSet = expectedWriteSetForIds(currentIds);
+// The allowed write set is derived from this transition, never remembered.
+// "Before" is the tracked as_of that produced the committed surfaces; "after"
+// is the repair's as_of. The difference is what promotes a record into the Home
+// preview, and the promoted record is exactly what the old drift-id-only
+// generation could not backfill.
+const trackedAsOf = currentnessAsOf(root);
+const previewTransition = resolvePreviewTransition({
+  records: canonicalRecords(root),
+  fromAsOf: trackedAsOf,
+  toAsOf: auth.asOf,
+});
+const allowedWriteSet = expectedWriteSetForTransition({
+  driftIds: currentIds,
+  previewBefore: previewTransition.previewBefore,
+  previewAfter: previewTransition.previewAfter,
+});
 const stagingRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aprasa-phase2b-stage-'));
 let promotion = null;
 let committed = false;
@@ -260,12 +329,12 @@ try {
   git(stagingRoot, ['commit', '-q', '-m', 'staging baseline']);
 
   const before = inventory(stagingRoot);
-  runCanonicalGeneration(stagingRoot, auth.asOf, currentIds);
+  runCanonicalGeneration(stagingRoot, auth.asOf);
   const changed = assertBoundedWriteSet(changedFiles(before, inventory(stagingRoot)), allowedWriteSet);
   const validations = runIncumbentValidators(stagingRoot, auth.asOf);
 
   const idempotenceBefore = inventory(stagingRoot);
-  runCanonicalGeneration(stagingRoot, auth.asOf, currentIds);
+  runCanonicalGeneration(stagingRoot, auth.asOf);
   const idempotenceChanges = changedFiles(idempotenceBefore, inventory(stagingRoot));
   assertIdempotentChanges(idempotenceChanges);
   git(stagingRoot, ['add', '-N', '.']);
@@ -296,7 +365,7 @@ try {
 
   git(root, ['push', '--set-upstream', 'origin', auth.branch]);
   const bodyFile = path.join(os.tmpdir(), `phase2b-pr-${candidateSha}.md`);
-  fs.writeFileSync(bodyFile, reportBody(auth, changed, validations, candidateSha));
+  fs.writeFileSync(bodyFile, reportBody(auth, changed, validations, candidateSha, previewTransition));
   const prUrl = command(root, 'gh', [
     'pr', 'create', '--repo', repository, '--draft', '--base', 'main', '--head', auth.branch,
     '--title', `Automated repair: Things-to-Do currentness (${auth.asOf})`,

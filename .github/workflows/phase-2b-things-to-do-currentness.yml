@@ -9,11 +9,19 @@ on:
 
 # This is the first and only Phase 2B write-authorized workflow. Phase 2A stays
 # read-only. These permissions are limited to reading its artifact, pushing one
-# bounded repair branch, and creating one draft PR. There is no merge, Pages,
-# deployment, issue, package, or environment write authority.
+# bounded repair branch, creating one draft PR, and raising/updating one
+# deduplicated failure-visibility issue. There is no merge, Pages, deployment,
+# package, or environment write authority.
+#
+# `issues: write` exists solely for the failure signal below. A Phase 2B run
+# that refuses to produce a repair was otherwise operationally silent — a red
+# Actions run and nothing else — so the refusal is now recorded as one durable
+# GitHub issue per failure class. It carries issue text only: no branch, no
+# commit, no pull request, no published content.
 permissions:
   actions: read
   contents: write
+  issues: write
   pull-requests: write
 
 concurrency:
@@ -57,10 +65,35 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
+        # The adapter's output is teed outside GITHUB_WORKSPACE — the same reason
+        # the artifact is unpacked there — so the failure step below can classify
+        # the refusal without making the checkout dirty. pipefail keeps the
+        # adapter's own exit status authoritative through the pipe.
         run: |
+          set -o pipefail
           node scripts/remediation/run-things-to-do-currentness-remediation.mjs \
             --report='${{ runner.temp }}/qa-input/post-publication-qa.json' \
             --repository='${{ github.repository }}' \
             --workflow-run-id='${{ github.event.workflow_run.id }}' \
             --workflow-run-attempt='${{ github.event.workflow_run.run_attempt }}' \
-            --workflow-head-sha='${{ github.event.workflow_run.head_sha }}'
+            --workflow-head-sha='${{ github.event.workflow_run.head_sha }}' \
+            2>&1 | tee '${{ runner.temp }}/phase2b-adapter.log'
+
+      # Failure visibility. Runs ONLY on failure, so a green run — and an
+      # authorized-but-skipped or duplicate-suppressed run, both of which exit 0
+      # — creates nothing at all. One open issue per failure class, one further
+      # comment per distinct failing commit, so repeated identical failures
+      # cannot spam the tracker. See scripts/remediation/lib/phase2b-failure-signal.mjs.
+      - name: Record durable Phase 2B failure signal
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          node scripts/remediation/report-phase2b-failure.mjs \
+            --repository='${{ github.repository }}' \
+            --run-id='${{ github.run_id }}' \
+            --run-attempt='${{ github.run_attempt }}' \
+            --commit='${{ github.event.workflow_run.head_sha }}' \
+            --log='${{ runner.temp }}/phase2b-adapter.log'
