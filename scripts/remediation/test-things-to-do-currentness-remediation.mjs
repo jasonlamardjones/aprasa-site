@@ -71,7 +71,10 @@ import {
   buildRecurrenceComment,
   classifyFailure,
   detectPostCommitRecovery,
-  recordedRecoveryCommits,
+  recordedCommitStates,
+  artifactStateRank,
+  stateMarker,
+  ARTIFACT_STATE_ORDER,
   decideFailureSignal,
   failureIssueTitle,
   failureSignalKey,
@@ -524,7 +527,7 @@ assert.equal(detectPostCommitRecovery(null), null);
 // the process may have been killed after a successful push, so the body must not
 // claim absence. Only a positive PHASE2B_NO_WRITE_PERFORMED earns that wording.
 assert.equal(resolveArtifactState(failContext.log), ARTIFACT_UNKNOWN);
-assert.ok(!issueBody.includes('no branch, no commit'),
+assert.ok(!issueBody.includes('created no new branch'),
   'a log with no terminal marker must NOT claim that nothing was created');
 assert.ok(issueBody.includes('Artifact state: **UNKNOWN**'));
 assert.ok(issueBody.includes('Inspect the remote branch and pull-request state'));
@@ -533,8 +536,21 @@ const noWriteLog = `PHASE2B_MAIN_MOVED: main moved\n${FAILURE_SIGNAL.noWriteMark
 assert.equal(resolveArtifactState(noWriteLog), ARTIFACT_NO_WRITE);
 const noWriteBody = buildIssueBody({ ...failContext, log: noWriteLog }, { repository: 'o/r', key: failKey });
 assert.ok(noWriteBody.includes('Artifact state: **NO_WRITE**'));
-assert.ok(noWriteBody.includes('no branch, no commit'),
-  'a PROVEN pre-write refusal still states the clean no-op');
+// #3: NO_WRITE proves only what THIS RUN did. It must not make a global claim
+// that no repair branch/commit/PR exists — several refusals that produce this
+// state fire precisely BECAUSE a candidate was already found on the remote.
+assert.ok(noWriteBody.includes('THIS RUN reached its own exit path'),
+  'a proven pre-write refusal is stated as a fact about this execution');
+assert.ok(noWriteBody.includes('created no new branch, no new'),
+  'it still records that this run published nothing new');
+assert.ok(noWriteBody.includes('`main` was not modified'));
+assert.ok(noWriteBody.includes('NOT a claim that no'),
+  'it must explicitly disclaim the global reading');
+assert.ok(noWriteBody.includes('ORPHAN_REMOTE_REPAIR_BRANCH'),
+  'it must name the duplicate/orphan states that mean a candidate DOES exist');
+assert.ok(noWriteBody.includes('concurrent-repair'));
+assert.ok(!/no branch, no commit and no draft pull request were created/.test(noWriteBody),
+  'the old absolute wording must be gone');
 assert.equal(resolveArtifactState(''), ARTIFACT_UNKNOWN, 'an empty log is UNKNOWN, never a clean no-op');
 assert.equal(resolveArtifactState(null), ARTIFACT_UNKNOWN);
 // Post-commit evidence outranks everything.
@@ -587,45 +603,95 @@ assert(comment.includes(OTHER_SHA));
 const updatedIssue = { ...openIssue, comments: [comment] };
 assert.equal(decideFailureSignal({ issue: updatedIssue, context: otherCommitContext }).action, 'NONE');
 assert.deepEqual(recordedCommits(updatedIssue), [SHA, OTHER_SHA].sort());
-// Commit identity alone is not the whole disposition. A commit first recorded as
-// a pre-commit refusal whose LATER run reaches post-commit recovery has left the
-// recorded text understating what exists — it still says no branch or commit was
-// created while a candidate may now be pushed. Both dispositions can classify
-// identically (an empty log and a bare recovery log are both UNCLASSIFIED), so
-// the commit check alone suppressed the correction.
-const unclassifiedPre = { failureClass: FAILURE_SIGNAL.unclassified, log: '', commit: SHA, runId: '1', runAttempt: '1' };
-const unclassifiedPost = { ...unclassifiedPre, log: 'PHASE2B_POST_COMMIT_RECOVERY: Candidate abc is already pushed on feature/x' };
-assert.equal(classifyFailure(unclassifiedPre.log), classifyFailure(unclassifiedPost.log),
-  'both dispositions must classify identically, which is what made this suppressible');
-const preKey = failureSignalKey(FAILURE_SIGNAL.unclassified);
-const preIssueBody = buildIssueBody(unclassifiedPre, { repository: 'o/r', key: preKey });
-assert.equal(resolveArtifactState(unclassifiedPre.log), ARTIFACT_UNKNOWN);
-assert.deepEqual(recordedRecoveryCommits({ body: preIssueBody, comments: [] }), [],
-  'a pre-commit record carries no recovery marker');
-let escalating = { number: 9, url: 'https://github.com/o/r/issues/9', body: preIssueBody, comments: [] };
-const escalated = decideFailureSignal({ issue: escalating, context: unclassifiedPost });
-assert.equal(escalated.action, 'COMMENT');
-assert.equal(escalated.reason, 'RECOVERY_STATE_CHANGED');
-assert.equal(escalated.escalation, true);
-const correction = buildRecurrenceComment(unclassifiedPost, { repository: 'o/r', escalation: true });
-assert.ok(correction.includes('CORRECTION for a commit already recorded'), 'the escalation must read as a correction');
-assert.ok(correction.includes('A candidate branch and commit may exist'), 'it must warn a candidate may exist');
-assert.ok(correction.includes('Candidate abc is already pushed'), 'it must carry the recovery detail');
-// Bounded: the escalation records itself, so it happens once per commit.
-escalating = { ...escalating, comments: [correction] };
-assert.deepEqual(recordedRecoveryCommits(escalating), [SHA]);
-assert.equal(decideFailureSignal({ issue: escalating, context: unclassifiedPost }).reason, 'ALREADY_RECORDED',
-  'a repeat post-commit failure on the same commit must not escalate twice');
-// One-directional: a later pre-commit failure on that commit does not re-comment.
-assert.equal(decideFailureSignal({ issue: escalating, context: unclassifiedPre }).reason, 'ALREADY_RECORDED',
-  'recovery state must not oscillate back to pre-commit');
-// An issue OPENED on a post-commit failure already carries the marker, so a
-// retry of that commit suppresses rather than escalating against itself.
-const postFirstBody = buildIssueBody(unclassifiedPost, { repository: 'o/r', key: preKey });
-assert.deepEqual(recordedRecoveryCommits({ body: postFirstBody, comments: [] }), [SHA]);
+// --- Artifact state is MONOTONIC, and only news is reported ---------------
+// The previous rule special-cased POST_COMMIT only, so a commit recorded
+// NO_WRITE whose LATER run died as UNKNOWN stayed suppressed behind the earlier
+// reassuring wording. State is now ranked, recorded per commit in a durable
+// marker, and reported only when it goes UP.
+assert.deepEqual(ARTIFACT_STATE_ORDER, { NO_WRITE: 0, UNKNOWN: 1, POST_COMMIT: 2 });
+assert.ok(artifactStateRank(ARTIFACT_NO_WRITE) < artifactStateRank(ARTIFACT_UNKNOWN));
+assert.ok(artifactStateRank(ARTIFACT_UNKNOWN) < artifactStateRank(ARTIFACT_POST_COMMIT));
+assert.throws(() => artifactStateRank('MADE_UP'), /ARTIFACT_STATE_UNKNOWN/);
+assert.throws(() => stateMarker(SHA, 'MADE_UP'), /ARTIFACT_STATE_UNKNOWN/);
+assert.throws(() => stateMarker('short', ARTIFACT_UNKNOWN), /FAILURE_COMMIT_UNREADABLE/);
+
+const NO_WRITE_LOG = `PHASE2B_MAIN_MOVED: moved\n${FAILURE_SIGNAL.noWriteMarker}: clean exit`;
+const UNKNOWN_LOG = 'PHASE2B_MAIN_MOVED: killed before it could report';
+const POST_COMMIT_LOG = `PHASE2B_MAIN_MOVED: moved\n${FAILURE_SIGNAL.postCommitMarker}: Candidate abc is already pushed on feature/x`;
+const ladderKey = failureSignalKey('PHASE2B_MAIN_MOVED');
+const ladderCtx = (log, commit = SHA) => ({ failureClass: classifyFailure(log), log, commit, runId: '1', runAttempt: '1' });
+assert.equal(resolveArtifactState(NO_WRITE_LOG), ARTIFACT_NO_WRITE);
+assert.equal(resolveArtifactState(UNKNOWN_LOG), ARTIFACT_UNKNOWN);
+assert.equal(resolveArtifactState(POST_COMMIT_LOG), ARTIFACT_POST_COMMIT);
+
+// The state travels in a durable per-commit marker, read back as the HIGHEST
+// recorded — so a duplicated or out-of-order marker cannot walk it back down.
+let ladder = {
+  number: 11,
+  url: 'https://github.com/o/r/issues/11',
+  body: buildIssueBody(ladderCtx(NO_WRITE_LOG), { repository: 'o/r', key: ladderKey }),
+  comments: [],
+};
+assert.deepEqual([...recordedCommitStates(ladder)], [[SHA, ARTIFACT_NO_WRITE]]);
+const ladderStep = (log) => {
+  const decision = decideFailureSignal({ issue: ladder, context: ladderCtx(log) });
+  if (decision.action === 'COMMENT') {
+    ladder = {
+      ...ladder,
+      comments: [...ladder.comments, buildRecurrenceComment(ladderCtx(log), { repository: 'o/r', escalation: decision.escalation })],
+    };
+  }
+  return decision;
+};
+// Upward transitions each report exactly once.
+assert.equal(ladderStep(NO_WRITE_LOG).reason, 'ALREADY_RECORDED');
+const up1 = ladderStep(UNKNOWN_LOG);
+assert.equal(up1.action, 'COMMENT');
+assert.equal(up1.reason, 'ARTIFACT_STATE_ESCALATED');
+assert.equal(up1.escalation, true);
+assert.equal(up1.recordedState, ARTIFACT_NO_WRITE);
+assert.equal(up1.artifactState, ARTIFACT_UNKNOWN);
+assert.deepEqual([...recordedCommitStates(ladder)], [[SHA, ARTIFACT_UNKNOWN]]);
+assert.equal(ladderStep(UNKNOWN_LOG).reason, 'ALREADY_RECORDED');
+// A weaker later observation must NOT walk the recorded state back down.
+const down1 = ladderStep(NO_WRITE_LOG);
+assert.equal(down1.action, 'NONE');
+assert.equal(down1.reason, 'LOWER_STATE_IGNORED');
+assert.deepEqual([...recordedCommitStates(ladder)], [[SHA, ARTIFACT_UNKNOWN]]);
+const up2 = ladderStep(POST_COMMIT_LOG);
+assert.equal(up2.reason, 'ARTIFACT_STATE_ESCALATED');
+assert.equal(up2.recordedState, ARTIFACT_UNKNOWN);
+assert.deepEqual([...recordedCommitStates(ladder)], [[SHA, ARTIFACT_POST_COMMIT]]);
+assert.equal(ladderStep(POST_COMMIT_LOG).reason, 'ALREADY_RECORDED');
+assert.equal(ladderStep(UNKNOWN_LOG).reason, 'LOWER_STATE_IGNORED');
+assert.equal(ladderStep(NO_WRITE_LOG).reason, 'LOWER_STATE_IGNORED');
+// BOUNDED: initial record plus at most two upward corrections, no oscillation.
+assert.equal(ladder.comments.length, 2, 'ceiling is two upward corrections per commit');
+// Skipping a rung is still one correction, not two.
+let skipper = {
+  number: 12, url: 'u12',
+  body: buildIssueBody(ladderCtx(NO_WRITE_LOG), { repository: 'o/r', key: ladderKey }),
+  comments: [],
+};
+const jumped = decideFailureSignal({ issue: skipper, context: ladderCtx(POST_COMMIT_LOG) });
+assert.equal(jumped.reason, 'ARTIFACT_STATE_ESCALATED');
+assert.equal(jumped.recordedState, ARTIFACT_NO_WRITE);
+assert.equal(jumped.artifactState, ARTIFACT_POST_COMMIT);
+// An UNKNOWN-first record still escalates to POST_COMMIT, and an issue OPENED at
+// POST_COMMIT never escalates against itself.
+const openedHigh = { number: 13, url: 'u13', body: buildIssueBody(ladderCtx(POST_COMMIT_LOG), { repository: 'o/r', key: ladderKey }), comments: [] };
+assert.equal(decideFailureSignal({ issue: openedHigh, context: ladderCtx(POST_COMMIT_LOG) }).reason, 'ALREADY_RECORDED');
+assert.equal(decideFailureSignal({ issue: openedHigh, context: ladderCtx(UNKNOWN_LOG) }).reason, 'LOWER_STATE_IGNORED');
+// A different commit is always news, whatever its state.
+assert.equal(decideFailureSignal({ issue: ladder, context: ladderCtx(NO_WRITE_LOG, OTHER_SHA) }).reason, 'NEW_COMMIT');
+// An unreadable recorded state fails closed rather than being guessed at.
+assert.throws(() => recordedCommitStates({ body: `<!-- ${FAILURE_SIGNAL.stateMarkerPrefix}: ${SHA} BOGUS -->`, comments: [] }),
+  /ARTIFACT_STATE_UNKNOWN/);
+// The issue is keyed to the FAILURE CLASS, never to artifact state, so a state
+// change corrects the existing issue instead of opening a second one.
 assert.equal(
-  decideFailureSignal({ issue: { number: 10, url: 'u10', body: postFirstBody, comments: [] }, context: unclassifiedPost }).reason,
-  'ALREADY_RECORDED',
+  decideFailureSignal({ issue: null, context: ladderCtx(NO_WRITE_LOG) }).key,
+  decideFailureSignal({ issue: null, context: ladderCtx(POST_COMMIT_LOG) }).key,
 );
 
 // A different failure class is a different signal, so it opens its own issue.
@@ -801,11 +867,13 @@ assert.ok(!liveRecoveryBody.includes('no branch, no commit'),
 assert.ok(liveRecoveryBody.includes('Candidate abc is already pushed on feature/y.'),
   'the live body must carry the adapter recovery detail');
 const livePlainBody = buildIssueBody(asReporterBuilds('PHASE2B_MAIN_MOVED'), { repository: 'o/r', key: failureSignalKey('PHASE2B_MAIN_MOVED') });
-assert.ok(!livePlainBody.includes('no branch, no commit'),
+assert.ok(!livePlainBody.includes('created no new branch'),
   'a plain log through the reporter path is UNKNOWN, not a claimed clean no-op');
+assert.ok(livePlainBody.includes('Artifact state: **UNKNOWN**'));
 const liveNoWriteBody = buildIssueBody(asReporterBuilds(noWriteLog), { repository: 'o/r', key: failureSignalKey(classifyFailure(noWriteLog)) });
-assert.ok(liveNoWriteBody.includes('no branch, no commit'),
-  'a proven no-write refusal states the clean no-op through the reporter path too');
+assert.ok(liveNoWriteBody.includes('created no new branch, no new'),
+  'a proven no-write refusal states its scoped claim through the reporter path too');
+assert.ok(liveNoWriteBody.includes('NOT a claim that no'));
 
 assert.ok(/'--limit', String\(PROBE_LIMIT\)/.test(signalSource), 'the reporter must use one limit for gh and the parser');
 // The reporter must pass the escalation flag through, or the correction reads as
@@ -823,7 +891,16 @@ assert.ok(!/--json', 'number,url,body,comments/.test(signalSource));
 // reported statuses, three reasons.
 assert.equal((signalSource.match(/reason: resolvedDecision\.reason/g) ?? []).length, 3,
   'all three reported decision paths (CREATE, COMMENT, NONE) must emit reason');
-for (const status of ['FAILURE_SIGNAL_CREATED', 'FAILURE_SIGNAL_ALREADY_RECORDED', 'FAILURE_SIGNAL_RECOVERY_ESCALATED']) {
+// The reporter must PROPAGATE the state the decision resolved, not re-derive it
+// from the log — two derivations could disagree, and the decision's is the one
+// the dedupe actually acted on.
+assert.equal((signalSource.match(/artifact_state: resolvedDecision\.artifactState/g) ?? []).length, 3,
+  'every reported path must surface the decision\'s own artifact state');
+assert.ok(!/resolveArtifactState\(/.test(signalSource),
+  'the reporter must not re-derive artifact state independently of the decision');
+assert.ok(signalSource.includes('recorded_state: resolvedDecision.recordedState'),
+  'an escalation must surface the state it escalated FROM');
+for (const status of ['FAILURE_SIGNAL_CREATED', 'FAILURE_SIGNAL_ALREADY_RECORDED', 'FAILURE_SIGNAL_ARTIFACT_STATE_ESCALATED']) {
   assert.ok(signalSource.includes(status), `the reporter must be able to report ${status}`);
 }
 

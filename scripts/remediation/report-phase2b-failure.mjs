@@ -21,7 +21,6 @@ import {
   failureIssueTitle,
   parseCommentPage,
   parseOpenFailureIssueProbe,
-  resolveArtifactState,
   assertCommentSetComplete,
   withComments,
 } from './lib/phase2b-failure-signal.mjs';
@@ -137,7 +136,8 @@ if (resolvedDecision.action === 'NONE') {
     status: 'FAILURE_SIGNAL_ALREADY_RECORDED',
     failure_class: resolvedDecision.failureClass,
     reason: resolvedDecision.reason,
-    artifact_state: resolveArtifactState(log),
+    recorded_state: resolvedDecision.recordedState ?? null,
+    artifact_state: resolvedDecision.artifactState,
     issue_url: issue.url,
     commit,
   }, null, 2));
@@ -150,10 +150,11 @@ if (resolvedDecision.action === 'COMMENT') {
     '--body', buildRecurrenceComment(context, { repository, escalation: resolvedDecision.escalation }),
   ]);
   console.log(JSON.stringify({
-    status: resolvedDecision.escalation ? 'FAILURE_SIGNAL_RECOVERY_ESCALATED' : 'FAILURE_SIGNAL_RECURRENCE_RECORDED',
+    status: resolvedDecision.escalation ? 'FAILURE_SIGNAL_ARTIFACT_STATE_ESCALATED' : 'FAILURE_SIGNAL_RECURRENCE_RECORDED',
+    recorded_state: resolvedDecision.recordedState ?? null,
     failure_class: resolvedDecision.failureClass,
     reason: resolvedDecision.reason,
-    artifact_state: resolveArtifactState(log),
+    artifact_state: resolvedDecision.artifactState,
     issue_url: issue.url,
     commit,
   }, null, 2));
@@ -171,7 +172,7 @@ console.log(JSON.stringify({
   status: 'FAILURE_SIGNAL_CREATED',
   failure_class: resolvedDecision.failureClass,
   reason: resolvedDecision.reason,
-  artifact_state: resolveArtifactState(log),
+  artifact_state: resolvedDecision.artifactState,
   issue_url: created,
   commit,
 }, null, 2));

@@ -41,11 +41,17 @@ export const FAILURE_SIGNAL = Object.freeze({
   label: 'phase-2b-remediation-failure',
   keyMarkerPrefix: 'phase2b-failure-signal',
   commitMarkerPrefix: 'phase2b-failure-commit',
-  recoveryMarkerPrefix: 'phase2b-failure-recovery',
-  // Positive terminal evidence that the adapter refused BEFORE writing anything.
-  // Only a surviving process can emit it, which is exactly the property the
-  // disposition below needs — see resolveArtifactState().
+  // Per-commit artifact-state marker. Records the disposition observed for a
+  // commit so a later run can tell an UPGRADE from a repeat — see
+  // ARTIFACT_STATE_ORDER and decideFailureSignal().
+  stateMarkerPrefix: 'phase2b-failure-state',
+
+  // The two disposition tokens, defined ONCE. Everything that classifies,
+  // detects or resolves disposition reads them from here: a rename must not be
+  // able to turn an artifact-disposition token into a failure-class key, which
+  // is exactly what a separately re-typed literal would allow.
   noWriteMarker: 'PHASE2B_NO_WRITE_PERFORMED',
+  postCommitMarker: 'PHASE2B_POST_COMMIT_RECOVERY',
   unclassified: 'PHASE2B_UNCLASSIFIED_FAILURE',
   // Comments are NOT read through `gh issue list --json comments`: that nests an
   // unpaginated comments(first: N) connection whose page size is gh's to choose,
@@ -75,7 +81,7 @@ const SHA_PATTERN = /^[a-f0-9]{40}$/;
 // appear anywhere in the log — and, since the exit handler flushes before the
 // uncaught-exception report, often FIRST — so classifying on them would key
 // dedupe on the disposition and collapse every distinct refusal into one issue.
-const DISPOSITION_MARKERS = Object.freeze(['PHASE2B_POST_COMMIT_RECOVERY', 'PHASE2B_NO_WRITE_PERFORMED']);
+const DISPOSITION_MARKERS = Object.freeze([FAILURE_SIGNAL.postCommitMarker, FAILURE_SIGNAL.noWriteMarker]);
 
 export function classifyFailure(log) {
   if (typeof log !== 'string') return FAILURE_SIGNAL.unclassified;
@@ -126,7 +132,7 @@ export function resolveArtifactState(log) {
 
 export function detectPostCommitRecovery(log) {
   if (typeof log !== 'string') return null;
-  const match = log.match(/PHASE2B_POST_COMMIT_RECOVERY:\s*(.+)/);
+  const match = log.match(new RegExp(`${FAILURE_SIGNAL.postCommitMarker}:\\s*(.+)`));
   return match ? match[1].trim().slice(0, 400) : null;
 }
 
@@ -150,13 +156,35 @@ export function commitMarker(sha) {
   return `<!-- ${FAILURE_SIGNAL.commitMarkerPrefix}: ${sha} -->`;
 }
 
+// Artifact state is MONOTONIC: a later run on the same commit can only ever
+// learn that MORE exists, never less. NO_WRITE is the weakest claim, UNKNOWN
+// admits a candidate may exist, POST_COMMIT proves one may. Ranking them makes
+// "is this news?" a comparison rather than a special case, which is what the
+// previous POST_COMMIT-only rule got wrong: a commit recorded NO_WRITE whose
+// later run died as UNKNOWN stayed suppressed behind the reassuring wording.
+export const ARTIFACT_STATE_ORDER = Object.freeze({
+  [ARTIFACT_NO_WRITE]: 0,
+  [ARTIFACT_UNKNOWN]: 1,
+  [ARTIFACT_POST_COMMIT]: 2,
+});
+
+export function artifactStateRank(state) {
+  const rank = ARTIFACT_STATE_ORDER[state];
+  if (rank === undefined) throw new Error(`PHASE2B_FAILURE_ARTIFACT_STATE_UNKNOWN: ${String(state)}`);
+  return rank;
+}
+
 /**
- * Records that this commit's failure landed AFTER the commit, so the escalation
- * is not re-reported on every later firing. Absent on pre-commit refusals.
+ * Durable per-commit disposition metadata.
+ *
+ * The issue itself stays keyed to the FAILURE CLASS; this records, per commit,
+ * which artifact state has already been reported, so a later run can tell an
+ * upgrade from a repeat without re-reading the original log.
  */
-export function recoveryMarker(sha) {
+export function stateMarker(sha, state) {
   if (!SHA_PATTERN.test(sha ?? '')) throw new Error('PHASE2B_FAILURE_COMMIT_UNREADABLE');
-  return `<!-- ${FAILURE_SIGNAL.recoveryMarkerPrefix}: ${sha} -->`;
+  artifactStateRank(state);
+  return `<!-- ${FAILURE_SIGNAL.stateMarkerPrefix}: ${sha} ${state} -->`;
 }
 
 function requireContext(context) {
@@ -302,9 +330,29 @@ export function recordedCommits(issue) {
   return markedCommits(issue, FAILURE_SIGNAL.commitMarkerPrefix);
 }
 
-/** Commits already recorded as having failed AFTER the repair commit. */
-export function recordedRecoveryCommits(issue) {
-  return markedCommits(issue, FAILURE_SIGNAL.recoveryMarkerPrefix);
+/**
+ * The highest artifact state already recorded for each commit on this issue.
+ *
+ * Highest rather than latest, so an out-of-order or duplicated marker cannot
+ * walk a commit's recorded disposition back down — monotonicity is enforced when
+ * reading, not merely when writing.
+ */
+export function recordedCommitStates(issue) {
+  if (!issue) return new Map();
+  if (!Array.isArray(issue.comments)) throw new Error('PHASE2B_FAILURE_SIGNAL_COMMENTS_UNATTACHED');
+  if (typeof issue.body !== 'string') throw new Error('PHASE2B_FAILURE_SIGNAL_BODY_UNREADABLE');
+  const pattern = new RegExp(`<!--\\s*${FAILURE_SIGNAL.stateMarkerPrefix}:\\s*([a-f0-9]{40})\\s+([A-Z_]+)\\s*-->`, 'g');
+  const haystack = [issue.body, ...issue.comments].join('\n');
+  const states = new Map();
+  for (const match of haystack.matchAll(pattern)) {
+    const [, sha, state] = match;
+    if (ARTIFACT_STATE_ORDER[state] === undefined) {
+      throw new Error(`PHASE2B_FAILURE_ARTIFACT_STATE_UNKNOWN: ${state} recorded for ${sha}`);
+    }
+    const current = states.get(sha);
+    if (current === undefined || artifactStateRank(state) > artifactStateRank(current)) states.set(sha, state);
+  }
+  return states;
 }
 
 export function failureIssueTitle(failureClass) {
@@ -336,9 +384,18 @@ export function buildIssueBody(context, { repository = null, key } = {}) {
     ]
     : artifactState === ARTIFACT_NO_WRITE
       ? [
-        'Artifact state: **NO_WRITE**. The adapter reached its own exit path with',
-        'nothing committed, so this is a proven clean refusal: no branch, no commit',
-        'and no draft pull request were created, and no published surface changed.',
+        'Artifact state: **NO_WRITE**. THIS RUN reached its own exit path without',
+        'committing or publishing a candidate: it created no new branch, no new',
+        'commit and no new pull request, `main` was not modified, and nothing was',
+        'deployed.',
+        '',
+        'That is a statement about THIS EXECUTION only. It is NOT a claim that no',
+        'repair branch, commit or draft pull request exists — several refusals that',
+        'produce this state mean the opposite, because what they refused was a',
+        'duplicate: `PHASE2B_DUPLICATE_STATE_REFUSED` (including',
+        '`ORPHAN_REMOTE_REPAIR_BRANCH`) and the concurrent-repair refusals fire',
+        'precisely because a candidate was already found on the remote. Read the',
+        'failure class below before concluding anything about remote state.',
       ]
       : [
         'Artifact state: **UNKNOWN**. The run left no terminal statement about what',
@@ -354,7 +411,7 @@ export function buildIssueBody(context, { repository = null, key } = {}) {
   return [
     keyMarker(key ?? failureSignalKey(resolved.failureClass)),
     commitMarker(resolved.commit),
-    ...(recovery ? [recoveryMarker(resolved.commit)] : []),
+    stateMarker(resolved.commit, artifactState),
     '',
     '## Phase 2B bounded currentness remediation failed',
     '',
@@ -380,11 +437,10 @@ export function buildRecurrenceComment(context, { repository = null, escalation 
   const artifactState = resolveArtifactState(context?.log ?? '');
   return [
     commitMarker(resolved.commit),
-    ...(recovery ? [recoveryMarker(resolved.commit)] : []),
+    stateMarker(resolved.commit, artifactState),
     '',
     escalation
-      ? 'CORRECTION for a commit already recorded above: a later run on this same'
-        + ' commit failed AFTER committing, so the earlier note understates what exists.'
+      ? `CORRECTION for a commit already recorded above: a later run on this same commit reached a HIGHER artifact state (**${artifactState}**), so the earlier note understates what may exist.`
       : 'Same failure class reproduced on a further commit.',
     `Artifact state: **${artifactState}**.`,
     ...(recovery
@@ -405,19 +461,38 @@ export function buildRecurrenceComment(context, { repository = null, escalation 
 export function decideFailureSignal({ issue = null, context } = {}) {
   const resolved = requireContext(context);
   const key = failureSignalKey(resolved.failureClass);
-  const recovery = detectPostCommitRecovery(context?.log ?? '') !== null;
+  const artifactState = resolveArtifactState(context?.log ?? '');
+  // The issue stays keyed to the FAILURE CLASS. Artifact state is per-commit
+  // disposition metadata and never part of the dedupe key, so a state change
+  // corrects an existing issue rather than opening a second one for the same
+  // failure.
+  const base = { key, failureClass: resolved.failureClass, artifactState };
   if (!issue) {
-    return Object.freeze({ action: 'CREATE', key, failureClass: resolved.failureClass, issue: null, escalation: false, reason: 'NO_OPEN_SIGNAL' });
+    return Object.freeze({ action: 'CREATE', ...base, issue: null, escalation: false, reason: 'NO_OPEN_SIGNAL' });
   }
-  if (recordedCommits(issue).includes(resolved.commit)) {
-    // Commit identity alone is not the whole disposition. A commit first
-    // recorded as a pre-commit refusal whose later run reaches post-commit
-    // recovery has left the recorded text understating what exists, so that
-    // one transition escalates rather than being suppressed.
-    if (recovery && !recordedRecoveryCommits(issue).includes(resolved.commit)) {
-      return Object.freeze({ action: 'COMMENT', key, failureClass: resolved.failureClass, issue, escalation: true, reason: 'RECOVERY_STATE_CHANGED' });
-    }
-    return Object.freeze({ action: 'NONE', key, failureClass: resolved.failureClass, issue, escalation: false, reason: 'ALREADY_RECORDED' });
+  const recorded = recordedCommitStates(issue).get(resolved.commit);
+  if (recorded === undefined) {
+    return Object.freeze({ action: 'COMMENT', ...base, issue, escalation: false, reason: 'NEW_COMMIT' });
   }
-  return Object.freeze({ action: 'COMMENT', key, failureClass: resolved.failureClass, issue, escalation: false, reason: 'NEW_COMMIT' });
+  // Already recorded, so only NEWS is reported — and because artifact state is
+  // monotonic, news can only ever be an UPGRADE. A repeat at the same state adds
+  // nothing, and a weaker observation from a later run must not walk the recorded
+  // disposition back down to a more reassuring one. The ceiling per commit is
+  // therefore its initial record plus at most two upward corrections
+  // (NO_WRITE -> UNKNOWN -> POST_COMMIT), and it cannot oscillate.
+  const rank = artifactStateRank(artifactState);
+  const recordedRank = artifactStateRank(recorded);
+  if (rank > recordedRank) {
+    return Object.freeze({
+      action: 'COMMENT', ...base, issue, escalation: true, reason: 'ARTIFACT_STATE_ESCALATED', recordedState: recorded,
+    });
+  }
+  return Object.freeze({
+    action: 'NONE',
+    ...base,
+    issue,
+    escalation: false,
+    reason: rank < recordedRank ? 'LOWER_STATE_IGNORED' : 'ALREADY_RECORDED',
+    recordedState: recorded,
+  });
 }
