@@ -60,23 +60,19 @@ jobs:
           path: ${{ runner.temp }}/qa-input
           merge-multiple: true
 
-      # STEP timeout, deliberately lower than the JOB timeout above.
+      # STEP timeout. It bounds how long the adapter itself may run; it is NOT
+      # relied upon as headroom for the durable failure reporter.
       #
-      # A job-level timeout cancels the JOB, and a cancelled job does not go on
-      # to evaluate later steps — so an adapter that hung until the 15-minute
-      # ceiling would take the durable failure reporter down with it, leaving
-      # hang-to-timeout as the one silent failure mode in a tranche whose whole
-      # purpose is that Phase 2B stops failing silently.
+      # An earlier revision tried to reserve reporter budget arithmetically by
+      # keeping this cap below the job's. That does not hold: the job clock
+      # starts at JOB start, so checkout, setup-node and the artifact download
+      # all spend it before this step begins. Slow setup plus a hanging adapter
+      # can still reach the 15-minute job ceiling while this step is inside its
+      # own 10 minutes, cancelling the job with no later step evaluated.
       #
-      # Capping the adapter at 10 minutes makes that timeout a STEP failure
-      # instead: the step fails, the job is still alive with roughly five
-      # minutes of reserved budget, and `if: failure()` below therefore runs and
-      # records the signal. The job's 15 minutes stays as the outer ceiling for
-      # anything this cap does not catch.
-      #
-      # Keep this strictly below the job timeout. The Phase 2B unit suite
-      # asserts that relationship on this file, so narrowing the gap to zero
-      # fails the tests rather than silently removing the reporter's headroom.
+      # Reporting is therefore no longer a step in this job at all — it is the
+      # separate `report_failure` job below, with its own lifecycle and its own
+      # budget. See the comment on that job.
       - name: Run bounded Phase 2B remediation adapter
         timeout-minutes: 10
         env:
@@ -84,7 +80,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         # The adapter's output is teed outside GITHUB_WORKSPACE — the same reason
-        # the artifact is unpacked there — so the failure step below can classify
+        # the artifact is unpacked there — so the reporter job below can classify
         # the refusal without making the checkout dirty. pipefail keeps the
         # adapter's own exit status authoritative through the pipe.
         run: |
@@ -97,13 +93,78 @@ jobs:
             --workflow-head-sha='${{ github.event.workflow_run.head_sha }}' \
             2>&1 | tee '${{ runner.temp }}/phase2b-adapter.log'
 
-      # Failure visibility. Runs ONLY on failure, so a green run — and an
-      # authorized-but-skipped or duplicate-suppressed run, both of which exit 0
-      # — creates nothing at all. One open issue per failure class, one further
-      # comment per distinct failing commit, so repeated identical failures
-      # cannot spam the tracker. See scripts/remediation/lib/phase2b-failure-signal.mjs.
-      - name: Record durable Phase 2B failure signal
+      # Best-effort evidence preservation, so the reporter job can classify a
+      # real failure from the real log rather than from its absence.
+      #
+      # Deliberately incapable of blocking anything: `continue-on-error` and
+      # `if-no-files-found: ignore` mean a missing log or a failed upload cannot
+      # turn preservation into a new failure mode. A job-level timeout can kill
+      # this job before this step runs at all — that is expected, and the
+      # reporter job still runs and records the conservative UNKNOWN state.
+      #
+      # This artifact is evidence only. It carries no authority.
+      - name: Preserve the adapter log for the reporter job
         if: failure()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase2b-adapter-log-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/phase2b-adapter.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # Failure visibility, as a SEPARATE JOB with its own lifecycle and budget.
+  #
+  # This is the structural form of the reservation. `remediate` may fail
+  # normally, have its adapter step time out, or reach its own 15-minute
+  # ceiling and be cancelled outright — in every one of those cases this job
+  # still starts, because its budget is not drawn from `remediate`'s clock.
+  # That closes hang-to-timeout, which an in-job step could not: a cancelled
+  # job does not go on to evaluate its later steps.
+  #
+  # It runs ONLY when remediation ended in failure or cancellation. A green run
+  # — including an authorized-but-skipped or duplicate-suppressed run, both of
+  # which exit 0 — creates nothing at all, and a run skipped as unauthorized or
+  # non-main leaves `remediate` with result `skipped`, which this gate excludes.
+  #
+  # One open issue per failure class, one further comment per distinct failing
+  # commit, so repeated identical failures cannot spam the tracker. See
+  # scripts/remediation/lib/phase2b-failure-signal.mjs.
+  report_failure:
+    needs: remediate
+    if: >-
+      always() &&
+      (needs.remediate.result == 'failure' ||
+       needs.remediate.result == 'cancelled')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out the exact QA source commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      # Tolerant on purpose. When `remediate` was cancelled by its job timeout
+      # the upload step never ran, so there is no artifact to fetch — and that
+      # is precisely the case this job exists to report. `continue-on-error`
+      # keeps the absence from aborting the job before the reporter runs.
+      - name: Download the preserved adapter log
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: phase2b-adapter-log-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/phase2b-log
+
+      # `--log` points at the expected path whether or not the download landed.
+      # The reporter's incumbent missing-log handling classifies an absent or
+      # unreadable log as a reportable UNKNOWN state; no synthetic log is
+      # fabricated and no specific failure class is claimed on its behalf.
+      - name: Record durable Phase 2B failure signal
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -114,4 +175,4 @@ jobs:
             --run-id='${{ github.run_id }}' \
             --run-attempt='${{ github.run_attempt }}' \
             --commit='${{ github.event.workflow_run.head_sha }}' \
-            --log='${{ runner.temp }}/phase2b-adapter.log'
+            --log='${{ runner.temp }}/phase2b-log/phase2b-adapter.log'

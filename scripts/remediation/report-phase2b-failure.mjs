@@ -1,9 +1,23 @@
 // Durable failure signal for the Phase 2B remediation workflow.
 //
-// Invoked ONLY from the workflow's `if: failure()` step, so a green run never
-// reaches it and nothing is created. All decision logic lives in
-// lib/phase2b-failure-signal.mjs and is unit tested without GitHub; this file
-// is the thin GitHub boundary.
+// Invoked ONLY from that workflow's separate `report_failure` job, which
+// `needs: remediate` and is gated on `needs.remediate.result` being `failure`
+// or `cancelled`. A green remediation run never reaches it, and neither does
+// one skipped as unauthorized or non-main (`skipped`), so nothing is created.
+//
+// The reporting job is separate on purpose. It carries its own lifecycle and
+// its own runtime budget, so it still runs when `remediate` is cancelled by
+// its own job timeout — the case an in-job `if: failure()` step could never
+// cover, since a cancelled job does not evaluate its later steps.
+//
+// Because of that, `--log` may point at a path that does not exist: the
+// remediation job can die before it uploads the adapter log. The missing-log
+// handling below is the incumbent behaviour for exactly that case and must
+// stay conservative — an absent log is reported as UNKNOWN, never as a
+// specific failure class.
+//
+// All decision logic lives in lib/phase2b-failure-signal.mjs and is unit
+// tested without GitHub; this file is the thin GitHub boundary.
 //
 // Authority: GitHub issue text only. It never writes a branch, a commit, a pull
 // request, a generated surface or a canonical record.

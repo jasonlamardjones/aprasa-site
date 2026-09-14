@@ -782,59 +782,114 @@ const remediationWorkflow = fs.readFileSync(
   path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '.github', 'workflows', 'phase-2b-things-to-do-currentness.yml'),
   'utf8',
 );
-assert.ok(remediationWorkflow.includes('report-phase2b-failure.mjs'), 'the workflow must invoke the failure signal');
-const signalStep = remediationWorkflow.slice(remediationWorkflow.indexOf('Record durable Phase 2B failure signal'));
-assert.ok(signalStep.includes('if: failure()'), 'the failure signal must be gated on failure()');
-assert.ok(
-  signalStep.indexOf('if: failure()') < signalStep.indexOf('report-phase2b-failure.mjs'),
-  'the failure gate must precede the signal invocation',
-);
-// The gate is the ONLY way in: nothing else in the workflow runs it.
-assert.equal(remediationWorkflow.split('report-phase2b-failure.mjs').length - 1, 1);
+// --- The durable reporter must be lifecycle-isolated from remediation ------
+//
+// Structural, not arithmetic. An earlier revision reserved reporter budget by
+// keeping the adapter's STEP timeout below the job's, but the job clock starts
+// at JOB start: checkout, setup-node and the artifact download all spend it
+// before the adapter step begins, so slow setup plus a hanging adapter still
+// reaches the job ceiling and cancels the job — and a cancelled job does not
+// evaluate its later steps, taking an in-job reporter down with it. That guard
+// compared 10 < 15 and passed in exactly the case it was written to prevent.
+//
+// Reporting is now a separate job with its own lifecycle and budget, so these
+// assertions prove the SHAPE that makes silence impossible rather than a
+// timing estimate that cannot.
+
+// Job bodies, sliced on the 2-space job keys under `jobs:`. Scoped to the
+// `jobs:` block: other top-level mappings (`on:`, `permissions:`) carry
+// 2-space keys of their own that are not jobs.
+const jobsBlockIndex = remediationWorkflow.search(/^jobs:$/m);
+assert.ok(jobsBlockIndex > -1, 'the workflow must declare a jobs block');
+const jobsBlock = remediationWorkflow.slice(jobsBlockIndex);
+const jobKeyPattern = /^ {2}([A-Za-z_][A-Za-z0-9_-]*):$/gm;
+const jobStarts = [...jobsBlock.matchAll(jobKeyPattern)]
+  .map((match) => ({ name: match[1], index: jobsBlockIndex + match.index }));
+const jobNames = jobStarts.map((job) => job.name);
+assert.ok(jobNames.includes('remediate'), 'the workflow must declare the remediate job');
+const reporterJobName = jobNames.find((name) => name !== 'remediate');
+assert.ok(reporterJobName,
+  'the durable reporter must be a SEPARATE job, so remediation cancellation cannot take it down');
+function jobBody(name) {
+  const at = jobStarts.findIndex((job) => job.name === name);
+  const from = jobStarts[at].index;
+  const to = at + 1 < jobStarts.length ? jobStarts[at + 1].index : remediationWorkflow.length;
+  return remediationWorkflow.slice(from, to);
+}
+const remediateJob = jobBody('remediate');
+const reporterJob = jobBody(reporterJobName);
+
+// The reporter invocation lives in the reporter job and NOWHERE in remediation.
+assert.equal(remediationWorkflow.split('report-phase2b-failure.mjs').length - 1, 1,
+  'the durable reporter must be invoked from exactly one place');
+assert.ok(reporterJob.includes('report-phase2b-failure.mjs'),
+  'the reporter job must invoke the durable failure signal');
+assert.ok(!remediateJob.includes('report-phase2b-failure.mjs'),
+  'the durable reporter must NOT run inside remediate: a cancelled job never reaches its later steps');
+
+// It observes remediation's result, so it is ordered after it and can read it.
+assert.ok(/^ {4}needs:\s*remediate\s*$/m.test(reporterJob),
+  'the reporter job must declare `needs: remediate`, or it cannot observe the remediation result');
+
+// The gate: both failing lifecycles admitted, neither silent one admitted.
+const reporterIfMatch = reporterJob.match(/^ {4}if:[^\n]*\n(?: {6}[^\n]*\n)*/m);
+assert.ok(reporterIfMatch, 'the reporter job must declare an `if` gate');
+const reporterCondition = reporterIfMatch[0];
+assert.ok(reporterCondition.includes("needs.remediate.result == 'failure'"),
+  'the reporter gate must admit a failed remediation');
+assert.ok(reporterCondition.includes("needs.remediate.result == 'cancelled'"),
+  'the reporter gate must admit a CANCELLED remediation — that is the job-timeout path this fix exists for');
+assert.ok(!reporterCondition.includes("'success'"),
+  'the reporter gate must not admit a successful remediation, or a green run would create a signal');
+assert.ok(!reporterCondition.includes("'skipped'"),
+  'the reporter gate must not admit a skipped remediation: an unauthorized or non-main run is not a failure');
+// `always()` alone would fire on success and on the unauthorized skip alike.
+assert.ok(/needs\.remediate\.result/.test(reporterCondition.replace(/always\(\)/g, '')),
+  'the reporter gate must be conditioned on the remediation result, not merely `always()`');
+
+// Its own budget, not a slice of remediation's.
+const reporterTimeoutMatch = reporterJob.match(/^ {4}timeout-minutes:\s*(\d+)\s*$/m);
+assert.ok(reporterTimeoutMatch, 'the reporter job must carry its own bounded timeout');
+assert.ok(Number(reporterTimeoutMatch[1]) > 0, 'the reporter job timeout must be a positive bound');
+
+// It consumes the preserved adapter log, and cannot be blocked by its absence.
+// A job-timeout cancellation kills remediation before the upload step runs, so
+// "no artifact" is the normal shape of the very case being reported.
+const logDownloadIndex = reporterJob.indexOf('- name: Download the preserved adapter log');
+assert.ok(logDownloadIndex > -1, 'the reporter job must attempt to consume the adapter log');
+const reporterInvokeIndex = reporterJob.indexOf('report-phase2b-failure.mjs');
+assert.ok(logDownloadIndex < reporterInvokeIndex,
+  'the log download must precede the reporter invocation');
+const logDownloadBody = reporterJob.slice(logDownloadIndex, reporterInvokeIndex);
+assert.ok(/^ {8}continue-on-error:\s*true\s*$/m.test(logDownloadBody),
+  'a missing or failed adapter-log download must NOT prevent the reporter from running');
+assert.ok(reporterJob.includes('--log='),
+  'the reporter must be pointed at the expected log path even when it does not exist');
+
+// Best-effort preservation in remediation: evidence only, never a new blocker.
+const preserveIndex = remediateJob.indexOf('- name: Preserve the adapter log for the reporter job');
+assert.ok(preserveIndex > -1, 'remediation must best-effort preserve the adapter log');
+const preserveBody = remediateJob.slice(preserveIndex);
+assert.ok(/^ {8}continue-on-error:\s*true\s*$/m.test(preserveBody),
+  'log preservation must not be able to fail the remediation job');
+assert.ok(/^ {10}if-no-files-found:\s*ignore\s*$/m.test(preserveBody),
+  'a missing adapter log must not turn preservation into a blocker');
+
+// Both runtimes stay bounded. These are now containment bounds in their own
+// right, NOT a reservation of reporter headroom — that is structural above.
+const jobTimeoutMatch = remediateJob.match(/^ {4}timeout-minutes:\s*(\d+)\s*$/m);
+assert.ok(jobTimeoutMatch, 'the remediate job must declare a timeout');
+assert.equal(Number(jobTimeoutMatch[1]), 15, 'the remediation job timeout is the outer ceiling and stays at 15');
+const adapterStepIndex = remediateJob.indexOf('- name: Run bounded Phase 2B remediation adapter');
+assert.ok(adapterStepIndex > -1, 'the adapter step must exist');
+const adapterStepBody = remediateJob.slice(adapterStepIndex, preserveIndex);
+const adapterTimeoutMatch = adapterStepBody.match(/^ {8}timeout-minutes:\s*(\d+)\s*$/m);
+assert.ok(adapterTimeoutMatch, 'the adapter step must declare its own timeout');
+assert.equal(Number(adapterTimeoutMatch[1]), 10, 'the adapter step timeout stays at 10');
+
 // Issue text is the whole of the added authority.
 assert.ok(remediationWorkflow.includes('issues: write'));
 
-// --- The durable reporter must have execution budget left to run ----------
-//
-// A job-level timeout cancels the JOB, and a cancelled job does not evaluate
-// later steps, so an adapter that hung to the job ceiling would take the
-// failure reporter down with it — leaving hang-to-timeout as the one silent
-// failure mode in a tranche whose whole point is that Phase 2B stops failing
-// silently. The adapter therefore carries a STEP timeout strictly below the
-// job's, which turns that hang into a step failure with budget to spare.
-//
-// Parsed as NUMBERS and compared, rather than matched as phrases: changing
-// either value, or closing the gap between them, fails here. No YAML parser is
-// added for this — the workflow source is read as text, as the other workflow
-// assertions in this suite already do.
-const jobTimeoutMatch = remediationWorkflow.match(/^\s{4}timeout-minutes:\s*(\d+)\s*$/m);
-assert.ok(jobTimeoutMatch, 'the remediate job must declare a timeout');
-const jobTimeout = Number(jobTimeoutMatch[1]);
-assert.equal(jobTimeout, 15, 'the job timeout is the outer ceiling and stays at 15');
-
-const adapterStepIndex = remediationWorkflow.indexOf('- name: Run bounded Phase 2B remediation adapter');
-const reporterStepIndex = remediationWorkflow.indexOf('- name: Record durable Phase 2B failure signal');
-assert.ok(adapterStepIndex > -1, 'the adapter step must exist');
-assert.ok(reporterStepIndex > -1, 'the durable reporter step must exist');
-assert.ok(adapterStepIndex < reporterStepIndex,
-  'the durable reporter must FOLLOW the adapter, or it cannot observe its failure');
-
-// The step timeout must belong to the adapter step, so read it from that step's
-// own body rather than from anywhere in the file.
-const adapterStepBody = remediationWorkflow.slice(adapterStepIndex, reporterStepIndex);
-const adapterTimeoutMatch = adapterStepBody.match(/^\s{8}timeout-minutes:\s*(\d+)\s*$/m);
-assert.ok(adapterTimeoutMatch, 'the adapter step must declare its own timeout');
-const adapterTimeout = Number(adapterTimeoutMatch[1]);
-assert.equal(adapterTimeout, 10, 'the adapter step timeout stays at 10');
-assert.ok(adapterTimeout < jobTimeout,
-  `the adapter timeout (${adapterTimeout}) must be strictly below the job timeout (${jobTimeout}), or a hang cancels the job before the reporter runs`);
-assert.ok(jobTimeout - adapterTimeout >= 1,
-  'there must be reserved job budget left for the reporter after the adapter is cut off');
-
-// And the reporter stays failure-gated, so a green run still creates nothing.
-const reporterStepBody = remediationWorkflow.slice(reporterStepIndex);
-assert.ok(/^\s{8}if:\s*failure\(\)\s*$/m.test(reporterStepBody),
-  'the durable reporter must remain gated on failure()');
 // The Phase 2B test workflow must not gate on a path list: the integration suite
 // drives build-all, whose children and their transitive inputs can move the
 // derived write set or Home containment without touching scripts/remediation/.
