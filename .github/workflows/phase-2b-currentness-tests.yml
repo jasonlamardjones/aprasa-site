@@ -1,20 +1,31 @@
 name: Phase 2B currentness tests
 
 on:
+  # NO path filter, deliberately — the same reasoning as
+  # .github/workflows/validate-things-to-do.yml, which removed its own list for
+  # exactly this failure mode.
+  #
+  # The integration suite below drives scripts/build-all.mjs, the real canonical
+  # orchestrator. That reaches build-locale-data.mjs, generate-things-to-do.mjs,
+  # build-static-pages.mjs, build-mindelo-pt.mjs and build-sitemap.mjs, each of
+  # which reaches further into scripts/lib/ and data/. A change in any of them
+  # can move the adapter's derived write set or its Home region containment
+  # without touching scripts/remediation/ at all.
+  #
+  # Enumerating those paths does not fix it, it only moves the hole: the list
+  # would have to name every transitive input of the whole build, and the first
+  # one nobody thought of matches no path, starts no job, and ships a Phase 2B
+  # behaviour change with the preview-boundary suite never having run. Running on
+  # every pull request is a superset of any list we could maintain, and the job
+  # costs seconds.
+  #
+  # These are GitHub's default activity types for pull_request, stated
+  # explicitly so this key has a value rather than resolving to null.
   pull_request:
-    paths:
-      - 'scripts/remediation/**'
-      - 'scripts/qa/qa-report.schema.json'
-      - 'scripts/qa/lib/qa-schema.mjs'
-      - '.github/workflows/phase-2b-*.yml'
+    types: [opened, synchronize, reopened]
   push:
     branches:
       - main
-    paths:
-      - 'scripts/remediation/**'
-      - 'scripts/qa/qa-report.schema.json'
-      - 'scripts/qa/lib/qa-schema.mjs'
-      - '.github/workflows/phase-2b-*.yml'
 
 permissions:
   contents: read
@@ -22,7 +33,7 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -31,7 +42,14 @@ jobs:
       - name: Syntax checks
         run: |
           node --check scripts/remediation/lib/things-to-do-currentness-remediation.mjs
+          node --check scripts/remediation/lib/phase2b-failure-signal.mjs
           node --check scripts/remediation/run-things-to-do-currentness-remediation.mjs
+          node --check scripts/remediation/report-phase2b-failure.mjs
           node --check scripts/remediation/test-things-to-do-currentness-remediation.mjs
+          node --check scripts/remediation/test-things-to-do-currentness-preview-backfill.mjs
       - name: Unit tests
         run: node scripts/remediation/test-things-to-do-currentness-remediation.mjs
+      # Drives real canonical generation against a synthetic preview-boundary
+      # expiry in a sandbox. Creates no GitHub issue and touches no tracked file.
+      - name: Preview-backfill integration tests
+        run: node scripts/remediation/test-things-to-do-currentness-preview-backfill.mjs

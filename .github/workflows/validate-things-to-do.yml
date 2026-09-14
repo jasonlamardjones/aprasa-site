@@ -530,3 +530,62 @@ jobs:
           fi
 
           git reset --hard HEAD
+
+      # --- Full-build generation cleanliness -------------------------------
+      #
+      # Phase 2B's bounded currentness remediation now drives
+      # scripts/build-all.mjs, the canonical orchestrator, rather than
+      # single-record generator runs. Its repair is accepted only if the
+      # resulting diff is confined to the files that lifecycle transition can
+      # explain, so ANY pre-existing drift between main and canonical
+      # generation makes every future repair abort — permanently, and silently
+      # as far as the public site is concerned, since a refused repair simply
+      # produces nothing.
+      #
+      # The gates above do not cover that. "Verify committed surfaces match
+      # canonical generation" compares only `index.html sitemap.xml
+      # things-to-do/`, which is the incumbent generator's own output. build-all
+      # additionally produces pt/index.html and the rest of the derived PT
+      # pages, data/locales/locale-data.generated.json, the Mindelo Essentials
+      # pages and the sitemap. One stale file among those would leave main
+      # looking healthy here while Phase 2B could never close again.
+      #
+      # So this asserts the prerequisite Phase 2B now depends on: running the
+      # SAME pathway Phase 2B runs, from a clean tree, changes nothing at all.
+      # `git status --porcelain` is the assertion because it covers both halves
+      # in one observation — a modified tracked file and a newly created
+      # untracked one are both output that canonical generation should not have
+      # produced.
+      #
+      # --as-of is the tracked governed currentness date, so this is
+      # deterministic rather than clock-dependent. That also pins build-all's
+      # own closing training-opportunity check to the same governed date; the
+      # LIVE EMAR/Kre+ check against AS_OF_EMAR above is deliberately separate
+      # and is not replaced by it.
+      - name: Verify main is generation-clean under the canonical build-all pathway
+        shell: bash
+        run: |
+          set -e
+          git reset --hard HEAD
+          git clean -fd
+
+          baseline=$(git status --porcelain)
+          if [ -n "$baseline" ]; then
+            echo 'Baseline is not clean before the full-build check:'
+            echo "$baseline"
+            exit 1
+          fi
+
+          echo "Running canonical build-all as of $AS_OF"
+          node scripts/build-all.mjs --as-of="$AS_OF"
+
+          drift=$(git status --porcelain)
+          if [ -n "$drift" ]; then
+            echo 'Canonical build-all changed the repository, so main is NOT generation-clean.'
+            echo 'Phase 2B bounded remediation would refuse every repair while this persists.'
+            echo "$drift"
+            git diff -- . | head -200
+            exit 1
+          fi
+          git diff --check
+          echo "Canonical build-all produced no tracked or untracked change: main is generation-clean."
