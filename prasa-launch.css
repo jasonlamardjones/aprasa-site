@@ -274,6 +274,46 @@ h3 { margin: 0; color: var(--green); font-size: 1.08rem; line-height: 1.28; font
 .dialog-media img { width: 100%; height: auto; display: block; }
 .dialog-media-poster { background: var(--white); }
 .dialog-media-poster img { object-fit: contain; }
+/* The generic A PRASA editorial-fallback media block (governed training
+   records with no provider image, e.g. Start CV) is now static markup
+   generated into both Home surfaces alongside .card-media/.dialog-media, so
+   it needs a stylesheet rule of its own rather than relying solely on the
+   runtime style block prasa-launch.js's addMediaFoundationStyles() injects.
+   Values match that block exactly; that runtime injection stays in place
+   unchanged as backward-compatible protection for the older, purely
+   client-side fallback path. */
+.media-fallback {
+  display: grid;
+  place-items: center;
+  min-height: 9rem;
+  padding: 1rem;
+  background: var(--cream);
+  color: var(--green);
+  text-align: center;
+}
+.media-fallback-inner {
+  display: grid;
+  justify-items: center;
+  gap: .55rem;
+}
+.media-fallback img {
+  width: 3rem;
+  height: auto;
+  object-fit: contain;
+}
+.media-fallback-label {
+  font-family: var(--serif);
+  font-size: 1rem;
+  line-height: 1.2;
+}
+.media-fallback-note {
+  max-width: 28ch;
+  font-size: .72rem;
+  line-height: 1.35;
+}
+.dialog-media.media-fallback {
+  min-height: 12rem;
+}
 /* Locale-matched media: both language variants are present in the shared
    EN source (pt/index.html is mechanically derived from it, so a single
    markup block is the only way to keep locale-specific images without a

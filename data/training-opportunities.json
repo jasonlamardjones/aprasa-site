@@ -35,6 +35,7 @@
       "lifecycle_class": "institutional-training-catalog",
       "publication_state": "CURRENT",
       "provider": "Start CV",
+      "media_manifest_title": "Language Courses at Start CV",
       "source": {
         "source_url": "https://startcv.cv/courses/",
         "provenance": "Start CV's official website: current course listings, live application form and first-party contact information, with recent first-party Facebook activity used as an additional currentness signal."
@@ -1261,6 +1262,7 @@
       "lifecycle_class": "fixed-window-opportunity",
       "publication_state": "CURRENT",
       "provider": "Universidade de Cabo Verde / Embassy of the People's Republic of China in Cabo Verde",
+      "media_manifest_title": "China Ambassador Scholarship for Uni-CV Students",
       "source": {
         "source_url": "https://www.unicv.edu.cv/pt/noticias-confucio/5932-uni-cv-prorroga-candidaturas-a-bolsa-do-embaixador-da-china-ate-20-de-setembro",
         "provenance": "Official Uni-CV scholarship announcement and the application portal; Edital 02/2026 supplied in the evidence packet with no separate public URL."
