@@ -1,8 +1,14 @@
 {
   "package_id": "aprasa-pt-start-cv-learning-spotlight-r15-delta",
   "revision_class": "ADDITIVE_NEW_KEYS",
-  "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
-  "previous_revision": "P03-PT-SOURCE-2026-09-06-r14",
+  "source_revision": "P09-PT-LEARNING-SPOTLIGHT-START-CV-2026-09-14-r1",
+  "legacy_recovered_revision_label": "P03-PT-SOURCE-2026-09-07-r15",
+  "legacy_previous_revision_label": "P03-PT-SOURCE-2026-09-06-r14",
+  "legacy_recovered_from": {
+    "branch": "origin/feature/learning-spotlight-start-cv-2026-09-v1",
+    "commit": "fce564558bbf4ef40943dfe050c53acc7a1b5848"
+  },
+  "provenance_status": "Legacy revision label retained as historical provenance only; it is not the current durable package identity and does not assert equivalence with the different r15 package already present on main.",
   "revision_type": "LEARNING_SPOTLIGHT_ROTATION_START_CV",
   "semantic_authority": "Project 03 — Start CV Learning Spotlight final editorial adjudication and English source freeze, 07 September 2026",
   "linguistic_authority": "Project 09 — Start CV Portuguese localization packet, 07 September 2026 (READY_FOR_PROJECT_04_IMPLEMENTATION)",
@@ -65,7 +71,8 @@
   "rows": [
     {
       "key": "training.record.start-cv.title",
-      "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
+      "source_revision": "P09-PT-LEARNING-SPOTLIGHT-START-CV-2026-09-14-r1",
+      "legacy_recovered_revision_label": "P03-PT-SOURCE-2026-09-07-r15",
       "source_en": "Language Courses at Start CV",
       "pt": "Cursos de Línguas na Start CV",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
@@ -77,7 +84,8 @@
     },
     {
       "key": "training.record.start-cv.status",
-      "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
+      "source_revision": "P09-PT-LEARNING-SPOTLIGHT-START-CV-2026-09-14-r1",
+      "legacy_recovered_revision_label": "P03-PT-SOURCE-2026-09-07-r15",
       "source_en": "Language-course intake currently available",
       "pt": "Candidaturas e pedidos de informação para cursos de línguas atualmente disponíveis",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
@@ -89,7 +97,8 @@
     },
     {
       "key": "training.record.start-cv.meta",
-      "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
+      "source_revision": "P09-PT-LEARNING-SPOTLIGHT-START-CV-2026-09-14-r1",
+      "legacy_recovered_revision_label": "P03-PT-SOURCE-2026-09-07-r15",
       "source_en": "Madeiralzinho, Mindelo · In person, online and hybrid",
       "pt": "Madeiralzinho, Mindelo · Presencial, online e híbrido",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
@@ -101,7 +110,8 @@
     },
     {
       "key": "training.record.start-cv.body",
-      "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
+      "source_revision": "P09-PT-LEARNING-SPOTLIGHT-START-CV-2026-09-14-r1",
+      "legacy_recovered_revision_label": "P03-PT-SOURCE-2026-09-07-r15",
       "source_en": "Start CV offers language courses in English, French, German, Dutch, Italian, Spanish, Portuguese and Cape Verdean Creole (Kriolu) from its language school in Mindelo.",
       "pt": "A Start CV oferece cursos de inglês, francês, alemão, neerlandês, italiano, espanhol, português e crioulo cabo-verdiano (Kriolu) na sua escola de línguas em Mindelo.",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
@@ -113,7 +123,8 @@
     },
     {
       "key": "training.record.start-cv.details_1",
-      "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
+      "source_revision": "P09-PT-LEARNING-SPOTLIGHT-START-CV-2026-09-14-r1",
+      "legacy_recovered_revision_label": "P03-PT-SOURCE-2026-09-07-r15",
       "source_en": "Start CV provides language courses from Rua Humberto Fonseca in Madeiralzinho, Mindelo.",
       "pt": "A Start CV oferece cursos de línguas a partir da Rua Humberto Fonseca, em Madeiralzinho, Mindelo.",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
@@ -125,7 +136,8 @@
     },
     {
       "key": "training.record.start-cv.details_2",
-      "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
+      "source_revision": "P09-PT-LEARNING-SPOTLIGHT-START-CV-2026-09-14-r1",
+      "legacy_recovered_revision_label": "P03-PT-SOURCE-2026-09-07-r15",
       "source_en": "Current first-party course information lists English, French, German, Dutch, Italian, Spanish, Portuguese and Cape Verdean Creole (Kriolu). The provider states that courses may be delivered in person, online or in a hybrid format.",
       "pt": "A informação atual disponibilizada diretamente pelo prestador apresenta cursos de inglês, francês, alemão, neerlandês, italiano, espanhol, português e crioulo cabo-verdiano (Kriolu). A Start CV indica que os cursos podem ser ministrados presencialmente, online ou em formato híbrido.",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
@@ -137,7 +149,8 @@
     },
     {
       "key": "training.record.start-cv.details_3",
-      "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
+      "source_revision": "P09-PT-LEARNING-SPOTLIGHT-START-CV-2026-09-14-r1",
+      "legacy_recovered_revision_label": "P03-PT-SOURCE-2026-09-07-r15",
       "source_en": "A current application form is available for prospective learners to provide their preferred course, start date, level and study frequency.",
       "pt": "Está disponível um formulário de candidatura atual para que potenciais alunos indiquem o curso pretendido, a data de início preferida, o nível e a frequência de estudo.",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
@@ -149,7 +162,8 @@
     },
     {
       "key": "training.record.start-cv.contact_instruction",
-      "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
+      "source_revision": "P09-PT-LEARNING-SPOTLIGHT-START-CV-2026-09-14-r1",
+      "legacy_recovered_revision_label": "P03-PT-SOURCE-2026-09-07-r15",
       "source_en": "Contact Start CV directly for current course availability, scheduling, fees and enrollment arrangements.",
       "pt": "Contacte diretamente a Start CV para confirmar a disponibilidade atual dos cursos, horários, propinas e condições de inscrição.",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
@@ -161,7 +175,8 @@
     },
     {
       "key": "training.record.start-cv.good_1",
-      "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
+      "source_revision": "P09-PT-LEARNING-SPOTLIGHT-START-CV-2026-09-14-r1",
+      "legacy_recovered_revision_label": "P03-PT-SOURCE-2026-09-07-r15",
       "source_en": "The presence of a live application form means Start CV is currently accepting course enquiries/applications. It does not confirm that a particular language, level, class time or preferred start date has an available place.",
       "pt": "A existência de um formulário de candidatura ativo significa que a Start CV está atualmente a receber candidaturas e pedidos de informação sobre os cursos. Isto não confirma que exista vaga disponível para uma determinada língua, nível, horário ou data de início pretendida.",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
@@ -173,7 +188,8 @@
     },
     {
       "key": "training.record.start-cv.good_2",
-      "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
+      "source_revision": "P09-PT-LEARNING-SPOTLIGHT-START-CV-2026-09-14-r1",
+      "legacy_recovered_revision_label": "P03-PT-SOURCE-2026-09-07-r15",
       "source_en": "Course fees, general course lengths and published class schedules are not established in the current source information. Confirm current arrangements directly with Start CV before enrolling.",
       "pt": "As propinas, a duração geral dos cursos e os horários das aulas publicados não estão estabelecidos na informação atualmente disponível. Confirme diretamente com a Start CV as condições atuais antes de se inscrever.",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
@@ -185,7 +201,8 @@
     },
     {
       "key": "training.record.start-cv.checked",
-      "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
+      "source_revision": "P09-PT-LEARNING-SPOTLIGHT-START-CV-2026-09-14-r1",
+      "legacy_recovered_revision_label": "P03-PT-SOURCE-2026-09-07-r15",
       "source_en": "Checked 7 September 2026 against Start CV's official website, current course listings, live application form and contact information, with recent first-party Facebook activity used as an additional currentness signal.",
       "pt": "Revisto em 7 de setembro de 2026 com base no site oficial da Start CV, na lista atual de cursos, no formulário de candidatura ativo e nas informações de contacto, utilizando também atividade recente da própria Start CV no Facebook como sinal adicional de atualidade.",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
@@ -197,7 +214,8 @@
     },
     {
       "key": "training.record.start-cv.action",
-      "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
+      "source_revision": "P09-PT-LEARNING-SPOTLIGHT-START-CV-2026-09-14-r1",
+      "legacy_recovered_revision_label": "P03-PT-SOURCE-2026-09-07-r15",
       "source_en": "View language courses",
       "pt": "Ver cursos de línguas",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
@@ -209,7 +227,8 @@
     },
     {
       "key": "training.record.start-cv.disclosure",
-      "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
+      "source_revision": "P09-PT-LEARNING-SPOTLIGHT-START-CV-2026-09-14-r1",
+      "legacy_recovered_revision_label": "P03-PT-SOURCE-2026-09-07-r15",
       "source_en": "Learning Spotlight is an independent A PRASA editorial selection. Inclusion does not mean A PRASA operates, accredits, certifies, endorses or sponsors this provider.",
       "pt": "O Destaque de Aprendizagem é uma seleção editorial independente da A PRASA. A inclusão não significa que a A PRASA opere este prestador, lhe atribua acreditação ou certificação, o recomende ou patrocine.",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",

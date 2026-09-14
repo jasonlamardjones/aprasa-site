@@ -1444,17 +1444,28 @@ for (const recordId of EXPECTED_DELTA16.records) {
 // 2026 plus the Project 09 Portuguese localization packet of the same date,
 // verdict READY_FOR_PROJECT_04_IMPLEMENTATION).
 //
-// PROVENANCE NOTE — the package's own frozen `source_revision` is
-// "P03-PT-SOURCE-2026-09-07-r15" and its `previous_revision` is
-// "P03-PT-SOURCE-2026-09-06-r14". That is the label Project 09 froze on the
-// approved packet, and it is carried here BYTE-FOR-BYTE rather than renumbered:
-// rewriting a frozen provenance label would be an ungoverned edit to approved
-// copy. It collides with the unrelated weekly-opportunity package already
-// merged into the r15 FILE slot, so this package occupies the next free file
-// and variable slot (r20) instead. The two are siblings off r14, not a chain —
-// nothing in this file chains one package's previous_revision to another's
-// source_revision, so the parallel label is inert here. Project 04 owns any
-// decision to renumber the frozen label itself.
+// PROVENANCE NOTE — reconciled by the Project 09 ruling of 14 September 2026.
+//
+// The recovered packet carried `source_revision` "P03-PT-SOURCE-2026-09-07-r15"
+// and `previous_revision` "P03-PT-SOURCE-2026-09-06-r14". That r15 label already
+// names a DIFFERENT package on main (the weekly-opportunity delta in the r15 FILE
+// slot), so it cannot serve as this package's current durable revision identity:
+// two distinct approved packages would otherwise stamp the same revision onto
+// their generated rows. Project 09 resolved the collision by issuing this package
+// its own durable identity,
+//
+//   P09-PT-LEARNING-SPOTLIGHT-START-CV-2026-09-14-r1
+//
+// and demoting the two P03 labels to explicit historical provenance fields on the
+// package (`legacy_recovered_revision_label`, `legacy_previous_revision_label`,
+// `legacy_recovered_from`, `provenance_status`). The demotion is a provenance-only
+// reconciliation: the ruling is START_CV_ROWS_CHANGED = 0, and all 13 governed
+// EN/PT values remain byte-for-byte as Project 09 approved them. The legacy labels
+// are recorded as history and assert no equivalence with main's r15 package.
+//
+// The FILE slot stays r20. A file-slot name and a governed revision identity are
+// separate concerns, no validator ties them together, and renaming the file would
+// be churn outside this reconciliation.
 //
 // Same strictly additive lane as r13/r14/r15: every key must be new, under this
 // record's own canonical training.record.start-cv.* namespace, and the package
@@ -1470,8 +1481,11 @@ for (const recordId of EXPECTED_DELTA16.records) {
 const EXPECTED_DELTA20 = {
   package_id: "aprasa-pt-start-cv-learning-spotlight-r15-delta",
   revision_class: "ADDITIVE_NEW_KEYS",
-  source_revision: "P03-PT-SOURCE-2026-09-07-r15",
-  previous_revision: "P03-PT-SOURCE-2026-09-06-r14",
+  source_revision: "P09-PT-LEARNING-SPOTLIGHT-START-CV-2026-09-14-r1",
+  legacy_recovered_revision_label: "P03-PT-SOURCE-2026-09-07-r15",
+  legacy_previous_revision_label: "P03-PT-SOURCE-2026-09-06-r14",
+  legacy_recovered_from_branch: "origin/feature/learning-spotlight-start-cv-2026-09-v1",
+  legacy_recovered_from_commit: "fce564558bbf4ef40943dfe050c53acc7a1b5848",
   record_id: "start-cv",
   row_count: 13,
   approved: 13,
@@ -1482,10 +1496,36 @@ const EXPECTED_DELTA20 = {
 
 const delta20 = JSON.parse(readFileSync(DELTA20_PATH, "utf8"));
 
-for (const field of ["package_id", "revision_class", "source_revision", "previous_revision"]) {
+for (const field of [
+  "package_id",
+  "revision_class",
+  "source_revision",
+  "legacy_recovered_revision_label",
+  "legacy_previous_revision_label",
+]) {
   if (delta20[field] !== EXPECTED_DELTA20[field]) {
     fail(`r20 ${field} mismatch: got ${JSON.stringify(delta20[field])}, expected ${JSON.stringify(EXPECTED_DELTA20[field])}`);
   }
+}
+// The current durable identity must be this package's alone. A package that
+// re-adopts the recovered P03 label would stamp main's r15 revision onto these
+// rows again, which is exactly the collision the 14 September ruling resolved.
+if (delta20.source_revision === EXPECTED_DELTA20.legacy_recovered_revision_label) {
+  fail(`r20 source_revision must be the durable P09 identity, not the legacy recovered label ${JSON.stringify(EXPECTED_DELTA20.legacy_recovered_revision_label)}`);
+}
+// `previous_revision` is retired for this package: its chain is recorded in the
+// legacy_* provenance fields, so a reintroduced chain field would be ambiguous.
+if ("previous_revision" in delta20) {
+  fail(`r20 must not declare previous_revision; the legacy chain is recorded in legacy_previous_revision_label`);
+}
+if (delta20.legacy_recovered_from?.branch !== EXPECTED_DELTA20.legacy_recovered_from_branch) {
+  fail(`r20 legacy_recovered_from.branch mismatch: got ${JSON.stringify(delta20.legacy_recovered_from?.branch)}`);
+}
+if (delta20.legacy_recovered_from?.commit !== EXPECTED_DELTA20.legacy_recovered_from_commit) {
+  fail(`r20 legacy_recovered_from.commit mismatch: got ${JSON.stringify(delta20.legacy_recovered_from?.commit)}`);
+}
+if (typeof delta20.provenance_status !== "string" || delta20.provenance_status.trim() === "") {
+  fail(`r20 must record provenance_status describing the legacy label's historical-only standing`);
 }
 if (delta20.project_09_status !== "approved") {
   fail(`r20 Project 09 status is not approved: ${JSON.stringify(delta20.project_09_status)}`);
@@ -1542,6 +1582,9 @@ for (const row of delta20.rows) {
     fail(`r20 key "${row.key}" uses the retired home.training.record.* namespace`);
   }
   if (row.source_revision !== EXPECTED_DELTA20.source_revision) fail(`r20 ${row.key} source_revision mismatch`);
+  if (row.legacy_recovered_revision_label !== EXPECTED_DELTA20.legacy_recovered_revision_label) {
+    fail(`r20 ${row.key} legacy_recovered_revision_label mismatch`);
+  }
   if (row.translation_status !== "APPROVED") fail(`r20 key "${row.key}" is not APPROVED (status: ${row.translation_status})`);
 
   if (row.scope_status === "REQUIRED_FOR_PT_LAUNCH") delta20Required += 1;
@@ -2438,6 +2481,10 @@ const output = {
     delta19_row_count: delta19.rows.length,
     delta20_package_id: delta20.package_id,
     delta20_revision: delta20.source_revision,
+    delta20_legacy_recovered_revision_label: delta20.legacy_recovered_revision_label,
+    delta20_legacy_previous_revision_label: delta20.legacy_previous_revision_label,
+    delta20_legacy_recovered_from: delta20.legacy_recovered_from,
+    delta20_provenance_status: delta20.provenance_status,
     delta20_revision_class: delta20.revision_class,
     delta20_row_count: delta20.rows.length,
     delta20_affected_records: delta20.affected_records,

@@ -75,7 +75,14 @@
     "delta19_revision_class": "ADDITIVE_RUNTIME_KEYS",
     "delta19_row_count": 4,
     "delta20_package_id": "aprasa-pt-start-cv-learning-spotlight-r15-delta",
-    "delta20_revision": "P03-PT-SOURCE-2026-09-07-r15",
+    "delta20_revision": "P09-PT-LEARNING-SPOTLIGHT-START-CV-2026-09-14-r1",
+    "delta20_legacy_recovered_revision_label": "P03-PT-SOURCE-2026-09-07-r15",
+    "delta20_legacy_previous_revision_label": "P03-PT-SOURCE-2026-09-06-r14",
+    "delta20_legacy_recovered_from": {
+      "branch": "origin/feature/learning-spotlight-start-cv-2026-09-v1",
+      "commit": "fce564558bbf4ef40943dfe050c53acc7a1b5848"
+    },
+    "delta20_provenance_status": "Legacy revision label retained as historical provenance only; it is not the current durable package identity and does not assert equivalence with the different r15 package already present on main.",
     "delta20_revision_class": "ADDITIVE_NEW_KEYS",
     "delta20_row_count": 13,
     "delta20_affected_records": [
@@ -11974,7 +11981,7 @@
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": "start-cv",
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
+      "source_revision": "P09-PT-LEARNING-SPOTLIGHT-START-CV-2026-09-14-r1",
       "context_notes": "Home Learning Spotlight card and detail presentation for the Start CV language-course record.",
       "linguistic_notes": "Provider identity \"Start CV\" is preserved verbatim; only the surrounding phrase is translated."
     },
@@ -11986,7 +11993,7 @@
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": "start-cv",
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
+      "source_revision": "P09-PT-LEARNING-SPOTLIGHT-START-CV-2026-09-14-r1",
       "context_notes": "Home Learning Spotlight card and detail presentation for the Start CV language-course record.",
       "linguistic_notes": "Preserves the narrow intake meaning: an application/enquiry can currently be submitted. It does not state that every listed course, level or class currently has places."
     },
@@ -11998,7 +12005,7 @@
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": "start-cv",
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
+      "source_revision": "P09-PT-LEARNING-SPOTLIGHT-START-CV-2026-09-14-r1",
       "context_notes": "Home Learning Spotlight card and detail presentation for the Start CV language-course record.",
       "linguistic_notes": "Place names Madeiralzinho and Mindelo are locale-independent and carried verbatim."
     },
@@ -12010,7 +12017,7 @@
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": "start-cv",
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
+      "source_revision": "P09-PT-LEARNING-SPOTLIGHT-START-CV-2026-09-14-r1",
       "context_notes": "Home Learning Spotlight card and detail presentation for the Start CV language-course record. Card summary body.",
       "linguistic_notes": "\"neerlandês\" is the European-Portuguese language name for Dutch. \"crioulo cabo-verdiano (Kriolu)\" preserves the general Cape Verdean Creole identification without assigning an island variety the source does not establish. No total number of languages is stated in either locale."
     },
@@ -12022,7 +12029,7 @@
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": "start-cv",
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
+      "source_revision": "P09-PT-LEARNING-SPOTLIGHT-START-CV-2026-09-14-r1",
       "context_notes": "Home Learning Spotlight card and detail presentation for the Start CV language-course record. Detail body paragraph 1 of 4.",
       "linguistic_notes": "Street and place identity (Rua Humberto Fonseca, Madeiralzinho, Mindelo) carried verbatim."
     },
@@ -12034,7 +12041,7 @@
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": "start-cv",
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
+      "source_revision": "P09-PT-LEARNING-SPOTLIGHT-START-CV-2026-09-14-r1",
       "context_notes": "Home Learning Spotlight card and detail presentation for the Start CV language-course record. Detail body paragraph 2 of 4.",
       "linguistic_notes": "Attribution to the provider is preserved in both locales; no delivery mode is asserted beyond what the provider states. No total number of languages is stated."
     },
@@ -12046,7 +12053,7 @@
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": "start-cv",
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
+      "source_revision": "P09-PT-LEARNING-SPOTLIGHT-START-CV-2026-09-14-r1",
       "context_notes": "Home Learning Spotlight card and detail presentation for the Start CV language-course record. Detail body paragraph 3 of 4.",
       "linguistic_notes": "Describes what the form collects. It does not state that a preferred course, start date, level or frequency is accepted or available."
     },
@@ -12058,7 +12065,7 @@
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": "start-cv",
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
+      "source_revision": "P09-PT-LEARNING-SPOTLIGHT-START-CV-2026-09-14-r1",
       "context_notes": "Home Learning Spotlight card and detail presentation for the Start CV language-course record. Detail body paragraph 4 of 4, immediately preceding the governed contact block.",
       "linguistic_notes": "Directs the reader to the provider for the facts the spotlight deliberately does not assert."
     },
@@ -12070,7 +12077,7 @@
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": "start-cv",
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
+      "source_revision": "P09-PT-LEARNING-SPOTLIGHT-START-CV-2026-09-14-r1",
       "context_notes": "Home Learning Spotlight card and detail presentation for the Start CV language-course record. Good-to-know paragraph 1 of 2.",
       "linguistic_notes": "Carries the governed intake semantics: an active form evidences intake, never guaranteed enrolment, a guaranteed place, a confirmed start date or acceptance of a preferred level or frequency."
     },
@@ -12082,7 +12089,7 @@
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": "start-cv",
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
+      "source_revision": "P09-PT-LEARNING-SPOTLIGHT-START-CV-2026-09-14-r1",
       "context_notes": "Home Learning Spotlight card and detail presentation for the Start CV language-course record. Good-to-know paragraph 2 of 2.",
       "linguistic_notes": "States what the current evidence does not establish. No fee, duration or timetable is introduced in either locale."
     },
@@ -12094,7 +12101,7 @@
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": "start-cv",
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
+      "source_revision": "P09-PT-LEARNING-SPOTLIGHT-START-CV-2026-09-14-r1",
       "context_notes": "Home Learning Spotlight card and detail presentation for the Start CV language-course record. Provenance/currentness line.",
       "linguistic_notes": "Date rendered in the European-Portuguese long form. \"Facebook\" is a locale-independent platform identity."
     },
@@ -12106,7 +12113,7 @@
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": "start-cv",
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
+      "source_revision": "P09-PT-LEARNING-SPOTLIGHT-START-CV-2026-09-14-r1",
       "context_notes": "Home Learning Spotlight card and detail presentation for the Start CV language-course record. Card and detail external action label for https://startcv.cv/courses/.",
       "linguistic_notes": "Neutral navigational label; it makes no availability or enrolment promise."
     },
@@ -12118,7 +12125,7 @@
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": "start-cv",
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
+      "source_revision": "P09-PT-LEARNING-SPOTLIGHT-START-CV-2026-09-14-r1",
       "context_notes": "Home Learning Spotlight card and detail presentation for the Start CV language-course record. Learning Spotlight editorial disclosure, rendered on both the card and the detail dialog.",
       "linguistic_notes": "Harmonized per Project 09 decision DESTAQUE_DE_APRENDIZAGEM_HARMONIZED: translates \"Learning Spotlight\" to \"Destaque de Aprendizagem\" in running text, aligning with the card label key spotlight.learning.label. Protected brand string A PRASA is preserved verbatim."
     },
