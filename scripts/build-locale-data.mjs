@@ -77,6 +77,7 @@ const DELTA16_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r16-provider
 const DELTA17_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r17-runtime-whatsapp-launcher.source.json");
 const DELTA18_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r18-ui-scroll-down.source.json");
 const DELTA19_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r19-runtime-whatsapp-prefill.source.json");
+const DELTA20_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r20-start-cv-learning-spotlight.source.json");
 const LOCALE_DIR = path.join(ROOT, "data", "locales");
 const OUT_PATH = path.join(ROOT, "data", "locales", "locale-data.generated.json");
 
@@ -1437,6 +1438,207 @@ for (const recordId of EXPECTED_DELTA16.records) {
   if (!delta16SeenRecords.has(recordId)) fail(`r16 is missing the alt key for authorized record "${recordId}"`);
 }
 
+// --- r20 delta: additive merge for the Start CV Learning Spotlight ----------
+// Supplies the governed EN/PT presentation strings for the incoming Start CV
+// Learning Spotlight record (Project 03 English source freeze of 07 September
+// 2026 plus the Project 09 Portuguese localization packet of the same date,
+// verdict READY_FOR_PROJECT_04_IMPLEMENTATION).
+//
+// PROVENANCE NOTE — reconciled by the Project 09 ruling of 14 September 2026.
+//
+// The recovered packet carried `source_revision` "P03-PT-SOURCE-2026-09-07-r15"
+// and `previous_revision` "P03-PT-SOURCE-2026-09-06-r14". That r15 label already
+// names a DIFFERENT package on main (the weekly-opportunity delta in the r15 FILE
+// slot), so it cannot serve as this package's current durable revision identity:
+// two distinct approved packages would otherwise stamp the same revision onto
+// their generated rows. Project 09 resolved the collision by issuing this package
+// its own durable identity,
+//
+//   P09-PT-LEARNING-SPOTLIGHT-START-CV-2026-09-14-r1
+//
+// and demoting the two P03 labels to explicit historical provenance fields on the
+// package (`legacy_recovered_revision_label`, `legacy_previous_revision_label`,
+// `legacy_recovered_from`, `provenance_status`). The demotion is a provenance-only
+// reconciliation: the ruling is START_CV_ROWS_CHANGED = 0, and all 13 governed
+// EN/PT values remain byte-for-byte as Project 09 approved them. The legacy labels
+// are recorded as history and assert no equivalence with main's r15 package.
+//
+// The FILE slot stays r20. A file-slot name and a governed revision identity are
+// separate concerns, no validator ties them together, and renaming the file would
+// be churn outside this reconciliation.
+//
+// Same strictly additive lane as r13/r14/r15: every key must be new, under this
+// record's own canonical training.record.start-cv.* namespace, and the package
+// may never reopen an approved key. The outgoing Myrtle record keeps all of its
+// approved rows untouched — the rotation withdraws only its spotlight
+// presentation treatment in data/training-opportunities.json, which is not a
+// locale-overlay concern.
+//
+// Applied BEFORE the r10 rename so the post-condition below (no migrated record
+// may retain a legacy home.training.record.* key) still sees the complete key
+// table. start-cv has no legacy namespace to migrate: it is authored directly
+// on the canonical namespace, which is why it is absent from the r10 manifest.
+const EXPECTED_DELTA20 = {
+  package_id: "aprasa-pt-start-cv-learning-spotlight-r15-delta",
+  revision_class: "ADDITIVE_NEW_KEYS",
+  source_revision: "P09-PT-LEARNING-SPOTLIGHT-START-CV-2026-09-14-r1",
+  legacy_recovered_revision_label: "P03-PT-SOURCE-2026-09-07-r15",
+  legacy_previous_revision_label: "P03-PT-SOURCE-2026-09-06-r14",
+  legacy_recovered_from_branch: "origin/feature/learning-spotlight-start-cv-2026-09-v1",
+  legacy_recovered_from_commit: "fce564558bbf4ef40943dfe050c53acc7a1b5848",
+  record_id: "start-cv",
+  row_count: 13,
+  approved: 13,
+  required_for_pt_launch: 13,
+  intentionally_unchanged: 0,
+  review_required: 0,
+};
+
+const delta20 = JSON.parse(readFileSync(DELTA20_PATH, "utf8"));
+
+for (const field of [
+  "package_id",
+  "revision_class",
+  "source_revision",
+  "legacy_recovered_revision_label",
+  "legacy_previous_revision_label",
+]) {
+  if (delta20[field] !== EXPECTED_DELTA20[field]) {
+    fail(`r20 ${field} mismatch: got ${JSON.stringify(delta20[field])}, expected ${JSON.stringify(EXPECTED_DELTA20[field])}`);
+  }
+}
+// The current durable identity must be this package's alone. A package that
+// re-adopts the recovered P03 label would stamp main's r15 revision onto these
+// rows again, which is exactly the collision the 14 September ruling resolved.
+if (delta20.source_revision === EXPECTED_DELTA20.legacy_recovered_revision_label) {
+  fail(`r20 source_revision must be the durable P09 identity, not the legacy recovered label ${JSON.stringify(EXPECTED_DELTA20.legacy_recovered_revision_label)}`);
+}
+// `previous_revision` is retired for this package: its chain is recorded in the
+// legacy_* provenance fields, so a reintroduced chain field would be ambiguous.
+if ("previous_revision" in delta20) {
+  fail(`r20 must not declare previous_revision; the legacy chain is recorded in legacy_previous_revision_label`);
+}
+if (delta20.legacy_recovered_from?.branch !== EXPECTED_DELTA20.legacy_recovered_from_branch) {
+  fail(`r20 legacy_recovered_from.branch mismatch: got ${JSON.stringify(delta20.legacy_recovered_from?.branch)}`);
+}
+if (delta20.legacy_recovered_from?.commit !== EXPECTED_DELTA20.legacy_recovered_from_commit) {
+  fail(`r20 legacy_recovered_from.commit mismatch: got ${JSON.stringify(delta20.legacy_recovered_from?.commit)}`);
+}
+if (typeof delta20.provenance_status !== "string" || delta20.provenance_status.trim() === "") {
+  fail(`r20 must record provenance_status describing the legacy label's historical-only standing`);
+}
+if (delta20.project_09_status !== "approved") {
+  fail(`r20 Project 09 status is not approved: ${JSON.stringify(delta20.project_09_status)}`);
+}
+if (delta20.project_09_verdict !== "READY_FOR_PROJECT_04_IMPLEMENTATION") {
+  fail(`r20 Project 09 verdict is not implementation-ready: ${JSON.stringify(delta20.project_09_verdict)}`);
+}
+if (JSON.stringify(delta20.affected_records) !== JSON.stringify([EXPECTED_DELTA20.record_id])) {
+  fail(`r20 affected_records must be exactly ${JSON.stringify([EXPECTED_DELTA20.record_id])}, got ${JSON.stringify(delta20.affected_records)}`);
+}
+if (!Array.isArray(delta20.rows) || delta20.rows.length !== EXPECTED_DELTA20.row_count) {
+  fail(`r20 row count mismatch: got ${delta20.rows?.length}, expected ${EXPECTED_DELTA20.row_count}`);
+}
+if (delta20.supplied_rows_approved !== EXPECTED_DELTA20.approved) {
+  fail(`r20 supplied_rows_approved mismatch: got ${delta20.supplied_rows_approved}`);
+}
+if (delta20.review_required !== EXPECTED_DELTA20.review_required || delta20.semantic_escalations_required !== 0 || delta20.blocking_issue != null) {
+  fail(`r20 has unresolved localization review state`);
+}
+if (delta20.missing_or_unaccounted_row_count !== 0) {
+  fail(`r20 missing_or_unaccounted_row_count is non-zero: ${delta20.missing_or_unaccounted_row_count}`);
+}
+for (const listField of ["duplicate_keys", "placeholder_mismatches", "a_prasa_to_a_praca_violations"]) {
+  if ((delta20[listField] || []).length !== 0) fail(`r20 ${listField} is non-empty: ${JSON.stringify(delta20[listField])}`);
+}
+if (delta20.source_english_changed !== false || delta20.change_control_status?.existing_keys_overridden !== 0) {
+  fail(`r20 declares a non-additive change (source_english_changed/existing_keys_overridden)`);
+}
+if (delta20.change_control_status?.new_keys_introduced !== EXPECTED_DELTA20.row_count) {
+  fail(`r20 new_keys_introduced mismatch: got ${delta20.change_control_status?.new_keys_introduced}`);
+}
+if (delta20.change_control_status?.lifecycle_or_publication_state_modified !== 0) {
+  fail(`r20 must not modify lifecycle or publication state`);
+}
+if (delta20.change_control_status?.protected_identities_modified !== 0) {
+  fail(`r20 must not modify protected identities`);
+}
+
+let delta20Required = 0;
+let delta20Unchanged = 0;
+for (const row of delta20.rows) {
+  if (seen.has(row.key)) {
+    fail(`r20 key "${row.key}" collides with an existing key — r20 must be strictly additive, never reopen an existing key`);
+  }
+  seen.add(row.key);
+
+  if (row.record_id !== EXPECTED_DELTA20.record_id) {
+    fail(`r20 key "${row.key}" declares record "${row.record_id}", outside the authorized record "${EXPECTED_DELTA20.record_id}"`);
+  }
+  if (!row.key.startsWith(`training.record.${EXPECTED_DELTA20.record_id}.`)) {
+    fail(`r20 key "${row.key}" is outside the authorized training.record.${EXPECTED_DELTA20.record_id}.* namespace`);
+  }
+  if (row.key.startsWith("home.training.record.")) {
+    fail(`r20 key "${row.key}" uses the retired home.training.record.* namespace`);
+  }
+  if (row.source_revision !== EXPECTED_DELTA20.source_revision) fail(`r20 ${row.key} source_revision mismatch`);
+  if (row.legacy_recovered_revision_label !== EXPECTED_DELTA20.legacy_recovered_revision_label) {
+    fail(`r20 ${row.key} legacy_recovered_revision_label mismatch`);
+  }
+  if (row.translation_status !== "APPROVED") fail(`r20 key "${row.key}" is not APPROVED (status: ${row.translation_status})`);
+
+  if (row.scope_status === "REQUIRED_FOR_PT_LAUNCH") delta20Required += 1;
+  else if (row.scope_status === "INTENTIONALLY_UNCHANGED") delta20Unchanged += 1;
+  else fail(`r20 key "${row.key}" has invalid scope_status`);
+
+  if (row.scope_status === "REQUIRED_FOR_PT_LAUNCH" && (row.pt == null || row.pt === "")) {
+    fail(`r20 REQUIRED_FOR_PT_LAUNCH key "${row.key}" has no PT value`);
+  }
+  if (!row.source_en) fail(`r20 key "${row.key}" is missing approved English text`);
+  const enPlaceholders = (row.source_en.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+  const ptPlaceholders = (row.pt.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+  if (JSON.stringify(enPlaceholders) !== JSON.stringify(ptPlaceholders)) {
+    fail(`r20 key "${row.key}" placeholder mismatch: en=${JSON.stringify(enPlaceholders)} pt=${JSON.stringify(ptPlaceholders)}`);
+  }
+  if ([row.source_en, row.pt].some((value) => value.includes("A PRAÇA"))) {
+    fail(`r20 key "${row.key}" violates protected A PRASA brand spelling`);
+  }
+  if (row.source_en.includes("A PRASA") && !row.pt.includes("A PRASA")) {
+    fail(`r20 key "${row.key}" drops the protected brand string A PRASA from its Portuguese value`);
+  }
+  // Provider identity is locale-independent: it is carried verbatim, never
+  // translated away, in every row that names it.
+  if (row.source_en.includes("Start CV") && !row.pt.includes("Start CV")) {
+    fail(`r20 key "${row.key}" drops the protected provider identity "Start CV" from its Portuguese value`);
+  }
+  // Project 03 omitted every total language count because the current
+  // first-party sources conflict between eight and nine. Neither locale may
+  // reintroduce one.
+  if (/\b(eight|nine|oito|nove)\b/i.test(`${row.source_en} ${row.pt}`)) {
+    fail(`r20 key "${row.key}" states a total language count, which Project 03 intentionally omitted`);
+  }
+
+  keys[row.key] = {
+    key: row.key,
+    en: row.source_en,
+    pt: row.pt,
+    scope_status: row.scope_status,
+    identity_policy: row.identity_policy,
+    record_id: row.record_id,
+    translation_status: row.translation_status,
+    source_revision: row.source_revision,
+    context_notes: row.context_notes || "",
+    linguistic_notes: row.linguistic_notes || "",
+  };
+}
+
+if (delta20Required !== EXPECTED_DELTA20.required_for_pt_launch) {
+  fail(`r20 required_for_pt_launch mismatch: got ${delta20Required}, expected ${EXPECTED_DELTA20.required_for_pt_launch}`);
+}
+if (delta20Unchanged !== EXPECTED_DELTA20.intentionally_unchanged) {
+  fail(`r20 intentionally_unchanged mismatch: got ${delta20Unchanged}, expected ${EXPECTED_DELTA20.intentionally_unchanged}`);
+}
+
 // --- r10 migration: ATOMIC namespace rename, applied last -------------------
 //
 // Project 09 approved moving the governed Home training presentation keys off
@@ -2233,6 +2435,7 @@ const output = {
       "data/locales/pt-overlay-r17-runtime-whatsapp-launcher.source.json",
       "data/locales/pt-overlay-r18-ui-scroll-down.source.json",
       "data/locales/pt-overlay-r19-runtime-whatsapp-prefill.source.json",
+      "data/locales/pt-overlay-r20-start-cv-learning-spotlight.source.json",
     ],
     base_revision: pkg.source_revision,
     delta_revision: delta.source_revision,
@@ -2276,6 +2479,15 @@ const output = {
     delta19_revision: delta19.source_revision,
     delta19_revision_class: delta19.revision_class,
     delta19_row_count: delta19.rows.length,
+    delta20_package_id: delta20.package_id,
+    delta20_revision: delta20.source_revision,
+    delta20_legacy_recovered_revision_label: delta20.legacy_recovered_revision_label,
+    delta20_legacy_previous_revision_label: delta20.legacy_previous_revision_label,
+    delta20_legacy_recovered_from: delta20.legacy_recovered_from,
+    delta20_provenance_status: delta20.provenance_status,
+    delta20_revision_class: delta20.revision_class,
+    delta20_row_count: delta20.rows.length,
+    delta20_affected_records: delta20.affected_records,
     delta9_superseding_ruling: delta9.superseding_ruling,
     delta9_owning_project: delta9.owning_project,
     event_delta_packages: eventDeltaPackages,
@@ -2321,6 +2533,7 @@ const output = {
     r17_delta_rows: delta17.rows.length,
     r18_delta_rows: delta18.rows.length,
     r19_delta_rows: delta19.rows.length,
+    r20_delta_rows: delta20.rows.length,
     r10_renamed_rows: r10Renamed.length,
     governed_override_rows: governedOverrideCount,
   },
