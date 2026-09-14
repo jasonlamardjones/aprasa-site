@@ -140,6 +140,39 @@ for (const record of manifest.records) {
     if (!record.fallback_reason) errors.push(`${label}: fallback requires fallback_reason`);
   }
 
+  // Regression guard: this validator has always confirmed a card's TITLE is
+  // present on a public surface, but never that its approved generic media
+  // treatment actually rendered there. An editorial-fallback training record
+  // shipped with a title on Home and no static .card-media/.dialog-media at
+  // all — its fallback existed only via prasa-launch.js's client-side
+  // injection — and this validator passed anyway. Checked here against the
+  // canonical marker region (the same one scripts/generate-training-
+  // opportunities.mjs owns), EN surface only, matching this validator's
+  // existing EN-only scope; PT coverage lives in
+  // scripts/test-training-opportunities-generator.mjs (PROBE 6).
+  if (record.media_type === 'editorial-fallback' && record.section === 'trainings-tools' && !isRemovedTrainingRecord) {
+    const canonicalId = canonicalTrainingByManifestTitle.get(record.title)?.id;
+    if (!canonicalId) {
+      errors.push(`${label}: editorial-fallback training record has no canonical id in ${path.relative(root, trainingPath)} to check for static fallback media`);
+    } else {
+      const beginMarker = `<!-- BEGIN GENERATED TRAINING: ${canonicalId} -->`;
+      const endMarker = `<!-- END GENERATED TRAINING: ${canonicalId} -->`;
+      const startIdx = html.indexOf(beginMarker);
+      const endIdx = html.indexOf(endMarker);
+      if (startIdx === -1 || endIdx === -1) {
+        errors.push(`${label}: no generated-training marker region found for ${canonicalId} to check for static fallback media`);
+      } else {
+        const regionHtml = html.slice(startIdx, endIdx);
+        if (!regionHtml.includes('<div class="card-media media-fallback" aria-hidden="true">')) {
+          errors.push(`${label}: editorial-fallback record ${canonicalId} is missing its static .card-media media-fallback block`);
+        }
+        if (!regionHtml.includes('<div class="dialog-media media-fallback" aria-hidden="true">')) {
+          errors.push(`${label}: editorial-fallback record ${canonicalId} is missing its static .dialog-media media-fallback block`);
+        }
+      }
+    }
+  }
+
   if (record.media_state === 'authentic-available-needs-ingestion' || record.media_state === 'fallback-temporary') {
     warnings.push(`${label}: media is not editorially complete (${record.media_state})`);
   }

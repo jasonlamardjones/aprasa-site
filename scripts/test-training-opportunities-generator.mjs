@@ -76,6 +76,21 @@ function setState(dir, id, state) {
   fs.writeFileSync(p, JSON.stringify(data, null, 2) + '\n');
 }
 
+// null deletes the field outright, to simulate a record with no linkage at
+// all (the pre-fix state Start CV and the China scholarship record actually
+// shipped in) rather than merely an empty string.
+function setMediaManifestTitle(dir, id, title) {
+  const p = path.join(dir, 'data', 'training-opportunities.json');
+  const data = JSON.parse(fs.readFileSync(p, 'utf8'));
+  const record = data.records.find((r) => r.id === id);
+  if (title === null) delete record.media_manifest_title;
+  else record.media_manifest_title = title;
+  fs.writeFileSync(p, JSON.stringify(data, null, 2) + '\n');
+}
+
+const CARD_MEDIA_COUNT = (html) => (html.match(/<div class="card-media(?:"|\s)/g) || []).length;
+const DIALOG_MEDIA_COUNT = (html) => (html.match(/<div class="dialog-media(?:"|\s)/g) || []).length;
+
 const MARKER_ONLY = (id) =>
   `        <!-- BEGIN GENERATED TRAINING: ${id} -->\n        <!-- END GENERATED TRAINING: ${id} -->`;
 
@@ -371,6 +386,119 @@ for (const removedState of ['EXPIRED', 'WITHDRAWN', 'SUPERSEDED']) {
     for (const locale of ['en', 'pt']) {
       check(`PROBE 5 (normal corpus): ${locale.toUpperCase()} drift check passes`, run(dir, locale).status === 0);
     }
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+// --- PROBE 6 — static editorial-fallback media for governed fallback records
+//
+// The defect these exist to prevent: an approved training record with no
+// provider media (media_type "editorial-fallback" in the manifest) rendered
+// with NO static .card-media/.dialog-media at all — the fallback existed
+// only as a client-side DOM injection by prasa-launch.js, so a no-JS, slow-JS
+// or blocked-JS page (and, live, whatever the founder actually saw) showed
+// nothing where the approved A PRASA fallback should be. These parse only
+// the generated static HTML — no script engine involved — so passing here is
+// itself proof of requirement K (no-JS/progressive enhancement).
+{
+  const FALLBACK_COPY = {
+    en: { label: 'Trainings, Tools &amp; Opportunities', note: 'A PRASA section thumbnail — not provider-specific imagery.' },
+    pt: { label: 'Formações, Ferramentas e Oportunidades', note: 'Miniatura da secção A PRASA — imagem não específica do prestador.' },
+  };
+  const FALLBACK_IDS = ['start-cv', 'unicv-china-ambassador-scholarship-2026'];
+
+  for (const id of FALLBACK_IDS) {
+    for (const locale of ['en', 'pt']) {
+      const dir = sandbox();
+      const written = run(dir, locale, ['--write']);
+      check(`PROBE 6 (${id}): ${locale.toUpperCase()} generation succeeds`, written.status === 0, written.stderr.trim());
+      const html = region(dir, locale, id);
+      check(`PROBE 6 (${id}): ${locale.toUpperCase()} region exists`, html !== null);
+
+      check(`PROBE 6 (${id}): ${locale.toUpperCase()} exactly one direct .card-media`, html !== null && CARD_MEDIA_COUNT(html) === 1);
+      check(`PROBE 6 (${id}): ${locale.toUpperCase()} exactly one direct .dialog-media`, html !== null && DIALOG_MEDIA_COUNT(html) === 1);
+      check(`PROBE 6 (${id}): ${locale.toUpperCase()} card fallback carries media-fallback + aria-hidden`,
+        html !== null && /<div class="card-media media-fallback" aria-hidden="true">/.test(html));
+      check(`PROBE 6 (${id}): ${locale.toUpperCase()} dialog fallback carries media-fallback + aria-hidden`,
+        html !== null && /<div class="dialog-media media-fallback" aria-hidden="true">/.test(html));
+      check(`PROBE 6 (${id}): ${locale.toUpperCase()} fallback symbol has alt=""`,
+        html !== null && (html.match(/A_PRASA_Symbol_v2_Primary_Green\.svg"[^>]*alt=""/g) || []).length === 2);
+      check(`PROBE 6 (${id}): ${locale.toUpperCase()} governed label present exactly twice (card + dialog)`,
+        html !== null && (html.match(new RegExp(`<span class="media-fallback-label">${FALLBACK_COPY[locale].label}</span>`, 'g')) || []).length === 2,
+        html ?? '');
+      check(`PROBE 6 (${id}): ${locale.toUpperCase()} governed note present exactly twice (card + dialog)`,
+        html !== null && (html.match(new RegExp(`<span class="media-fallback-note">${FALLBACK_COPY[locale].note.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}</span>`, 'g')) || []).length === 2,
+        html ?? '');
+
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  // Start CV must remain the sole Learning Spotlight, unaffected by the new
+  // media branch.
+  {
+    const dir = sandbox();
+    run(dir, 'en', ['--write']);
+    const html = fs.readFileSync(homePath(dir, 'en'), 'utf8');
+    const spotlightCards = (html.match(/data-learning-spotlight="[^"]+"/g) || []);
+    check('PROBE 6: exactly one Learning Spotlight record',
+      spotlightCards.length === 1 && spotlightCards[0] === 'data-learning-spotlight="start-cv"', JSON.stringify(spotlightCards));
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+
+  // Myrtle is provider-owned (its real photo is injected at runtime by
+  // prasa-launch.js's providerMedia map, keyed by title) and must NOT gain
+  // any static fallback merely because it also has no record.media.
+  {
+    const dir = sandbox();
+    run(dir, 'en', ['--write']);
+    const html = region(dir, 'en', 'myrtle');
+    check('PROBE 6 (myrtle): still has no static .card-media/.dialog-media of any kind',
+      html !== null && CARD_MEDIA_COUNT(html) === 0 && DIALOG_MEDIA_COUNT(html) === 0, html ?? '');
+    check('PROBE 6 (myrtle): no media-fallback markup added', html !== null && !html.includes('media-fallback'), html ?? '');
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+
+  // A record with real record.media (academia-crescer) keeps rendering its
+  // own poster media, untouched by the new fallback branch.
+  {
+    const dir = sandbox();
+    run(dir, 'en', ['--write']);
+    const html = region(dir, 'en', 'academia-crescer');
+    check('PROBE 6 (academia-crescer): exactly one direct .card-media', html !== null && CARD_MEDIA_COUNT(html) === 1);
+    check('PROBE 6 (academia-crescer): exactly one direct .dialog-media', html !== null && DIALOG_MEDIA_COUNT(html) === 1);
+    check('PROBE 6 (academia-crescer): renders its own poster asset, not the fallback symbol',
+      html !== null && html.includes('academia-crescer-recruitment-2026-2027.webp') && !html.includes('media-fallback'), html ?? '');
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+
+  // GUARD — record.media absent is NEVER sufficient by itself. Point Start
+  // CV's linkage at a real manifest entry whose media_type is NOT
+  // "editorial-fallback" (a provider-owned record) and confirm no fallback
+  // is emitted, proving the generator checks media_type and not just the
+  // presence of some media_manifest_title.
+  {
+    const dir = sandbox();
+    setMediaManifestTitle(dir, 'start-cv', 'Myrtle Atividades Educativas');
+    const written = run(dir, 'en', ['--write']);
+    check('PROBE 6 (guard: wrong media_type): generation still succeeds', written.status === 0, written.stderr.trim());
+    const html = region(dir, 'en', 'start-cv');
+    check('PROBE 6 (guard: wrong media_type): no fallback emitted for a provider-owned linkage',
+      html !== null && !html.includes('media-fallback'), html ?? '');
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+
+  // GUARD — the pre-fix shape (media_manifest_title entirely absent) must
+  // also emit no fallback, proving the branch requires an explicit governed
+  // linkage rather than defaulting to fallback whenever record.media is null.
+  {
+    const dir = sandbox();
+    setMediaManifestTitle(dir, 'start-cv', null);
+    const written = run(dir, 'en', ['--write']);
+    check('PROBE 6 (guard: no linkage at all): generation still succeeds', written.status === 0, written.stderr.trim());
+    const html = region(dir, 'en', 'start-cv');
+    check('PROBE 6 (guard: no linkage at all): no fallback emitted with media_manifest_title absent',
+      html !== null && !html.includes('media-fallback'), html ?? '');
     fs.rmSync(dir, { recursive: true, force: true });
   }
 }

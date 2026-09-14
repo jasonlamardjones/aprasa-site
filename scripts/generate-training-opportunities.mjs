@@ -11,6 +11,9 @@
 // Source of truth chain (do not invert):
 //   data/training-opportunities.json  — structure, identity, provenance, linkage
 //   data/locales/locale-data.generated.json — every presentation string
+//   internal/provider-media-manifest.json — read-only: which media_manifest_title
+//     records are governed media_type "editorial-fallback" (record.media
+//     absent is never itself sufficient to render the static generic fallback)
 //
 // The data file carries NO copy of its own: every rendered string is a
 // reference into the governed Project 09 overlay under the canonical
@@ -39,6 +42,14 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
 
 const DATA_PATH = path.join(root, 'data', 'training-opportunities.json');
+// Read-only cross-reference. A record with no record.media of its own is
+// authorized to receive the generic A PRASA editorial-fallback treatment
+// ONLY when its media_manifest_title resolves here to media_type
+// "editorial-fallback" — never merely because record.media is absent, which
+// is also true of every legacy record whose real photo is still injected at
+// runtime by prasa-launch.js's own providerMedia map (Myrtle, HP LIFE, ...).
+const MANIFEST_PATH = path.join(root, 'internal', 'provider-media-manifest.json');
+const FALLBACK_SYMBOL_ASSET = 'assets/brand/A_PRASA_Symbol_v2_Primary_Green.svg';
 const DEFAULT_HOME = { en: 'index.html', pt: path.join('pt', 'index.html') };
 
 function fail(msg) {
@@ -144,6 +155,38 @@ function mediaBlock(media, className, indent, where) {
   return [`${indent}<div class="${className}">`, `${indent}  ${img}`, `${indent}</div>`];
 }
 
+// Governed generic fallback copy is locale-wide, not per-record, and every
+// approved value is already required for PT launch — resolved once and
+// memoized rather than re-resolved (and re-risking a thrown lookup) per record.
+let fallbackCopyCache = null;
+function fallbackCopy() {
+  if (!fallbackCopyCache) {
+    fallbackCopyCache = {
+      label: t('home.training.title', locale),
+      note: t('system.media_fallback.section_note', locale),
+    };
+  }
+  return fallbackCopyCache;
+}
+
+// Static counterpart of prasa-launch.js's createEditorialFallback(): the same
+// DOM shape (aria-hidden region, A PRASA symbol, label, note), so a page
+// with JavaScript disabled or not yet run already shows the approved generic
+// fallback exactly as governed, rather than nothing.
+function editorialFallbackBlock(className, indent) {
+  const { label, note } = fallbackCopy();
+  const img = `<img src="${escAttr(assetPrefix + FALLBACK_SYMBOL_ASSET)}" width="725" height="725" alt="">`;
+  return [
+    `${indent}<div class="${className} media-fallback" aria-hidden="true">`,
+    `${indent}  <div class="media-fallback-inner">`,
+    `${indent}    ${img}`,
+    `${indent}    <span class="media-fallback-label">${esc(label)}</span>`,
+    `${indent}    <span class="media-fallback-note">${esc(note)}</span>`,
+    `${indent}  </div>`,
+    `${indent}</div>`,
+  ];
+}
+
 function actionTags(tags, indent, where) {
   if (!tags || !tags.length) return [];
   const spans = tags.map((tg, i) => `<span>${esc(text(tg, `${where} tag[${i}]`))}</span>`).join('');
@@ -160,6 +203,7 @@ function renderCard(record) {
 
   lines.push(`        <article class="resource-card"${attrString(card.attributes)}>`);
   if (record.media) lines.push(...mediaBlock(record.media, record.media.card_class, I, where));
+  else if (needsEditorialFallback(record)) lines.push(...editorialFallbackBlock('card-media', I));
   if (card.spotlight_label) lines.push(`${I}<p class="spotlight-label">${esc(text(card.spotlight_label, `${where} spotlight`))}</p>`);
   lines.push(...actionTags(card.action_tags, I, where));
   lines.push(`${I}<p class="card-status">${esc(text(card.status, `${where} status`))}</p>`);
@@ -196,6 +240,7 @@ function renderDetail(record) {
   const lines = [];
 
   if (record.media) lines.push(...mediaBlock(record.media, record.media.detail_class, I, where));
+  else if (needsEditorialFallback(record)) lines.push(...editorialFallbackBlock('dialog-media', I));
   if (d.spotlight_label) lines.push(`${I}<p class="spotlight-label">${esc(text(d.spotlight_label, `${where} spotlight`))}</p>`);
   lines.push(...actionTags(d.action_tags, I, where));
   lines.push(`${I}<p class="provider">${esc(record.provider)}</p>`);
@@ -261,6 +306,27 @@ function renderRegion(record) {
 
 const data = JSON.parse(fs.readFileSync(DATA_PATH, 'utf8'));
 if (data.version !== 1) fail(`unsupported data version ${data.version}`);
+
+// Same manifest scripts/validate-training-opportunities-data.mjs and
+// scripts/validate-card-media.mjs already read; keyed by title exactly as
+// prasa-launch.js's own runtime providerMedia map is.
+const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
+const manifestMediaTypeByTitle = new Map(manifest.records.map((r) => [r.title, r.media_type]));
+
+// A record qualifies for the static generic fallback only when it has no
+// record.media of its own AND its governed manifest entry is explicitly
+// media_type "editorial-fallback". record.media absent is NOT sufficient by
+// itself: several CURRENT records (Myrtle, HP LIFE, OpenLearn, IEFP PEPE,
+// IEFP training, IBM SkillsBuild, Microsoft Learn) also carry no
+// record.media because their real provider photo is still injected at
+// runtime by prasa-launch.js's own providerMedia map, and must render
+// exactly as before.
+function needsEditorialFallback(record) {
+  if (record.media) return false;
+  const title = record.media_manifest_title;
+  if (typeof title !== 'string') return false;
+  return manifestMediaTypeByTitle.get(title) === 'editorial-fallback';
+}
 
 // Publication state drives what a record's marker region CONTAINS, never
 // whether the generator looks at that region at all. Every canonical record is
