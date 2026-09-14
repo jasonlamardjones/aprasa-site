@@ -29,7 +29,8 @@
       "data/locales/pt-overlay-r16-provider-media-alt.source.json",
       "data/locales/pt-overlay-r17-runtime-whatsapp-launcher.source.json",
       "data/locales/pt-overlay-r18-ui-scroll-down.source.json",
-      "data/locales/pt-overlay-r19-runtime-whatsapp-prefill.source.json"
+      "data/locales/pt-overlay-r19-runtime-whatsapp-prefill.source.json",
+      "data/locales/pt-overlay-r20-start-cv-learning-spotlight.source.json"
     ],
     "base_revision": "P03-PT-SOURCE-2026-08-25-r2",
     "delta_revision": "P03-PT-SOURCE-2026-08-25-r3",
@@ -73,6 +74,13 @@
     "delta19_revision": "P09-PT-RUNTIME-WHATSAPP-PREFILL-2026-09-13-r1",
     "delta19_revision_class": "ADDITIVE_RUNTIME_KEYS",
     "delta19_row_count": 4,
+    "delta20_package_id": "aprasa-pt-start-cv-learning-spotlight-r15-delta",
+    "delta20_revision": "P03-PT-SOURCE-2026-09-07-r15",
+    "delta20_revision_class": "ADDITIVE_NEW_KEYS",
+    "delta20_row_count": 13,
+    "delta20_affected_records": [
+      "start-cv"
+    ],
     "delta9_superseding_ruling": "P03-SINERGIA-CURRENTNESS-2026-09-01",
     "delta9_owning_project": "Project 03",
     "event_delta_packages": [
@@ -132,10 +140,10 @@
     "governed_override_authorization": "fixed code-side contract in scripts/build-locale-data.mjs (GOVERNED_OVERRIDE_CONTRACTS)"
   },
   "counts": {
-    "total_rows": 994,
-    "required_for_pt_launch": 966,
+    "total_rows": 1007,
+    "required_for_pt_launch": 979,
     "intentionally_unchanged": 28,
-    "approved_rows_total": 994,
+    "approved_rows_total": 1007,
     "r3_delta_rows": 21,
     "r4_delta_rows": 26,
     "r5_delta_rows": 2,
@@ -148,6 +156,7 @@
     "r17_delta_rows": 8,
     "r18_delta_rows": 1,
     "r19_delta_rows": 4,
+    "r20_delta_rows": 13,
     "r10_renamed_rows": 76,
     "governed_override_rows": 6
   },
@@ -11956,6 +11965,162 @@
       "source_revision": "P04-MEDIA-ALT-2026-09-11-r16",
       "context_notes": "Informative alt text for the authentic founder-supplied Uni-CV/CIGEF REGEA artwork used on the EN/PT Home card and Details dialog.",
       "linguistic_notes": "States both date ranges visible in the artwork so the extension is not obscured."
+    },
+    "training.record.start-cv.title": {
+      "key": "training.record.start-cv.title",
+      "en": "Language Courses at Start CV",
+      "pt": "Cursos de Línguas na Start CV",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "start-cv",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
+      "context_notes": "Home Learning Spotlight card and detail presentation for the Start CV language-course record.",
+      "linguistic_notes": "Provider identity \"Start CV\" is preserved verbatim; only the surrounding phrase is translated."
+    },
+    "training.record.start-cv.status": {
+      "key": "training.record.start-cv.status",
+      "en": "Language-course intake currently available",
+      "pt": "Candidaturas e pedidos de informação para cursos de línguas atualmente disponíveis",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "start-cv",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
+      "context_notes": "Home Learning Spotlight card and detail presentation for the Start CV language-course record.",
+      "linguistic_notes": "Preserves the narrow intake meaning: an application/enquiry can currently be submitted. It does not state that every listed course, level or class currently has places."
+    },
+    "training.record.start-cv.meta": {
+      "key": "training.record.start-cv.meta",
+      "en": "Madeiralzinho, Mindelo · In person, online and hybrid",
+      "pt": "Madeiralzinho, Mindelo · Presencial, online e híbrido",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "start-cv",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
+      "context_notes": "Home Learning Spotlight card and detail presentation for the Start CV language-course record.",
+      "linguistic_notes": "Place names Madeiralzinho and Mindelo are locale-independent and carried verbatim."
+    },
+    "training.record.start-cv.body": {
+      "key": "training.record.start-cv.body",
+      "en": "Start CV offers language courses in English, French, German, Dutch, Italian, Spanish, Portuguese and Cape Verdean Creole (Kriolu) from its language school in Mindelo.",
+      "pt": "A Start CV oferece cursos de inglês, francês, alemão, neerlandês, italiano, espanhol, português e crioulo cabo-verdiano (Kriolu) na sua escola de línguas em Mindelo.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "start-cv",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
+      "context_notes": "Home Learning Spotlight card and detail presentation for the Start CV language-course record. Card summary body.",
+      "linguistic_notes": "\"neerlandês\" is the European-Portuguese language name for Dutch. \"crioulo cabo-verdiano (Kriolu)\" preserves the general Cape Verdean Creole identification without assigning an island variety the source does not establish. No total number of languages is stated in either locale."
+    },
+    "training.record.start-cv.details_1": {
+      "key": "training.record.start-cv.details_1",
+      "en": "Start CV provides language courses from Rua Humberto Fonseca in Madeiralzinho, Mindelo.",
+      "pt": "A Start CV oferece cursos de línguas a partir da Rua Humberto Fonseca, em Madeiralzinho, Mindelo.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "start-cv",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
+      "context_notes": "Home Learning Spotlight card and detail presentation for the Start CV language-course record. Detail body paragraph 1 of 4.",
+      "linguistic_notes": "Street and place identity (Rua Humberto Fonseca, Madeiralzinho, Mindelo) carried verbatim."
+    },
+    "training.record.start-cv.details_2": {
+      "key": "training.record.start-cv.details_2",
+      "en": "Current first-party course information lists English, French, German, Dutch, Italian, Spanish, Portuguese and Cape Verdean Creole (Kriolu). The provider states that courses may be delivered in person, online or in a hybrid format.",
+      "pt": "A informação atual disponibilizada diretamente pelo prestador apresenta cursos de inglês, francês, alemão, neerlandês, italiano, espanhol, português e crioulo cabo-verdiano (Kriolu). A Start CV indica que os cursos podem ser ministrados presencialmente, online ou em formato híbrido.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "start-cv",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
+      "context_notes": "Home Learning Spotlight card and detail presentation for the Start CV language-course record. Detail body paragraph 2 of 4.",
+      "linguistic_notes": "Attribution to the provider is preserved in both locales; no delivery mode is asserted beyond what the provider states. No total number of languages is stated."
+    },
+    "training.record.start-cv.details_3": {
+      "key": "training.record.start-cv.details_3",
+      "en": "A current application form is available for prospective learners to provide their preferred course, start date, level and study frequency.",
+      "pt": "Está disponível um formulário de candidatura atual para que potenciais alunos indiquem o curso pretendido, a data de início preferida, o nível e a frequência de estudo.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "start-cv",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
+      "context_notes": "Home Learning Spotlight card and detail presentation for the Start CV language-course record. Detail body paragraph 3 of 4.",
+      "linguistic_notes": "Describes what the form collects. It does not state that a preferred course, start date, level or frequency is accepted or available."
+    },
+    "training.record.start-cv.contact_instruction": {
+      "key": "training.record.start-cv.contact_instruction",
+      "en": "Contact Start CV directly for current course availability, scheduling, fees and enrollment arrangements.",
+      "pt": "Contacte diretamente a Start CV para confirmar a disponibilidade atual dos cursos, horários, propinas e condições de inscrição.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "start-cv",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
+      "context_notes": "Home Learning Spotlight card and detail presentation for the Start CV language-course record. Detail body paragraph 4 of 4, immediately preceding the governed contact block.",
+      "linguistic_notes": "Directs the reader to the provider for the facts the spotlight deliberately does not assert."
+    },
+    "training.record.start-cv.good_1": {
+      "key": "training.record.start-cv.good_1",
+      "en": "The presence of a live application form means Start CV is currently accepting course enquiries/applications. It does not confirm that a particular language, level, class time or preferred start date has an available place.",
+      "pt": "A existência de um formulário de candidatura ativo significa que a Start CV está atualmente a receber candidaturas e pedidos de informação sobre os cursos. Isto não confirma que exista vaga disponível para uma determinada língua, nível, horário ou data de início pretendida.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "start-cv",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
+      "context_notes": "Home Learning Spotlight card and detail presentation for the Start CV language-course record. Good-to-know paragraph 1 of 2.",
+      "linguistic_notes": "Carries the governed intake semantics: an active form evidences intake, never guaranteed enrolment, a guaranteed place, a confirmed start date or acceptance of a preferred level or frequency."
+    },
+    "training.record.start-cv.good_2": {
+      "key": "training.record.start-cv.good_2",
+      "en": "Course fees, general course lengths and published class schedules are not established in the current source information. Confirm current arrangements directly with Start CV before enrolling.",
+      "pt": "As propinas, a duração geral dos cursos e os horários das aulas publicados não estão estabelecidos na informação atualmente disponível. Confirme diretamente com a Start CV as condições atuais antes de se inscrever.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "start-cv",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
+      "context_notes": "Home Learning Spotlight card and detail presentation for the Start CV language-course record. Good-to-know paragraph 2 of 2.",
+      "linguistic_notes": "States what the current evidence does not establish. No fee, duration or timetable is introduced in either locale."
+    },
+    "training.record.start-cv.checked": {
+      "key": "training.record.start-cv.checked",
+      "en": "Checked 7 September 2026 against Start CV's official website, current course listings, live application form and contact information, with recent first-party Facebook activity used as an additional currentness signal.",
+      "pt": "Revisto em 7 de setembro de 2026 com base no site oficial da Start CV, na lista atual de cursos, no formulário de candidatura ativo e nas informações de contacto, utilizando também atividade recente da própria Start CV no Facebook como sinal adicional de atualidade.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "start-cv",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
+      "context_notes": "Home Learning Spotlight card and detail presentation for the Start CV language-course record. Provenance/currentness line.",
+      "linguistic_notes": "Date rendered in the European-Portuguese long form. \"Facebook\" is a locale-independent platform identity."
+    },
+    "training.record.start-cv.action": {
+      "key": "training.record.start-cv.action",
+      "en": "View language courses",
+      "pt": "Ver cursos de línguas",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "start-cv",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
+      "context_notes": "Home Learning Spotlight card and detail presentation for the Start CV language-course record. Card and detail external action label for https://startcv.cv/courses/.",
+      "linguistic_notes": "Neutral navigational label; it makes no availability or enrolment promise."
+    },
+    "training.record.start-cv.disclosure": {
+      "key": "training.record.start-cv.disclosure",
+      "en": "Learning Spotlight is an independent A PRASA editorial selection. Inclusion does not mean A PRASA operates, accredits, certifies, endorses or sponsors this provider.",
+      "pt": "O Destaque de Aprendizagem é uma seleção editorial independente da A PRASA. A inclusão não significa que a A PRASA opere este prestador, lhe atribua acreditação ou certificação, o recomende ou patrocine.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "start-cv",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-09-07-r15",
+      "context_notes": "Home Learning Spotlight card and detail presentation for the Start CV language-course record. Learning Spotlight editorial disclosure, rendered on both the card and the detail dialog.",
+      "linguistic_notes": "Harmonized per Project 09 decision DESTAQUE_DE_APRENDIZAGEM_HARMONIZED: translates \"Learning Spotlight\" to \"Destaque de Aprendizagem\" in running text, aligning with the card label key spotlight.learning.label. Protected brand string A PRASA is preserved verbatim."
     },
     "runtime.whatsapp_launcher.header": {
       "key": "runtime.whatsapp_launcher.header",

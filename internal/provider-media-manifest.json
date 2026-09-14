@@ -186,6 +186,22 @@
     },
     {
       "section": "trainings-tools",
+      "title": "Language Courses at Start CV",
+      "provider": "Start CV",
+      "source_url": "https://startcv.cv/courses/",
+      "media_type": "editorial-fallback",
+      "media_state": "fallback-final",
+      "media_source": null,
+      "media_asset": null,
+      "fallback_category": "opportunities-learning-general",
+      "fallback_reason": "Project 03 media ruling of 07 September 2026 for the Start CV Learning Spotlight: the governed editorial fallback is used unless first-party Start CV imagery is separately cleared for A PRASA republication. Public availability of imagery on Start CV's website or social accounts does not by itself establish republication rights, so no provider imagery was ingested, no logo was scraped, and no provider-specific media or alt text was created. Absence of cleared provider imagery does not block the Learning Spotlight selection.",
+      "media_provenance": null,
+      "media_asset_source_url": null,
+      "media_checked_date": "2026-09-07",
+      "media_alt": null
+    },
+    {
+      "section": "trainings-tools",
       "title": "Myrtle Atividades Educativas",
       "provider": "Myrtle Atividades Educativas",
       "source_url": "https://myrtleducativas.com/",
@@ -419,7 +435,7 @@
       "media_asset": "assets/card-media/organizations-help/simabo-volunteer-leaflet.png",
       "fallback_category": "help-volunteer",
       "fallback_reason": null,
-      "media_provenance": "Volunteer leaflet supplied directly by Silvia (Simabo) on 27 August 2026 and explicitly authorized for A PRASA use as current Simabo volunteer supporting/promotional media. Ingested byte-for-byte as supplied (1035 \u00d7 1600 PNG, not re-encoded, not cropped). It is the main provider image for this record: shown contained on the compact card via the existing card-media-poster pattern and full-width in the Details dialog, where the leaflet text is readable. The dog/cat mark inside the leaflet is part of the leaflet artwork only \u2014 it is NOT separately authorized, and no standalone Simabo logo asset was extracted or created. No unrelated Simabo photography is authorized by this grant.",
+      "media_provenance": "Volunteer leaflet supplied directly by Silvia (Simabo) on 27 August 2026 and explicitly authorized for A PRASA use as current Simabo volunteer supporting/promotional media. Ingested byte-for-byte as supplied (1035 × 1600 PNG, not re-encoded, not cropped). It is the main provider image for this record: shown contained on the compact card via the existing card-media-poster pattern and full-width in the Details dialog, where the leaflet text is readable. The dog/cat mark inside the leaflet is part of the leaflet artwork only — it is NOT separately authorized, and no standalone Simabo logo asset was extracted or created. No unrelated Simabo photography is authorized by this grant.",
       "media_asset_source_url": null,
       "media_checked_date": "2026-08-27",
       "media_alt": "Simabo volunteer leaflet: volunteer at our shelters — walk our dogs or hang out with the cats. Visit the dog shelter every day from 7 am to 1 pm or 1 pm to 6:30 pm; hang out with the cats from 9 am to 6 pm in the office building."
