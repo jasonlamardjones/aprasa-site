@@ -60,7 +60,25 @@ jobs:
           path: ${{ runner.temp }}/qa-input
           merge-multiple: true
 
+      # STEP timeout, deliberately lower than the JOB timeout above.
+      #
+      # A job-level timeout cancels the JOB, and a cancelled job does not go on
+      # to evaluate later steps — so an adapter that hung until the 15-minute
+      # ceiling would take the durable failure reporter down with it, leaving
+      # hang-to-timeout as the one silent failure mode in a tranche whose whole
+      # purpose is that Phase 2B stops failing silently.
+      #
+      # Capping the adapter at 10 minutes makes that timeout a STEP failure
+      # instead: the step fails, the job is still alive with roughly five
+      # minutes of reserved budget, and `if: failure()` below therefore runs and
+      # records the signal. The job's 15 minutes stays as the outer ceiling for
+      # anything this cap does not catch.
+      #
+      # Keep this strictly below the job timeout. The Phase 2B unit suite
+      # asserts that relationship on this file, so narrowing the gap to zero
+      # fails the tests rather than silently removing the reporter's headroom.
       - name: Run bounded Phase 2B remediation adapter
+        timeout-minutes: 10
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

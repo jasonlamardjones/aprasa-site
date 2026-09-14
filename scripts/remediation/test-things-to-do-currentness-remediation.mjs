@@ -793,6 +793,48 @@ assert.ok(
 assert.equal(remediationWorkflow.split('report-phase2b-failure.mjs').length - 1, 1);
 // Issue text is the whole of the added authority.
 assert.ok(remediationWorkflow.includes('issues: write'));
+
+// --- The durable reporter must have execution budget left to run ----------
+//
+// A job-level timeout cancels the JOB, and a cancelled job does not evaluate
+// later steps, so an adapter that hung to the job ceiling would take the
+// failure reporter down with it — leaving hang-to-timeout as the one silent
+// failure mode in a tranche whose whole point is that Phase 2B stops failing
+// silently. The adapter therefore carries a STEP timeout strictly below the
+// job's, which turns that hang into a step failure with budget to spare.
+//
+// Parsed as NUMBERS and compared, rather than matched as phrases: changing
+// either value, or closing the gap between them, fails here. No YAML parser is
+// added for this — the workflow source is read as text, as the other workflow
+// assertions in this suite already do.
+const jobTimeoutMatch = remediationWorkflow.match(/^\s{4}timeout-minutes:\s*(\d+)\s*$/m);
+assert.ok(jobTimeoutMatch, 'the remediate job must declare a timeout');
+const jobTimeout = Number(jobTimeoutMatch[1]);
+assert.equal(jobTimeout, 15, 'the job timeout is the outer ceiling and stays at 15');
+
+const adapterStepIndex = remediationWorkflow.indexOf('- name: Run bounded Phase 2B remediation adapter');
+const reporterStepIndex = remediationWorkflow.indexOf('- name: Record durable Phase 2B failure signal');
+assert.ok(adapterStepIndex > -1, 'the adapter step must exist');
+assert.ok(reporterStepIndex > -1, 'the durable reporter step must exist');
+assert.ok(adapterStepIndex < reporterStepIndex,
+  'the durable reporter must FOLLOW the adapter, or it cannot observe its failure');
+
+// The step timeout must belong to the adapter step, so read it from that step's
+// own body rather than from anywhere in the file.
+const adapterStepBody = remediationWorkflow.slice(adapterStepIndex, reporterStepIndex);
+const adapterTimeoutMatch = adapterStepBody.match(/^\s{8}timeout-minutes:\s*(\d+)\s*$/m);
+assert.ok(adapterTimeoutMatch, 'the adapter step must declare its own timeout');
+const adapterTimeout = Number(adapterTimeoutMatch[1]);
+assert.equal(adapterTimeout, 10, 'the adapter step timeout stays at 10');
+assert.ok(adapterTimeout < jobTimeout,
+  `the adapter timeout (${adapterTimeout}) must be strictly below the job timeout (${jobTimeout}), or a hang cancels the job before the reporter runs`);
+assert.ok(jobTimeout - adapterTimeout >= 1,
+  'there must be reserved job budget left for the reporter after the adapter is cut off');
+
+// And the reporter stays failure-gated, so a green run still creates nothing.
+const reporterStepBody = remediationWorkflow.slice(reporterStepIndex);
+assert.ok(/^\s{8}if:\s*failure\(\)\s*$/m.test(reporterStepBody),
+  'the durable reporter must remain gated on failure()');
 // The Phase 2B test workflow must not gate on a path list: the integration suite
 // drives build-all, whose children and their transitive inputs can move the
 // derived write set or Home containment without touching scripts/remediation/.
