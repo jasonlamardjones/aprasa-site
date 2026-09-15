@@ -8,10 +8,7 @@
       "provider": "Centro Cultural do Mindelo",
       "summary": "PART_ILHAS is a ciclo de conversas (conversation series) featuring filmmaker and photographer Nuno Miranda at Centro Cultural do Mindelo.",
       "category": "culture",
-      "location": {
-        "name": "Centro Cultural do Mindelo",
-        "locality": "Mindelo"
-      },
+      "location": {"name": "Centro Cultural do Mindelo", "locality": "Mindelo"},
       "source_url": "https://www.agendacultural.cv/eventos/part-ilhas-ciclo-de-conversas-com-o-cineasta-fotografo-nuno-miranda-no-centro-cultural-do-mindelo",
       "source_type": "official-event-listing",
       "start_datetime": "2026-08-22T18:30:00-01:00",
@@ -23,46 +20,17 @@
       "media_manifest_title": "PART_ILHAS — ciclo de conversas com Nuno Miranda",
       "detail_page": "things-to-do/part-ilhas-nuno-miranda/",
       "free_admission": true,
-      "display": {
-        "status": "Saturday 22 August 2026 · 18:30",
-        "meta": "Centro Cultural do Mindelo · Entrada livre (free admission)",
-        "checked": "Checked 22 August 2026"
-      },
-      "media": {
-        "asset": "assets/events/part-ilhas-nuno-miranda-flyer.jpg",
-        "alt": "PART_ILHAS flyer: ciclo de conversas with filmmaker/photographer Nuno Miranda, Saturday 22 August, 18h30, Centro Cultural do Mindelo, entrada livre.",
-        "width": 1310,
-        "height": 1638
-      },
-      "card_action": {
-        "label": "Event listing",
-        "url": "https://www.agendacultural.cv/eventos/part-ilhas-ciclo-de-conversas-com-o-cineasta-fotografo-nuno-miranda-no-centro-cultural-do-mindelo"
-      },
+      "display": {"status": "Saturday 22 August 2026 · 18:30", "meta": "Centro Cultural do Mindelo · Entrada livre (free admission)", "checked": "Checked 22 August 2026"},
+      "media": {"asset": "assets/events/part-ilhas-nuno-miranda-flyer.jpg", "alt": "PART_ILHAS flyer: ciclo de conversas with filmmaker/photographer Nuno Miranda, Saturday 22 August, 18h30, Centro Cultural do Mindelo, entrada livre.", "width": 1310, "height": 1638},
+      "card_action": {"label": "Event listing", "url": "https://www.agendacultural.cv/eventos/part-ilhas-ciclo-de-conversas-com-o-cineasta-fotografo-nuno-miranda-no-centro-cultural-do-mindelo"},
       "detail": {
-        "facts": [
-          {
-            "label": "Date",
-            "value": "Saturday, 22 August 2026 · 18:30"
-          },
-          {
-            "label": "Where",
-            "value": "Centro Cultural do Mindelo"
-          },
-          {
-            "label": "Admission",
-            "value": "Entrada livre (free)"
-          }
-        ],
+        "facts": [{"label": "Date", "value": "Saturday, 22 August 2026 · 18:30"}, {"label": "Where", "value": "Centro Cultural do Mindelo"}, {"label": "Admission", "value": "Entrada livre (free)"}],
         "body": "PART_ILHAS is a ciclo de conversas (conversation series) featuring filmmaker and photographer Nuno Miranda at Centro Cultural do Mindelo. This is the 1st edition (2026); the official flyer carries the Ministério da Cultura e das Indústrias Criativas and Centro Cultural do Mindelo (CCM) marks.",
         "good_to_know": "Admission is free per the official flyer. Confirm any other current access or registration requirements directly with Centro Cultural do Mindelo or the event listing before attending.",
         "checked": "Checked 22 August 2026 against the official event flyer and the Agenda Cultural de Cabo Verde event listing.",
         "action_label": "See event listing"
       },
-      "seo": {
-        "description": "PART_ILHAS is a ciclo de conversas with filmmaker and photographer Nuno Miranda at Centro Cultural do Mindelo, Saturday 22 August 2026 at 18:30. Entrada livre (free admission).",
-        "title": "PART_ILHAS — Ciclo de Conversas com Nuno Miranda | A PRASA",
-        "schema_type": "Event"
-      }
+      "seo": {"description": "PART_ILHAS is a ciclo de conversas with filmmaker and photographer Nuno Miranda at Centro Cultural do Mindelo, Saturday 22 August 2026 at 18:30. Entrada livre (free admission).", "title": "PART_ILHAS — Ciclo de Conversas com Nuno Miranda | A PRASA", "schema_type": "Event"}
     },
     {
       "id": "mon-pikenin",
@@ -71,10 +39,7 @@
       "provider": "Alternativa Galeria",
       "summary": "A children’s session hosted by Alternativa Galeria; the poster does not specify further activity details beyond age and time.",
       "category": "family-youth",
-      "location": {
-        "name": "Alternativa Galeria",
-        "locality": "Mindelo"
-      },
+      "location": {"name": "Alternativa Galeria", "locality": "Mindelo"},
       "source_url": "https://www.solm.land/calendar",
       "source_type": "organizer-calendar",
       "start_datetime": "2026-08-29T10:00:00-01:00",
@@ -86,46 +51,17 @@
       "media_manifest_title": "Mon Pikenin",
       "detail_page": "things-to-do/mon-pikenin/",
       "free_admission": null,
-      "display": {
-        "status": "29 August 2026 · 10:00–12:00",
-        "meta": "Ages 5–12 years",
-        "checked": "Checked 17 August 2026"
-      },
-      "media": {
-        "asset": "assets/events/mon-pikenin-poster.png",
-        "alt": "Poster for Mon Pikenin children’s workshop.",
-        "width": 1206,
-        "height": 1489
-      },
-      "card_action": {
-        "label": "Register",
-        "url": "https://www.solm.land/calendar"
-      },
+      "display": {"status": "29 August 2026 · 10:00–12:00", "meta": "Ages 5–12 years", "checked": "Checked 17 August 2026"},
+      "media": {"asset": "assets/events/mon-pikenin-poster.png", "alt": "Poster for Mon Pikenin children’s workshop.", "width": 1206, "height": 1489},
+      "card_action": {"label": "Register", "url": "https://www.solm.land/calendar"},
       "detail": {
-        "facts": [
-          {
-            "label": "Date",
-            "value": "29 August 2026 · 10:00–12:00"
-          },
-          {
-            "label": "Ages",
-            "value": "5–12 years"
-          },
-          {
-            "label": "Registration",
-            "value_html": "<a href=\"https://www.solm.land/calendar\" target=\"_blank\" rel=\"noopener noreferrer\">www.solm.land/calendar</a> or <a href=\"tel:+2389886080\">+238 988 60 80</a>"
-          }
-        ],
+        "facts": [{"label": "Date", "value": "29 August 2026 · 10:00–12:00"}, {"label": "Ages", "value": "5–12 years"}, {"label": "Registration", "value_html": "<a href=\"https://www.solm.land/calendar\" target=\"_blank\" rel=\"noopener noreferrer\">www.solm.land/calendar</a> or <a href=\"tel:+2389886080\">+238 988 60 80</a>"}],
         "body": "A children’s session hosted by Alternativa Galeria; the poster does not specify further activity details beyond age and time.",
         "good_to_know": null,
         "checked": "Checked 17 August 2026 against the organizer’s published event poster.",
         "action_label": "Register"
       },
-      "seo": {
-        "description": "Mon Pikenin is a children’s workshop (ages 5–12) hosted by Alternativa Galeria in Mindelo on 29 August 2026, 10:00–12:00.",
-        "title": "Mon Pikenin — Children’s Workshop in Mindelo | A PRASA",
-        "schema_type": "Event"
-      }
+      "seo": {"description": "Mon Pikenin is a children’s workshop (ages 5–12) hosted by Alternativa Galeria in Mindelo on 29 August 2026, 10:00–12:00.", "title": "Mon Pikenin — Children’s Workshop in Mindelo | A PRASA", "schema_type": "Event"}
     },
     {
       "id": "arquitectura-da-imperfeicao",
@@ -134,11 +70,7 @@
       "provider": "Alternativa Galeria",
       "summary": "Painting exhibition ‘Arquitectura da Imperfeição’ by Nuno M. Martins, opening with a vernissage at Alternativa Galeria.",
       "category": "visual-arts",
-      "location": {
-        "name": "Alternativa Galeria",
-        "locality": "Mindelo",
-        "street": "Av. 5 de Julho, Mindelo, São Vicente"
-      },
+      "location": {"name": "Alternativa Galeria", "locality": "Mindelo", "street": "Av. 5 de Julho, Mindelo, São Vicente"},
       "source_url": "https://www.solm.land/calendar",
       "source_type": "organizer-published-poster",
       "start_datetime": "2026-08-17T18:00:00-01:00",
@@ -151,47 +83,17 @@
       "detail_page": "things-to-do/arquitectura-da-imperfeicao/",
       "free_admission": null,
       "currentness_note": "Verified no longer current as of the 24 August 2026 editorial currentness check. No reliable closing date has been established by any approved source record, so no end_date is recorded; do not infer or display a closing date from this check.",
-      "display": {
-        "status": "Opens 17 August 2026 · 18:00",
-        "meta": "Painting exhibition by Nuno M. Martins",
-        "checked": "Checked 24 August 2026 — verified no longer current; exact closing date unknown"
-      },
-      "media": {
-        "asset": "assets/events/arquitectura-da-imperfeicao-poster.jpg",
-        "alt": "Poster for the painting exhibition Arquitectura da Imperfeição by Nuno M. Martins.",
-        "width": 1254,
-        "height": 1254
-      },
+      "display": {"status": "Opens 17 August 2026 · 18:00", "meta": "Painting exhibition by Nuno M. Martins", "checked": "Checked 24 August 2026 — verified no longer current; exact closing date unknown"},
+      "media": {"asset": "assets/events/arquitectura-da-imperfeicao-poster.jpg", "alt": "Poster for the painting exhibition Arquitectura da Imperfeição by Nuno M. Martins.", "width": 1254, "height": 1254},
       "card_action": null,
       "detail": {
-        "facts": [
-          {
-            "label": "Type",
-            "value": "Painting exhibition"
-          },
-          {
-            "label": "Artist",
-            "value": "Nuno M. Martins"
-          },
-          {
-            "label": "Opening (vernissage)",
-            "value": "17 August 2026 · 18:00"
-          },
-          {
-            "label": "Where",
-            "value": "Alternativa Galeria · Av. 5 de Julho, Mindelo, São Vicente"
-          }
-        ],
+        "facts": [{"label": "Type", "value": "Painting exhibition"}, {"label": "Artist", "value": "Nuno M. Martins"}, {"label": "Opening (vernissage)", "value": "17 August 2026 · 18:00"}, {"label": "Where", "value": "Alternativa Galeria · Av. 5 de Julho, Mindelo, São Vicente"}],
         "body": "Painting exhibition “Arquitectura da Imperfeição” by Nuno M. Martins, opening with a vernissage at Alternativa Galeria.",
         "good_to_know": null,
         "checked": "Checked 24 August 2026: verified no longer current as of this editorial currentness review. No reliable closing date has been established by any approved source, so no closing date is recorded or implied. Originally checked 13 August 2026 against the organizer’s published event poster; no external registration link was ever published for this exhibition.",
         "action_label": null
       },
-      "seo": {
-        "description": "Arquitectura da Imperfeição is a painting exhibition by Nuno M. Martins at Alternativa Galeria in Mindelo, opening 17 August 2026.",
-        "title": "Arquitectura da Imperfeição — Painting Exhibition in Mindelo | A PRASA",
-        "schema_type": "ExhibitionEvent"
-      }
+      "seo": {"description": "Arquitectura da Imperfeição is a painting exhibition by Nuno M. Martins at Alternativa Galeria in Mindelo, opening 17 August 2026.", "title": "Arquitectura da Imperfeição — Painting Exhibition in Mindelo | A PRASA", "schema_type": "ExhibitionEvent"}
     },
     {
       "id": "cartinha-dholanda-mindelo-2026",
@@ -260,10 +162,7 @@
       "provider": "Centro Cultural do Mindelo",
       "summary": "See “Eclipse”, an exhibition by visual artist Yuran Henrique at Centro Cultural do Mindelo, on view through 12 September.",
       "category": "visual-arts",
-      "location": {
-        "name": "Centro Cultural do Mindelo",
-        "locality": "Mindelo, São Vicente"
-      },
+      "location": {"name": "Centro Cultural do Mindelo", "locality": "Mindelo, São Vicente"},
       "source_url": "https://www.agendacultural.cv/eventos/exposicao-eclipse-do-artista-plastico-yuran-henrique-no-centro-cultural-do-mindelo",
       "source_type": "official-event-listing",
       "start_datetime": null,
@@ -276,46 +175,17 @@
       "media_manifest_title": "Exposição “Eclipse”",
       "detail_page": "things-to-do/eclipse-yuran-henrique/",
       "free_admission": null,
-      "display": {
-        "status": "13 August – 12 September 2026",
-        "meta": "Exhibition by Yuran Henrique",
-        "checked": "Checked 24 August 2026"
-      },
-      "media": {
-        "asset": "assets/events/eclipse-yuran-henrique-flyer.jpg",
-        "alt": "Poster for Exposição “Eclipse” by Yuran Henrique at Centro Cultural do Mindelo, opening 13 August at 18:30 with free admission.",
-        "width": 1110,
-        "height": 1387
-      },
-      "card_action": {
-        "label": "Event listing",
-        "url": "https://www.agendacultural.cv/eventos/exposicao-eclipse-do-artista-plastico-yuran-henrique-no-centro-cultural-do-mindelo"
-      },
+      "display": {"status": "13 August – 12 September 2026", "meta": "Exhibition by Yuran Henrique", "checked": "Checked 24 August 2026"},
+      "media": {"asset": "assets/events/eclipse-yuran-henrique-flyer.jpg", "alt": "Poster for Exposição “Eclipse” by Yuran Henrique at Centro Cultural do Mindelo, opening 13 August at 18:30 with free admission.", "width": 1110, "height": 1387},
+      "card_action": {"label": "Event listing", "url": "https://www.agendacultural.cv/eventos/exposicao-eclipse-do-artista-plastico-yuran-henrique-no-centro-cultural-do-mindelo"},
       "detail": {
-        "facts": [
-          {
-            "label": "Dates",
-            "value": "13 August – 12 September 2026"
-          },
-          {
-            "label": "Artist",
-            "value": "Yuran Henrique"
-          },
-          {
-            "label": "Where",
-            "value": "Centro Cultural do Mindelo, Mindelo, São Vicente"
-          }
-        ],
+        "facts": [{"label": "Dates", "value": "13 August – 12 September 2026"}, {"label": "Artist", "value": "Yuran Henrique"}, {"label": "Where", "value": "Centro Cultural do Mindelo, Mindelo, São Vicente"}],
         "body": "See “Eclipse”, an exhibition by visual artist Yuran Henrique at Centro Cultural do Mindelo, on view through 12 September.",
         "good_to_know": null,
         "checked": "Checked 24 August 2026 against Agenda Cultural de Cabo Verde / CVCultural.",
         "action_label": "Event listing"
       },
-      "seo": {
-        "description": "Eclipse is an exhibition by visual artist Yuran Henrique at Centro Cultural do Mindelo, on view 13 August–12 September 2026.",
-        "title": "Exposição “Eclipse” — Yuran Henrique at Centro Cultural do Mindelo | A PRASA",
-        "schema_type": "ExhibitionEvent"
-      }
+      "seo": {"description": "Eclipse is an exhibition by visual artist Yuran Henrique at Centro Cultural do Mindelo, on view 13 August–12 September 2026.", "title": "Exposição “Eclipse” — Yuran Henrique at Centro Cultural do Mindelo | A PRASA", "schema_type": "ExhibitionEvent"}
     },
     {
       "id": "oficina-contemporanea-lata",
@@ -324,11 +194,7 @@
       "provider": "Centro Cultural do Mindelo",
       "summary": "See the final works from the Oficina Contemporânea Lata project at Centro Cultural do Mindelo, on view through 29 August.",
       "category": "visual-arts",
-      "location": {
-        "name": "Centro Cultural do Mindelo",
-        "street": "Avenida Marginal, Mindelo",
-        "locality": "Mindelo"
-      },
+      "location": {"name": "Centro Cultural do Mindelo", "street": "Avenida Marginal, Mindelo", "locality": "Mindelo"},
       "source_url": "https://www.agendacultural.cv/eventos/exposicao-dos-trabalhos-finais-do-projeto-oficina-contemporanea-lata-no-centro-cultural-do-mindelo",
       "source_type": "official-event-listing",
       "start_datetime": null,
@@ -341,42 +207,17 @@
       "media_manifest_title": "Exposição dos trabalhos finais do projeto Oficina Contemporânea Lata",
       "detail_page": "things-to-do/oficina-contemporanea-lata/",
       "free_admission": null,
-      "display": {
-        "status": "30 July – 29 August 2026",
-        "meta": "Final works from the Oficina Contemporânea Lata project",
-        "checked": "Checked 24 August 2026"
-      },
-      "media": {
-        "asset": "assets/events/oficina-contemporanea-lata-flyer.jpg",
-        "alt": "Poster for the Oficina Contemporânea Lata final works exhibition at Centro Cultural do Mindelo, opening 30 July at 18:30 with free admission.",
-        "width": 1110,
-        "height": 1387
-      },
-      "card_action": {
-        "label": "Event listing",
-        "url": "https://www.agendacultural.cv/eventos/exposicao-dos-trabalhos-finais-do-projeto-oficina-contemporanea-lata-no-centro-cultural-do-mindelo"
-      },
+      "display": {"status": "30 July – 29 August 2026", "meta": "Final works from the Oficina Contemporânea Lata project", "checked": "Checked 24 August 2026"},
+      "media": {"asset": "assets/events/oficina-contemporanea-lata-flyer.jpg", "alt": "Poster for the Oficina Contemporânea Lata final works exhibition at Centro Cultural do Mindelo, opening 30 July at 18:30 with free admission.", "width": 1110, "height": 1387},
+      "card_action": {"label": "Event listing", "url": "https://www.agendacultural.cv/eventos/exposicao-dos-trabalhos-finais-do-projeto-oficina-contemporanea-lata-no-centro-cultural-do-mindelo"},
       "detail": {
-        "facts": [
-          {
-            "label": "Dates",
-            "value": "30 July – 29 August 2026"
-          },
-          {
-            "label": "Where",
-            "value": "Centro Cultural do Mindelo, Avenida Marginal, Mindelo"
-          }
-        ],
+        "facts": [{"label": "Dates", "value": "30 July – 29 August 2026"}, {"label": "Where", "value": "Centro Cultural do Mindelo, Avenida Marginal, Mindelo"}],
         "body": "See the final works from the Oficina Contemporânea Lata project at Centro Cultural do Mindelo, on view through 29 August.",
         "good_to_know": null,
         "checked": "Checked 24 August 2026 against Agenda Cultural de Cabo Verde / CVCultural.",
         "action_label": "Event listing"
       },
-      "seo": {
-        "description": "Exposição dos trabalhos finais do projeto Oficina Contemporânea Lata is on view at Centro Cultural do Mindelo, 30 July–29 August 2026.",
-        "title": "Oficina Contemporânea Lata — Final Works Exhibition at Centro Cultural do Mindelo | A PRASA",
-        "schema_type": "ExhibitionEvent"
-      }
+      "seo": {"description": "Exposição dos trabalhos finais do projeto Oficina Contemporânea Lata is on view at Centro Cultural do Mindelo, 30 July–29 August 2026.", "title": "Oficina Contemporânea Lata — Final Works Exhibition at Centro Cultural do Mindelo | A PRASA", "schema_type": "ExhibitionEvent"}
     },
     {
       "id": "part-ilhas-artemisa-ferreira",
@@ -385,11 +226,7 @@
       "provider": "Centro Cultural do Mindelo",
       "summary": "Join filmmaker and poet Artemisa Ferreira for a PART_ILHAS conversation about creative process, images, intention and what happens before a work takes shape.",
       "category": "culture",
-      "location": {
-        "name": "Centro Cultural do Mindelo",
-        "street": "Avenida Marginal",
-        "locality": "Mindelo, São Vicente"
-      },
+      "location": {"name": "Centro Cultural do Mindelo", "street": "Avenida Marginal", "locality": "Mindelo, São Vicente"},
       "source_url": "https://cvcultural.cv/eventos/part-ilhas-ciclo-com-a-cineasta-artemisa-ferreira",
       "source_type": "official-event-listing",
       "start_datetime": "2026-08-29T18:30:00-01:00",
@@ -401,50 +238,17 @@
       "media_manifest_title": "PART_ILHAS — ciclo de conversas com Artemisa Ferreira",
       "detail_page": "things-to-do/part-ilhas-artemisa-ferreira/",
       "free_admission": true,
-      "display": {
-        "status": "Saturday, 29 August 2026 · 18:30",
-        "meta": "Centro Cultural do Mindelo · Mindelo, São Vicente",
-        "checked": "Checked 29 August 2026"
-      },
-      "media": {
-        "asset": "assets/events/part-ilhas-artemisa-ferreira-flyer.jpg",
-        "alt": "PART_ILHAS 1ª edição 2026 poster: Ciclo Conversas with Artemisa Ferreira, cineasta/poetisa, Saturday 29 August at 18h30, entrada livre, at Centro Cultural do Mindelo, over a photograph of stony ground crossed by the shadow of a person holding a camera.",
-        "width": 1110,
-        "height": 1387
-      },
-      "card_action": {
-        "label": "Event listing",
-        "url": "https://cvcultural.cv/eventos/part-ilhas-ciclo-com-a-cineasta-artemisa-ferreira"
-      },
+      "display": {"status": "Saturday, 29 August 2026 · 18:30", "meta": "Centro Cultural do Mindelo · Mindelo, São Vicente", "checked": "Checked 29 August 2026"},
+      "media": {"asset": "assets/events/part-ilhas-artemisa-ferreira-flyer.jpg", "alt": "PART_ILHAS 1ª edição 2026 poster: Ciclo Conversas with Artemisa Ferreira, cineasta/poetisa, Saturday 29 August at 18h30, entrada livre, at Centro Cultural do Mindelo, over a photograph of stony ground crossed by the shadow of a person holding a camera.", "width": 1110, "height": 1387},
+      "card_action": {"label": "Event listing", "url": "https://cvcultural.cv/eventos/part-ilhas-ciclo-com-a-cineasta-artemisa-ferreira"},
       "detail": {
-        "facts": [
-          {
-            "label": "Date",
-            "value": "Saturday, 29 August 2026 · 18:30"
-          },
-          {
-            "label": "Guest",
-            "value": "Artemisa Ferreira · Filmmaker and poet"
-          },
-          {
-            "label": "Where",
-            "value": "Centro Cultural do Mindelo · Avenida Marginal, Mindelo, São Vicente"
-          },
-          {
-            "label": "Admission",
-            "value": "Free admission"
-          }
-        ],
+        "facts": [{"label": "Date", "value": "Saturday, 29 August 2026 · 18:30"}, {"label": "Guest", "value": "Artemisa Ferreira · Filmmaker and poet"}, {"label": "Where", "value": "Centro Cultural do Mindelo · Avenida Marginal, Mindelo, São Vicente"}, {"label": "Admission", "value": "Free admission"}],
         "body": "PART_ILHAS is a creative-conversation series. This edition with Artemisa Ferreira focuses on image, intention and creative process, including what images reveal or leave unsaid and the relationship between scenes, silence and creation.",
         "good_to_know": "Confirm current access information with Centro Cultural do Mindelo before attending.",
         "checked": "Checked 29 August 2026 against the current official event pages.",
         "action_label": "See official event page"
       },
-      "seo": {
-        "description": "PART_ILHAS conversation with filmmaker and poet Artemisa Ferreira about creative process, images, intention and what happens before a work takes shape at Centro Cultural do Mindelo.",
-        "title": "PART_ILHAS — ciclo de conversas com Artemisa Ferreira | A PRASA",
-        "schema_type": "Event"
-      }
+      "seo": {"description": "PART_ILHAS conversation with filmmaker and poet Artemisa Ferreira about creative process, images, intention and what happens before a work takes shape at Centro Cultural do Mindelo.", "title": "PART_ILHAS — ciclo de conversas com Artemisa Ferreira | A PRASA", "schema_type": "Event"}
     },
     {
       "id": "sinergia-da-materia",
@@ -453,11 +257,7 @@
       "provider": "CNAD",
       "summary": "Explore Davitson Almeida’s investigation of stone, metal, drawing and three-dimensional form at CNAD’s Galeria Zero.",
       "category": "visual-arts",
-      "location": {
-        "name": "Galeria Zero, CNAD",
-        "locality": "Mindelo",
-        "street": "Praça Amílcar Cabral, Mindelo"
-      },
+      "location": {"name": "Galeria Zero, CNAD", "locality": "Mindelo", "street": "Praça Amílcar Cabral, Mindelo"},
       "source_url": "https://cnad.cv/info/",
       "source_type": "provider-visitor-info",
       "start_date": "2026-07-31",
@@ -472,41 +272,17 @@
       "media_manifest_title": "Sinergia da Matéria: Entre o Bruto e o Traço",
       "detail_page": "things-to-do/sinergia-da-materia/",
       "free_admission": true,
-      "display": {
-        "status": "On view until November 2026",
-        "meta": "Exhibition by Davitson Almeida",
-        "checked": "Checked 15 August 2026"
-      },
+      "display": {"status": "On view until November 2026", "meta": "Exhibition by Davitson Almeida", "checked": "Checked 15 August 2026"},
       "media": null,
-      "card_action": {
-        "label": "Visitor information",
-        "url": "https://cnad.cv/info/"
-      },
+      "card_action": {"label": "Visitor information", "url": "https://cnad.cv/info/"},
       "detail": {
-        "facts": [
-          {
-            "label": "Dates",
-            "value": "On view until November 2026"
-          },
-          {
-            "label": "Where",
-            "value": "Galeria Zero, CNAD, Praça Amílcar Cabral, Mindelo"
-          },
-          {
-            "label": "Admission",
-            "value": "Free admission"
-          }
-        ],
+        "facts": [{"label": "Dates", "value": "On view until November 2026"}, {"label": "Where", "value": "Galeria Zero, CNAD, Praça Amílcar Cabral, Mindelo"}, {"label": "Admission", "value": "Free admission"}],
         "body": "Explore Davitson Almeida’s investigation of stone, metal, drawing and three-dimensional form at CNAD’s Galeria Zero.",
         "good_to_know": "Confirm current exhibition access and admission directly with CNAD before visiting.",
         "checked": "Checked 15 August 2026",
         "action_label": "Visitor information"
       },
-      "seo": {
-        "description": "Sinergia da Matéria: Entre o Bruto e o Traço is an exhibition by Davitson Almeida at CNAD’s Galeria Zero in Mindelo, on view until November 2026.",
-        "title": "Sinergia da Matéria: Entre o Bruto e o Traço — CNAD Exhibition in Mindelo | A PRASA",
-        "schema_type": "ExhibitionEvent"
-      }
+      "seo": {"description": "Sinergia da Matéria: Entre o Bruto e o Traço is an exhibition by Davitson Almeida at CNAD’s Galeria Zero in Mindelo, on view until November 2026.", "title": "Sinergia da Matéria: Entre o Bruto e o Traço — CNAD Exhibition in Mindelo | A PRASA", "schema_type": "ExhibitionEvent"}
     },
     {
       "id": "4-campeonato-nacional-senior-de-boxe",
