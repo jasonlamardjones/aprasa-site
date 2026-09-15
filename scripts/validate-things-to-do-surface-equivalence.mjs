@@ -36,6 +36,19 @@ if (!/^\d{4}-\d{2}-\d{2}$/.test(asOf)) {
   process.exit(1);
 }
 
+// Matches scripts/generate-things-to-do.mjs's escapeHtml() exactly: the
+// generator always HTML-escapes record.title before emitting it into <h1>,
+// so the detail-page presence check below must compare against the same
+// escaped form rather than the raw governed string.
+function escapeHtml(value = '') {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
 const data = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
 const indexHtml = fs.readFileSync(indexPath, 'utf8');
 const errors = [];
@@ -65,12 +78,12 @@ for (const record of data.records ?? []) {
   const label = `${record.id} :: ${record.title}`;
   const detailFile = path.join(root, record.detail_page, 'index.html');
   const expired = isExpired(record, asOf);
-  const onHome = indexHtml.includes(`<h3>${record.title}</h3>`);
+  const onHome = indexHtml.includes(`<h3>${escapeHtml(record.title)}</h3>`);
   const inPreview = previewIds.has(record.id);
   // The hub links each card by bare slug, since every detail page is a direct
   // child of the hub route.
   const hubHref = record.detail_page.replace(/^things-to-do\//, '');
-  const onHub = hubHtml ? hubHtml.includes(`<h3>${record.title}</h3>`) : false;
+  const onHub = hubHtml ? hubHtml.includes(`<h3>${escapeHtml(record.title)}</h3>`) : false;
 
   if (expired && onHome) errors.push(`${label}: expired record remains on Home as of ${asOf}`);
   // With the hub dormant, Home carries only the approved preview, so an
@@ -101,7 +114,7 @@ for (const record of data.records ?? []) {
   }
 
   const detailHtml = fs.readFileSync(detailFile, 'utf8');
-  if (!detailHtml.includes(`<h1>${record.title}</h1>`)) errors.push(`${label}: title missing from detail page`);
+  if (!detailHtml.includes(`<h1>${escapeHtml(record.title)}</h1>`)) errors.push(`${label}: title missing from detail page`);
   if (!detailHtml.includes(record.provider)) errors.push(`${label}: provider missing from detail page`);
   if (record.card_action?.url && !detailHtml.includes(record.card_action.url)) errors.push(`${label}: action URL missing from detail page`);
   if (record.media?.asset) {

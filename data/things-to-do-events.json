@@ -344,6 +344,71 @@
       }
     },
     {
+      "id": "voyage-obi-margo-kafe-djan-djan-2026",
+      "kind": "dated-event",
+      "title": "VOYAGE — OBI & MARGO",
+      "provider": "TXON KUCEU",
+      "summary": "VOYAGE brings visual artists and hand-poke tattoo specialists OBI & MARGO to Kafe Djan Djan for an exhibition inspired by their journey through Cabo Verde. Opening 16 September, with free public events on 16, 23 and 30 September.",
+      "category": "visual-arts",
+      "location": {
+        "name": "Kafe Djan Djan",
+        "locality": "Mindelo"
+      },
+      "source_url": "https://aprasa.org/assets/events/voyage-obi-margo-kafe-djan-djan-2026.jpg",
+      "source_type": "Organizer / promotional source supplied directly to A PRASA",
+      "start_date": "2026-09-16",
+      "start_datetime": null,
+      "end_datetime": null,
+      "end_date": "2026-09-30",
+      "checked_at": "2026-09-15",
+      "publication_state": "published",
+      "media_policy": "required",
+      "media_manifest_title": "VOYAGE — OBI & MARGO",
+      "detail_page": "things-to-do/voyage-obi-margo-kafe-djan-djan-2026/",
+      "free_admission": true,
+      "display": {
+        "status": "16–30 September 2026 · Free exhibition and events at Kafe Djan Djan",
+        "meta": "Open to the public",
+        "checked": "Checked 15 September 2026 against organizer/promotional artwork supplied directly to A PRASA."
+      },
+      "media": {
+        "asset": "assets/events/voyage-obi-margo-kafe-djan-djan-2026.jpg",
+        "alt": "VOYAGE — OBI & MARGO",
+        "width": 1800,
+        "height": 2546
+      },
+      "card_action": null,
+      "detail": {
+        "facts": [
+          {
+            "label": "Dates",
+            "value": "16–30 September 2026"
+          },
+          {
+            "label": "Venue",
+            "value": "Kafe Djan Djan"
+          },
+          {
+            "label": "Program",
+            "value": "16, 23 and 30 September · 18:00–20:00"
+          },
+          {
+            "label": "Admission",
+            "value": "Free and open to the public"
+          }
+        ],
+        "body": "VOYAGE is an exhibition by OBI & MARGO, visual artists and hand-poke tattoo specialists from Croatia and France. Their journey in Cabo Verde became a source of artistic exploration shaped by new encounters, landscapes and the experience of discovering a sense of home. The exhibition runs at Kafe Djan Djan from 16–30 September 2026. The programme includes “Vitoria pa frente, tristeza pa trás,” an opening and autobiographical performance with puppets, headlamps and kazoo on 16 September; “The Transformation,” an interactive hand-poke tattoo ceremony on 23 September; and “Remember to follow the Sun,” a playful meditation session and exhibition closing on 30 September. All three events are stated by the organizer’s poster to be free and open to the public.",
+        "good_to_know": "The organizer states that all listed events are free and open to the public. The 18:00–20:00 time applies to the three listed program events and should not be presented as the exhibition’s daily opening hours.\n\nEvent details are based on organizer/promotional artwork supplied directly to A PRASA. An independently indexed first-party event page was not identified in the bounded 15 September check.",
+        "checked": "Checked 15 September 2026 against organizer/promotional artwork supplied directly to A PRASA.",
+        "action_label": null
+      },
+      "seo": {
+        "description": "VOYAGE brings visual artists and hand-poke tattoo specialists OBI & MARGO to Kafe Djan Djan for an exhibition inspired by their journey through Cabo Verde. Opening 16 September, with free public events on 16, 23 and 30 September.",
+        "title": "VOYAGE — OBI & MARGO",
+        "schema_type": "ExhibitionEvent"
+      }
+    },
+    {
       "id": "50-anos-de-memoria-criacao-e-resistencia",
       "kind": "dated-event",
       "title": "50 Anos de Memória, Criação e Resistência",

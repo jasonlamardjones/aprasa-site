@@ -8,6 +8,19 @@ const indexPath = path.join(root, 'index.html');
 const records = JSON.parse(fs.readFileSync(input, 'utf8')).records;
 const indexHtml = fs.readFileSync(indexPath, 'utf8');
 
+// Matches scripts/generate-things-to-do.mjs's escapeHtml() exactly: the
+// generator always HTML-escapes record.title before emitting it into <h3>,
+// so the Home-presence check below must compare against the same escaped
+// form rather than the raw governed string.
+function escapeHtml(value = '') {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
 const asOfArg = process.argv.find((arg) => arg.startsWith('--as-of='));
 if (!asOfArg) {
   console.error('Missing required --as-of=YYYY-MM-DD');
@@ -51,7 +64,7 @@ for (const record of records) {
 
   if (state !== EXPIRED) continue;
 
-  const appearsOnHome = indexHtml.includes(`<h3>${record.title}</h3>`);
+  const appearsOnHome = indexHtml.includes(`<h3>${escapeHtml(record.title)}</h3>`);
   if (appearsOnHome) {
     const reason = record.publication_state === 'expired'
       ? 'publication_state "expired"'

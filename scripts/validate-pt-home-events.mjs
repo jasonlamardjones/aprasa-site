@@ -33,6 +33,21 @@ const homeHtml = fs.readFileSync(path.join(root, 'pt', 'index.html'), 'utf8');
 
 const errors = [];
 
+// Matches scripts/generate-things-to-do.mjs's escapeHtml() exactly: the
+// generator always HTML-escapes governed presentation strings before
+// emitting them into the Home region, so comparisons against that raw HTML
+// must use the same escaped form rather than the raw governed string. New
+// lines below follow this file's established LF-for-new-lines precedent
+// (see the good_to_know block further down) rather than its CRLF outlier.
+function escapeHtml(value = '') {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
 function extractRegion(recordId) {
   const begin = `<!-- BEGIN GENERATED EVENT: ${recordId} -->`;
   const end = `<!-- END GENERATED EVENT: ${recordId} -->`;
@@ -47,13 +62,13 @@ function checkPair(recordId, field, region, enValue, ptValue) {
     errors.push(`${recordId}: expected PT value for "${field}" is empty — cannot validate`);
     return;
   }
-  if (!region.includes(ptValue)) {
+  if (!region.includes(escapeHtml(ptValue))) {
     errors.push(`${recordId}: PT Home region missing expected PT "${field}": "${ptValue}"`);
   }
   // Skip the absence check when the EN string is itself a substring of the
   // correct PT string (e.g. EN "Artist" vs PT "Artista") — that's a false
   // positive, not a regression.
-  if (enValue && enValue !== ptValue && !ptValue.includes(enValue) && region.includes(enValue)) {
+  if (enValue && enValue !== ptValue && !ptValue.includes(enValue) && region.includes(escapeHtml(enValue))) {
     errors.push(`${recordId}: PT Home region still contains English "${field}": "${enValue}" (expected PT: "${ptValue}")`);
   }
 }
