@@ -28,7 +28,7 @@ AI products are replaceable workers. The contracts name roles, not vendors.
 - `fixtures/ttd-adjudication-oracle.json` — synthetic acceptance oracle covering normalization, evaluation, and routing.
 - `scripts/validate-control-plane-contracts.mjs` — self-contained schema/subset validator, semantic invariant validator, and negative-regression harness.
 - `task-result.schema.json` — schema for the provider-neutral, content-addressed task-result records described below.
-- `results/` — where real task-result records land once written; empty by default; see `results/README.md`.
+- `results/` — documentation placeholder only; real records are committed onto a separate `control-plane-task-results` ref, never here; see `results/README.md`.
 - `fixtures/task-result-examples/` — one committed synthetic example per result_type, kept in sync by `scripts/test-control-plane-result.mjs`.
 
 ## Normal state progression
@@ -111,14 +111,9 @@ records — `NEEDS_EVIDENCE_VERIFICATION`, `NEEDS_PROJECT_03_DECISION`,
 
 A task result is provider-neutral: it names a worker role and a governance
 owner drawn from the same vocabulary as the task envelope and orchestration
-contract, never a vendor. It is content-addressed: `result_id` is the SHA-256
-digest of the record with `result_id` itself removed, so identical content
-always resolves to the same id and the same path
-(`results/<result_id>.json`); persisting the same outcome twice is a no-op,
-and persisting different content that happened to collide on an id is
-refused rather than silently overwritten. `grants_publication_authority` is a
-schema `const: false` on every record — a task result can report that a
-review passed, but it cannot itself authorize merge, deploy, or publication.
+contract, never a vendor. `grants_publication_authority` is a schema `const:
+false` on every record — a task result can report that a review passed, but
+it cannot itself authorize merge, deploy, or publication.
 
 The mapping from `result_type` to `status`, `owner`, and `resume_point` is
 fixed and cannot vary per instance (`scripts/lib/control-plane-result.mjs`'s
@@ -131,24 +126,93 @@ already uses for the Things-to-Do policy document. `REVIEW_PASSED` carries a
 founder-only, and a `null` route means exactly what it means throughout this
 control plane — no automatic downstream route exists for that outcome.
 
+### Identity vs. occurrence: what result_id means
+
+`result_id` is the SHA-256 digest of the record with `result_id` **and
+`created_at`** both removed. `created_at` is retained on every record as
+useful occurrence data, but excluding it from identity is deliberate: a retry
+of the same logical event — a CLI rerun after a transient failure, replaying
+an unchanged adjudication outcome — must not mint a second result merely
+because wall-clock time advanced. Two records are the same logical event
+exactly when every other field agrees; if anything governance-relevant
+differs (`reason`, `evidence_digest`, `reviewer`, `upstream_refs`, ...), that
+is genuinely a new event and correctly gets a new identity.
+
+This does mean `created_at` alone is not tamper-evident by the JSON content
+digest. The fields that actually gate a governance decision —
+`repository.sha`, `evidence_digest` — remain digest-protected; `created_at`
+does not, and no consumer should treat it as an authoritative timestamp on
+its own. The persisting git commit's own committer timestamp (see below)
+supplies an independent, git-object-level occurrence record that is
+tamper-evident in the way the JSON field alone is not.
+
+### Persistence: a separate ref, never the candidate's own branch
+
+A `REVIEW_PASSED`/`REVIEW_FAILED` record binds to an exact `repository.sha`.
+If that record were committed onto the very branch it reviews, the commit
+would create a new SHA, and the review would be stale by its own rule the
+instant it was persisted. To avoid that, every result — all five types, for
+uniformity — is persisted onto a dedicated git ref,
+`refs/heads/control-plane-task-results` by default, using plumbing only
+(`hash-object`, `read-tree`/`write-tree` against a throwaway index,
+`commit-tree`, `update-ref` with compare-and-swap). The working tree, the
+real index, and HEAD of whatever branch happens to be checked out are never
+touched, so writing a result can never move the candidate branch it
+describes.
+
+The lifecycle:
+
+```
+candidate branch at SHA A
+        |  (no commit; the reviewer inspects A as it stands)
+        v
+independent exact-head review of A
+        |  buildResult({ resultType: REVIEW_PASSED, repositorySha: A, ... })
+        v
+writeResult(root, record)              -- plumbing only, targets
+        |                                  refs/heads/control-plane-task-results
+        v
+control-plane-task-results ref advances to a NEW commit B
+        |                                  (candidate branch is still at A)
+        v
+validate-control-plane-result.mjs --candidate-sha=A
+        |                                  reads the record from B, compares
+        |                                  record.repository.sha (A) to A -> current
+        v
+founder merge gate                     -- unaffected; still manual, still
+                                           outside this layer's authority
+```
+
+`B` and `A` are commits on two different refs; persisting `B` never rewrites
+or moves `A`. The regression suite proves this directly: it builds a
+candidate commit, persists a `REVIEW_PASSED` result for it, then re-reads the
+candidate branch's own SHA and asserts it is byte-identical to what it was
+before the write — and separately proves the review does, correctly, go
+stale once the candidate branch receives *its own* later, unrelated commit.
+
+Reading is symmetric: `readPersistedResult`/`listPersistedResults` use `git
+show <ref>:<path>` and `git ls-tree`, so a checkout that has never fetched
+the results ref simply reports no results, and one that has can validate
+every result on it without checking it out.
+
 ### Exact-SHA binding
 
 `REVIEW_PASSED` and `REVIEW_FAILED` records carry the exact `repository.sha`
 they were produced against and are invalid once the candidate's head SHA
-moves. `scripts/validate-control-plane-result.mjs --result=<path>
---candidate-sha=<sha>` enforces this: a mismatch fails closed with
-`STALE_REVIEW_RESULT`, and no other check in that run is treated as
-sufficient to paper over it. Non-review result types carry `repository.sha`
-for provenance only and are not invalidated by SHA drift, since they describe
-a dependency or a validator failure rather than a verdict on a specific
-commit.
+moves. `scripts/validate-control-plane-result.mjs --candidate-sha=<sha>`
+enforces this: a mismatch fails closed with `STALE_REVIEW_RESULT`, and no
+other check in that run is treated as sufficient to paper over it.
+Non-review result types carry `repository.sha` for provenance only and are
+not invalidated by SHA drift, since they describe a dependency or a
+validator failure rather than a verdict on a specific commit.
 
 ### Writing and reading a result
 
 ```sh
-node scripts/write-control-plane-result.mjs --draft=<path-to-draft.json>
-node scripts/validate-control-plane-result.mjs                      # validates every persisted result
-node scripts/validate-control-plane-result.mjs --result=<path>      # validates one
+node scripts/write-control-plane-result.mjs --draft=<path-to-draft.json> [--ref=<name>] [--root=<repo>]
+node scripts/validate-control-plane-result.mjs                                   # validates every result on the ref
+node scripts/validate-control-plane-result.mjs --ref=<name>                      # a non-default results ref
+node scripts/validate-control-plane-result.mjs --result=<path>                   # validates one local file
 node scripts/validate-control-plane-result.mjs --result=<path> --candidate-sha=<sha>
 ```
 
@@ -157,9 +221,10 @@ The draft file supplies only what varies per instance — `resultType`,
 `evidenceDigest`, `reviewer` (required for the two review types, forbidden
 otherwise), and `upstreamRefs` (at least one, tracing back to whatever
 produced this result — an adjudication audit record, a publication run
-artifact, a reviewed commit SHA). Neither script commits, pushes, merges, or
-deploys; persistence is a file on disk, and whether/when it is committed
-remains an operational decision outside this layer.
+artifact, a reviewed commit SHA). Neither script commits onto a candidate
+branch, pushes, merges, or deploys. Whether and when the results ref itself
+is pushed to a remote remains an operational decision outside this layer —
+these scripts only ever advance a local ref.
 
 ## Validation
 

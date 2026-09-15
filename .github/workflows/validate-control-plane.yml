@@ -73,6 +73,10 @@ jobs:
       - name: Control-plane task-result acceptance and fail-closed regressions
         run: node scripts/test-control-plane-result.mjs
 
+      # Real results live on a separate ref (refs/heads/control-plane-task-
+      # results), which a standard single-branch checkout does not fetch, so
+      # this normally reports NO_RESULTS_FOUND here. It still exercises the
+      # ref-absent code path and stands ready as soon as that ref is fetched.
       - name: Validate every persisted control-plane task result
         run: node scripts/validate-control-plane-result.mjs
 

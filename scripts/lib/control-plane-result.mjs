@@ -4,9 +4,31 @@
 // progression: NEEDS_EVIDENCE_VERIFICATION, NEEDS_PROJECT_03_DECISION,
 // TECHNICAL_VALIDATION_FAILED, REVIEW_PASSED, REVIEW_FAILED. It never grants
 // publication, merge, or deploy authority (grants_publication_authority is a
-// schema const false), and it is content-addressed: result_id is the SHA-256
-// digest of the record with result_id itself removed, so identical content
-// always resolves to the same id and the same persistence path.
+// schema const false).
+//
+// Identity vs. occurrence metadata: result_id is the SHA-256 digest of the
+// record with result_id AND created_at both removed. created_at is retained
+// on every record as useful occurrence data, but it is deliberately excluded
+// from identity — otherwise a retry of the same logical event (a CLI rerun
+// after a transient failure, an idempotent re-adjudication) would mint a new
+// result_id merely because wall-clock time advanced. Two records are "the
+// same logical event" exactly when every other field is identical; if any
+// governance-relevant field differs (reason, evidence_digest, reviewer,
+// upstream_refs, ...) that is a genuinely new event and correctly gets a new
+// identity. created_at is therefore not itself tamper-evident — the fields
+// that gate any authority decision (repository.sha, evidence_digest) remain
+// digest-protected, and the persisting git commit's own committer timestamp
+// (see persistToRef below) supplies an independently tamper-evident
+// occurrence record at the git-object layer.
+//
+// Persistence: a REVIEW_PASSED/REVIEW_FAILED record binds to an exact
+// repository.sha and must not itself change that SHA by being committed onto
+// the same branch it reviews. Every result type is therefore persisted onto
+// a separate, dedicated git ref (default refs/heads/control-plane-task-results)
+// via plumbing only (hash-object/read-tree/write-tree/commit-tree/update-ref)
+// — the working tree, the index, and HEAD of whatever branch happens to be
+// checked out are never touched, so persisting review evidence about a
+// candidate can never move that candidate's own head.
 //
 // The repository carries no JSON Schema library, so structural validation is
 // a small hand-rolled subset (matching the existing duplicated validator in
@@ -18,8 +40,21 @@
 // Things-to-Do policy document.
 
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { assertNoDangerousKeys, canonicalize, digest } from './ttd-canonical-json.mjs';
+
+export const DEFAULT_RESULTS_REF = 'control-plane-task-results';
+
+// The SHA-1 of an empty git tree. This is a universal git constant (the hash
+// of zero entries under git's tree object format), identical in every git
+// repository regardless of content or git version — not looked up, not
+// created, just known. Used as the base tree when the results ref does not
+// exist yet, so the very first write does not require special-casing.
+const EMPTY_TREE_SHA = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
+const ZERO_SHA = '0'.repeat(40);
+const RESULT_COMMIT_IDENTITY = Object.freeze({ name: 'A PRASA Control Plane', email: 'automation@aprasa.org' });
 
 export const RESULT_TYPES = Object.freeze([
   'NEEDS_EVIDENCE_VERIFICATION',
@@ -223,9 +258,12 @@ export function validateResult(record, { root = process.cwd() } = {}) {
 }
 
 // --- Content addressing ----------------------------------------------------
+//
+// Identity is computed over every field except result_id itself and
+// created_at — see the module-level comment for why created_at is excluded.
 
 export function computeResultId(record) {
-  const { result_id, ...rest } = record;
+  const { result_id, created_at, ...rest } = record;
   return digest(rest);
 }
 
@@ -291,37 +329,144 @@ export function buildResult({
   return draft;
 }
 
-export function resultPath(root, record) {
-  return path.join(resultsDir(root), `${record.result_id}.json`);
+export function resultRelativePath(record) {
+  return `${RESULTS_DIR.split(path.sep).join('/')}/${record.result_id}.json`;
+}
+
+// --- Git plumbing helpers ---------------------------------------------------
+// Every call here is pure object-database/ref plumbing: no working-tree file
+// is written, read, or staged, the real index is never touched (a throwaway
+// GIT_INDEX_FILE is used instead), and HEAD is never moved. This is what
+// makes it safe to persist review evidence about a candidate without the act
+// of persisting it changing that candidate's own SHA.
+
+function git(root, args, { allowFailure = false, env = {}, input = undefined } = {}) {
+  const result = spawnSync('git', args, {
+    cwd: root,
+    encoding: 'utf8',
+    env: { ...process.env, ...env },
+    input
+  });
+  if (!allowFailure && result.status !== 0) {
+    const detail = [result.stdout, result.stderr].filter(Boolean).join('\n').trim();
+    throw new Error(`git ${args.join(' ')} failed (${result.status})${detail ? `: ${detail}` : ''}`);
+  }
+  return result;
+}
+
+function resolveRefTip(root, ref) {
+  const probe = git(root, ['rev-parse', '--verify', '--quiet', `refs/heads/${ref}`], { allowFailure: true });
+  const sha = probe.stdout.trim();
+  return probe.status === 0 && /^[a-f0-9]{40}$/.test(sha) ? sha : null;
+}
+
+function readBlobAtPath(root, treeIsh, relPath) {
+  const probe = git(root, ['show', `${treeIsh}:${relPath}`], { allowFailure: true });
+  return probe.status === 0 ? probe.stdout : null;
 }
 
 /**
- * Persists a result as a content-addressed file. Writing the same content
- * twice is a no-op (same digest, same path, identical bytes). Writing
- * different content that happens to collide on result_id is refused —
- * refused rather than silently overwritten, per the fail-closed rule this
- * repository applies everywhere else content addressing is used.
+ * Lists every result file recorded on a results ref, as {relPath} entries.
+ * Returns [] when the ref does not exist yet (nothing has been persisted).
  */
-export function writeResult(root, record) {
-  const errors = validateResult(record, { root });
-  if (errors.length > 0) throw new Error(`INVALID_TASK_RESULT: ${errors.join('; ')}`);
-  const target = resultPath(root, record);
-  const canonical = `${canonicalize(record)}\n`;
-  if (fs.existsSync(target)) {
-    const existing = fs.readFileSync(target, 'utf8');
-    if (existing.trim() !== canonical.trim()) {
-      throw new Error(`TASK_RESULT_ID_COLLISION: ${record.result_id} already exists with different content`);
-    }
-    return { path: target, written: false };
-  }
-  fs.mkdirSync(path.dirname(target), { recursive: true });
-  fs.writeFileSync(target, canonical);
-  return { path: target, written: true };
+export function listPersistedResults(root, { ref = DEFAULT_RESULTS_REF } = {}) {
+  const tip = resolveRefTip(root, ref);
+  if (tip === null) return [];
+  const dirPrefix = RESULTS_DIR.split(path.sep).join('/');
+  const probe = git(root, ['ls-tree', '-r', '--name-only', tip, '--', dirPrefix], { allowFailure: true });
+  if (probe.status !== 0) return [];
+  return probe.stdout.split('\n').map((line) => line.trim()).filter((line) => line.endsWith('.json'));
 }
 
-export function readResult(root, resultId) {
-  const target = path.join(resultsDir(root), `${resultId}.json`);
-  return JSON.parse(fs.readFileSync(target, 'utf8'));
+/**
+ * Reads one persisted result by content-addressed id from a results ref.
+ * Returns null if the ref or the file does not exist.
+ */
+export function readPersistedResult(root, resultId, { ref = DEFAULT_RESULTS_REF } = {}) {
+  const tip = resolveRefTip(root, ref);
+  if (tip === null) return null;
+  const relPath = `${RESULTS_DIR.split(path.sep).join('/')}/${resultId}.json`;
+  const content = readBlobAtPath(root, tip, relPath);
+  return content === null ? null : JSON.parse(content);
+}
+
+/**
+ * Persists a result onto a dedicated results ref via plumbing only — never
+ * onto whatever branch happens to be checked out, and never touching the
+ * working tree, the real index, or HEAD. This is what lets a REVIEW_PASSED /
+ * REVIEW_FAILED record be committed durably without invalidating the exact
+ * repository.sha it binds to: that SHA belongs to a different branch/ref
+ * entirely, and this operation never writes to it.
+ *
+ * Writing the same logical result twice (same computeResultId, i.e. same
+ * content once created_at is set aside) is a no-op: no new blob, tree, or
+ * commit is created, and the originally-persisted created_at is preserved.
+ * Writing different content that happened to collide on result_id — which
+ * would require an actual SHA-256 collision, since result_id is itself that
+ * content's digest — is refused rather than silently overwritten.
+ */
+export function writeResult(root, record, { ref = DEFAULT_RESULTS_REF } = {}) {
+  const errors = validateResult(record, { root });
+  if (errors.length > 0) throw new Error(`INVALID_TASK_RESULT: ${errors.join('; ')}`);
+
+  const relPath = resultRelativePath(record);
+  const canonical = `${canonicalize(record)}\n`;
+
+  const oldTip = resolveRefTip(root, ref);
+  const baseTree = oldTip !== null ? git(root, ['rev-parse', `${oldTip}^{tree}`]).stdout.trim() : EMPTY_TREE_SHA;
+
+  const existing = readBlobAtPath(root, baseTree, relPath);
+  if (existing !== null) {
+    // The path is the result_id, which is itself a digest of every field
+    // except created_at, so two records that land here already agree on
+    // everything but possibly created_at — that is exactly the "same logical
+    // event, replayed at a later instant" case, and must be a no-op that
+    // keeps the originally-persisted created_at. Comparing full bytes here
+    // (including created_at) would wrongly treat every retry as a collision.
+    const existingRecord = JSON.parse(existing);
+    const { created_at: existingCreatedAt, ...existingIdentity } = existingRecord;
+    const { created_at: newCreatedAt, ...newIdentity } = record;
+    if (canonicalize(existingIdentity) === canonicalize(newIdentity)) {
+      return { written: false, ref, path: relPath, commit: oldTip };
+    }
+    throw new Error(`TASK_RESULT_ID_COLLISION: ${record.result_id} already exists on ${ref} with different content`);
+  }
+
+  const blobSha = git(root, ['hash-object', '-w', '--stdin'], { input: canonical }).stdout.trim();
+
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'control-plane-result-index-'));
+  const tmpIndex = path.join(tmpDir, 'index');
+  try {
+    const indexEnv = { GIT_INDEX_FILE: tmpIndex };
+    git(root, ['read-tree', baseTree], { env: indexEnv });
+    git(root, ['update-index', '--add', '--cacheinfo', `100644,${blobSha},${relPath}`], { env: indexEnv });
+    const newTree = git(root, ['write-tree'], { env: indexEnv }).stdout.trim();
+
+    const commitArgs = ['commit-tree', newTree];
+    if (oldTip !== null) commitArgs.push('-p', oldTip);
+    commitArgs.push('-m', `task-result ${record.result_type} ${record.result_id}`);
+    const commitEnv = {
+      GIT_AUTHOR_NAME: RESULT_COMMIT_IDENTITY.name,
+      GIT_AUTHOR_EMAIL: RESULT_COMMIT_IDENTITY.email,
+      GIT_COMMITTER_NAME: RESULT_COMMIT_IDENTITY.name,
+      GIT_COMMITTER_EMAIL: RESULT_COMMIT_IDENTITY.email
+    };
+    const newCommit = git(root, commitArgs, { env: commitEnv }).stdout.trim();
+
+    // Compare-and-swap: fails closed if something else moved the ref between
+    // our read of oldTip and this update, rather than silently clobbering it.
+    git(root, ['update-ref', `refs/heads/${ref}`, newCommit, oldTip ?? ZERO_SHA]);
+
+    return { written: true, ref, path: relPath, commit: newCommit };
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+}
+
+export function readResult(root, resultId, options = {}) {
+  const record = readPersistedResult(root, resultId, options);
+  if (record === null) throw new Error(`TASK_RESULT_NOT_FOUND: ${resultId}`);
+  return record;
 }
 
 /**

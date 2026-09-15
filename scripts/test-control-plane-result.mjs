@@ -5,14 +5,18 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { createHarness } from './lib/ttd-test-harness.mjs';
 import {
   buildResult,
   computeResultId,
+  DEFAULT_RESULTS_REF,
   isResultCurrent,
+  listPersistedResults,
+  readPersistedResult,
   RESULT_TYPES,
-  resultPath,
+  resultRelativePath,
   validateResult,
   writeResult
 } from './lib/control-plane-result.mjs';
@@ -23,6 +27,33 @@ const harness = createHarness('CONTROL_PLANE_RESULT');
 const SHA_A = 'a'.repeat(40);
 const SHA_B = 'b'.repeat(40);
 const DIGEST_A = 'a'.repeat(64);
+
+function git(cwd, args) {
+  const result = spawnSync('git', args, { cwd, encoding: 'utf8' });
+  if (result.status !== 0) throw new Error(`git ${args.join(' ')} failed: ${result.stderr || result.stdout}`);
+  return result.stdout.trim();
+}
+
+/**
+ * A real, throwaway git repository with one commit on its default branch,
+ * carrying the schema file writeResult/validateResult need to read. Returns
+ * {dir, candidateBranch, candidateSha}. Callers are responsible for cleanup.
+ */
+function initSandboxRepo() {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'control-plane-result-test-'));
+  git(dir, ['init', '-q', '-b', 'main']);
+  git(dir, ['config', 'user.name', 'Test']);
+  git(dir, ['config', 'user.email', 'test@example.invalid']);
+  fs.mkdirSync(path.join(dir, 'automation', 'control-plane'), { recursive: true });
+  fs.copyFileSync(
+    path.join(ROOT, 'automation', 'control-plane', 'task-result.schema.json'),
+    path.join(dir, 'automation', 'control-plane', 'task-result.schema.json')
+  );
+  git(dir, ['add', '-A']);
+  git(dir, ['commit', '-q', '-m', 'candidate baseline']);
+  const candidateSha = git(dir, ['rev-parse', 'main']);
+  return { dir, candidateBranch: 'main', candidateSha };
+}
 
 function baseFields(overrides = {}) {
   return {
@@ -200,32 +231,180 @@ harness.equal('reviewer.role HUMAN_ESCALATION is an accepted alternate to INDEPE
 const needsEvidence = buildResult({ resultType: 'NEEDS_EVIDENCE_VERIFICATION', ...baseFields() });
 harness.equal('a non-review result type is never marked stale by SHA drift', isResultCurrent(needsEvidence, SHA_B), true);
 
-// --- Persistence: content-addressed, idempotent, collision-refusing -------
+// --- Persistence: content-addressed ref, idempotent, collision-refusing ---
 
-const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'control-plane-result-test-'));
-try {
-  fs.mkdirSync(path.join(sandbox, 'automation', 'control-plane'), { recursive: true });
-  fs.copyFileSync(
-    path.join(ROOT, 'automation', 'control-plane', 'task-result.schema.json'),
-    path.join(sandbox, 'automation', 'control-plane', 'task-result.schema.json')
-  );
+{
+  const { dir } = initSandboxRepo();
+  try {
+    const record = buildResult({ resultType: 'NEEDS_EVIDENCE_VERIFICATION', ...baseFields() });
+    const expectedRelPath = resultRelativePath(record);
 
-  const record = buildResult({ resultType: 'NEEDS_EVIDENCE_VERIFICATION', ...baseFields() });
-  const expectedPath = resultPath(sandbox, record);
+    const first = writeResult(dir, record);
+    harness.equal('first write reports written:true', first.written, true);
+    harness.equal('first write lands at the content-addressed relative path', first.path, expectedRelPath);
+    harness.equal('first write targets the default results ref', first.ref, DEFAULT_RESULTS_REF);
+    harness.ok('a commit now exists on the results ref', /^[a-f0-9]{40}$/.test(first.commit));
+    harness.equal('the record round-trips exactly from the results ref',
+      readPersistedResult(dir, record.result_id), record);
 
-  const first = writeResult(sandbox, record);
-  harness.equal('first write reports written:true', first.written, true);
-  harness.ok('first write lands at the content-addressed path', first.path === expectedPath);
-  harness.ok('the file now exists on disk', fs.existsSync(expectedPath));
+    const beforeSecondTip = git(dir, ['rev-parse', DEFAULT_RESULTS_REF]);
+    const second = writeResult(dir, record);
+    harness.equal('re-writing identical content is idempotent (written:false)', second.written, false);
+    harness.equal('idempotent re-write creates no new commit', git(dir, ['rev-parse', DEFAULT_RESULTS_REF]), beforeSecondTip);
 
-  const second = writeResult(sandbox, record);
-  harness.equal('re-writing identical content is idempotent (written:false)', second.written, false);
+    // Fabricate a genuine same-path/different-content collision directly at
+    // the git-object layer (the only way one can occur, since result_id is
+    // itself the content digest) and confirm it is refused, not overwritten.
+    const tip = git(dir, ['rev-parse', DEFAULT_RESULTS_REF]);
+    const tree = git(dir, ['rev-parse', `${tip}^{tree}`]);
+    const tmpIndex = path.join(dir, '.git', 'tmp-index-for-collision-test');
+    const blobSha = spawnSync('git', ['hash-object', '-w', '--stdin'], {
+      cwd: dir, encoding: 'utf8', input: `${JSON.stringify({ ...record, reason: 'corrupted' }, null, 2)}\n`
+    }).stdout.trim();
+    spawnSync('git', ['read-tree', tree], { cwd: dir, encoding: 'utf8', env: { ...process.env, GIT_INDEX_FILE: tmpIndex } });
+    spawnSync('git', ['update-index', '--add', '--cacheinfo', `100644,${blobSha},${expectedRelPath}`], {
+      cwd: dir, encoding: 'utf8', env: { ...process.env, GIT_INDEX_FILE: tmpIndex }
+    });
+    const collidedTree = spawnSync('git', ['write-tree'], { cwd: dir, encoding: 'utf8', env: { ...process.env, GIT_INDEX_FILE: tmpIndex } }).stdout.trim();
+    const collidedCommit = spawnSync('git', ['commit-tree', collidedTree, '-p', tip, '-m', 'induced collision'], {
+      cwd: dir,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        GIT_AUTHOR_NAME: 'Test', GIT_AUTHOR_EMAIL: 'test@example.invalid',
+        GIT_COMMITTER_NAME: 'Test', GIT_COMMITTER_EMAIL: 'test@example.invalid'
+      }
+    }).stdout.trim();
+    git(dir, ['update-ref', `refs/heads/${DEFAULT_RESULTS_REF}`, collidedCommit, tip]);
+    fs.rmSync(tmpIndex, { force: true });
 
-  fs.writeFileSync(expectedPath, JSON.stringify({ ...record, reason: 'corrupted on disk' }, null, 2));
-  harness.throws('writing different content at the same content-addressed path is refused',
-    () => writeResult(sandbox, record));
-} finally {
-  fs.rmSync(sandbox, { recursive: true, force: true });
+    harness.throws('writing different content at the same content-addressed path is refused',
+      () => writeResult(dir, record));
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+// --- Blocker 1 proof: persisting review evidence never moves the reviewed --
+// --- candidate's own SHA, because it lands on a separate ref entirely. -----
+
+{
+  const { dir, candidateBranch, candidateSha } = initSandboxRepo();
+  try {
+    const review = buildResult({
+      resultType: 'REVIEW_PASSED',
+      candidateId: `${candidateBranch}`,
+      repositorySha: candidateSha,
+      reason: 'Independent exact-head review found no defects.',
+      requiredInput: 'None; ready for founder approval.',
+      evidenceDigest: DIGEST_A,
+      upstreamRefs: [{ kind: 'GITHUB_SHA', ref: candidateSha }],
+      reviewer: { role: 'INDEPENDENT_REVIEWER', identity: 'Blocker-1 proof reviewer' }
+    });
+
+    writeResult(dir, review);
+
+    const candidateShaAfter = git(dir, ['rev-parse', candidateBranch]);
+    harness.equal('persisting REVIEW_PASSED does not move the reviewed candidate branch',
+      candidateShaAfter, candidateSha);
+
+    const resultsRefTip = git(dir, ['rev-parse', DEFAULT_RESULTS_REF]);
+    harness.ok('the results ref is a distinct commit from the candidate branch',
+      resultsRefTip !== candidateSha);
+
+    const rereadReview = readPersistedResult(dir, review.result_id);
+    harness.equal('the persisted review still binds to the unmoved candidate sha',
+      rereadReview.repository.sha, candidateShaAfter);
+    harness.equal('re-checking the persisted review against the (unmoved) live candidate sha reports current',
+      isResultCurrent(rereadReview, candidateShaAfter), true);
+
+    // Simulate ordinary further work continuing on the candidate branch after
+    // the review was persisted — the review then correctly goes stale, but
+    // only because the candidate itself changed, never because of anything
+    // the review's own persistence did.
+    fs.writeFileSync(path.join(dir, 'unrelated.txt'), 'further candidate work\n');
+    git(dir, ['add', '-A']);
+    git(dir, ['commit', '-q', '-m', 'further candidate work']);
+    const candidateShaAfterFurtherWork = git(dir, ['rev-parse', candidateBranch]);
+    harness.ok('a later, unrelated candidate commit does move the candidate branch (control)',
+      candidateShaAfterFurtherWork !== candidateSha);
+    harness.equal('the review is correctly stale against genuinely new candidate work',
+      isResultCurrent(rereadReview, candidateShaAfterFurtherWork), false);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+// --- Blocker 2 proof: identity is stable across a retry at a later instant,
+// --- proven through the real buildResult + writeResult + CLI path. --------
+
+{
+  const t1 = '2026-09-15T00:00:00Z';
+  const t2 = '2026-09-15T01:00:00Z'; // a later instant: simulates wall-clock advancing between retries
+  const first = buildResult({ resultType: 'NEEDS_EVIDENCE_VERIFICATION', ...baseFields(), createdAt: t1 });
+  const retry = buildResult({ resultType: 'NEEDS_EVIDENCE_VERIFICATION', ...baseFields(), createdAt: t2 });
+  harness.ok('two builds of the same logical event have different created_at', first.created_at !== retry.created_at);
+  harness.equal('two builds of the same logical event share one result_id regardless of created_at',
+    first.result_id, retry.result_id);
+
+  const changed = buildResult({ resultType: 'NEEDS_EVIDENCE_VERIFICATION', ...baseFields({ reason: 'A genuinely different reason.' }), createdAt: t2 });
+  harness.ok('a genuinely different event still gets a different result_id', changed.result_id !== first.result_id);
+
+  const { dir } = initSandboxRepo();
+  try {
+    const firstWrite = writeResult(dir, first);
+    harness.equal('the first occurrence is written', firstWrite.written, true);
+
+    const retryWrite = writeResult(dir, retry);
+    harness.equal('replaying the same logical event at a later instant is a no-op', retryWrite.written, false);
+    harness.equal('no second commit is created by the replay', retryWrite.commit, firstWrite.commit);
+
+    const persisted = readPersistedResult(dir, first.result_id);
+    harness.equal('the persisted record keeps the first occurrence\'s created_at, not the retry\'s',
+      persisted.created_at, t1);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+// The same replay proof through the actual CLI entrypoint, not just the
+// library call — this is what "through the real writer/build path" means:
+// two separate process invocations of write-control-plane-result.mjs against
+// the identical logical draft, each naturally producing its own real
+// new Date().toISOString() for created_at, must still collapse to one result.
+{
+  const { dir } = initSandboxRepo();
+  const draftDir = fs.mkdtempSync(path.join(os.tmpdir(), 'control-plane-result-cli-draft-'));
+  try {
+    const draftPath = path.join(draftDir, 'draft.json');
+    fs.writeFileSync(draftPath, JSON.stringify({
+      resultType: 'TECHNICAL_VALIDATION_FAILED',
+      taskId: 'TTD-2026-CLI-REPLAY-001',
+      repositorySha: SHA_A,
+      reason: 'CLI replay regression fixture reason.',
+      requiredInput: 'CLI replay regression fixture required input.',
+      evidenceDigest: DIGEST_A,
+      upstreamRefs: [{ kind: 'AUDIT_RECORD', ref: 'synthetic:cli-replay:0001' }]
+    }, null, 2));
+
+    const writerScript = path.join(ROOT, 'scripts', 'write-control-plane-result.mjs');
+    function runCli() {
+      const result = spawnSync(process.execPath, [writerScript, `--draft=${draftPath}`, `--root=${dir}`], { encoding: 'utf8' });
+      if (result.status !== 0) throw new Error(`CLI writer failed: ${result.stderr || result.stdout}`);
+      return JSON.parse(result.stdout);
+    }
+
+    const firstRun = runCli();
+    const secondRun = runCli(); // a genuine second process, its own new Date() call, a later instant
+    harness.equal('the CLI reports WRITTEN on first invocation', firstRun.status, 'WRITTEN');
+    harness.equal('the CLI reports ALREADY_PRESENT on the retry, not a second WRITTEN', secondRun.status, 'ALREADY_PRESENT');
+    harness.equal('both CLI invocations agree on result_id despite the elapsed wall-clock time',
+      firstRun.result_id, secondRun.result_id);
+    harness.equal('the retry does not advance the results ref', secondRun.commit, firstRun.commit);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+    fs.rmSync(draftDir, { recursive: true, force: true });
+  }
 }
 
 // --- Committed example fixtures: one per result_type, must stay valid ------
