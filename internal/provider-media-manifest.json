@@ -551,6 +551,24 @@
       "media_asset_source_url": null,
       "media_checked_date": "2026-09-11",
       "media_alt": "REGEA 2026 call for oral communications poster showing the original 30 July–30 August window and the extension through 30 September."
+    },
+    {
+      "section": "things-to-do",
+      "title": "VOYAGE — OBI & MARGO",
+      "provider": "TXON KUCEU",
+      "source_url": "https://aprasa.org/assets/events/voyage-obi-margo-kafe-djan-djan-2026.jpg",
+      "media_type": "provider-supplied",
+      "media_state": "authentic-present",
+      "media_source": "Organizer / promotional source supplied directly to A PRASA",
+      "media_asset": "assets/events/voyage-obi-margo-kafe-djan-djan-2026.jpg",
+      "fallback_category": "things-visual-arts",
+      "fallback_reason": null,
+      "media_provenance": "Event details are based on organizer/promotional artwork supplied directly to A PRASA. An independently indexed first-party event page was not identified in the bounded 15 September check.",
+      "media_asset_source_url": "https://aprasa.org/assets/events/voyage-obi-margo-kafe-djan-djan-2026.jpg",
+      "media_checked_date": "2026-09-15",
+      "media_alt": "VOYAGE — OBI & MARGO",
+      "media_width": 1800,
+      "media_height": 2546
     }
   ]
 }
