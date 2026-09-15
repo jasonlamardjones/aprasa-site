@@ -10,6 +10,10 @@ on:
       - 'scripts/validate-ttd-trust-anchor.mjs'
       - 'scripts/lib/ttd-*.mjs'
       - 'scripts/test-ttd-*.mjs'
+      - 'scripts/lib/control-plane-result.mjs'
+      - 'scripts/write-control-plane-result.mjs'
+      - 'scripts/validate-control-plane-result.mjs'
+      - 'scripts/test-control-plane-result.mjs'
       - '.github/workflows/validate-control-plane.yml'
   push:
     branches: [main]
@@ -21,6 +25,10 @@ on:
       - 'scripts/validate-ttd-trust-anchor.mjs'
       - 'scripts/lib/ttd-*.mjs'
       - 'scripts/test-ttd-*.mjs'
+      - 'scripts/lib/control-plane-result.mjs'
+      - 'scripts/write-control-plane-result.mjs'
+      - 'scripts/validate-control-plane-result.mjs'
+      - 'scripts/test-control-plane-result.mjs'
       - '.github/workflows/validate-control-plane.yml'
 
 permissions:
@@ -61,3 +69,16 @@ jobs:
 
       - name: Things-to-Do adversarial regressions
         run: node scripts/test-ttd-adversarial-regressions.mjs
+
+      - name: Control-plane task-result acceptance and fail-closed regressions
+        run: node scripts/test-control-plane-result.mjs
+
+      - name: Validate every persisted control-plane task result
+        run: node scripts/validate-control-plane-result.mjs
+
+      - name: Validate committed control-plane task-result example fixtures
+        run: node scripts/validate-control-plane-result.mjs --result=automation/control-plane/fixtures/task-result-examples/needs-evidence-verification.json
+      - run: node scripts/validate-control-plane-result.mjs --result=automation/control-plane/fixtures/task-result-examples/needs-project-03-decision.json
+      - run: node scripts/validate-control-plane-result.mjs --result=automation/control-plane/fixtures/task-result-examples/technical-validation-failed.json
+      - run: node scripts/validate-control-plane-result.mjs --result=automation/control-plane/fixtures/task-result-examples/review-passed.json
+      - run: node scripts/validate-control-plane-result.mjs --result=automation/control-plane/fixtures/task-result-examples/review-failed.json

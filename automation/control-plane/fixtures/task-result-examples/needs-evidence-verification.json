@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0.0",
+  "result_id": "3fcc71a1df916a4f41b815e5c6d89b5d2f91a2e2e40dfaa1637d979ff21e875c",
+  "result_type": "NEEDS_EVIDENCE_VERIFICATION",
+  "status": "HOLD",
+  "task_ref": {
+    "task_id": null,
+    "candidate_id": "TTD-EXAMPLE-CANDIDATE-001"
+  },
+  "repository": {
+    "sha": "5555555555555555555555555555555555555555",
+    "ref": null
+  },
+  "owner": "EVIDENCE_VERIFIER",
+  "reason": "material_source_conflict is KNOWN true and conflict_resolved is KNOWN false; the adjudication evaluator HOLDs under TTD-EVID-001 pending resolution.",
+  "required_input": "A first-party or corroborating source that resolves the conflicting assertion.",
+  "resume_point": {
+    "next_role": "EVIDENCE_VERIFIER",
+    "next_status": "HOLD"
+  },
+  "evidence_digest": "6666666666666666666666666666666666666666666666666666666666666666",
+  "reviewer": null,
+  "upstream_refs": [
+    {
+      "kind": "AUDIT_RECORD",
+      "ref": "example:adjudication-audit:TTD-EXAMPLE-CANDIDATE-001"
+    }
+  ],
+  "grants_publication_authority": false,
+  "created_at": "2026-09-15T00:00:00Z"
+}

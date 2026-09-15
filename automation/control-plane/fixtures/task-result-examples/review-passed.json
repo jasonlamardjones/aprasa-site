@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0.0",
+  "result_id": "c2dbf7d9ed035452a04683b1c4f44840c87224c2c504a82f8dc9e1c29482bbcc",
+  "result_type": "REVIEW_PASSED",
+  "status": "REVIEWED",
+  "task_ref": {
+    "task_id": null,
+    "candidate_id": "feature/example-publication-candidate"
+  },
+  "repository": {
+    "sha": "5555555555555555555555555555555555555555",
+    "ref": null
+  },
+  "owner": "INDEPENDENT_REVIEWER",
+  "reason": "Independent exact-head review found no correctness, scope, or authority defects in this candidate at the stated SHA.",
+  "required_input": "None; the candidate is ready for founder approval and merge decision.",
+  "resume_point": null,
+  "evidence_digest": "6666666666666666666666666666666666666666666666666666666666666666",
+  "reviewer": {
+    "role": "INDEPENDENT_REVIEWER",
+    "identity": "Example independent reviewer"
+  },
+  "upstream_refs": [
+    {
+      "kind": "GITHUB_SHA",
+      "ref": "5555555555555555555555555555555555555555"
+    }
+  ],
+  "grants_publication_authority": false,
+  "created_at": "2026-09-15T00:00:00Z"
+}

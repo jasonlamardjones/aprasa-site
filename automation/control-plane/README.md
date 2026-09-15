@@ -27,6 +27,9 @@ AI products are replaceable workers. The contracts name roles, not vendors.
 - `trust/things-to-do-v1.trust-anchor.json` — deployment trust root binding the approved policy identity, version, approval reference, rule set, and content digest.
 - `fixtures/ttd-adjudication-oracle.json` — synthetic acceptance oracle covering normalization, evaluation, and routing.
 - `scripts/validate-control-plane-contracts.mjs` — self-contained schema/subset validator, semantic invariant validator, and negative-regression harness.
+- `task-result.schema.json` — schema for the provider-neutral, content-addressed task-result records described below.
+- `results/` — where real task-result records land once written; empty by default; see `results/README.md`.
+- `fixtures/task-result-examples/` — one committed synthetic example per result_type, kept in sync by `scripts/test-control-plane-result.mjs`.
 
 ## Normal state progression
 
@@ -94,6 +97,69 @@ Detailed religious, political/advocacy, adult/sexualized, hateful/extremist, uns
 Every autonomous task must declare allowed and prohibited actions. `MERGE`, `DEPLOY`, `DELETE_BRANCH`, `INVENT_FACTS`, `INVENT_POLICY`, `PUBLISH_EXTERNAL_MESSAGE`, and `CHANGE_GOVERNANCE` remain explicit prohibition tokens for this foundation.
 
 This v1 foundation does not itself authorize any of those actions.
+
+## Task results: persisting exceptions and reviews
+
+Several outcomes currently stop autonomous progression but leave no durable
+record: an unresolved evidence dependency, an unresolved Project 03 standards
+question, a failed technical validator, and the independent exact-head review
+that gates every guarded-write candidate. `scripts/lib/control-plane-result.mjs`
+persists exactly five such outcomes as schema-validated, content-addressed
+records — `NEEDS_EVIDENCE_VERIFICATION`, `NEEDS_PROJECT_03_DECISION`,
+`TECHNICAL_VALIDATION_FAILED`, `REVIEW_PASSED`, `REVIEW_FAILED` — governed by
+`task-result.schema.json`.
+
+A task result is provider-neutral: it names a worker role and a governance
+owner drawn from the same vocabulary as the task envelope and orchestration
+contract, never a vendor. It is content-addressed: `result_id` is the SHA-256
+digest of the record with `result_id` itself removed, so identical content
+always resolves to the same id and the same path
+(`results/<result_id>.json`); persisting the same outcome twice is a no-op,
+and persisting different content that happened to collide on an id is
+refused rather than silently overwritten. `grants_publication_authority` is a
+schema `const: false` on every record — a task result can report that a
+review passed, but it cannot itself authorize merge, deploy, or publication.
+
+The mapping from `result_type` to `status`, `owner`, and `resume_point` is
+fixed and cannot vary per instance (`scripts/lib/control-plane-result.mjs`'s
+`RESULT_TYPE_INVARIANTS`), because the repository's hand-rolled schema
+validator does not implement `if`/`then`/`else` or `allOf`; the schema fixes
+shape only, and `validateResult` enforces the per-type invariant as a
+semantic check, the same split `scripts/validate-control-plane-contracts.mjs`
+already uses for the Things-to-Do policy document. `REVIEW_PASSED` carries a
+`resume_point` of `null` rather than an automatic route: merge/deploy remains
+founder-only, and a `null` route means exactly what it means throughout this
+control plane — no automatic downstream route exists for that outcome.
+
+### Exact-SHA binding
+
+`REVIEW_PASSED` and `REVIEW_FAILED` records carry the exact `repository.sha`
+they were produced against and are invalid once the candidate's head SHA
+moves. `scripts/validate-control-plane-result.mjs --result=<path>
+--candidate-sha=<sha>` enforces this: a mismatch fails closed with
+`STALE_REVIEW_RESULT`, and no other check in that run is treated as
+sufficient to paper over it. Non-review result types carry `repository.sha`
+for provenance only and are not invalidated by SHA drift, since they describe
+a dependency or a validator failure rather than a verdict on a specific
+commit.
+
+### Writing and reading a result
+
+```sh
+node scripts/write-control-plane-result.mjs --draft=<path-to-draft.json>
+node scripts/validate-control-plane-result.mjs                      # validates every persisted result
+node scripts/validate-control-plane-result.mjs --result=<path>      # validates one
+node scripts/validate-control-plane-result.mjs --result=<path> --candidate-sha=<sha>
+```
+
+The draft file supplies only what varies per instance — `resultType`,
+`taskId`/`candidateId`, `repositorySha`, `reason`, `requiredInput`,
+`evidenceDigest`, `reviewer` (required for the two review types, forbidden
+otherwise), and `upstreamRefs` (at least one, tracing back to whatever
+produced this result — an adjudication audit record, a publication run
+artifact, a reviewed commit SHA). Neither script commits, pushes, merges, or
+deploys; persistence is a file on disk, and whether/when it is committed
+remains an operational decision outside this layer.
 
 ## Validation
 
@@ -196,6 +262,7 @@ node scripts/test-ttd-normalization.mjs
 node scripts/test-ttd-policy-evaluator.mjs
 node scripts/test-ttd-adjudication-composition.mjs
 node scripts/test-ttd-adversarial-regressions.mjs
+node scripts/test-control-plane-result.mjs
 ```
 
 The three stages are tested separately against `fixtures/ttd-adjudication-oracle.json`. Stage B consumes the oracle's hand-authored normalized facts rather than normalizer output, and stage C consumes the oracle's expected evaluation rather than evaluator output, so no suite generates its own expected results from the production implementation.
@@ -205,3 +272,5 @@ All oracle records are synthetic. None describes a real event and none may be pu
 ## Next implementation tranche
 
 After this tranche passes exact-SHA independent review, the next tranche should reconcile the oracle against the Project 03 standards owner's own test specification, then connect only governed `SELECTED` records to the existing event-publication preparation machinery. Existing publication validators and exact-SHA review gates remain controlling. No autonomous merge, deploy, publication, or governance authority is created here.
+
+The task-result layer above persists exceptions and reviews; it does not yet wire any producer to call `write-control-plane-result.mjs` automatically. A future tranche could have the guarded-write path (`scripts/lib/event-publication-write.mjs`) emit a `TECHNICAL_VALIDATION_FAILED` result on validator failure, and have independent review conclude with a `REVIEW_PASSED`/`REVIEW_FAILED` result instead of prose in a PR body — but that wiring is deliberately out of scope here and remains for governance and implementation review to authorize separately.

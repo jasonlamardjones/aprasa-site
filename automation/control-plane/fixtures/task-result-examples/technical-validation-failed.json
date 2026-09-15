@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0.0",
+  "result_id": "4452ad0ca856c25cf8c630b604cdbe567dc5f026c4c720d3d6ced0d6308f388d",
+  "result_type": "TECHNICAL_VALIDATION_FAILED",
+  "status": "BLOCKED",
+  "task_ref": {
+    "task_id": "TTD-2026-EXAMPLE-003",
+    "candidate_id": null
+  },
+  "repository": {
+    "sha": "5555555555555555555555555555555555555555",
+    "ref": null
+  },
+  "owner": "PROJECT_04",
+  "reason": "scripts/validate-things-to-do-surface-equivalence.mjs failed during guarded-write preparation: the built EN/PT surfaces diverged from the approved packet.",
+  "reason_code": "SURFACE_EQUIVALENCE_MISMATCH",
+  "required_input": "A corrected packet or generator input that resolves the reported surface-equivalence mismatch.",
+  "resume_point": {
+    "next_role": "PUBLICATION_WRITER",
+    "next_status": "BLOCKED"
+  },
+  "evidence_digest": "6666666666666666666666666666666666666666666666666666666666666666",
+  "reviewer": null,
+  "upstream_refs": [
+    {
+      "kind": "TASK_RESULT",
+      "ref": "example:publication-run:TTD-2026-EXAMPLE-003"
+    }
+  ],
+  "grants_publication_authority": false,
+  "created_at": "2026-09-15T00:00:00Z"
+}
