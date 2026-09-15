@@ -18,6 +18,7 @@ const STATIC_EN_ROUTES = [
   '/',
   '/mindelo-essentials/',
   '/about/',
+  '/privacy/',
   // Canonical Things-to-Do collection hub. Listed as a static route rather
   // than derived: it is one crawlable collection surface per locale, not a
   // per-record route, and its PT counterpart is emitted by the same
