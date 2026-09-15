@@ -39,6 +39,14 @@ const PUBLICATION_STATES = new Set([
   'SUPERSEDED',
   'TEMPORARILY_UNAVAILABLE',
 ]);
+
+// Project 03 approved ordinary-publication eligibility. This is an
+// independent editorial dimension from lifecycle_class/publication_state
+// above: a record's factual currentness must never be used to encode this
+// separate, editorial decision, and vice versa.
+const ORDINARY_PUBLICATION_ELIGIBILITY = new Set(['ELIGIBLE', 'NOT_ELIGIBLE']);
+// Project 03 approved exclusion reasons for NOT_ELIGIBLE records.
+const ORDINARY_PUBLICATION_REASONS = new Set(['PAID_LOCAL_SERVICE_TRAINING']);
 // The space-separated spelling is a legacy form, not an accepted alias. It is
 // listed explicitly so a stray occurrence produces a precise error naming the
 // canonical token rather than a generic "invalid state".
@@ -136,8 +144,28 @@ const locale = loadLocaleData();
 }
 
 // --- document shape -------------------------------------------------------
-if (data.version !== 1) fail(`version must be 1, got ${JSON.stringify(data.version)}`);
-if (data.schema !== 'aprasa.training-opportunities.v1') fail(`unexpected schema id ${JSON.stringify(data.schema)}`);
+if (data.version !== 2) fail(`version must be 2, got ${JSON.stringify(data.version)}`);
+if (data.schema !== 'aprasa.training-opportunities.v2') fail(`unexpected schema id ${JSON.stringify(data.schema)}`);
+if (!data.ordinary_publication_eligibility_values || typeof data.ordinary_publication_eligibility_values !== 'object') {
+  fail('ordinary_publication_eligibility_values is required');
+} else {
+  for (const value of Object.keys(data.ordinary_publication_eligibility_values)) {
+    if (!ORDINARY_PUBLICATION_ELIGIBILITY.has(value)) fail(`declared ordinary_publication_eligibility value "${value}" is not a Project 03 approved value`);
+  }
+  for (const value of ORDINARY_PUBLICATION_ELIGIBILITY) {
+    if (!(value in data.ordinary_publication_eligibility_values)) fail(`approved ordinary_publication_eligibility value "${value}" is missing from ordinary_publication_eligibility_values`);
+  }
+}
+if (!data.ordinary_publication_reasons || typeof data.ordinary_publication_reasons !== 'object') {
+  fail('ordinary_publication_reasons is required');
+} else {
+  for (const reason of Object.keys(data.ordinary_publication_reasons)) {
+    if (!ORDINARY_PUBLICATION_REASONS.has(reason)) fail(`declared ordinary_publication_reason "${reason}" is not a Project 03 approved reason`);
+  }
+  for (const reason of ORDINARY_PUBLICATION_REASONS) {
+    if (!(reason in data.ordinary_publication_reasons)) fail(`approved ordinary_publication_reason "${reason}" is missing from ordinary_publication_reasons`);
+  }
+}
 if (!Array.isArray(data.records) || data.records.length === 0) fail('records[] must be a non-empty array');
 if (!Array.isArray(data.lifecycle_classes)) fail('lifecycle_classes[] is required');
 else {
@@ -251,6 +279,23 @@ for (const [index, record] of (data.records ?? []).entries()) {
   }
   if (typeof record.provider !== 'string' || !record.provider.trim()) {
     fail(`${where}: provider identity is required`);
+  }
+
+  // Ordinary-publication eligibility. Required and explicit for every
+  // canonical record — never silently optional — and independent of
+  // lifecycle_class/publication_state above: this loop never reads
+  // publication_state to decide eligibility validity, and the reverse must
+  // never happen either.
+  if (!ORDINARY_PUBLICATION_ELIGIBILITY.has(record.ordinary_publication_eligibility)) {
+    fail(`${where}: invalid or missing ordinary_publication_eligibility ${JSON.stringify(record.ordinary_publication_eligibility)}`);
+  } else if (record.ordinary_publication_eligibility === 'ELIGIBLE') {
+    if (record.ordinary_publication_reason !== null) {
+      fail(`${where}: ordinary_publication_eligibility ELIGIBLE requires ordinary_publication_reason to be null, got ${JSON.stringify(record.ordinary_publication_reason)}`);
+    }
+  } else if (record.ordinary_publication_eligibility === 'NOT_ELIGIBLE') {
+    if (!ORDINARY_PUBLICATION_REASONS.has(record.ordinary_publication_reason)) {
+      fail(`${where}: ordinary_publication_eligibility NOT_ELIGIBLE requires an approved ordinary_publication_reason, got ${JSON.stringify(record.ordinary_publication_reason)}`);
+    }
   }
 
   // Dates. checked_at is provenance, never an expiry signal: a stale

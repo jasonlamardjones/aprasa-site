@@ -24,7 +24,14 @@ const trainingRecords = JSON.parse(fs.readFileSync(trainingPath, 'utf8')).record
 const currentness = JSON.parse(fs.readFileSync(currentnessPath, 'utf8'));
 const asOf = currentness.as_of;
 
-const allowedTypes = new Set(['provider-supplied', 'provider-owned', 'editorial-fallback']);
+// "aprasa-category" is the machine-readable Plan B representation: locally
+// stored A PRASA-created/owned category/editorial imagery (never generic and
+// never provider-authentic — that distinction is "editorial-fallback", Plan
+// C, which the shared front-end foundation renders as the standardized
+// section fallback when a record carries no media_asset of its own). A
+// "aprasa-category" record MUST carry a real, locally verified media_asset,
+// unlike "editorial-fallback", where media_asset is null.
+const allowedTypes = new Set(['provider-supplied', 'provider-owned', 'editorial-fallback', 'aprasa-category']);
 const allowedStates = new Set(['authentic-present', 'authentic-available-needs-ingestion', 'fallback-temporary', 'fallback-final']);
 
 const errors = [];
@@ -86,6 +93,29 @@ const canonicalTrainingByManifestTitle = new Map(
     .map((record) => [record.media_manifest_title, record])
 );
 
+// A CURRENT/REVIEW-DUE training record is no longer necessarily rendered as
+// an ORDINARY public record (Project 03's ordinary-publication eligibility
+// tranche): a lifecycle-retainable record that is NOT_ELIGIBLE and carries no
+// approved Spotlight role has its Home marker region emptied by
+// scripts/generate-training-opportunities.mjs, exactly like a removed-state
+// record, even though its lifecycle stays CURRENT. This mirrors the
+// generator's own APPROVED_SPOTLIGHT_ATTRS bound EXACTLY: the exception is
+// scoped to the currently approved Learning Spotlight attribute, never to any
+// key that merely matches a "-spotlight" naming pattern, so an unapproved
+// attribute (e.g. a stray "data-fake-spotlight") can never itself excuse a
+// record from this check. No record id is ever named here either.
+const APPROVED_SPOTLIGHT_ATTRS = new Set(['data-learning-spotlight']);
+function hasApprovedSpotlightRole(trainingRecord) {
+  const attrs = trainingRecord?.card?.attributes;
+  if (!attrs) return false;
+  return Object.keys(attrs).some((key) => APPROVED_SPOTLIGHT_ATTRS.has(key));
+}
+function isOrdinaryPublicationSuppressed(trainingRecord) {
+  if (!trainingRecord) return false;
+  if (TRAINING_REMOVED_STATES.has(trainingRecord.publication_state)) return false; // already excused above
+  return trainingRecord.ordinary_publication_eligibility === 'NOT_ELIGIBLE' && !hasApprovedSpotlightRole(trainingRecord);
+}
+
 for (const record of manifest.records) {
   const label = `${record.section} :: ${record.title}`;
   const titleHeading = `<h3>${escapeHtml(record.title)}</h3>`;
@@ -109,12 +139,15 @@ for (const record of manifest.records) {
     && canonicalEvent.kind === 'dated-event'
     && isExpired(canonicalEvent, asOf)
   );
+  const trainingRecordForThisEntry = record.section === 'trainings-tools'
+    ? canonicalTrainingByManifestTitle.get(record.title)
+    : null;
   const isRemovedTrainingRecord = record.section === 'trainings-tools'
-    && TRAINING_REMOVED_STATES.has(
-      canonicalTrainingByManifestTitle.get(record.title)?.publication_state
-    );
+    && TRAINING_REMOVED_STATES.has(trainingRecordForThisEntry?.publication_state);
+  const isSuppressedByEligibility = record.section === 'trainings-tools'
+    && isOrdinaryPublicationSuppressed(trainingRecordForThisEntry);
 
-  if (!appearsOnHome && !appearsOnHub && !appearsOnDetail && !isExpiredDatedEvent && !isRemovedTrainingRecord) {
+  if (!appearsOnHome && !appearsOnHub && !appearsOnDetail && !isExpiredDatedEvent && !isRemovedTrainingRecord && !isSuppressedByEligibility) {
     errors.push(`${label}: card title not found in index.html${THINGS_TO_DO_HUB_PUBLIC ? `, ${hubOutputPath('en')}` : ''} or its own detail page`);
   }
   if (!record.source_url) errors.push(`${label}: missing source_url`);
@@ -140,6 +173,23 @@ for (const record of manifest.records) {
     if (!record.fallback_reason) errors.push(`${label}: fallback requires fallback_reason`);
   }
 
+  // Plan B: locally stored A PRASA-created/owned category imagery, reused
+  // generically. Unlike editorial-fallback (Plan C, no media_asset), an
+  // aprasa-category record MUST carry a real, locally verified asset and
+  // provenance stating plainly that the image is category-level, not
+  // provider-authentic — so it never gets confused with authentic media that
+  // depicts the actual record/provider.
+  if (record.media_type === 'aprasa-category') {
+    if (!record.fallback_category) errors.push(`${label}: aprasa-category requires fallback_category`);
+    if (!record.fallback_reason) errors.push(`${label}: aprasa-category requires fallback_reason`);
+    if (!record.media_asset) errors.push(`${label}: aprasa-category requires a local media_asset`);
+    else if (!fs.existsSync(path.join(root, record.media_asset))) {
+      errors.push(`${label}: media_asset does not exist: ${record.media_asset}`);
+    }
+    if (!hasText(record.media_provenance)) errors.push(`${label}: aprasa-category requires media_provenance stating the image is A PRASA-owned category imagery, not provider-authentic`);
+    if (!isIsoDate(record.media_checked_date)) errors.push(`${label}: aprasa-category requires a valid calendar date in YYYY-MM-DD format`);
+  }
+
   // Regression guard: this validator has always confirmed a card's TITLE is
   // present on a public surface, but never that its approved generic media
   // treatment actually rendered there. An editorial-fallback training record
@@ -150,7 +200,7 @@ for (const record of manifest.records) {
   // opportunities.mjs owns), EN surface only, matching this validator's
   // existing EN-only scope; PT coverage lives in
   // scripts/test-training-opportunities-generator.mjs (PROBE 6).
-  if (record.media_type === 'editorial-fallback' && record.section === 'trainings-tools' && !isRemovedTrainingRecord) {
+  if (record.media_type === 'editorial-fallback' && record.section === 'trainings-tools' && !isRemovedTrainingRecord && !isSuppressedByEligibility) {
     const canonicalId = canonicalTrainingByManifestTitle.get(record.title)?.id;
     if (!canonicalId) {
       errors.push(`${label}: editorial-fallback training record has no canonical id in ${path.relative(root, trainingPath)} to check for static fallback media`);
@@ -168,6 +218,33 @@ for (const record of manifest.records) {
         }
         if (!regionHtml.includes('<div class="dialog-media media-fallback" aria-hidden="true">')) {
           errors.push(`${label}: editorial-fallback record ${canonicalId} is missing its static .dialog-media media-fallback block`);
+        }
+      }
+    }
+  }
+
+  // Regression guard, mirroring the editorial-fallback check above but in the
+  // opposite direction: an aprasa-category (Plan B) record must render its
+  // real category asset, never the generic symbol fallback, and never claim
+  // provider-specific authenticity in its rendered alt text.
+  if (record.media_type === 'aprasa-category' && record.section === 'trainings-tools' && !isRemovedTrainingRecord && !isSuppressedByEligibility) {
+    const canonicalId = trainingRecordForThisEntry?.id;
+    if (!canonicalId) {
+      errors.push(`${label}: aprasa-category training record has no canonical id in ${path.relative(root, trainingPath)} to check for static category media`);
+    } else {
+      const beginMarker = `<!-- BEGIN GENERATED TRAINING: ${canonicalId} -->`;
+      const endMarker = `<!-- END GENERATED TRAINING: ${canonicalId} -->`;
+      const startIdx = html.indexOf(beginMarker);
+      const endIdx = html.indexOf(endMarker);
+      if (startIdx === -1 || endIdx === -1) {
+        errors.push(`${label}: no generated-training marker region found for ${canonicalId} to check for static category media`);
+      } else {
+        const regionHtml = html.slice(startIdx, endIdx);
+        if (regionHtml.includes('media-fallback')) {
+          errors.push(`${label}: aprasa-category record ${canonicalId} must render its category asset, not the generic media-fallback block`);
+        }
+        if (!record.media_asset || !regionHtml.includes(record.media_asset)) {
+          errors.push(`${label}: aprasa-category record ${canonicalId} does not render its declared media_asset (${record.media_asset}) in its static region`);
         }
       }
     }

@@ -19,6 +19,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import { t } from './lib/locale.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -165,7 +166,12 @@ function reportCounts(stdout) {
 for (const removedState of ['EXPIRED', 'WITHDRAWN', 'SUPERSEDED']) {
   for (const locale of ['en', 'pt']) {
     const dir = sandbox();
-    const id = 'myrtle';
+    // ibm-skillsbuild: ordinary_publication_eligibility ELIGIBLE, so it
+    // renders normally and is unaffected by the eligibility/Spotlight
+    // tranche — myrtle no longer starts populated (NOT_ELIGIBLE, no
+    // Spotlight role), so it cannot exercise this populated-region
+    // transition probe any more.
+    const id = 'ibm-skillsbuild';
     const label = `${locale.toUpperCase()} CURRENT -> ${removedState} -> CURRENT`;
 
     const populated = region(dir, locale, id);
@@ -227,7 +233,10 @@ for (const removedState of ['EXPIRED', 'WITHDRAWN', 'SUPERSEDED']) {
 // --- stale content inside a removed-state region is drift, never "matches" --
 {
   const dir = sandbox();
-  const id = 'myrtle';
+  // Needs a record that starts populated (ordinary_publication_eligibility
+  // ELIGIBLE) so the state change actually leaves stale content behind;
+  // myrtle no longer starts populated under the eligibility/Spotlight tranche.
+  const id = 'ibm-skillsbuild';
   setState(dir, id, 'WITHDRAWN');
   const dry = run(dir, 'en');
   check('stale content in a removed-state region is reported as drift',
@@ -405,7 +414,12 @@ for (const removedState of ['EXPIRED', 'WITHDRAWN', 'SUPERSEDED']) {
     en: { label: 'Trainings, Tools &amp; Opportunities', note: 'A PRASA section thumbnail — not provider-specific imagery.' },
     pt: { label: 'Formações, Ferramentas e Oportunidades', note: 'Miniatura da secção A PRASA — imagem não específica do prestador.' },
   };
-  const FALLBACK_IDS = ['start-cv', 'unicv-china-ambassador-scholarship-2026'];
+  // start-cv moved from the generic Plan C section fallback to its own Plan B
+  // A PRASA category asset (see PLAN B / PLAN C tests below), so it is no
+  // longer a Plan C fallback probe target. unicv-china-ambassador-scholarship
+  // is the required PLAN C CONTROL: it must keep using the generic fallback
+  // unchanged, proving Plan C was preserved rather than globally removed.
+  const FALLBACK_IDS = ['unicv-china-ambassador-scholarship-2026'];
 
   for (const id of FALLBACK_IDS) {
     for (const locale of ['en', 'pt']) {
@@ -472,17 +486,19 @@ for (const removedState of ['EXPIRED', 'WITHDRAWN', 'SUPERSEDED']) {
     fs.rmSync(dir, { recursive: true, force: true });
   }
 
-  // GUARD — record.media absent is NEVER sufficient by itself. Point Start
-  // CV's linkage at a real manifest entry whose media_type is NOT
-  // "editorial-fallback" (a provider-owned record) and confirm no fallback
-  // is emitted, proving the generator checks media_type and not just the
-  // presence of some media_manifest_title.
+  // GUARD — record.media absent is NEVER sufficient by itself. Point the
+  // China scholarship record's linkage at a real manifest entry whose
+  // media_type is NOT "editorial-fallback" (a provider-owned record) and
+  // confirm no fallback is emitted, proving the generator checks media_type
+  // and not just the presence of some media_manifest_title. (Retargeted from
+  // start-cv, which now carries its own record.media under Plan B and so no
+  // longer exercises this manifest-driven branch at all.)
   {
     const dir = sandbox();
-    setMediaManifestTitle(dir, 'start-cv', 'Myrtle Atividades Educativas');
+    setMediaManifestTitle(dir, 'unicv-china-ambassador-scholarship-2026', 'Myrtle Atividades Educativas');
     const written = run(dir, 'en', ['--write']);
     check('PROBE 6 (guard: wrong media_type): generation still succeeds', written.status === 0, written.stderr.trim());
-    const html = region(dir, 'en', 'start-cv');
+    const html = region(dir, 'en', 'unicv-china-ambassador-scholarship-2026');
     check('PROBE 6 (guard: wrong media_type): no fallback emitted for a provider-owned linkage',
       html !== null && !html.includes('media-fallback'), html ?? '');
     fs.rmSync(dir, { recursive: true, force: true });
@@ -493,12 +509,236 @@ for (const removedState of ['EXPIRED', 'WITHDRAWN', 'SUPERSEDED']) {
   // linkage rather than defaulting to fallback whenever record.media is null.
   {
     const dir = sandbox();
-    setMediaManifestTitle(dir, 'start-cv', null);
+    setMediaManifestTitle(dir, 'unicv-china-ambassador-scholarship-2026', null);
     const written = run(dir, 'en', ['--write']);
     check('PROBE 6 (guard: no linkage at all): generation still succeeds', written.status === 0, written.stderr.trim());
-    const html = region(dir, 'en', 'start-cv');
+    const html = region(dir, 'en', 'unicv-china-ambassador-scholarship-2026');
     check('PROBE 6 (guard: no linkage at all): no fallback emitted with media_manifest_title absent',
       html !== null && !html.includes('media-fallback'), html ?? '');
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+// --- PROBE 7 — ordinary-publication eligibility + Spotlight visibility ----
+//
+// Project 03's approved semantic distinction: lifecycle/currentness
+// (publication_state) is factual; ordinary-publication eligibility is
+// editorial; the two are independent. A record must never be marked
+// EXPIRED/WITHDRAWN/SUPERSEDED merely because it is NOT_ELIGIBLE for
+// ordinary publication, and a NOT_ELIGIBLE record may still render if it
+// carries an approved structured Spotlight role.
+{
+  const CANONICAL_DATA = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'training-opportunities.json'), 'utf8'));
+  const byId = (id) => CANONICAL_DATA.records.find((r) => r.id === id);
+
+  // CASE 1 — MYRTLE: CURRENT but ordinary-ineligible, in both EN and PT.
+  {
+    const dir = sandbox();
+    for (const locale of ['en', 'pt']) {
+      const written = run(dir, locale, ['--write']);
+      check(`CASE 1 (myrtle, ${locale.toUpperCase()}): generation succeeds`, written.status === 0, written.stderr.trim());
+      const html = region(dir, locale, 'myrtle');
+      check(`CASE 1 (myrtle, ${locale.toUpperCase()}): region is exactly the marker pair (no public article/card)`,
+        html === MARKER_ONLY('myrtle'), html ?? '');
+    }
+    const data = JSON.parse(fs.readFileSync(path.join(dir, 'data', 'training-opportunities.json'), 'utf8'));
+    const myrtle = data.records.find((r) => r.id === 'myrtle');
+    check('CASE 1 (myrtle): canonical publication_state remains CURRENT', myrtle.publication_state === 'CURRENT');
+    check('CASE 1 (myrtle): eligibility is NOT_ELIGIBLE', myrtle.ordinary_publication_eligibility === 'NOT_ELIGIBLE');
+    check('CASE 1 (myrtle): reason is PAID_LOCAL_SERVICE_TRAINING', myrtle.ordinary_publication_reason === 'PAID_LOCAL_SERVICE_TRAINING');
+    check('CASE 1 (myrtle): marker ownership is preserved on EN',
+      ownedMarkerIds(dir, 'en').includes('myrtle'));
+    check('CASE 1 (myrtle): marker ownership is preserved on PT',
+      ownedMarkerIds(dir, 'pt').includes('myrtle'));
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+
+  // CASE 2 — START CV: CURRENT + ordinary-ineligible + Spotlight, in both EN
+  // and PT. Renders exactly once, carrying the governed Spotlight role, with
+  // no duplicate ordinary rendering. The duplicate check uses the record's
+  // own governed/localized title (resolved from the real locale overlay, not
+  // invented copy) rather than only counting the Spotlight attribute, so it
+  // proves there is exactly one rendered Start CV CARD on the whole Home
+  // surface, not merely exactly one Spotlight-marked attribute.
+  const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  {
+    const dir = sandbox();
+    for (const locale of ['en', 'pt']) {
+      const written = run(dir, locale, ['--write']);
+      check(`CASE 2 (start-cv, ${locale.toUpperCase()}): generation succeeds`, written.status === 0, written.stderr.trim());
+      const html = region(dir, locale, 'start-cv');
+      check(`CASE 2 (start-cv, ${locale.toUpperCase()}): exactly one Start CV card is rendered`,
+        html !== null && (html.match(/<article class="resource-card"/g) || []).length === 1, html ?? '');
+      check(`CASE 2 (start-cv, ${locale.toUpperCase()}): rendered card carries the governed Spotlight role`,
+        html !== null && html.includes('data-learning-spotlight="start-cv"'), html ?? '');
+
+      const startCvTitle = t('training.record.start-cv.title', locale);
+      const fullHome = fs.readFileSync(homePath(dir, locale), 'utf8');
+      const cardTitleCount = (fullHome.match(new RegExp(`<h3>${escapeRegExp(startCvTitle)}</h3>`, 'g')) || []).length;
+      const dialogTitleCount = (fullHome.match(new RegExp(`<h2>${escapeRegExp(startCvTitle)}</h2>`, 'g')) || []).length;
+      check(`CASE 2 (start-cv, ${locale.toUpperCase()}): exactly one rendered Start CV card by governed title (not just the Spotlight attribute)`,
+        cardTitleCount === 1, `card title occurrences=${cardTitleCount}`);
+      check(`CASE 2 (start-cv, ${locale.toUpperCase()}): exactly one rendered Start CV detail dialog by governed title`,
+        dialogTitleCount === 1, `dialog title occurrences=${dialogTitleCount}`);
+      check(`CASE 2 (start-cv, ${locale.toUpperCase()}): no duplicate ordinary Start CV rendering (Spotlight attribute)`,
+        (fullHome.match(/data-learning-spotlight="start-cv"/g) || []).length === 1);
+    }
+    const data = JSON.parse(fs.readFileSync(path.join(dir, 'data', 'training-opportunities.json'), 'utf8'));
+    const startCv = data.records.find((r) => r.id === 'start-cv');
+    check('CASE 2 (start-cv): publication_state remains CURRENT', startCv.publication_state === 'CURRENT');
+    check('CASE 2 (start-cv): eligibility is NOT_ELIGIBLE', startCv.ordinary_publication_eligibility === 'NOT_ELIGIBLE');
+    check('CASE 2 (start-cv): reason is PAID_LOCAL_SERVICE_TRAINING', startCv.ordinary_publication_reason === 'PAID_LOCAL_SERVICE_TRAINING');
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+
+  // CASE 3 — SPOTLIGHT REMOVAL NEGATIVE FIXTURE (sandbox only). Remove Start
+  // CV's Spotlight role, leave publication_state CURRENT and eligibility
+  // NOT_ELIGIBLE, regenerate: Start CV must disappear from public rendering
+  // without any lifecycle mutation. This never touches the real repository —
+  // the sandbox copy is discarded afterward.
+  {
+    const dir = sandbox();
+    const p = path.join(dir, 'data', 'training-opportunities.json');
+    const data = JSON.parse(fs.readFileSync(p, 'utf8'));
+    const startCv = data.records.find((r) => r.id === 'start-cv');
+    delete startCv.card.attributes; // removes the sole "data-learning-spotlight" key
+    fs.writeFileSync(p, JSON.stringify(data, null, 2) + '\n');
+
+    const written = run(dir, 'en', ['--write']);
+    check('CASE 3 (spotlight removed): generation succeeds', written.status === 0, written.stderr.trim());
+    const html = region(dir, 'en', 'start-cv');
+    check('CASE 3 (spotlight removed): Start CV disappears from public rendering',
+      html === MARKER_ONLY('start-cv'), html ?? '');
+
+    const afterData = JSON.parse(fs.readFileSync(p, 'utf8'));
+    const afterStartCv = afterData.records.find((r) => r.id === 'start-cv');
+    check('CASE 3 (spotlight removed): publication_state is unchanged (still CURRENT)',
+      afterStartCv.publication_state === 'CURRENT');
+    check('CASE 3 (spotlight removed): eligibility is unchanged (still NOT_ELIGIBLE)',
+      afterStartCv.ordinary_publication_eligibility === 'NOT_ELIGIBLE');
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+
+  // CASE 4 — FREE ELIGIBLE CONTROL. An incumbent ELIGIBLE record (HP LIFE)
+  // remains publicly rendered, proving this patch did not suppress ordinary
+  // approved resources.
+  {
+    const dir = sandbox();
+    for (const locale of ['en', 'pt']) {
+      const written = run(dir, locale, ['--write']);
+      const html = region(dir, locale, 'hp-life');
+      check(`CASE 4 (hp-life control, ${locale.toUpperCase()}): still renders as an ordinary record`,
+        written.status === 0 && html !== null && html.includes('<article class="resource-card"'), html ?? '');
+    }
+    check('CASE 4 (hp-life control): canonical eligibility is ELIGIBLE', byId('hp-life').ordinary_publication_eligibility === 'ELIGIBLE');
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+
+  // CASE 5 — NO FALSE LIFECYCLE MUTATION. Static assertion against the
+  // committed canonical data: Start CV and Myrtle are CURRENT, never
+  // EXPIRED/WITHDRAWN/SUPERSEDED, despite being ordinary-publication
+  // NOT_ELIGIBLE.
+  {
+    check('CASE 5: start-cv is canonically CURRENT', byId('start-cv').publication_state === 'CURRENT');
+    check('CASE 5: myrtle is canonically CURRENT', byId('myrtle').publication_state === 'CURRENT');
+  }
+
+  // CASE 6 — IDEMPOTENCE. Generate EN and PT, then both (a) rerun as a
+  // read-only drift check and (b) rerun a second --write, capturing the Home
+  // bytes independently BEFORE and AFTER that second write. This is a real
+  // comparison of two separately captured snapshots — not the same read
+  // compared to itself — so it is capable of failing if the second
+  // generation run changes output (e.g. a hidden source of non-determinism).
+  {
+    const dir = sandbox();
+    for (const locale of ['en', 'pt']) {
+      const first = run(dir, locale, ['--write']);
+      check(`CASE 6 (idempotence, ${locale.toUpperCase()}): first --write run succeeds`, first.status === 0, first.stderr.trim());
+      const beforeBytes = fs.readFileSync(homePath(dir, locale), 'utf8');
+
+      const dryRun = run(dir, locale);
+      check(`CASE 6 (idempotence, ${locale.toUpperCase()}): rerun reports no drift`, dryRun.status === 0, dryRun.stderr.trim());
+
+      const second = run(dir, locale, ['--write']);
+      check(`CASE 6 (idempotence, ${locale.toUpperCase()}): second --write run succeeds`, second.status === 0, second.stderr.trim());
+      const afterBytes = fs.readFileSync(homePath(dir, locale), 'utf8');
+
+      check(`CASE 6 (idempotence, ${locale.toUpperCase()}): Home bytes captured before and after the second run are byte-identical`,
+        beforeBytes === afterBytes);
+    }
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+
+  // CASE 7 — PLAN B MEDIA. Start CV card and detail use the approved A PRASA
+  // category asset; the generic Plan-C fallback is no longer rendered; no
+  // provider-specific authenticity claim appears in alt/provenance.
+  {
+    const dir = sandbox();
+    for (const locale of ['en', 'pt']) {
+      run(dir, locale, ['--write']);
+      const html = region(dir, locale, 'start-cv');
+      check(`CASE 7 (Plan B media, ${locale.toUpperCase()}): renders the approved A PRASA category asset`,
+        html !== null && html.includes('assets/environment/praca-trainings-800.webp'), html ?? '');
+      check(`CASE 7 (Plan B media, ${locale.toUpperCase()}): does not render the generic Plan-C fallback`,
+        html !== null && !html.includes('media-fallback'), html ?? '');
+      check(`CASE 7 (Plan B media, ${locale.toUpperCase()}): alt text makes no provider-authenticity claim about Start CV`,
+        html !== null && !/alt="[^"]*(?:Start CV|student|classroom|premises|class)[^"]*"/i.test(html), html ?? '');
+    }
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+
+  // CASE 8 — PLAN C CONTROL. At least one legitimate record still relies on
+  // the generic Plan C fallback, proving Plan C was preserved rather than
+  // globally removed.
+  {
+    const dir = sandbox();
+    run(dir, 'en', ['--write']);
+    const html = region(dir, 'en', 'unicv-china-ambassador-scholarship-2026');
+    check('CASE 8 (Plan C control): unicv-china-ambassador-scholarship-2026 still renders the generic fallback',
+      html !== null && html.includes('media-fallback'), html ?? '');
+    const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'internal', 'provider-media-manifest.json'), 'utf8'));
+    const manifestEntry = manifest.records.find((r) => r.title === 'China Ambassador Scholarship for Uni-CV Students');
+    check('CASE 8 (Plan C control): manifest entry is still media_type editorial-fallback',
+      manifestEntry?.media_type === 'editorial-fallback');
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+
+  // CASE 9 — EN/PT PARITY. Start CV Spotlight present in both; Myrtle absent
+  // in both; same eligibility logic applies to both locales.
+  {
+    const dir = sandbox();
+    for (const locale of ['en', 'pt']) run(dir, locale, ['--write']);
+    check('CASE 9 (parity): Start CV Spotlight present in EN',
+      (region(dir, 'en', 'start-cv') || '').includes('data-learning-spotlight="start-cv"'));
+    check('CASE 9 (parity): Start CV Spotlight present in PT',
+      (region(dir, 'pt', 'start-cv') || '').includes('data-learning-spotlight="start-cv"'));
+    check('CASE 9 (parity): Myrtle absent (marker-only) in EN', region(dir, 'en', 'myrtle') === MARKER_ONLY('myrtle'));
+    check('CASE 9 (parity): Myrtle absent (marker-only) in PT', region(dir, 'pt', 'myrtle') === MARKER_ONLY('myrtle'));
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+
+  // CASE 10 — NEGATIVE: an unapproved "*-spotlight"-shaped attribute must
+  // NOT authorize ordinary rendering of a NOT_ELIGIBLE record. The Spotlight
+  // exception is bounded to APPROVED_SPOTLIGHT_ATTRS ("data-learning-
+  // spotlight" only), never to any key merely matching a "-spotlight" naming
+  // pattern. This never touches the real repository — the sandbox copy is
+  // discarded afterward — and it never names myrtle's id in generator logic;
+  // myrtle is used here only as an already-NOT_ELIGIBLE fixture record.
+  {
+    const dir = sandbox();
+    const p = path.join(dir, 'data', 'training-opportunities.json');
+    const data = JSON.parse(fs.readFileSync(p, 'utf8'));
+    const myrtle = data.records.find((r) => r.id === 'myrtle');
+    myrtle.card.attributes = { 'data-fake-spotlight': 'myrtle' };
+    fs.writeFileSync(p, JSON.stringify(data, null, 2) + '\n');
+
+    const written = run(dir, 'en', ['--write']);
+    check('CASE 10 (fake spotlight, negative): generation succeeds', written.status === 0, written.stderr.trim());
+    const html = region(dir, 'en', 'myrtle');
+    check('CASE 10 (fake spotlight, negative): an unapproved data-fake-spotlight attribute does NOT authorize rendering',
+      html === MARKER_ONLY('myrtle'), html ?? '');
+    check('CASE 10 (fake spotlight, negative): the unapproved attribute itself is never emitted',
+      !fs.readFileSync(homePath(dir, 'en'), 'utf8').includes('data-fake-spotlight'));
     fs.rmSync(dir, { recursive: true, force: true });
   }
 }

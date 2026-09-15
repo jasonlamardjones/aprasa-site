@@ -8,6 +8,17 @@
 // (and refactoring the currentness / card-media validators around it) is T2
 // work and is out of scope here.
 //
+// A record's publication_state (lifecycle/currentness) and its
+// ordinary_publication_eligibility (an independent editorial decision) are
+// both read from the same canonical record, but they answer different
+// questions: publication_state says whether the region is generator-owned at
+// all (a removed state clears it); ordinary_publication_eligibility plus an
+// optional approved Spotlight role (a card.attributes key in the bounded
+// APPROVED_SPOTLIGHT_ATTRS set below — never an arbitrary "*-spotlight"-shaped
+// key) says whether a lifecycle-retainable record renders as an ORDINARY
+// record. Neither dimension is ever inferred from the other, and no record
+// id is ever named in this selection logic.
+//
 // Source of truth chain (do not invert):
 //   data/training-opportunities.json  — structure, identity, provenance, linkage
 //   data/locales/locale-data.generated.json — every presentation string
@@ -305,7 +316,7 @@ function renderRegion(record) {
 // --- surface rewrite ------------------------------------------------------
 
 const data = JSON.parse(fs.readFileSync(DATA_PATH, 'utf8'));
-if (data.version !== 1) fail(`unsupported data version ${data.version}`);
+if (data.version !== 2) fail(`unsupported data version ${data.version}`);
 
 // Same manifest scripts/validate-training-opportunities-data.mjs and
 // scripts/validate-card-media.mjs already read; keyed by title exactly as
@@ -340,6 +351,49 @@ const REMOVED_STATES = new Set(['EXPIRED', 'WITHDRAWN', 'SUPERSEDED']);
 // Canonical token is the underscore form. The space form is not an alias and
 // must never be accepted anywhere.
 const TEMPORARILY_UNAVAILABLE = 'TEMPORARILY_UNAVAILABLE';
+
+// Lifecycle/currentness (publication_state) and ordinary-publication
+// eligibility are Project 03 approved as INDEPENDENT dimensions. A record
+// being in a lifecycle-retainable state (CURRENT/REVIEW-DUE) no longer by
+// itself authorizes ordinary rendering: a record must also be
+// ordinary_publication_eligibility "ELIGIBLE", OR carry an approved
+// structured Spotlight role. This is a generic, non-ID-specific rule — no
+// record id is ever named here — so any record that governance later grants
+// or revokes a Spotlight role gains or loses ordinary-surface visibility
+// purely through its own structured data, with no code change.
+const ELIGIBLE = 'ELIGIBLE';
+const NOT_ELIGIBLE = 'NOT_ELIGIBLE';
+const ELIGIBILITY_VALUES = new Set([ELIGIBLE, NOT_ELIGIBLE]);
+
+// The incumbent Spotlight mechanism (see the Learning Spotlight invariant in
+// scripts/validate-training-opportunities-data.mjs) marks its holder with the
+// governed card.attributes key "data-learning-spotlight". This exception is
+// bounded to the currently APPROVED Spotlight attribute set — never to any
+// key that merely matches a "-spotlight" naming pattern — so an unapproved
+// attribute (e.g. a stray "data-fake-spotlight") can never itself authorize
+// ordinary rendering of a NOT_ELIGIBLE record. Adding a future approved
+// Spotlight role means adding its exact attribute name to this set, a
+// reviewable governance change; it never means widening a pattern. No record
+// id is ever named here.
+const APPROVED_SPOTLIGHT_ATTRS = new Set(['data-learning-spotlight']);
+
+function hasApprovedSpotlightRole(record) {
+  const attrs = record.card && record.card.attributes;
+  if (!attrs) return false;
+  return Object.keys(attrs).some((key) => APPROVED_SPOTLIGHT_ATTRS.has(key));
+}
+
+// Whether a lifecycle-retainable record renders as an ORDINARY record. This
+// never inspects a record's id: eligibility and membership in the bounded
+// APPROVED_SPOTLIGHT_ATTRS set are the only inputs, so the rule is enforced
+// identically for every canonical record.
+function isOrdinaryRenderable(record) {
+  const eligibility = record.ordinary_publication_eligibility;
+  if (!ELIGIBILITY_VALUES.has(eligibility)) {
+    fail(`record ${record.id}: invalid or missing ordinary_publication_eligibility "${eligibility}"`);
+  }
+  return eligibility === ELIGIBLE || hasApprovedSpotlightRole(record);
+}
 
 let html;
 try {
@@ -387,9 +441,20 @@ for (const record of data.records) {
   // and generator-owned, ready to be repopulated if the record returns to a
   // visible state — but the content between the markers is emptied. Because
   // this is compared like any other region, stale card markup left inside it
-  // is drift and can never be reported as "matches".
-  const rendered = VISIBLE_STATES.has(state) ? renderRegion(record) : renderEmptyRegion(record);
-  if (VISIBLE_STATES.has(state)) renderedCount += 1;
+  // is drift and can never be reported as "matches". The same emptied-marker
+  // treatment now also applies to a lifecycle-retainable record that is
+  // NOT_ELIGIBLE for ordinary publication and carries no approved Spotlight
+  // role: its region stays generator-owned and ready to repopulate the
+  // instant governance grants eligibility or a Spotlight role, but nothing
+  // renders in it — this is a presentation decision, never a lifecycle one.
+  const lifecycleRetainable = VISIBLE_STATES.has(state);
+  // Validated for every canonical record regardless of lifecycle state: the
+  // eligibility dimension is never silently optional, even for a record that
+  // is not currently lifecycle-retainable.
+  const ordinaryRenderable = isOrdinaryRenderable(record);
+  const renders = lifecycleRetainable && ordinaryRenderable;
+  const rendered = renders ? renderRegion(record) : renderEmptyRegion(record);
+  if (renders) renderedCount += 1;
   else clearedCount += 1;
 
   if (current !== rendered) drifted.push(record.id);
