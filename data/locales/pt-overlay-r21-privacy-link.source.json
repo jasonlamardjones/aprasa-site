@@ -1,0 +1,50 @@
+{
+  "package_id": "aprasa-pt-privacy-link-r21",
+  "revision_class": "ADDITIVE_NEW_KEYS",
+  "source_revision": "P09-PRIVACY-PT-2026-09-15-v1.0",
+  "previous_revision": "P09-PT-LEARNING-SPOTLIGHT-START-CV-2026-09-14-r1",
+  "revision_type": "PRIVACY_POLICY_PUBLIC_LINK",
+  "semantic_authority": "Project 03 — A PRASA Privacy v1.0 final publication authority",
+  "linguistic_authority": "Project 09 — P09-PRIVACY-PT-2026-09-15-v1.0 (APPROVED_FINAL_PT)",
+  "target_language": "pt",
+  "target_variant": "European Portuguese appropriate to Cabo Verde",
+  "project_09_status": "approved",
+  "project_09_verdict": "READY_FOR_PROJECT_04",
+  "intent": "Supplies the governed EN/PT value for the global/public policy-link label currently required by the About footer's Privacy link (about/index.html, pt/about/index.html). The PT value is reused verbatim from the approved Privacy v1.0 page title already shipped at pt/privacy/index.html. Strictly additive: introduces one new key, reopens nothing, and alters no lifecycle, publication, currentness or media policy.",
+  "declared_new_row_count_in_handoff": 1,
+  "actual_row_objects_supplied": 1,
+  "missing_or_unaccounted_row_count": 0,
+  "supplied_rows_approved": 1,
+  "review_required": 0,
+  "semantic_escalations_required": 0,
+  "semantic_change": false,
+  "source_english_changed": false,
+  "localization_architecture_reopened": false,
+  "duplicate_keys": [],
+  "placeholder_mismatches": [],
+  "a_prasa_to_a_praca_violations": [],
+  "linguistic_refinements": [],
+  "blocking_issue": null,
+  "change_control_status": {
+    "new_keys_introduced": 1,
+    "existing_keys_overridden": 0,
+    "english_source_values_modified": 0,
+    "lifecycle_or_publication_state_modified": 0,
+    "protected_identities_modified": 0,
+    "additional_languages_authorized": 0
+  },
+  "rows": [
+    {
+      "key": "nav.privacy",
+      "source_revision": "P09-PRIVACY-PT-2026-09-15-v1.0",
+      "source_en": "Privacy",
+      "pt": "Privacidade",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "context_notes": "Global/public policy-link label used by the About footer (about/index.html, pt/about/index.html) to point to the Privacy page.",
+      "linguistic_notes": "PT value reused verbatim from the approved Privacy v1.0 page title (P09-PRIVACY-PT-2026-09-15-v1.0, APPROVED_FINAL_PT), already shipped as the <h1>/<title> of pt/privacy/index.html. Carries no protected brand string and no placeholder."
+    }
+  ]
+}
