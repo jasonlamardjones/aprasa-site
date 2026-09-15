@@ -27,7 +27,7 @@ Each in-scope public card must have a corresponding record in `internal/provider
 - title
 - provider / organizer
 - source URL or source reference
-- media type: `provider-supplied`, `provider-owned`, or `editorial-fallback`
+- media type: `provider-supplied`, `provider-owned`, `aprasa-category`, or `editorial-fallback`
 - media state
 - media source / provenance note
 - local media asset path when authentic media is present
@@ -51,9 +51,11 @@ A card displaying correctly with a fallback does not by itself make the record m
 
 ## Fallback behavior
 
-If a card has no authentic media, the shared front-end foundation inserts the standardized A PRASA editorial fallback media region. The fallback is intentionally generic, identifies the content area, and carries no alt-text claim about the specific record.
+If a card has no authentic media, the shared front-end foundation inserts the standardized A PRASA editorial fallback media region (media type `editorial-fallback`, precedence item 4 above). The fallback is intentionally generic, identifies the content area, and carries no alt-text claim about the specific record.
 
 The same fallback is used in the details dialog when the source record has no authentic media.
+
+`aprasa-category` is the machine-readable lane for precedence item 3, the approved A PRASA category fallback: locally stored A PRASA-created/owned category or editorial imagery, reused across records in the same category. Unlike `editorial-fallback`, an `aprasa-category` record carries a real local media asset that is actually rendered — it is not the generic section symbol — but that asset is still never authentic provider media and must never be captioned or documented as depicting the specific record, provider, activity or premises.
 
 `fallback-temporary` is a visible safety state, not an editorial completion state. When an approved category-level fallback library is available, use the matching category fallback before the section-level fallback.
 

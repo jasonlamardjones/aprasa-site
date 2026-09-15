@@ -189,16 +189,16 @@
       "title": "Language Courses at Start CV",
       "provider": "Start CV",
       "source_url": "https://startcv.cv/courses/",
-      "media_type": "editorial-fallback",
+      "media_type": "aprasa-category",
       "media_state": "fallback-final",
       "media_source": null,
-      "media_asset": null,
+      "media_asset": "assets/environment/praca-trainings-800.webp",
       "fallback_category": "opportunities-learning-general",
-      "fallback_reason": "Project 03 media ruling of 07 September 2026 for the Start CV Learning Spotlight: the governed editorial fallback is used unless first-party Start CV imagery is separately cleared for A PRASA republication. Public availability of imagery on Start CV's website or social accounts does not by itself establish republication rights, so no provider imagery was ingested, no logo was scraped, and no provider-specific media or alt text was created. Absence of cleared provider imagery does not block the Learning Spotlight selection.",
-      "media_provenance": null,
+      "fallback_reason": "Project 03 media ruling of 07 September 2026 for the Start CV Learning Spotlight: the governed editorial fallback is used unless first-party Start CV imagery is separately cleared for A PRASA republication. Public availability of imagery on Start CV's website or social accounts does not by itself establish republication rights, so no provider imagery was ingested and no logo was scraped. This tranche moves the record from the generic A PRASA section fallback (Plan C) to the existing A PRASA-owned Trainings, Tools & Opportunities category/environment photograph (Plan B, the same asset already rendered elsewhere on Home as the decorative section banner). No provider-specific media or alt text was created, and no claim is made that the image depicts Start CV, its students, premises, classes or any specific activity. Absence of cleared provider imagery does not block the Learning Spotlight selection.",
+      "media_provenance": "A PRASA-owned category/environment photograph already held in the repository (the assets/environment/praca-trainings-* family), reused here unmodified as the approved category-level media for this record. It is not provider-authentic imagery and depicts no specific provider, activity or premises.",
       "media_asset_source_url": null,
-      "media_checked_date": "2026-09-07",
-      "media_alt": null
+      "media_checked_date": "2026-09-15",
+      "media_alt": "A PRASA Trainings, Tools & Opportunities category/environment photograph (not specific to any provider)."
     },
     {
       "section": "trainings-tools",

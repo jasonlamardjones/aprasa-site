@@ -1,18 +1,27 @@
 {
-  "version": 1,
-  "schema": "aprasa.training-opportunities.v1",
+  "version": 2,
+  "schema": "aprasa.training-opportunities.v2",
   "governance": {
     "semantic_authority": "Project 03 — A PRASA Business, Brand & Administration",
     "linguistic_authority": "Project 09 — governed PT overlay",
     "lifecycle_authority": "Project 03 approved lifecycle classes and publication states",
+    "editorial_authority": "Project 03 approved ordinary-publication eligibility, independent of lifecycle/currentness",
     "localization_namespace": "training.record.<record_id>.<field>",
     "surface": "Home — Trainings, Tools & Opportunities",
     "phase": "T1 — structured foundation. Not yet wired into scripts/build-all.mjs.",
     "notes": [
       "Every presentation string is a reference into the governed locale overlay. This file carries NO copy of its own: it is structure, identity, provenance and linkage only.",
       "Provider names are locale-independent identity literals, deliberately absent from the overlay (same policy as scripts/build-static-pages.mjs ALLOWED_UNTRANSLATED).",
-      "Records are emitted in array order; that order is the published Home order."
+      "Records are emitted in array order; that order is the published Home order.",
+      "lifecycle_class/publication_state answer whether a record is factually current. ordinary_publication_eligibility/ordinary_publication_reason answer a separate, editorial question: whether the record is authorized for ORDINARY Home publication. A record must never be marked EXPIRED/WITHDRAWN/SUPERSEDED merely because it is NOT_ELIGIBLE for ordinary publication — the two dimensions are independent and a NOT_ELIGIBLE record may still remain visible through an approved exception: the governed Learning Spotlight treatment on that record's own card/detail structured data (card.attributes.data-learning-spotlight plus its paired spotlight_label/spotlight_disclosure fields — see the Learning Spotlight invariant enforced in scripts/validate-training-opportunities-data.mjs)."
     ]
+  },
+  "ordinary_publication_eligibility_values": {
+    "ELIGIBLE": "ordinary Home publication is authorized",
+    "NOT_ELIGIBLE": "the record is not authorized for ORDINARY Home publication; it may still be visible only through an approved structured exception (e.g. the Learning Spotlight), and remains unaffected in lifecycle_class/publication_state"
+  },
+  "ordinary_publication_reasons": {
+    "PAID_LOCAL_SERVICE_TRAINING": "the record is a paid, locally delivered training service; Project 03 excludes this category from ordinary publication independent of lifecycle currentness"
   },
   "lifecycle_classes": [
     "evergreen-learning-resource",
@@ -34,6 +43,8 @@
       "id": "start-cv",
       "lifecycle_class": "institutional-training-catalog",
       "publication_state": "CURRENT",
+      "ordinary_publication_eligibility": "NOT_ELIGIBLE",
+      "ordinary_publication_reason": "PAID_LOCAL_SERVICE_TRAINING",
       "provider": "Start CV",
       "media_manifest_title": "Language Courses at Start CV",
       "source": {
@@ -41,6 +52,27 @@
         "provenance": "Start CV's official website: current course listings, live application form and first-party contact information, with recent first-party Facebook activity used as an additional currentness signal."
       },
       "checked_at": "2026-09-07",
+      "media": {
+        "asset": "assets/environment/praca-trainings-800.webp",
+        "width": 800,
+        "height": 450,
+        "loading": "lazy",
+        "decoding": "async",
+        "alt": {
+          "locale_key": "home.training.title"
+        },
+        "card_class": "card-media",
+        "detail_class": "dialog-media",
+        "layout": "block",
+        "attribute_order": [
+          "src",
+          "width",
+          "height",
+          "loading",
+          "decoding",
+          "alt"
+        ]
+      },
       "card": {
         "attributes": {
           "data-learning-spotlight": "start-cv"
@@ -142,6 +174,8 @@
       "id": "myrtle",
       "lifecycle_class": "institutional-training-catalog",
       "publication_state": "CURRENT",
+      "ordinary_publication_eligibility": "NOT_ELIGIBLE",
+      "ordinary_publication_reason": "PAID_LOCAL_SERVICE_TRAINING",
       "provider": "Myrtle Atividades Educativas",
       "source": {
         "source_url": "https://myrtleducativas.com/",
@@ -202,6 +236,8 @@
       "id": "academia-crescer",
       "lifecycle_class": "recurring-opportunity",
       "publication_state": "REVIEW-DUE",
+      "ordinary_publication_eligibility": "ELIGIBLE",
+      "ordinary_publication_reason": null,
       "provider": "Academia de Estudo Crescer",
       "source": {
         "source_url": null,
@@ -301,6 +337,8 @@
       "id": "kafe-djan-djan",
       "lifecycle_class": "rolling-opportunity",
       "publication_state": "REVIEW-DUE",
+      "ordinary_publication_eligibility": "ELIGIBLE",
+      "ordinary_publication_reason": null,
       "provider": "Kafê Djan Djan, Mindelo",
       "source": {
         "source_url": null,
@@ -394,6 +432,8 @@
       "id": "hp-life",
       "lifecycle_class": "evergreen-learning-resource",
       "publication_state": "CURRENT",
+      "ordinary_publication_eligibility": "ELIGIBLE",
+      "ordinary_publication_reason": null,
       "provider": "HP Foundation",
       "source": {
         "source_url": "https://www.life-global.org/",
@@ -475,6 +515,8 @@
       "id": "openlearn",
       "lifecycle_class": "evergreen-learning-resource",
       "publication_state": "CURRENT",
+      "ordinary_publication_eligibility": "ELIGIBLE",
+      "ordinary_publication_reason": null,
       "provider": "The Open University / OpenLearn",
       "source": {
         "source_url": "https://www.open.edu/openlearn/free-courses",
@@ -530,6 +572,8 @@
       "id": "iefp-pepe",
       "lifecycle_class": "institutional-training-catalog",
       "publication_state": "CURRENT",
+      "ordinary_publication_eligibility": "ELIGIBLE",
+      "ordinary_publication_reason": null,
       "provider": "Instituto do Emprego e Formação Profissional (IEFP)",
       "source": {
         "source_url": "https://pepe.iefp.cv/frontend/web/index.php/pt/site",
@@ -585,6 +629,8 @@
       "id": "iefp-training",
       "lifecycle_class": "institutional-training-catalog",
       "publication_state": "CURRENT",
+      "ordinary_publication_eligibility": "ELIGIBLE",
+      "ordinary_publication_reason": null,
       "provider": "IEFP Cabo Verde",
       "source": {
         "source_url": "https://iefp.cv/",
@@ -660,6 +706,8 @@
       "id": "ibm-skillsbuild",
       "lifecycle_class": "evergreen-learning-resource",
       "publication_state": "CURRENT",
+      "ordinary_publication_eligibility": "ELIGIBLE",
+      "ordinary_publication_reason": null,
       "provider": "IBM",
       "source": {
         "source_url": "https://skillsbuild.org/",
@@ -741,6 +789,8 @@
       "id": "microsoft-learn",
       "lifecycle_class": "evergreen-learning-resource",
       "publication_state": "CURRENT",
+      "ordinary_publication_eligibility": "ELIGIBLE",
+      "ordinary_publication_reason": null,
       "provider": "Microsoft",
       "source": {
         "source_url": "https://learn.microsoft.com/training/",
@@ -822,6 +872,8 @@
       "id": "unicv-erasmus-viana-do-castelo-edital-027-2026",
       "lifecycle_class": "fixed-window-opportunity",
       "publication_state": "EXPIRED",
+      "ordinary_publication_eligibility": "ELIGIBLE",
+      "ordinary_publication_reason": null,
       "provider": "Universidade de Cabo Verde — Gabinete de Estudos, Planeamento e Cooperação (GEPC)",
       "source": {
         "source_url": "https://www.unicv.edu.cv/pt/nots-geral/5956-novas-oportunidades-erasmus-para-estudantes-da-uni-cv",
@@ -901,6 +953,8 @@
       "id": "unicv-erasmus-bielefeld-edital-028-2026",
       "lifecycle_class": "fixed-window-opportunity",
       "publication_state": "EXPIRED",
+      "ordinary_publication_eligibility": "ELIGIBLE",
+      "ordinary_publication_reason": null,
       "provider": "Universidade de Cabo Verde — Gabinete de Estudos, Planeamento e Cooperação (GEPC)",
       "source": {
         "source_url": "https://www.unicv.edu.cv/pt/nots-geral/5956-novas-oportunidades-erasmus-para-estudantes-da-uni-cv",
@@ -980,6 +1034,8 @@
       "id": "unicv-erasmus-ca-foscari-edital-029-2026",
       "lifecycle_class": "fixed-window-opportunity",
       "publication_state": "EXPIRED",
+      "ordinary_publication_eligibility": "ELIGIBLE",
+      "ordinary_publication_reason": null,
       "provider": "Universidade de Cabo Verde — Gabinete de Estudos, Planeamento e Cooperação (GEPC)",
       "source": {
         "source_url": "https://www.unicv.edu.cv/pt/nots-geral/5956-novas-oportunidades-erasmus-para-estudantes-da-uni-cv",
@@ -1059,6 +1115,8 @@
       "id": "unicv-undergraduate-admissions-third-phase-2026-2027",
       "lifecycle_class": "fixed-window-opportunity",
       "publication_state": "EXPIRED",
+      "ordinary_publication_eligibility": "ELIGIBLE",
+      "ordinary_publication_reason": null,
       "provider": "Universidade de Cabo Verde",
       "source": {
         "source_url": "https://www.unicv.edu.cv/pt/nots-geral/5933-uni-cv-mantem-aberta-3-fase-de-candidaturas-as-licenciaturas-ate-11-de-setembro",
@@ -1160,6 +1218,8 @@
       "id": "laczos-artisticos-2nd-edition-2026",
       "lifecycle_class": "fixed-window-opportunity",
       "publication_state": "CURRENT",
+      "ordinary_publication_eligibility": "ELIGIBLE",
+      "ordinary_publication_reason": null,
       "provider": "Direção-Geral das Artes (DGARTES)",
       "source": {
         "source_url": "https://www.dgartes.gov.pt/pt/noticia/10122",
@@ -1261,6 +1321,8 @@
       "id": "unicv-china-ambassador-scholarship-2026",
       "lifecycle_class": "fixed-window-opportunity",
       "publication_state": "CURRENT",
+      "ordinary_publication_eligibility": "ELIGIBLE",
+      "ordinary_publication_reason": null,
       "provider": "Universidade de Cabo Verde / Embassy of the People's Republic of China in Cabo Verde",
       "media_manifest_title": "China Ambassador Scholarship for Uni-CV Students",
       "source": {
@@ -1341,6 +1403,8 @@
       "id": "unicv-confucius-chinese-language-courses-2026-2027",
       "lifecycle_class": "fixed-window-opportunity",
       "publication_state": "CURRENT",
+      "ordinary_publication_eligibility": "ELIGIBLE",
+      "ordinary_publication_reason": null,
       "provider": "Instituto Confúcio na Universidade de Cabo Verde",
       "source": {
         "source_url": "https://www.unicv.edu.cv/pt/nots-geral/5948-instituto-confucio-na-uni-cv-abre-inscricoes-para-cursos-livres-de-lingua-chinesa",
@@ -1442,6 +1506,8 @@
       "id": "regea-oral-communications-call-2026",
       "lifecycle_class": "fixed-window-opportunity",
       "publication_state": "CURRENT",
+      "ordinary_publication_eligibility": "ELIGIBLE",
+      "ordinary_publication_reason": null,
       "provider": "Universidade de Cabo Verde / CIGEF",
       "source": {
         "source_url": "https://www.unicv.edu.cv/pt/nots-geral/5949-regea-prorroga-ate-30-de-setembro-chamada-para-comunicacoes-orais-em-16-grupos-de-trabalho",
