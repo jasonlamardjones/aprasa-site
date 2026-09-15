@@ -78,6 +78,7 @@ const DELTA17_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r17-runtime-
 const DELTA18_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r18-ui-scroll-down.source.json");
 const DELTA19_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r19-runtime-whatsapp-prefill.source.json");
 const DELTA20_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r20-start-cv-learning-spotlight.source.json");
+const DELTA21_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r21-privacy-link.source.json");
 const LOCALE_DIR = path.join(ROOT, "data", "locales");
 const OUT_PATH = path.join(ROOT, "data", "locales", "locale-data.generated.json");
 
@@ -2372,6 +2373,128 @@ if (delta19Unchanged !== EXPECTED_DELTA19.intentionally_unchanged) {
   fail(`r19 intentionally_unchanged mismatch: got ${delta19Unchanged}`);
 }
 
+// --- r21 delta: additive merge for the About-footer Privacy link label -----
+// Single key, same strictly additive lane as r17/r18/r19: it must be new,
+// never reopen an existing key. The English source and Portuguese value are
+// both already the approved Privacy v1.0 title (P09-PRIVACY-PT-2026-09-15-v1.0),
+// so this package is a pure implementation binding, not a new translation.
+const EXPECTED_DELTA21 = {
+  package_id: "aprasa-pt-privacy-link-r21",
+  revision_class: "ADDITIVE_NEW_KEYS",
+  source_revision: "P09-PRIVACY-PT-2026-09-15-v1.0",
+  previous_revision: "P09-PT-LEARNING-SPOTLIGHT-START-CV-2026-09-14-r1",
+  row_count: 1,
+  approved: 1,
+  required_for_pt_launch: 1,
+  intentionally_unchanged: 0,
+  review_required: 0,
+};
+
+const delta21 = JSON.parse(readFileSync(DELTA21_PATH, "utf8"));
+
+for (const field of ["package_id", "revision_class", "source_revision", "previous_revision"]) {
+  if (delta21[field] !== EXPECTED_DELTA21[field]) {
+    fail(`r21 ${field} mismatch: got ${JSON.stringify(delta21[field])}, expected ${JSON.stringify(EXPECTED_DELTA21[field])}`);
+  }
+}
+if (delta21.project_09_status !== "approved") {
+  fail(`r21 Project 09 status is not approved: ${JSON.stringify(delta21.project_09_status)}`);
+}
+if (delta21.project_09_verdict !== "READY_FOR_PROJECT_04") {
+  fail(`r21 Project 09 verdict is not implementation-ready: ${JSON.stringify(delta21.project_09_verdict)}`);
+}
+if (!Array.isArray(delta21.rows) || delta21.rows.length !== EXPECTED_DELTA21.row_count) {
+  fail(`r21 row count mismatch: got ${delta21.rows?.length}, expected ${EXPECTED_DELTA21.row_count}`);
+}
+if (delta21.supplied_rows_approved !== EXPECTED_DELTA21.approved) {
+  fail(`r21 supplied_rows_approved mismatch: got ${delta21.supplied_rows_approved}`);
+}
+if (delta21.review_required !== EXPECTED_DELTA21.review_required
+  || delta21.blocking_issue != null
+  || delta21.semantic_escalations_required !== 0) {
+  fail("r21 has unresolved localization review state");
+}
+if (delta21.missing_or_unaccounted_row_count !== 0) {
+  fail(`r21 missing_or_unaccounted_row_count is non-zero: ${delta21.missing_or_unaccounted_row_count}`);
+}
+for (const listField of ["duplicate_keys", "placeholder_mismatches", "a_prasa_to_a_praca_violations"]) {
+  if ((delta21[listField] || []).length !== 0) fail(`r21 ${listField} is non-empty: ${JSON.stringify(delta21[listField])}`);
+}
+if (delta21.source_english_changed !== false || delta21.change_control_status?.existing_keys_overridden !== 0) {
+  fail("r21 declares a non-additive change (source_english_changed/existing_keys_overridden)");
+}
+if (delta21.change_control_status?.new_keys_introduced !== EXPECTED_DELTA21.row_count) {
+  fail(`r21 new_keys_introduced mismatch: got ${delta21.change_control_status?.new_keys_introduced}`);
+}
+if (delta21.change_control_status?.lifecycle_or_publication_state_modified !== 0) {
+  fail("r21 must not modify lifecycle or publication state");
+}
+if (delta21.semantic_change !== false) {
+  fail("r21 declares a semantic change; this package is a pure implementation binding");
+}
+if (delta21.localization_architecture_reopened !== false) {
+  fail("r21 must not reopen the localization architecture");
+}
+if (delta21.target_language !== "pt") {
+  fail(`r21 target_language mismatch: got ${JSON.stringify(delta21.target_language)}`);
+}
+
+let delta21Required = 0;
+let delta21Unchanged = 0;
+for (const row of delta21.rows) {
+  if (seen.has(row.key)) {
+    fail(`r21 key "${row.key}" collides with an existing key — r21 must be strictly additive, never reopen an existing key`);
+  }
+  seen.add(row.key);
+
+  if (row.record_id != null) fail(`r21 key "${row.key}" is record-scoped; this package carries no record copy`);
+  if (row.key !== "nav.privacy") {
+    fail(`r21 key "${row.key}" is outside the single authorized key nav.privacy`);
+  }
+  if (row.source_revision !== EXPECTED_DELTA21.source_revision) fail(`r21 ${row.key} source_revision mismatch`);
+  if (row.translation_status !== "APPROVED") fail(`r21 key "${row.key}" is not APPROVED (status: ${row.translation_status})`);
+  if (row.source_en !== "Privacy") fail(`r21 key "${row.key}" source_en must be exactly "Privacy"`);
+  if (row.pt !== "Privacidade") fail(`r21 key "${row.key}" pt must be exactly "Privacidade"`);
+  if (row.scope_status !== "REQUIRED_FOR_PT_LAUNCH") fail(`r21 key "${row.key}" scope_status must be REQUIRED_FOR_PT_LAUNCH`);
+
+  if (row.scope_status === "REQUIRED_FOR_PT_LAUNCH") delta21Required += 1;
+  else if (row.scope_status === "INTENTIONALLY_UNCHANGED") delta21Unchanged += 1;
+  else fail(`r21 key "${row.key}" has invalid scope_status`);
+
+  if (row.scope_status === "REQUIRED_FOR_PT_LAUNCH" && (row.pt == null || row.pt === "")) {
+    fail(`r21 REQUIRED_FOR_PT_LAUNCH key "${row.key}" has no PT value`);
+  }
+  if (!row.source_en) fail(`r21 key "${row.key}" is missing approved English text`);
+  const enPlaceholders = (row.source_en.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+  const ptPlaceholders = (row.pt.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+  if (JSON.stringify(enPlaceholders) !== JSON.stringify(ptPlaceholders)) {
+    fail(`r21 key "${row.key}" placeholder mismatch`);
+  }
+  if ([row.source_en, row.pt].some((value) => value.includes("A PRAÇA"))) {
+    fail(`r21 key "${row.key}" violates protected A PRASA brand spelling`);
+  }
+
+  keys[row.key] = {
+    key: row.key,
+    en: row.source_en,
+    pt: row.pt,
+    scope_status: row.scope_status,
+    identity_policy: row.identity_policy,
+    record_id: row.record_id,
+    translation_status: row.translation_status,
+    source_revision: row.source_revision,
+    context_notes: row.context_notes || "",
+    linguistic_notes: row.linguistic_notes || "",
+  };
+}
+
+if (delta21Required !== EXPECTED_DELTA21.required_for_pt_launch) {
+  fail(`r21 required_for_pt_launch mismatch: got ${delta21Required}`);
+}
+if (delta21Unchanged !== EXPECTED_DELTA21.intentionally_unchanged) {
+  fail(`r21 intentionally_unchanged mismatch: got ${delta21Unchanged}`);
+}
+
 // Aggregate tallies, read off the finished key map that is about to be written.
 const assembled = (() => {
   const values = Object.values(keys);
@@ -2436,6 +2559,7 @@ const output = {
       "data/locales/pt-overlay-r18-ui-scroll-down.source.json",
       "data/locales/pt-overlay-r19-runtime-whatsapp-prefill.source.json",
       "data/locales/pt-overlay-r20-start-cv-learning-spotlight.source.json",
+      "data/locales/pt-overlay-r21-privacy-link.source.json",
     ],
     base_revision: pkg.source_revision,
     delta_revision: delta.source_revision,
@@ -2488,6 +2612,10 @@ const output = {
     delta20_revision_class: delta20.revision_class,
     delta20_row_count: delta20.rows.length,
     delta20_affected_records: delta20.affected_records,
+    delta21_package_id: delta21.package_id,
+    delta21_revision: delta21.source_revision,
+    delta21_revision_class: delta21.revision_class,
+    delta21_row_count: delta21.rows.length,
     delta9_superseding_ruling: delta9.superseding_ruling,
     delta9_owning_project: delta9.owning_project,
     event_delta_packages: eventDeltaPackages,
@@ -2534,6 +2662,7 @@ const output = {
     r18_delta_rows: delta18.rows.length,
     r19_delta_rows: delta19.rows.length,
     r20_delta_rows: delta20.rows.length,
+    r21_delta_rows: delta21.rows.length,
     r10_renamed_rows: r10Renamed.length,
     governed_override_rows: governedOverrideCount,
   },

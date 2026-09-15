@@ -52,21 +52,21 @@ for (const fileName of eventDeltaFiles) {
 // + r5 delta (2) + r7 delta (19) + r8 delta (21) + r13 delta (8) + r14 delta (1)
 // + r15 delta (96) + r16 provider-media alt delta (4) + r17 contact-panel delta (8)
 // + r18 Down-control delta (1) + r19 quick-action prefill delta (4)
-// + r20 Start CV Learning Spotlight delta (13).
+// + r20 Start CV Learning Spotlight delta (13) + r21 Privacy-link delta (1).
 // The r6 brand-voice delta overrides 42 existing PT values and adds
 // no keys, so every count below is unchanged by it; r13 adds the 8 Things-to-Do
 // collection-hub keys, r14 the runtime section fallback note, and r15 the 96
 // presentation keys for the eight weekly fixed-window opportunity records; r16
 // adds four localized informative alt descriptions; r17 adds the 8 runtime
 // contact-panel strings the floating WhatsApp launcher renders, r18 the
-// accessible name of the floating Down control off Home, and r19 the four
-// quick-action starter messages prefilled into WhatsApp, and r20 the 13 governed
-// presentation keys for the incoming Start CV Learning Spotlight record — all
-// required. ---
-if (keys.length !== 956 + eventDeltaRequired + eventDeltaUnchanged) fail(`expected ${956 + eventDeltaRequired + eventDeltaUnchanged} total keys including approved event deltas, got ${keys.length}`);
+// accessible name of the floating Down control off Home, r19 the four
+// quick-action starter messages prefilled into WhatsApp, r20 the 13 governed
+// presentation keys for the incoming Start CV Learning Spotlight record, and
+// r21 the single About-footer Privacy link label — all required. ---
+if (keys.length !== 957 + eventDeltaRequired + eventDeltaUnchanged) fail(`expected ${957 + eventDeltaRequired + eventDeltaUnchanged} total keys including approved event deltas, got ${keys.length}`);
 const required = keys.filter((k) => k.scope_status === "REQUIRED_FOR_PT_LAUNCH");
 const unchanged = keys.filter((k) => k.scope_status === "INTENTIONALLY_UNCHANGED");
-if (required.length !== 928 + eventDeltaRequired) fail(`expected ${928 + eventDeltaRequired} REQUIRED_FOR_PT_LAUNCH keys, got ${required.length}`);
+if (required.length !== 929 + eventDeltaRequired) fail(`expected ${929 + eventDeltaRequired} REQUIRED_FOR_PT_LAUNCH keys, got ${required.length}`);
 if (unchanged.length !== 28 + eventDeltaUnchanged) fail(`expected ${28 + eventDeltaUnchanged} INTENTIONALLY_UNCHANGED keys, got ${unchanged.length}`);
 if (data.provenance.delta_revision !== "P03-PT-SOURCE-2026-08-25-r3") {
   fail(`unexpected delta_revision: ${data.provenance.delta_revision}`);
@@ -199,6 +199,36 @@ for (const recordId of R16_RECORDS) {
   if (row.record_id !== recordId) fail(`r16 ${key} is not scoped to its own record`);
   if (typeof row.en !== "string" || row.en === "" || typeof row.pt !== "string" || row.pt === "") {
     fail(`r16 ${key} requires informative EN and PT text`);
+  }
+}
+
+// --- r21 delta spot check (About-footer Privacy link label) ---
+// Single-key package binding the already-approved Privacy v1.0 title into the
+// About footer's link text. Pinned here so the key cannot drift and so the
+// exact-match localizer (scripts/lib/static-page-transform.mjs) keeps
+// resolving the About page's "Privacy" footer text against a governed value.
+if (data.provenance.delta21_package_id !== "aprasa-pt-privacy-link-r21") {
+  fail(`unexpected delta21_package_id: ${data.provenance.delta21_package_id}`);
+}
+if (data.provenance.delta21_revision !== "P09-PRIVACY-PT-2026-09-15-v1.0") {
+  fail(`unexpected delta21_revision: ${data.provenance.delta21_revision}`);
+}
+if (data.provenance.delta21_revision_class !== "ADDITIVE_NEW_KEYS") {
+  fail(`unexpected delta21_revision_class: ${data.provenance.delta21_revision_class}`);
+}
+if (data.provenance.delta21_row_count !== 1) {
+  fail(`unexpected delta21_row_count: ${data.provenance.delta21_row_count}`);
+}
+{
+  const row = data.keys["nav.privacy"];
+  if (!row) {
+    fail("r21 key missing from generated locale data: nav.privacy");
+  } else {
+    if (row.en !== "Privacy") fail(`nav.privacy EN does not match the approved Privacy v1.0 title: got ${JSON.stringify(row.en)}`);
+    if (row.pt !== "Privacidade") fail(`nav.privacy PT does not match the approved Privacy v1.0 title: got ${JSON.stringify(row.pt)}`);
+    if (row.scope_status !== "REQUIRED_FOR_PT_LAUNCH") fail("nav.privacy must be REQUIRED_FOR_PT_LAUNCH");
+    if (row.record_id !== null) fail(`nav.privacy must not be record-scoped: got ${JSON.stringify(row.record_id)}`);
+    if (row.source_revision !== "P09-PRIVACY-PT-2026-09-15-v1.0") fail("nav.privacy provenance is not the r21 revision");
   }
 }
 

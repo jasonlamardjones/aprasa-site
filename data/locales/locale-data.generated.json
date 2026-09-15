@@ -31,7 +31,8 @@
       "data/locales/pt-overlay-r17-runtime-whatsapp-launcher.source.json",
       "data/locales/pt-overlay-r18-ui-scroll-down.source.json",
       "data/locales/pt-overlay-r19-runtime-whatsapp-prefill.source.json",
-      "data/locales/pt-overlay-r20-start-cv-learning-spotlight.source.json"
+      "data/locales/pt-overlay-r20-start-cv-learning-spotlight.source.json",
+      "data/locales/pt-overlay-r21-privacy-link.source.json"
     ],
     "base_revision": "P03-PT-SOURCE-2026-08-25-r2",
     "delta_revision": "P03-PT-SOURCE-2026-08-25-r3",
@@ -89,6 +90,10 @@
     "delta20_affected_records": [
       "start-cv"
     ],
+    "delta21_package_id": "aprasa-pt-privacy-link-r21",
+    "delta21_revision": "P09-PRIVACY-PT-2026-09-15-v1.0",
+    "delta21_revision_class": "ADDITIVE_NEW_KEYS",
+    "delta21_row_count": 1,
     "delta9_superseding_ruling": "P03-SINERGIA-CURRENTNESS-2026-09-01",
     "delta9_owning_project": "Project 03",
     "event_delta_packages": [
@@ -155,10 +160,10 @@
     "governed_override_authorization": "fixed code-side contract in scripts/build-locale-data.mjs (GOVERNED_OVERRIDE_CONTRACTS)"
   },
   "counts": {
-    "total_rows": 1026,
-    "required_for_pt_launch": 998,
+    "total_rows": 1027,
+    "required_for_pt_launch": 999,
     "intentionally_unchanged": 28,
-    "approved_rows_total": 1026,
+    "approved_rows_total": 1027,
     "r3_delta_rows": 21,
     "r4_delta_rows": 26,
     "r5_delta_rows": 2,
@@ -172,6 +177,7 @@
     "r18_delta_rows": 1,
     "r19_delta_rows": 4,
     "r20_delta_rows": 13,
+    "r21_delta_rows": 1,
     "r10_renamed_rows": 76,
     "governed_override_rows": 6
   },
@@ -12520,6 +12526,18 @@
       "source_revision": "P09-PT-RUNTIME-WHATSAPP-PREFILL-2026-09-13-r1",
       "context_notes": "Starter message prefilled into the WhatsApp composer for the matching governed quick action.",
       "linguistic_notes": "Project 09 identity policy as supplied: TRANSLATE — preserve A PRASA. The protected brand string and the aprasa.org source channel are carried verbatim into Portuguese."
+    },
+    "nav.privacy": {
+      "key": "nav.privacy",
+      "en": "Privacy",
+      "pt": "Privacidade",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PRIVACY-PT-2026-09-15-v1.0",
+      "context_notes": "Global/public policy-link label used by the About footer (about/index.html, pt/about/index.html) to point to the Privacy page.",
+      "linguistic_notes": "PT value reused verbatim from the approved Privacy v1.0 page title (P09-PRIVACY-PT-2026-09-15-v1.0, APPROVED_FINAL_PT), already shipped as the <h1>/<title> of pt/privacy/index.html. Carries no protected brand string and no placeholder."
     }
   }
 }
