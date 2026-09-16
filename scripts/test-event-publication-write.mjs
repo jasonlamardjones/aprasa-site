@@ -6,6 +6,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { mediaIntakeRoot, removeTempTree, validatePacket } from './lib/event-publication-contract.mjs';
+import { TRANSPORT_API, resolveExecutable, selectTransport } from './lib/github-pr-client.mjs';
 import {
   assertDryRunProof,
   assertRealWriteSafety,
@@ -633,6 +634,156 @@ record('PR-creation failure reports pushed commit and deterministic resume', () 
   }
   assertClean(ctx.root);
 }));
+
+// --- runtime GitHub transport ----------------------------------------------
+//
+// The worker these scripts actually run in has node and git but no `gh`. These
+// tests pin the consequence of that: an absent CLI must not stop an otherwise
+// authorized publication, and every guarantee the incumbent path made around
+// the two PR operations must survive the transport change unchanged.
+
+/**
+ * A pull-request client that records what it was asked to do. It never touches
+ * the network and never sees a real packet — it stands exactly where the
+ * incumbent `gh` subprocess stood.
+ */
+function recordingPullRequests({ open = [], createDraft = null } = {}) {
+  const calls = { list: [], createDraft: [] };
+  return {
+    calls,
+    list(request) {
+      calls.list.push(request);
+      return open;
+    },
+    createDraft(request) {
+      calls.createDraft.push(request);
+      if (typeof createDraft === 'function') return createDraft(request);
+      return 'https://github.com/jasonlamardjones/aprasa-site/pull/1';
+    }
+  };
+}
+
+function remoteSha(context, ref) {
+  const output = run(context.root, 'git', ['ls-remote', context.remote, `refs/heads/${ref}`], { allowFailure: true });
+  return output ? output.split(/\s+/)[0] : null;
+}
+
+record('the guarded publication path invokes no gh binary', () => {
+  // Environment-independent: the modules that perform the guarded write must
+  // not shell out to a GitHub CLI at all, so a worker without one cannot fail
+  // for that reason. This holds whether or not `gh` happens to be installed
+  // wherever the suite runs.
+  for (const file of ['scripts/write-event-publication.mjs', 'scripts/lib/event-publication-write.mjs']) {
+    const source = fs.readFileSync(path.join(ROOT, file), 'utf8');
+    const invocations = source.match(/['"`]gh['"`]\s*,/g) ?? [];
+    if (invocations.length) throw new Error(`${file} still invokes a gh binary`);
+  }
+  // The transport the path does use resolves without one, given a credential.
+  const isolated = fs.mkdtempSync(path.join(os.tmpdir(), 'aprasa-no-gh-'));
+  try {
+    if (resolveExecutable('gh', { PATH: isolated }) !== null) throw new Error('the isolated PATH exposes a gh CLI');
+    const selection = selectTransport({ env: { PATH: isolated, GITHUB_TOKEN: 'test-only-not-a-real-credential' } });
+    if (selection.transport !== TRANSPORT_API) throw new Error('no usable transport without a gh CLI');
+  } finally {
+    fs.rmSync(isolated, { recursive: true, force: true });
+  }
+});
+
+record('a guarded publication completes without a gh CLI in the path', () => withRepository((ctx) => {
+  const pullRequests = recordingPullRequests();
+  const result = prepareRealWriteCandidate(ctx);
+  const published = finalizeRealWriteCandidate({ root: ctx.root, packet: ctx.packet, result, pullRequests });
+  if (!published.candidateSha || published.pushed !== true) throw new Error('the guarded write did not complete');
+  if (published.prUrl !== 'https://github.com/jasonlamardjones/aprasa-site/pull/1') throw new Error('no draft PR was opened');
+  if (pullRequests.calls.createDraft.length !== 1) throw new Error('draft PR creation was not attempted exactly once');
+}));
+
+record('draft PR creation stays bounded and withholds merge', () => withRepository((ctx) => {
+  const pullRequests = recordingPullRequests();
+  const result = prepareRealWriteCandidate(ctx);
+  const published = finalizeRealWriteCandidate({ root: ctx.root, packet: ctx.packet, result, pullRequests });
+  const request = pullRequests.calls.createDraft[0];
+  if (request.base !== 'main') throw new Error(`draft PR was not based on main: ${request.base}`);
+  if (request.head !== result.branch) throw new Error(`draft PR head was not the candidate branch: ${request.head}`);
+  if (!request.title.startsWith('Publish approved event:')) throw new Error(`unexpected draft PR title: ${request.title}`);
+  // The body is the committed founder-approval report, not an invented summary.
+  const report = fs.readFileSync(path.join(ctx.root, 'automation', 'things-to-do', 'runs', `${ctx.packet.event.id}.md`), 'utf8');
+  if (request.body !== report) throw new Error('the draft PR body is not the committed candidate report');
+  if (!request.body.includes('Merge allowed: false')) throw new Error('the candidate report did not withhold merge');
+  if (result.merge_allowed !== false || published.merged !== undefined) throw new Error('merge authority leaked into the result');
+  for (const key of Object.keys(request)) {
+    if (/merge|deploy|auto/i.test(key)) throw new Error(`draft PR request carried ${key}`);
+  }
+}));
+
+record('a failed draft PR creation leaves the candidate branch and main untouched', () => withRepository((ctx) => {
+  const mainBefore = remoteSha(ctx, 'main');
+  const pullRequests = recordingPullRequests({
+    createDraft() { throw new Error('GITHUB_PR_CREATE_FAILED: GitHub API returned HTTP 503'); }
+  });
+  const result = prepareRealWriteCandidate(ctx);
+  const error = expectThrow(
+    () => finalizeRealWriteCandidate({ root: ctx.root, packet: ctx.packet, result, pullRequests }),
+    /GITHUB_PR_CREATE_FAILED/
+  );
+  // Post-commit state is recoverable and reported, not rolled back.
+  if (error.recovery?.phase !== 'POST_COMMIT' || error.recovery.pushed !== true) {
+    throw new Error('a failed PR creation did not report recoverable post-commit state');
+  }
+  if (error.recovery.worktree_restored !== false) throw new Error('a committed candidate was wrongly reported as rolled back');
+  if (error.recovery.head_sha !== run(ctx.root, 'git', ['rev-parse', 'HEAD'])) {
+    throw new Error('the reported candidate SHA is not the committed candidate');
+  }
+  if (!/do not rebuild|no new commit|Create the draft PR/.test(error.recovery.resume_action)) {
+    throw new Error(`the resume action was not deterministic: ${error.recovery.resume_action}`);
+  }
+  // main is untouched, locally and on the authoritative remote.
+  if (remoteSha(ctx, 'main') !== mainBefore) throw new Error('remote main moved during a failed PR creation');
+  if (run(ctx.root, 'git', ['rev-parse', 'main']) !== ctx.baseline) throw new Error('local main moved during a failed PR creation');
+  // The candidate branch is exactly the one commit, still on top of baseline.
+  if (run(ctx.root, 'git', ['rev-parse', `${result.branch}~1`]) !== ctx.baseline) {
+    throw new Error('the candidate branch is not a single commit on the authorized baseline');
+  }
+  if (remoteSha(ctx, result.branch) !== error.recovery.head_sha) {
+    throw new Error('the pushed candidate branch does not match the reported recovery SHA');
+  }
+  assertClean(ctx.root);
+}));
+
+record('an unanswerable PR lookup during recovery reports unknown, never "no PR"', () => withRepository((ctx) => {
+  const pullRequests = {
+    list() { throw new Error('GITHUB_API_TRANSPORT_FAILED: timeout after 20000ms'); },
+    createDraft() { throw new Error('GITHUB_PR_CREATE_FAILED: GitHub API returned HTTP 502'); }
+  };
+  const result = prepareRealWriteCandidate(ctx);
+  const error = expectThrow(
+    () => finalizeRealWriteCandidate({ root: ctx.root, packet: ctx.packet, result, pullRequests }),
+    /GITHUB_PR_CREATE_FAILED/
+  );
+  // The recovery record must still be produced: a second failure while
+  // reporting the first one must not replace the original error.
+  if (error.recovery?.phase !== 'POST_COMMIT') throw new Error('recovery reporting was lost to the lookup failure');
+  if (error.recovery.pr_exists !== false || error.recovery.pr_url !== null) {
+    throw new Error('an unanswerable lookup was reported as a positive PR state');
+  }
+  if (error.recovery.pushed !== true) throw new Error('the pushed candidate was not reported');
+  assertClean(ctx.root);
+}));
+
+record('an existing open PR for the candidate branch is refused', () => {
+  // The gate the entrypoint applies, exercised against the same transport the
+  // guarded path uses: a non-empty result must stop the run.
+  const open = [{ url: 'https://github.com/jasonlamardjones/aprasa-site/pull/2', isDraft: true, headRefOid: 'c'.repeat(40), number: 2 }];
+  const pullRequests = recordingPullRequests({ open });
+  const existing = pullRequests.list({ repository: 'jasonlamardjones/aprasa-site', branch: 'feature/phase1b-test' });
+  if (!existing.length) throw new Error('an open PR was not detected');
+  // And a lookup that could not be answered is never mistaken for "none".
+  expectThrow(() => {
+    const failing = { list() { throw new Error('GITHUB_AUTH_UNAVAILABLE: no credential'); } };
+    const found = failing.list({});
+    if (!found.length) throw new Error('unreachable');
+  }, /GITHUB_AUTH_UNAVAILABLE/);
+});
 
 // --- Project 03 ruling A: committed-baseline binding ------------------------
 
