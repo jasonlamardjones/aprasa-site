@@ -27,6 +27,9 @@ AI products are replaceable workers. The contracts name roles, not vendors.
 - `trust/things-to-do-v1.trust-anchor.json` — deployment trust root binding the approved policy identity, version, approval reference, rule set, and content digest.
 - `fixtures/ttd-adjudication-oracle.json` — synthetic acceptance oracle covering normalization, evaluation, and routing.
 - `scripts/validate-control-plane-contracts.mjs` — self-contained schema/subset validator, semantic invariant validator, and negative-regression harness.
+- `task-result.schema.json` — schema for the provider-neutral, content-addressed task-result records described below.
+- `results/` — documentation placeholder only; real records are committed onto a separate `control-plane-task-results` ref, never here; see `results/README.md`.
+- `fixtures/task-result-examples/` — one committed synthetic example per result_type, kept in sync by `scripts/test-control-plane-result.mjs`.
 
 ## Normal state progression
 
@@ -94,6 +97,217 @@ Detailed religious, political/advocacy, adult/sexualized, hateful/extremist, uns
 Every autonomous task must declare allowed and prohibited actions. `MERGE`, `DEPLOY`, `DELETE_BRANCH`, `INVENT_FACTS`, `INVENT_POLICY`, `PUBLISH_EXTERNAL_MESSAGE`, and `CHANGE_GOVERNANCE` remain explicit prohibition tokens for this foundation.
 
 This v1 foundation does not itself authorize any of those actions.
+
+## Task results: persisting exceptions and reviews
+
+Several outcomes currently stop autonomous progression but leave no durable
+record: an unresolved evidence dependency, an unresolved Project 03 standards
+question, a failed technical validator, and the independent exact-head review
+that gates every guarded-write candidate. `scripts/lib/control-plane-result.mjs`
+persists exactly five such outcomes as schema-validated, content-addressed
+records — `NEEDS_EVIDENCE_VERIFICATION`, `NEEDS_PROJECT_03_DECISION`,
+`TECHNICAL_VALIDATION_FAILED`, `REVIEW_PASSED`, `REVIEW_FAILED` — governed by
+`task-result.schema.json`.
+
+A task result is provider-neutral: it names a worker role and a governance
+owner drawn from the same vocabulary as the task envelope and orchestration
+contract, never a vendor. `grants_publication_authority` is a schema `const:
+false` on every record — a task result can report that a review passed, but
+it cannot itself authorize merge, deploy, or publication.
+
+The mapping from `result_type` to `status`, `owner`, and `resume_point` is
+fixed and cannot vary per instance (`scripts/lib/control-plane-result.mjs`'s
+`RESULT_TYPE_INVARIANTS`), because the repository's hand-rolled schema
+validator does not implement `if`/`then`/`else` or `allOf`; the schema fixes
+shape only, and `validateResult` enforces the per-type invariant as a
+semantic check, the same split `scripts/validate-control-plane-contracts.mjs`
+already uses for the Things-to-Do policy document. `REVIEW_PASSED` carries a
+`resume_point` of `null` rather than an automatic route: merge/deploy remains
+founder-only, and a `null` route means exactly what it means throughout this
+control plane — no automatic downstream route exists for that outcome.
+
+### Identity vs. occurrence: what result_id means
+
+`result_id` is the SHA-256 digest of the record with `result_id` **and
+`created_at`** both removed. `created_at` is retained on every record as
+useful occurrence data, but excluding it from identity is deliberate: a retry
+of the same logical event — a CLI rerun after a transient failure, replaying
+an unchanged adjudication outcome — must not mint a second result merely
+because wall-clock time advanced. Two records are the same logical event
+exactly when every other field agrees; if anything governance-relevant
+differs (`reason`, `evidence_digest`, `reviewer`, `upstream_refs`, ...), that
+is genuinely a new event and correctly gets a new identity.
+
+This does mean `created_at` alone is not tamper-evident by the JSON content
+digest. The fields that actually gate a governance decision —
+`repository.sha`, `evidence_digest` — remain digest-protected; `created_at`
+does not, and no consumer should treat it as an authoritative timestamp on
+its own. The persisting git commit's own committer timestamp (see below)
+supplies an independent, git-object-level occurrence record that is
+tamper-evident in the way the JSON field alone is not.
+
+### Persistence: a separate ref, never the candidate's own branch
+
+A `REVIEW_PASSED`/`REVIEW_FAILED` record binds to an exact `repository.sha`.
+If that record were committed onto the very branch it reviews, the commit
+would create a new SHA, and the review would be stale by its own rule the
+instant it was persisted. To avoid that, every result — all five types, for
+uniformity — is persisted onto a dedicated git ref,
+`refs/heads/control-plane-task-results` by default, using plumbing only
+(`hash-object`, `read-tree`/`write-tree` against a throwaway index,
+`commit-tree`, `update-ref` with compare-and-swap). The working tree, the
+real index, and HEAD of whatever branch happens to be checked out are never
+touched, so writing a result can never move the candidate branch it
+describes.
+
+The local-only lifecycle (`writeResult`, no network):
+
+```
+candidate branch at SHA A
+        |  (no commit; the reviewer inspects A as it stands)
+        v
+independent exact-head review of A
+        |  buildResult({ resultType: REVIEW_PASSED, repositorySha: A, ... })
+        v
+writeResult(root, record)              -- plumbing only, targets
+        |                                  refs/heads/control-plane-task-results
+        v
+control-plane-task-results ref advances to a NEW commit B
+        |                                  (candidate branch is still at A)
+```
+
+`B` and `A` are commits on two different refs; persisting `B` never rewrites
+or moves `A`. The regression suite proves this directly: it builds a
+candidate commit, persists a `REVIEW_PASSED` result for it, then re-reads the
+candidate branch's own SHA and asserts it is byte-identical to what it was
+before the write — and separately proves the review does, correctly, go
+stale once the candidate branch receives *its own* later, unrelated commit.
+
+`writeResult` alone is durable only inside the checkout that produced it —
+an ephemeral CI/worker environment loses it when the environment ends. See
+"Remote durability" below for the layer that fixes that.
+
+Reading is symmetric: `readPersistedResult`/`listPersistedResults` use `git
+show <ref>:<path>` and `git ls-tree`, so a checkout that has never fetched
+the results ref simply reports no results, and one that has can validate
+every result on it without checking it out.
+
+### Remote durability
+
+A local-only result vanishes with its checkout. GitHub is the authoritative
+technical source for this project (see "Source-of-truth boundaries" above),
+so `publishResult` treats the *remote's* current tip of the results ref as
+ground truth on every call, and only ever advances the remote with an
+ordinary fast-forward push. No custom locking is invented: git and GitHub
+already refuse a non-fast-forward update to a branch ref, and that refusal
+*is* the concurrency control this layer relies on. `--force` is never used
+anywhere in this module.
+
+The full lifecycle:
+
+```
+candidate SHA A
+        v
+independent review of A (no commit on A's own branch)
+        v
+buildResult({ resultType: REVIEW_PASSED, repositorySha: A, ... })
+        v
+publishResult(root, record)
+        |  1. resolveAuthoritativeRemoteTip  -- ls-remote the results ref;
+        |                                        null only means "never
+        |                                        published", never
+        |                                        "unreachable" (that throws)
+        |  2. sync the local staging ref to exactly that remote tip
+        |     (or delete it, if the remote has none yet)
+        |  3. writeResult (unchanged) builds on top of it -- a same-identity
+        |     replay is a no-op here already, before any network write
+        |  4. git push <remote> <new-commit>:refs/heads/<ref>  -- plain,
+        |     never forced
+        |  5a. push succeeds -> ls-remote again to verify the remote now
+        |      reports exactly the commit just pushed
+        |  5b. push rejected (non-fast-forward) -> re-resolve the remote tip;
+        |      if it moved, a concurrent writer won -- rebuild on the new
+        |      tip and retry (bounded); if it did not move, this was not a
+        |      race and the failure is surfaced, never retried blindly
+        v
+control-plane-task-results ref on GitHub advances to commit B
+        |                                  (candidate branch is still at A)
+        v
+a later worker: fetchResultsRef(root)  -- explicit; validate never fetches
+        |                                  implicitly
+        v
+validate-control-plane-result.mjs --candidate-sha=A
+        |                                  reads the record from B, compares
+        |                                  record.repository.sha (A) to A -> current
+        v
+founder merge gate                     -- unaffected; still manual, still
+                                           outside this layer's authority
+```
+
+**Why `refs/heads/control-plane-task-results` and not a custom namespace.**
+This stays a normal branch ref rather than moving to `refs/notes/*` or a
+bespoke `refs/task-results/*` namespace, specifically for GitHub
+compatibility: `refs/heads/*` is the only namespace GitHub's web UI renders
+specially (branch dropdown, file browser, compare view), the only one a
+plain `git fetch <remote> <name>` or `actions/checkout` with `ref:` reaches
+without extra configuration, and the only one every git tool assumes by
+default. A custom namespace would be invisible in GitHub's own UI and would
+need bespoke fetch/checkout configuration everywhere it was read — worse on
+exactly the discoverability and tool-compatibility grounds this choice is
+made on. The cost is that it appears as an ordinary-looking branch that is
+never meant to be merged; that is an already-familiar, well-precedented git
+pattern (`gh-pages`, changelog branches), not a new one.
+
+**Concurrency, precisely.** Two writers resolving the same remote tip and
+building on it concurrently is not prevented — it is *detected*, by the
+plain git push each performs. Whichever push reaches GitHub first wins; the
+second is rejected as non-fast-forward (proven in the sandbox test below by
+fabricating exactly that race and confirming the rejected push changes
+nothing on the remote). `publishResult`'s own retry loop reacts to that by
+re-resolving the remote and rebuilding, which is what turns a rejection into
+forward progress for a real writer without ever forcing past someone else's
+work; the raw git-level protection holds even if a caller bypasses the retry
+loop entirely.
+
+### Exact-SHA binding
+
+`REVIEW_PASSED` and `REVIEW_FAILED` records carry the exact `repository.sha`
+they were produced against and are invalid once the candidate's head SHA
+moves. `scripts/validate-control-plane-result.mjs --candidate-sha=<sha>`
+enforces this: a mismatch fails closed with `STALE_REVIEW_RESULT`, and no
+other check in that run is treated as sufficient to paper over it.
+Non-review result types carry `repository.sha` for provenance only and are
+not invalidated by SHA drift, since they describe a dependency or a
+validator failure rather than a verdict on a specific commit.
+
+### Writing and reading a result
+
+```sh
+# Local only -- durable inside this checkout.
+node scripts/write-control-plane-result.mjs --draft=<path-to-draft.json> [--ref=<name>] [--root=<repo>]
+
+# Durable across workers/checkouts: reconciles against the remote first,
+# pushes only refs/heads/<ref>, never forces, retries against a moved remote.
+node scripts/write-control-plane-result.mjs --draft=<path-to-draft.json> --publish [--remote=<name>]
+
+# A later worker: fetch, then validate against the exact candidate SHA.
+node scripts/validate-control-plane-result.mjs --fetch                           # fetch, default remote/ref
+node scripts/validate-control-plane-result.mjs --fetch=<remote>                  # a non-default remote
+node scripts/validate-control-plane-result.mjs                                   # validates every result on the (local) ref
+node scripts/validate-control-plane-result.mjs --ref=<name>                      # a non-default results ref
+node scripts/validate-control-plane-result.mjs --result=<path>                   # validates one local file
+node scripts/validate-control-plane-result.mjs --result=<path> --candidate-sha=<sha>
+```
+
+The draft file supplies only what varies per instance — `resultType`,
+`taskId`/`candidateId`, `repositorySha`, `reason`, `requiredInput`,
+`evidenceDigest`, `reviewer` (required for the two review types, forbidden
+otherwise), and `upstreamRefs` (at least one, tracing back to whatever
+produced this result — an adjudication audit record, a publication run
+artifact, a reviewed commit SHA). Neither script ever commits onto,
+pushes, or moves a candidate branch, and neither merges or deploys.
+`validate-control-plane-result.mjs` never touches the network unless
+`--fetch` is passed explicitly.
 
 ## Validation
 
@@ -196,6 +410,7 @@ node scripts/test-ttd-normalization.mjs
 node scripts/test-ttd-policy-evaluator.mjs
 node scripts/test-ttd-adjudication-composition.mjs
 node scripts/test-ttd-adversarial-regressions.mjs
+node scripts/test-control-plane-result.mjs
 ```
 
 The three stages are tested separately against `fixtures/ttd-adjudication-oracle.json`. Stage B consumes the oracle's hand-authored normalized facts rather than normalizer output, and stage C consumes the oracle's expected evaluation rather than evaluator output, so no suite generates its own expected results from the production implementation.
@@ -205,3 +420,5 @@ All oracle records are synthetic. None describes a real event and none may be pu
 ## Next implementation tranche
 
 After this tranche passes exact-SHA independent review, the next tranche should reconcile the oracle against the Project 03 standards owner's own test specification, then connect only governed `SELECTED` records to the existing event-publication preparation machinery. Existing publication validators and exact-SHA review gates remain controlling. No autonomous merge, deploy, publication, or governance authority is created here.
+
+The task-result layer above persists exceptions and reviews; it does not yet wire any producer to call `write-control-plane-result.mjs` automatically. A future tranche could have the guarded-write path (`scripts/lib/event-publication-write.mjs`) emit a `TECHNICAL_VALIDATION_FAILED` result on validator failure, and have independent review conclude with a `REVIEW_PASSED`/`REVIEW_FAILED` result instead of prose in a PR body — but that wiring is deliberately out of scope here and remains for governance and implementation review to authorize separately.

@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0.0",
+  "result_id": "ca7700d8e04b4e1af0ff17bd6b397c885b220e609aee8f1728ace373957ceff8",
+  "result_type": "NEEDS_PROJECT_03_DECISION",
+  "status": "ESCALATED",
+  "task_ref": {
+    "task_id": null,
+    "candidate_id": "TTD-EXAMPLE-CANDIDATE-002"
+  },
+  "repository": {
+    "sha": "5555555555555555555555555555555555555555",
+    "ref": null
+  },
+  "owner": "PROJECT_03",
+  "reason": "standards_boundary_unresolved is true (TTD-GOV-002): no complete affirmative-ordinary-scope classification exists for this candidate.",
+  "required_input": "An explicit Project 03 standards classification (affirmative_ordinary_scope_evidence, confidence, unresolved_dimensions, mixed_purpose, evidence_refs).",
+  "resume_point": {
+    "next_role": "HUMAN_ESCALATION",
+    "next_status": "ESCALATED"
+  },
+  "evidence_digest": "6666666666666666666666666666666666666666666666666666666666666666",
+  "reviewer": null,
+  "upstream_refs": [
+    {
+      "kind": "AUDIT_RECORD",
+      "ref": "example:adjudication-audit:TTD-EXAMPLE-CANDIDATE-002"
+    }
+  ],
+  "grants_publication_authority": false,
+  "created_at": "2026-09-15T00:00:00Z"
+}
