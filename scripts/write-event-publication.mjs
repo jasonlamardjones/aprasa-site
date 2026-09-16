@@ -45,10 +45,12 @@ import {
   finalizeRealWriteCandidate,
   prepareRealWriteCandidate
 } from './lib/event-publication-write.mjs';
+import { listOpenPullRequests } from './lib/github-pr-client.mjs';
 import { DEFAULT_REMOTE, DEFAULT_RESULTS_REF } from './lib/control-plane-result.mjs';
 import { buildTechnicalValidationFailedInputs, emitResult } from './lib/control-plane-result-producers.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const REPOSITORY = 'jasonlamardjones/aprasa-site';
 const packetArg = process.argv.find((arg) => arg.startsWith('--packet='));
 const resultRefArg = process.argv.find((arg) => arg.startsWith('--result-ref='));
 const resultRemoteArg = process.argv.find((arg) => arg.startsWith('--result-remote='));
@@ -155,11 +157,16 @@ try {
   packet = loadPacket(packetPath);
   ownership = classifyOwnership(packet);
   const branch = run('git', ['branch', '--show-current']);
-  const existing = run('gh', ['pr', 'list', '--repo', 'jasonlamardjones/aprasa-site', '--head', branch, '--state', 'open', '--json', 'url']);
-  if (JSON.parse(existing).length) throw new Error('DRAFT_PR_REFUSED: an open PR already exists for this branch');
+  // Fail-closed by construction: this throws on any unanswerable lookup —
+  // missing credential, transport failure, or a non-success status — so the
+  // refusal can never be satisfied by a query that merely failed to run. The
+  // lookup is transport-agnostic; a worker without the GitHub CLI installed is
+  // no longer a reason to stop an otherwise authorized publication.
+  const existing = listOpenPullRequests({ repository: REPOSITORY, branch, cwd: ROOT });
+  if (existing.length) throw new Error('DRAFT_PR_REFUSED: an open PR already exists for this branch');
   run('git', ['push', '--dry-run', 'origin', `HEAD:refs/heads/${branch}`]);
   const result = prepareRealWriteCandidate({ root: ROOT, packet, packetPath });
-  const published = finalizeRealWriteCandidate({ root: ROOT, packet, result });
+  const published = finalizeRealWriteCandidate({ root: ROOT, packet, result, repository: REPOSITORY });
 
   console.log(JSON.stringify({
     ...result,

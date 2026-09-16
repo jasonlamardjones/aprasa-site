@@ -15,6 +15,7 @@ import {
   expectedDryRunChangedFiles,
   validatePacket
 } from './event-publication-contract.mjs';
+import { defaultPullRequestClient } from './github-pr-client.mjs';
 
 const TEXT_EXTENSIONS = new Set([
   '.css', '.html', '.js', '.json', '.md', '.mjs', '.svg', '.txt', '.xml',
@@ -442,15 +443,15 @@ function inspectRemoteBranch(root, branch) {
   return probe.stdout.trim().split(/\s+/)[0] ?? null;
 }
 
-function inspectDraftPr(root, repository, branch) {
+// Post-commit inspection only. This runs while a failure is already being
+// reported, so it must never introduce a second one: an unanswerable lookup
+// degrades to `null`, which the recovery record reports as "PR state unknown"
+// rather than as "no PR exists". The fail-closed duplicate check that gates the
+// write is a different call, and it still throws.
+function inspectDraftPr(root, repository, branch, pullRequests) {
   if (!repository) return null;
-  const probe = command(root, 'gh', [
-    'pr', 'list', '--repo', repository, '--head', branch, '--state', 'open',
-    '--json', 'url,isDraft,headRefOid'
-  ], { allowFailure: true });
-  if (probe.status !== 0) return null;
   try {
-    return JSON.parse(probe.stdout)[0] ?? null;
+    return pullRequests.list({ repository, branch, cwd: root })[0] ?? null;
   } catch {
     return null;
   }
@@ -461,6 +462,7 @@ export function finalizeRealWriteCandidate({
   packet,
   result,
   repository = 'jasonlamardjones/aprasa-site',
+  pullRequests = defaultPullRequestClient,
   testHooks = {}
 }) {
   let committed = false;
@@ -482,11 +484,14 @@ export function finalizeRealWriteCandidate({
     if (testHooks.inducePushFailure) throw new Error('INDUCED_PUSH_FAILURE');
     git(root, ['push', '--set-upstream', 'origin', result.branch]);
     if (testHooks.inducePrFailure) throw new Error('INDUCED_PR_CREATION_FAILURE');
-    const prUrl = command(root, 'gh', [
-      'pr', 'create', '--repo', repository, '--draft', '--base', 'main', '--head', result.branch,
-      '--title', `Publish approved event: ${packet.event.title}`,
-      '--body-file', `automation/things-to-do/runs/${packet.event.id}.md`
-    ]).stdout.trim();
+    const prUrl = pullRequests.createDraft({
+      repository,
+      base: 'main',
+      head: result.branch,
+      title: `Publish approved event: ${packet.event.title}`,
+      body: fs.readFileSync(path.join(root, 'automation', 'things-to-do', 'runs', `${packet.event.id}.md`), 'utf8'),
+      cwd: root
+    });
     return { candidateSha, prUrl, pushed: true, prExists: true };
   } catch (error) {
     if (!committed) {
@@ -506,7 +511,7 @@ export function finalizeRealWriteCandidate({
 
     acceptRealWriteCommit(result);
     const remoteSha = inspectRemoteBranch(root, result.branch);
-    const pr = inspectDraftPr(root, repository, result.branch);
+    const pr = inspectDraftPr(root, repository, result.branch, pullRequests);
     const pushed = remoteSha === candidateSha;
     const prExists = Boolean(pr?.isDraft && pr?.headRefOid === candidateSha);
     const resumeAction = pushed

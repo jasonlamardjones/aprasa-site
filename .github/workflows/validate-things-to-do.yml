@@ -79,6 +79,9 @@ jobs:
       - name: Validate Phase 1B guarded real-write workflow
         run: node scripts/test-event-publication-write.mjs
 
+      - name: Validate guarded publication GitHub transport
+        run: node scripts/test-github-pr-client.mjs
+
       - name: Validate media-gate exit-2 contract and propagation
         run: node scripts/test-media-gate-propagation.mjs
 
