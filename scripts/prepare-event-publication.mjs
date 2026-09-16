@@ -17,10 +17,50 @@ import {
   loadPacket,
   validatePacket
 } from './lib/event-publication-contract.mjs';
+import {
+  emitProducerResult,
+  packetPreflightIntent,
+  resolveHeadSha,
+  technicalFailureIntent
+} from './lib/control-plane-result-producers.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const packetArg = process.argv.find((arg) => arg.startsWith('--packet='));
 const proofArg = process.argv.find((arg) => arg.startsWith('--proof='));
+
+// Durable task-result emission is opt-in per invocation. Without
+// --emit-result this command behaves exactly as before and never touches the
+// results ref or the network. With it, emission is fail-closed: if a required
+// result cannot be persisted, this command reports that and exits non-zero
+// rather than degrading into "the failure happened but went unrecorded".
+const emitResult = process.argv.includes('--emit-result');
+const resultLocalOnly = process.argv.includes('--result-local-only');
+const resultRefArg = process.argv.find((arg) => arg.startsWith('--result-ref='));
+const resultRemoteArg = process.argv.find((arg) => arg.startsWith('--result-remote='));
+
+function resultOptions() {
+  return {
+    publish: !resultLocalOnly,
+    ...(resultRefArg ? { ref: resultRefArg.slice('--result-ref='.length) } : {}),
+    ...(resultRemoteArg ? { remote: resultRemoteArg.slice('--result-remote='.length) } : {})
+  };
+}
+
+/**
+ * Emits one durable result and reports the outcome on stdout. Any persistence
+ * failure is rethrown: the caller turns it into a visible non-zero exit.
+ */
+function emitAndReport(intent) {
+  const { record, outcome } = emitProducerResult(ROOT, intent, resultOptions());
+  console.log([
+    '',
+    `TASK RESULT: ${record.result_type}`,
+    `RESULT ID: ${record.result_id}`,
+    `RESULT REF: ${outcome.ref}`,
+    `RESULT RECORDED: ${outcome.written ? 'NEW' : 'ALREADY_PRESENT'}`,
+    'GRANTS PUBLICATION AUTHORITY: false'
+  ].join('\n'));
+}
 const TEXT_EXTENSIONS = new Set([
   '.css', '.html', '.js', '.json', '.md', '.mjs', '.svg', '.txt', '.xml',
   '.yaml', '.yml'
@@ -49,6 +89,25 @@ if (!preflight.ok) {
     '',
     'ACTION: RETURN TO OWNER / FIX INPUT'
   ].join('\n'));
+  if (emitResult) {
+    try {
+      const classified = packetPreflightIntent({
+        root: ROOT,
+        packet,
+        packetPath,
+        preflight,
+        repositorySha: resolveHeadSha(ROOT)
+      });
+      if (classified.eligible) emitAndReport(classified.intent);
+      // A boundary owned by another authority is declined explicitly. There is
+      // no admissible result type for it, and borrowing the nearest one would
+      // assert an authority this project does not hold.
+      else console.log(`\nTASK RESULT: NOT_RECORDED (${classified.refusal}${classified.owner ? `: ${classified.owner}` : ''})`);
+    } catch (error) {
+      console.error(`\nTASK_RESULT_EMISSION_FAILED: ${error.message}`);
+      process.exit(1);
+    }
+  }
   process.exit(1);
 }
 
@@ -291,6 +350,23 @@ try {
     'RESUME POINT: IMPLEMENTED'
   ].join('\n'));
   process.exitCode = 1;
+  if (emitResult) {
+    try {
+      emitAndReport(technicalFailureIntent({
+        root: ROOT,
+        packet,
+        packetPath,
+        producer: 'prepare-event-publication',
+        stage: 'DRY_RUN_VALIDATION_FAILED',
+        detail: error.message,
+        repositorySha: resolveHeadSha(ROOT),
+        requiredInput: 'technical correction or validator resolution'
+      }));
+    } catch (emissionError) {
+      console.error(`\nTASK_RESULT_EMISSION_FAILED: ${emissionError.message}`);
+      process.exitCode = 1;
+    }
+  }
 } finally {
   removeTempTree(tempRoot);
 }
