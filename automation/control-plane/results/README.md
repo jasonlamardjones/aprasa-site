@@ -43,5 +43,14 @@ normally, as ordinary files, in
 illustrative fixtures, not live review evidence about this candidate's own
 SHA, so the self-invalidation concern above does not apply to them.
 
+Records are also written by the wired producers rather than only by hand:
+`scripts/write-event-publication.mjs` emits one `TECHNICAL_VALIDATION_FAILED`
+when a governance-approved guarded real-write fails for a technical reason, and
+`scripts/record-independent-review.mjs` records a `REVIEW_PASSED`/`REVIEW_FAILED`
+from explicitly supplied reviewer identity and exact candidate SHA. Both go
+through the same `writeResult`/`publishResult` path described above and land on
+the same separate ref. See `automation/control-plane/README.md` ("Producers:
+which real workflow outcomes emit a result").
+
 A result never grants publication, merge, or deploy authority
 (`grants_publication_authority` is a schema `const: false` on every record).

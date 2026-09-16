@@ -14,6 +14,10 @@ on:
       - 'scripts/write-control-plane-result.mjs'
       - 'scripts/validate-control-plane-result.mjs'
       - 'scripts/test-control-plane-result.mjs'
+      - 'scripts/lib/control-plane-result-producers.mjs'
+      - 'scripts/record-independent-review.mjs'
+      - 'scripts/test-control-plane-result-producers.mjs'
+      - 'scripts/write-event-publication.mjs'
       - '.github/workflows/validate-control-plane.yml'
   push:
     branches: [main]
@@ -29,6 +33,10 @@ on:
       - 'scripts/write-control-plane-result.mjs'
       - 'scripts/validate-control-plane-result.mjs'
       - 'scripts/test-control-plane-result.mjs'
+      - 'scripts/lib/control-plane-result-producers.mjs'
+      - 'scripts/record-independent-review.mjs'
+      - 'scripts/test-control-plane-result-producers.mjs'
+      - 'scripts/write-event-publication.mjs'
       - '.github/workflows/validate-control-plane.yml'
 
 permissions:
@@ -72,6 +80,12 @@ jobs:
 
       - name: Control-plane task-result acceptance and fail-closed regressions
         run: node scripts/test-control-plane-result.mjs
+
+      # The layer above the result contract: real workflow outcomes reaching it,
+      # only where Project 04 owns the outcome, idempotently, and without the
+      # act of persisting a result moving the work it reports on.
+      - name: Control-plane task-result producer wiring regressions
+        run: node scripts/test-control-plane-result-producers.mjs
 
       # Real results live on a separate ref (refs/heads/control-plane-task-
       # results), which a standard single-branch checkout does not fetch, so

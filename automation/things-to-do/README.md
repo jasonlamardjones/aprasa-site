@@ -58,3 +58,35 @@ Promotion keeps a private backup journal until commit succeeds. Copy, staging,
 or commit failure restores the exact clean baseline. A later push or PR failure
 preserves the commit and reports its SHA, verified remote/PR state, and the
 deterministic resume action rather than silently rewriting history.
+
+## Durable failure record
+
+A refused real-write is no longer only a red exit code. When the approved
+packet has cleared the governance preflight and the failure is therefore
+Project 04's — a stale branch, a dirty worktree, a failing validator, a scope
+or idempotence violation, a push or PR failure — the command emits one
+`TECHNICAL_VALIDATION_FAILED` control-plane task result onto the dedicated
+`refs/heads/control-plane-task-results` ref and publishes it, so the state
+survives an ephemeral worker instead of being relayed by hand.
+
+A failure **at or before** the governance gate is not emitted: an unapproved
+packet, incomplete Project 09 localization, unresolved media rights, or missing
+real-write authorization belong to the owning project, and the run reports
+`task_result.reason: NOT_TECHNICALLY_OWNED` with the gate that stopped it rather
+than relabelling a governance refusal as a technical one.
+
+```sh
+node scripts/write-event-publication.mjs \
+  --packet=path/to/approved-packet.json \
+  [--no-publish-result] [--no-task-result] [--result-ref=<name>] [--result-remote=<name>]
+```
+
+`--no-publish-result` keeps the record local to this checkout; `--no-task-result`
+skips it. Both are reported in the command's output rather than applied
+silently, and a result that cannot be persisted is reported as
+`TASK_RESULT_PERSISTENCE_FAILED` alongside the original failure — the command
+never continues without a record. The record grants no publication, merge, or
+deploy authority, and persisting it never moves the candidate branch or main.
+
+See `automation/control-plane/README.md` ("Producers: which real workflow
+outcomes emit a result") for the full contract.
