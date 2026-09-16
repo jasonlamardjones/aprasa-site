@@ -30,6 +30,7 @@ AI products are replaceable workers. The contracts name roles, not vendors.
 - `task-result.schema.json` — schema for the provider-neutral, content-addressed task-result records described below.
 - `results/` — documentation placeholder only; real records are committed onto a separate `control-plane-task-results` ref, never here; see `results/README.md`.
 - `fixtures/task-result-examples/` — one committed synthetic example per result_type, kept in sync by `scripts/test-control-plane-result.mjs`.
+- `scripts/lib/control-plane-result-producers.mjs` — the wiring layer that turns real workflow outcomes into records on the contract above; see "Producers" below.
 
 ## Normal state progression
 
@@ -308,6 +309,139 @@ artifact, a reviewed commit SHA). Neither script ever commits onto,
 pushes, or moves a candidate branch, and neither merges or deploys.
 `validate-control-plane-result.mjs` never touches the network unless
 `--fetch` is passed explicitly.
+
+### Producers: which real workflow outcomes emit a result
+
+`scripts/lib/control-plane-result-producers.mjs` is the wiring layer between
+real workflow outcomes and the contract above. It owns nothing the result layer
+already owns: no second schema, no second identity function, no second
+persistence mechanism. It builds the per-instance inputs `buildResult` already
+accepts and hands the record to `writeResult`/`publishResult` on the dedicated
+results ref.
+
+Two producers are wired. Both are fail-closed: a required result that cannot be
+persisted raises `TASK_RESULT_PERSISTENCE_FAILED`, which the callers report
+alongside the original failure. Nothing here continues without a record.
+
+**1. Guarded event publication → `TECHNICAL_VALIDATION_FAILED`.**
+`scripts/write-event-publication.mjs` already failed closed on a refused
+real-write; that refusal was simply not durable, so on an ephemeral worker it
+vanished and the founder relayed the state by hand. It now emits one durable
+record instead.
+
+The ownership gate is structural rather than textual. Before any guarded work
+runs, the approved packet is put through the same `validatePacket` preflight
+`prepareRealWriteCandidate` performs, purely to decide ownership. That validator
+stamps an owner on every issue it raises, and those owners include Project 03,
+Project 09, the owning media project, and the founder. A failure at or before
+that gate is therefore **not** emitted as a technical validation failure: the
+run reports `task_result.reason: NOT_TECHNICALLY_OWNED` with the gate that
+stopped it, and creates nothing. Project 04 must not relabel a governance
+refusal as a technical one. Once that gate passes, the packet is
+governance-approved and every remaining failure is repository/automation
+mechanics, which Project 04 does own.
+
+The record is published to the remote results ref by default, because
+durability across workers is the point. `--no-publish-result` keeps it local to
+the checkout and `--no-task-result` skips it; both downgrades are reported in
+the command's output rather than applied silently.
+
+```sh
+node scripts/write-event-publication.mjs --packet=<approved-real-write-packet.json> \
+  [--no-publish-result] [--no-task-result] [--result-ref=<name>] [--result-remote=<name>]
+```
+
+**2. Independent exact-SHA review → `REVIEW_PASSED` / `REVIEW_FAILED`.**
+`scripts/record-independent-review.mjs` is a structured-input adapter, not an
+in-process call, and that distinction is the whole point. The worker that
+produced a candidate can physically call the result writer — same repository,
+same library — so independence cannot be inferred from the running process. The
+adapter therefore **never derives the reviewer**: it reads no git config, no
+commit author, no CI actor, no environment variable. `--reviewer-identity` must
+be supplied explicitly, and identities naming the writing process or the
+control-plane automation are refused outright. `--candidate-sha` is required in
+full 40-character form and must resolve to a real commit in this repository; a
+reviewer on a fresh clone fetches the candidate first.
+
+```sh
+node scripts/record-independent-review.mjs \
+  --outcome=PASSED|FAILED \
+  --candidate-sha=<40-char lowercase hex> \
+  --reviewer-identity='<who reviewed it>' \
+  --reason='<the finding>' \
+  --required-input='<what is needed next>' \
+  (--evidence=<path> | --evidence-digest=<64-char lowercase hex>) \
+  [--candidate-id=<id>] [--task-id=<ID>] [--candidate-ref=<ref>] \
+  [--reviewer-role=INDEPENDENT_REVIEWER|HUMAN_ESCALATION] \
+  [--upstream-ref=<KIND>:<ref> ...] [--publish] [--remote=<name>] [--ref=<name>] [--root=<repo>]
+```
+
+A recorded review is evidence and nothing else. `grants_publication_authority`
+stays the schema `const false`, `REVIEW_PASSED` keeps its `null` resume point
+because merge and deploy remain founder-only, and neither command merges,
+deploys, pushes a candidate branch, or moves any ref but the results ref.
+
+#### Producer identity and results-ref isolation
+
+The task-result schema is `additionalProperties: false` and has no producer
+field, and this tranche does not change the schema. Producer identity therefore
+travels in `upstream_refs` under the existing `AUDIT_RECORD` kind with a stable
+`control-plane-producer:` prefix.
+
+`assertResultsRefIsolated` refuses to persist onto the branch being reported on,
+the checked-out branch, or `main`/`master`. The merged persistence layer already
+writes by plumbing only and never touches HEAD, the index, or the working tree,
+but it writes to whatever ref name it is given; pointing that at a candidate
+would make persisting evidence an act that moves the thing the evidence is
+about. That is refused rather than relied on not to happen.
+
+#### Replay identity: normalizing run-scoped noise
+
+`result_id` excludes `created_at`, so two records are the same logical event
+exactly when every other field agrees. Raw guarded-write failure text breaks
+that guarantee on its own: the path runs inside `mkdtemp` staging, proof, and
+backup roots whose names end in six random characters, and it shells out through
+an absolute `process.execPath`. Two identical failures would mint two different
+result ids purely because a temporary directory was named differently.
+
+`normalizeFailureDetail` rewrites exactly three enumerated classes of run-scoped
+token — the repository root, temp roots (including `mkdtemp` suffixes), and the
+node executable path — to stable placeholders before anything is digested, and
+bounds the detail deterministically. It is a narrow, enumerated normalization,
+not a general sanitizer: every other byte is preserved, so a genuinely different
+failure still produces a genuinely different record. `reason_code` is likewise a
+syntactic read of the leading `CODE:` token the failing code already emitted; a
+failure carrying no such token omits `reason_code` rather than inventing one.
+
+#### Producers deliberately not wired in this tranche
+
+`NEEDS_EVIDENCE_VERIFICATION` and `NEEDS_PROJECT_03_DECISION` remain unwired.
+
+`routeEvaluation` does deterministically emit
+`{EVIDENCE_VERIFIER, HOLD}`, which is exactly the
+`NEEDS_EVIDENCE_VERIFICATION` resume point — but `adjudicateCandidate` has no
+production caller in this repository. Wiring that producer would mean building
+the adjudication runner that would invoke it, which is new orchestration, not
+wiring of an existing workflow outcome.
+
+One narrower gap is deliberate too. A handful of packet-preflight issues are
+stamped `Project 04` by the validator itself — a missing local media asset, a
+colliding canonical event id, an approved media SHA-256 that does not match the
+supplied bytes. Those are genuinely technical, but they are raised at the same
+gate that raises Project 03, Project 09, media-rights and founder issues, and
+this tranche's ownership test is structural ("did the whole gate pass?") rather
+than per-issue. The gate therefore under-emits rather than risking a
+misclassification: a technical preflight refusal is reported as
+`NOT_TECHNICALLY_OWNED` and creates no record. Reading the validator's own
+per-issue `owner` field would close that gap without inference and is the
+natural next increment; it is not done here.
+
+`NEEDS_PROJECT_03_DECISION` additionally fails the authority test. Routing's
+escalation path reports `authority_target: OWNING_GOVERNANCE_AUTHORITY`, which
+is deliberately abstract, across escalation classes that include media-rights
+and commercial-policy questions. Deciding that a given escalation class is
+Project 03's is a governance determination Project 04 must not make, and the
+control plane does not currently record it anywhere a producer could read.
 
 ## Validation
 
