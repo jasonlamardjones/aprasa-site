@@ -114,6 +114,47 @@ export function loadPacket(packetPath) {
   return JSON.parse(fs.readFileSync(packetPath, 'utf8'));
 }
 
+// --- Ephemeral working-tree teardown (issue #100) ---------------------------
+//
+// Every temp root this module and its callers tear down (trusted dry-run
+// proof dirs, real-write staging copies, promotion backups, throwaway test
+// repositories) is deleted immediately after heavy synchronous churn: many
+// git invocations and generator/validator subprocesses writing and rewriting
+// files through spawnSync, which blocks until each child has fully exited.
+// Nothing in this process still holds those files open by the time removal
+// runs, so a repeat ENOTEMPTY/EBUSY/EPERM here is not an application-level
+// resource-ownership bug -- it is the OS/filesystem's own removal call
+// occasionally observing the directory mid-settle right after that churn.
+//
+// This retries only that narrow, named set of transient codes, a bounded
+// number of times, with a real (non-busy-spinning) synchronous delay between
+// attempts. Any other error -- and a transient error that outlives the
+// retry budget -- is rethrown immediately: this stays fail-closed, it does
+// not swallow unexpected failures, and it is not a blanket retry-everything
+// workaround for the historical flake.
+const TRANSIENT_TEARDOWN_CODES = new Set(['ENOTEMPTY', 'EBUSY', 'EPERM']);
+
+function sleepSync(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+export function removeTempTree(root, {
+  rm = (target) => fs.rmSync(target, { recursive: true, force: true }),
+  retries = 5,
+  delayMs = 100,
+  sleep = sleepSync
+} = {}) {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      rm(root);
+      return;
+    } catch (error) {
+      if (!TRANSIENT_TEARDOWN_CODES.has(error.code) || attempt >= retries) throw error;
+      sleep(delayMs);
+    }
+  }
+}
+
 export function mediaIntakeRoot(root = ROOT) {
   return path.join(root, '.git', 'aprasa-media-intake');
 }

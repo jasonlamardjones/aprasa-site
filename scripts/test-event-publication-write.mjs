@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { mediaIntakeRoot, validatePacket } from './lib/event-publication-contract.mjs';
+import { mediaIntakeRoot, removeTempTree, validatePacket } from './lib/event-publication-contract.mjs';
 import {
   assertDryRunProof,
   assertRealWriteSafety,
@@ -287,8 +287,8 @@ function createRepository({ branch = 'feature/phase1b-test', committedAsOf = nul
     packet,
     packetPath,
     cleanup() {
-      fs.rmSync(root, { recursive: true, force: true });
-      fs.rmSync(remote, { recursive: true, force: true });
+      removeTempTree(root);
+      removeTempTree(remote);
     }
   };
 }
@@ -528,7 +528,7 @@ record('authoritative remote main defeats stale cached origin/main', () => withR
     if (run(ctx.root, 'git', ['rev-parse', 'origin/main']) !== ctx.baseline) throw new Error('cached origin/main unexpectedly moved');
     expectThrow(() => assertRealWriteSafety(ctx.root, ctx.packet), /STALE_MAIN_REFUSED/);
   } finally {
-    fs.rmSync(updater, { recursive: true, force: true });
+    removeTempTree(updater);
   }
 }));
 
@@ -720,6 +720,76 @@ record('deliberate cross-boundary as_of divergence is refused', () => {
     assertClean(ctx.root, ctx.baseline);
   });
 }, 'baseline-binding');
+
+// --- Issue #100: bounded ENOTEMPTY teardown retry ---------------------------
+//
+// The exhaustive lifecycle audit found no lingering handle, subprocess, or
+// async write: every git and generator/validator call on the real-write path
+// is spawnSync, fully reaped before its temp directory is removed. What
+// removeTempTree hardens is the one remaining unsafe assumption -- that a
+// recursive delete of a directory that was just subjected to heavy churn
+// always succeeds on the first OS-level attempt. These prove its retry is
+// restricted to exactly the named transient codes, still fails closed on an
+// unrelated error or on retry exhaustion, and actually removes a real tree.
+
+record('teardown retries only transient codes and recovers within budget', () => {
+  let calls = 0;
+  const rm = () => {
+    calls += 1;
+    if (calls <= 2) {
+      const error = new Error('directory not empty');
+      error.code = 'ENOTEMPTY';
+      throw error;
+    }
+  };
+  let slept = 0;
+  removeTempTree('/unused/path', { rm, retries: 5, delayMs: 10, sleep: (ms) => { slept += ms; } });
+  if (calls !== 3) throw new Error(`expected exactly 3 attempts before success, got ${calls}`);
+  if (slept !== 20) throw new Error(`expected two 10ms backoff delays between retries, got ${slept}`);
+}, 'teardown-reliability');
+
+record('teardown does not retry an unrelated filesystem error', () => {
+  let calls = 0;
+  const rm = () => {
+    calls += 1;
+    const error = new Error('permission denied');
+    error.code = 'EACCES';
+    throw error;
+  };
+  expectThrow(
+    () => removeTempTree('/unused/path', { rm, retries: 5, delayMs: 10, sleep: () => { throw new Error('must not sleep for a non-transient error'); } }),
+    /permission denied/
+  );
+  if (calls !== 1) throw new Error(`expected exactly 1 attempt for a non-transient error, got ${calls}`);
+}, 'teardown-reliability');
+
+record('teardown retry exhaustion still fails closed', () => {
+  let calls = 0;
+  const rm = () => {
+    calls += 1;
+    const error = new Error('still not empty');
+    error.code = 'ENOTEMPTY';
+    throw error;
+  };
+  const error = expectThrow(
+    () => removeTempTree('/unused/path', { rm, retries: 3, delayMs: 0, sleep: () => {} }),
+    /still not empty/
+  );
+  if (error.code !== 'ENOTEMPTY') throw new Error('exhausted retry did not preserve the original transient error code');
+  if (calls !== 4) throw new Error(`expected retries+1 = 4 attempts before giving up, got ${calls}`);
+}, 'teardown-reliability');
+
+record('teardown removes a real freshly-written directory tree', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'aprasa-teardown-check-'));
+  try {
+    fs.mkdirSync(path.join(dir, 'nested'), { recursive: true });
+    fs.writeFileSync(path.join(dir, 'nested', 'file.txt'), 'x');
+    removeTempTree(dir);
+    if (fs.existsSync(dir)) throw new Error('directory was not removed');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}, 'teardown-reliability');
 
 for (const result of results) {
   console.log(`${result.status} — ${result.name}${result.reason ? `: ${result.reason}` : ''}`);

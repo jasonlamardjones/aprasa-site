@@ -9,6 +9,7 @@ import {
   mediaGateStateFrom,
   mediaGateSummary,
   MEDIA_GATE_OPEN,
+  removeTempTree,
   validationOutcome,
   expectedChangedFiles,
   expectedDryRunChangedFiles,
@@ -213,7 +214,7 @@ export function runTrustedDryRun(root, packet, packetPath, safety) {
     assertDryRunProof(root, packet, packetPath, proof, safety.head, safety.authoritativeMain);
     return Object.freeze(proof);
   } finally {
-    fs.rmSync(proofRoot, { recursive: true, force: true });
+    removeTempTree(proofRoot);
   }
 }
 
@@ -301,7 +302,7 @@ function restorePromotion(root, state) {
     if (fs.existsSync(dir) && fs.readdirSync(dir).length === 0) fs.rmdirSync(dir);
   }
   state.closed = true;
-  fs.rmSync(state.backupRoot, { recursive: true, force: true });
+  removeTempTree(state.backupRoot);
   const remaining = git(root, ['status', '--porcelain']).stdout.trim();
   if (remaining) throw new Error(`PROMOTION_ROLLBACK_INCOMPLETE: ${remaining}`);
 }
@@ -345,7 +346,7 @@ export function acceptRealWriteCommit(result) {
   const state = promotionStates.get(result);
   if (!state || state.closed) return;
   state.closed = true;
-  fs.rmSync(state.backupRoot, { recursive: true, force: true });
+  removeTempTree(state.backupRoot);
 }
 
 export function prepareRealWriteCandidate({ root, packet, packetPath, testHooks = {} }) {
@@ -431,7 +432,7 @@ export function prepareRealWriteCandidate({ root, packet, packetPath, testHooks 
     promotionStates.set(result, promotion);
     return result;
   } finally {
-    fs.rmSync(stagingRoot, { recursive: true, force: true });
+    removeTempTree(stagingRoot);
   }
 }
 

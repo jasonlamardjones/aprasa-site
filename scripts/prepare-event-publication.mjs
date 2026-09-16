@@ -11,6 +11,7 @@ import {
   mediaGateStateFrom,
   mediaGateSummary,
   MEDIA_GATE_OPEN,
+  removeTempTree,
   validationOutcome,
   expectedDryRunChangedFiles,
   loadPacket,
@@ -291,5 +292,5 @@ try {
   ].join('\n'));
   process.exitCode = 1;
 } finally {
-  fs.rmSync(tempRoot, { recursive: true, force: true });
+  removeTempTree(tempRoot);
 }
