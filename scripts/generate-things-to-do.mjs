@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { t, hasKey } from './lib/locale.mjs';
 import { bodyParagraphs, factKeyBase } from './lib/things-to-do-keys.mjs';
 import { currentnessState, isExpired as recordIsExpired, EXPIRED, REVIEW_DUE } from './lib/things-to-do-currentness.mjs';
+import { isRecurringVenue } from './lib/things-to-do-kinds.mjs';
 import { HOME_PREVIEW_LIMIT, THINGS_TO_DO_HUB_PUBLIC, collectionRecords, homePreviewIds, hubOutputPath, hubCanonical } from './lib/things-to-do-collection.mjs';
 import { LAUNCHER_SURFACE_KEYS, resolveRuntimeStrings, renderRuntimeStringsBlock } from './lib/runtime-strings.mjs';
 import { renderContactConfigBlock } from './lib/contact-channels.mjs';
@@ -292,6 +293,31 @@ function renderFacts(facts = []) {
 }
 
 function renderSchema(record, loc, expired) {
+  // An evergreen recurring-venue record states no occurrence, so it must not
+  // serialize Event semantics. An Event node with no startDate and an
+  // EventScheduled status would assert to search engines exactly the scheduled
+  // occurrence this card explicitly does not promise, and there is no
+  // Schema.org Event shape for "recurring, see the source for current detail".
+  //
+  // It therefore emits ordinary WebPage semantics and nothing else -- the same
+  // decision, for the same reason, that renderHubSchema() below records: where
+  // Project 03 has supplied no structured-data position, none is invented. No
+  // Event node, no dates, no eventStatus, and no isAccessibleForFree (the card
+  // makes no admission claim). The venue's own address is deliberately not
+  // serialized either: it would read as a Place/LocalBusiness assertion about
+  // the venue, which this page is not.
+  if (isRecurringVenue(record)) {
+    return JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': record.seo?.schema_type ?? 'WebPage',
+      name: loc.title,
+      url: `https://aprasa.org/${localeRoutePrefix()}${record.detail_page}`,
+      description: loc.summary,
+      inLanguage: locale === 'pt' ? 'pt-PT' : 'en',
+      isPartOf: { '@type': 'WebSite', name: 'A PRASA', url: 'https://aprasa.org/' },
+    }, null, 2);
+  }
+
   const schema = {
     '@context': 'https://schema.org',
     '@type': record.seo?.schema_type ?? 'Event',

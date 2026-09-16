@@ -106,6 +106,16 @@ jobs:
       - name: Event schema regression tests
         run: node scripts/test-things-to-do-event-schema.mjs
 
+      # The evergreen recurring-venue discovery cards (Taverna, Nautilus). What
+      # the records say, where they point, the shared A PRASA category media
+      # they share, EN/PT resolution with no English fallback, and the negative
+      # rules the card type exists for: no occurrence date, time, weekday,
+      # weekly promise or admission claim outside the governed provenance line.
+      # It also holds the standing absence assertions for the three HOLD
+      # venues (CineMindelo, Jazzy Bird, Le Metalo).
+      - name: Recurring-venue card regression tests
+        run: node scripts/test-ttd-recurring-venue-cards.mjs
+
       # Governed detail bodies must reach a reader with their approved
       # paragraph structure: the 50 Anos body as two visibly separate
       # paragraphs, every single-paragraph incumbent body as exactly one.

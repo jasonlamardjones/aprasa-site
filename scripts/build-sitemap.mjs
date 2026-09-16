@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { THINGS_TO_DO_HUB_PUBLIC } from './lib/things-to-do-collection.mjs';
+import { hasDetailRoute } from './lib/things-to-do-kinds.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const write = process.argv.includes('--write');
@@ -39,23 +40,29 @@ const STATIC_EN_ROUTES = [
 
 const events = JSON.parse(fs.readFileSync(EVENTS_PATH, 'utf8'));
 const detailRoutePattern = /^things-to-do\/[a-z0-9]+(?:-[a-z0-9]+)*\/$/;
-const datedEventRoutes = [];
+const recordDetailRoutes = [];
 const seen = new Set(STATIC_EN_ROUTES);
 
 for (const record of events.records ?? []) {
-  if (record.kind !== 'dated-event') continue;
+  // Every canonical kind that owns a public detail route is listed. A
+  // recurring-venue record has exactly the same kind of page a dated event
+  // has -- public, canonical, same-locale -- so excluding it would hide a
+  // shipped route from crawlers for no reason. Currentness is deliberately not
+  // consulted here for either kind: an expired event keeps a public,
+  // past-marked page, and an evergreen record never expires at all.
+  if (!hasDetailRoute(record)) continue;
   if (typeof record.detail_page !== 'string' || !detailRoutePattern.test(record.detail_page)) {
-    throw new Error(`${record.id ?? record.title ?? 'unknown'}: invalid dated-event detail_page`);
+    throw new Error(`${record.id ?? record.title ?? 'unknown'}: invalid ${record.kind} detail_page`);
   }
   const route = `/${record.detail_page}`;
   if (seen.has(route)) {
     throw new Error(`${record.id ?? record.title ?? 'unknown'}: duplicate sitemap route ${route}`);
   }
   seen.add(route);
-  datedEventRoutes.push(route);
+  recordDetailRoutes.push(route);
 }
 
-const EN_ROUTES = [...STATIC_EN_ROUTES, ...datedEventRoutes];
+const EN_ROUTES = [...STATIC_EN_ROUTES, ...recordDetailRoutes];
 
 function ptRouteExists(enRoute) {
   const ptDir = path.join(root, 'pt', enRoute.replace(/^\//, ''));
@@ -70,7 +77,7 @@ const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.s
 
 if (write) {
   fs.writeFileSync(SITEMAP_PATH, xml);
-  console.log(`[build-sitemap] wrote sitemap.xml — ${EN_ROUTES.length} EN routes (${datedEventRoutes.length} canonical dated-event routes), ${ptRoutes.length} PT routes (${EN_ROUTES.length - ptRoutes.length} PT route(s) not yet generated, excluded).`);
+  console.log(`[build-sitemap] wrote sitemap.xml — ${EN_ROUTES.length} EN routes (${recordDetailRoutes.length} canonical record detail routes), ${ptRoutes.length} PT routes (${EN_ROUTES.length - ptRoutes.length} PT route(s) not yet generated, excluded).`);
 } else {
   console.log(xml);
 }

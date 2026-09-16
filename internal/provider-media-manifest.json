@@ -569,6 +569,42 @@
       "media_alt": "VOYAGE — OBI & MARGO",
       "media_width": 1800,
       "media_height": 2546
+    },
+    {
+      "section": "things-to-do",
+      "title": "Live Music at Taverna / Rua Pedonal",
+      "provider": "Taverna",
+      "source_url": "https://cvcultural.cv/eventos/agenda-semanal-musica-ao-vivo-na-taverna-11",
+      "media_type": "aprasa-category",
+      "media_state": "fallback-final",
+      "media_source": null,
+      "media_asset": "assets/card-media/things-to-do/live-performance-category-fallback.webp",
+      "fallback_category": "things-culture",
+      "fallback_reason": "No verified venue-controlled image was available for this recurring-venue discovery card; the approved shared A PRASA live-performance category fallback is used.",
+      "media_provenance": "A PRASA-created language-neutral category illustration for recurring live-music programming, approved as a shared Things-to-Do category fallback and reused across recurring-venue records. It is A PRASA-owned category imagery, NOT provider-authentic media: it does not depict this venue, its premises, its performers or any specific performance. Derived for web delivery from the approved master assets/card-media/things-to-do/source/A_PRASA_TTD_Fallback_Live_Performance_4x3_v1.png (PNG, 1200 x 900, sha256 b1c33594829522dab0f8a7c302da999fd02b55b9c1ae345201d44b213016480a) by a single deterministic WebP encode at quality 82 with no resize, crop, recolour or added text; the approved visual content is unchanged.",
+      "media_asset_source_url": null,
+      "media_checked_date": "2026-09-16",
+      "media_alt": "",
+      "media_width": 1200,
+      "media_height": 900
+    },
+    {
+      "section": "things-to-do",
+      "title": "Live Music at Nautilus",
+      "provider": "Nautilus",
+      "source_url": "https://cvcultural.cv/eventos/agenda-musica-ao-vivo-no-nautilus",
+      "media_type": "aprasa-category",
+      "media_state": "fallback-final",
+      "media_source": null,
+      "media_asset": "assets/card-media/things-to-do/live-performance-category-fallback.webp",
+      "fallback_category": "things-culture",
+      "fallback_reason": "No verified venue-controlled image was available for this recurring-venue discovery card; the approved shared A PRASA live-performance category fallback is used.",
+      "media_provenance": "A PRASA-created language-neutral category illustration for recurring live-music programming, approved as a shared Things-to-Do category fallback and reused across recurring-venue records. It is A PRASA-owned category imagery, NOT provider-authentic media: it does not depict this venue, its premises, its performers or any specific performance. Derived for web delivery from the approved master assets/card-media/things-to-do/source/A_PRASA_TTD_Fallback_Live_Performance_4x3_v1.png (PNG, 1200 x 900, sha256 b1c33594829522dab0f8a7c302da999fd02b55b9c1ae345201d44b213016480a) by a single deterministic WebP encode at quality 82 with no resize, crop, recolour or added text; the approved visual content is unchanged.",
+      "media_asset_source_url": null,
+      "media_checked_date": "2026-09-16",
+      "media_alt": "",
+      "media_width": 1200,
+      "media_height": 900
     }
   ]
 }

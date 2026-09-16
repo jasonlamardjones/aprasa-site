@@ -36,6 +36,7 @@ import {
   parseValidatorDriftIds,
   resolvePreviewTransition,
 } from './lib/things-to-do-currentness-remediation.mjs';
+import { isDatedEvent } from '../lib/things-to-do-kinds.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(scriptDir, '..', '..');
@@ -114,6 +115,15 @@ function sandbox() {
   const events = readJson(dir, 'data/things-to-do-events.json');
   const keep = { [ACTIVE]: '2026-12-31', [RETAINED]: '2026-12-31', [PROMOTED]: '2026-12-31', [EXPIRING]: BEFORE };
   for (const record of events.records) {
+    // Only DATED EVENTS take part in a preview-boundary expiry, so only they
+    // are given a synthetic end. An evergreen recurring-venue record states no
+    // occurrence at all -- it carries no end field to assign, it can never
+    // expire, and the canonical schema rejects it outright if it is given one.
+    // It is therefore left exactly as committed, which is also what the
+    // fixture wants: such a record sits after all four named records in
+    // canonical order, so it stays outside the three-slot preview on both
+    // sides of the transition and cannot perturb the membership asserted below.
+    if (!isDatedEvent(record)) continue;
     // A record with no assigned survival date ends on its own start day, which
     // is always >= its start and always before BEFORE, so it is out of the
     // collection on both sides of the transition. A record that states only a

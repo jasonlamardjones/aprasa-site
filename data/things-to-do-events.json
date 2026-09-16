@@ -464,6 +464,110 @@
         "title": "50 Anos de Memória, Criação e Resistência — CNAD Exhibition in Mindelo | A PRASA",
         "schema_type": "ExhibitionEvent"
       }
+    },
+    {
+      "id": "taverna-live-music",
+      "kind": "recurring-venue",
+      "title": "Live Music at Taverna / Rua Pedonal",
+      "provider": "Taverna",
+      "summary": "Taverna hosts recurring live-music programming on Rua Pedonal in Mindelo. Check the current schedule source for the latest details.",
+      "category": "culture",
+      "location": {
+        "name": "Taverna",
+        "locality": "Mindelo",
+        "street": "Rua Pedonal, Mindelo"
+      },
+      "source_url": "https://cvcultural.cv/eventos/agenda-semanal-musica-ao-vivo-na-taverna-11",
+      "source_type": "official-schedule-listing",
+      "checked_at": "2026-09-16",
+      "publication_state": "published",
+      "media_policy": "fallback_allowed",
+      "media_manifest_title": "Live Music at Taverna / Rua Pedonal",
+      "detail_page": "things-to-do/taverna-live-music/",
+      "free_admission": null,
+      "display": {
+        "status": "Recurring live music · Check the current schedule for details",
+        "meta": "Taverna · Rua Pedonal, Mindelo",
+        "checked": "Checked 16 September 2026"
+      },
+      "media": {
+        "asset": "assets/card-media/things-to-do/live-performance-category-fallback.webp",
+        "alt": "",
+        "width": 1200,
+        "height": 900
+      },
+      "card_action": {
+        "label": "View current schedule",
+        "url": "https://cvcultural.cv/eventos/agenda-semanal-musica-ao-vivo-na-taverna-11"
+      },
+      "detail": {
+        "facts": [
+          {
+            "label": "Where",
+            "value": "Taverna · Rua Pedonal, Mindelo"
+          }
+        ],
+        "body": "Taverna hosts recurring live-music programming on Rua Pedonal in Mindelo. Check the current schedule source for the latest details.",
+        "checked": "Checked 16 September 2026 against the approved current schedule source.",
+        "action_label": "View current schedule"
+      },
+      "seo": {
+        "description": "Discover recurring live music at Taverna on Rua Pedonal in Mindelo and check the current schedule source for the latest details.",
+        "title": "Live Music at Taverna / Rua Pedonal | A PRASA",
+        "schema_type": "WebPage"
+      }
+    },
+    {
+      "id": "nautilus-live-music",
+      "kind": "recurring-venue",
+      "title": "Live Music at Nautilus",
+      "provider": "Nautilus",
+      "summary": "Nautilus hosts recurring live-music programming on Avenida Marginal in Mindelo. Check the current schedule source for the latest details.",
+      "category": "culture",
+      "location": {
+        "name": "Nautilus",
+        "locality": "Mindelo",
+        "street": "Avenida Marginal, Mindelo"
+      },
+      "source_url": "https://cvcultural.cv/eventos/agenda-musica-ao-vivo-no-nautilus",
+      "source_type": "official-schedule-listing",
+      "checked_at": "2026-09-16",
+      "publication_state": "published",
+      "media_policy": "fallback_allowed",
+      "media_manifest_title": "Live Music at Nautilus",
+      "detail_page": "things-to-do/nautilus-live-music/",
+      "free_admission": null,
+      "display": {
+        "status": "Recurring live music · Check the current schedule for details",
+        "meta": "Nautilus · Avenida Marginal, beside Centro Cultural do Mindelo",
+        "checked": "Checked 16 September 2026"
+      },
+      "media": {
+        "asset": "assets/card-media/things-to-do/live-performance-category-fallback.webp",
+        "alt": "",
+        "width": 1200,
+        "height": 900
+      },
+      "card_action": {
+        "label": "View current schedule",
+        "url": "https://cvcultural.cv/eventos/agenda-musica-ao-vivo-no-nautilus"
+      },
+      "detail": {
+        "facts": [
+          {
+            "label": "Where",
+            "value": "Nautilus · Avenida Marginal, beside Centro Cultural do Mindelo"
+          }
+        ],
+        "body": "Nautilus hosts recurring live-music programming on Avenida Marginal in Mindelo. Check the current schedule source for the latest details.",
+        "checked": "Checked 16 September 2026 against the approved current schedule source.",
+        "action_label": "View current schedule"
+      },
+      "seo": {
+        "description": "Discover recurring live music at Nautilus on Avenida Marginal in Mindelo and check the current schedule source for the latest details.",
+        "title": "Live Music at Nautilus | A PRASA",
+        "schema_type": "WebPage"
+      }
     }
   ]
 }

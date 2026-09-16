@@ -17,6 +17,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { t } from './lib/locale.mjs';
 import { currentnessState, isExpired, isReviewDue, EXPIRED } from './lib/things-to-do-currentness.mjs';
+import { hasDetailRoute } from './lib/things-to-do-kinds.mjs';
 import {
   HOME_PREVIEW_LIMIT,
   HUB_ROUTE,
@@ -259,14 +260,15 @@ if (renderedByLocale.en && renderedByLocale.pt) {
       }
     }
     // Detail routes are unaffected by hub publication state and must remain.
-    // scripts/build-sitemap.mjs lists every dated-event record's detail route
-    // from the canonical corpus regardless of currentness (an expired event
-    // keeps a public, past-marked page), so that is what is asserted here.
+    // scripts/build-sitemap.mjs lists the detail route of every canonical
+    // record whose kind owns one, regardless of currentness (an expired event
+    // keeps a public, past-marked page, and an evergreen recurring-venue
+    // record never expires), so that is what is asserted here.
     for (const record of records) {
-      if (record.kind !== 'dated-event') continue;
+      if (!hasDetailRoute(record)) continue;
       const loc = `https://aprasa.org/${record.detail_page}`;
       if (!sitemap.includes(`<loc>${loc}</loc>`)) {
-        errors.push(`sitemap.xml is missing the dated-event detail route ${loc}`);
+        errors.push(`sitemap.xml is missing the ${record.kind} detail route ${loc}`);
       }
     }
   }
