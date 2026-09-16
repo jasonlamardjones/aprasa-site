@@ -121,17 +121,19 @@ export function loadPacket(packetPath) {
 // repositories) is deleted immediately after heavy synchronous churn: many
 // git invocations and generator/validator subprocesses writing and rewriting
 // files through spawnSync, which blocks until each child has fully exited.
-// Nothing in this process still holds those files open by the time removal
-// runs, so a repeat ENOTEMPTY/EBUSY/EPERM here is not an application-level
-// resource-ownership bug -- it is the OS/filesystem's own removal call
-// occasionally observing the directory mid-settle right after that churn.
+// An audit of that synchronous call graph found no lingering
+// process/handle/resource-ownership defect that would explain a repeat
+// ENOTEMPTY/EBUSY/EPERM here -- but non-discovery is not proof of
+// impossibility. The remaining working hypothesis is a short OS/filesystem
+// timing race on the removal call itself, occasionally observing the
+// directory mid-settle right after that churn.
 //
 // This retries only that narrow, named set of transient codes, a bounded
 // number of times, with a real (non-busy-spinning) synchronous delay between
 // attempts. Any other error -- and a transient error that outlives the
-// retry budget -- is rethrown immediately: this stays fail-closed, it does
-// not swallow unexpected failures, and it is not a blanket retry-everything
-// workaround for the historical flake.
+// retry budget -- is rethrown immediately: this hardens the transient class
+// without hiding an unrelated or persistent failure, so it stays fail-closed
+// and is not a blanket retry-everything workaround for the historical flake.
 const TRANSIENT_TEARDOWN_CODES = new Set(['ENOTEMPTY', 'EBUSY', 'EPERM']);
 
 function sleepSync(ms) {
