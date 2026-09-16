@@ -12,9 +12,12 @@ import {
   buildResult,
   computeResultId,
   DEFAULT_RESULTS_REF,
+  fetchResultsRef,
   isResultCurrent,
   listPersistedResults,
+  publishResult,
   readPersistedResult,
+  resolveAuthoritativeRemoteTip,
   RESULT_TYPES,
   resultRelativePath,
   validateResult,
@@ -53,6 +56,47 @@ function initSandboxRepo() {
   git(dir, ['commit', '-q', '-m', 'candidate baseline']);
   const candidateSha = git(dir, ['rev-parse', 'main']);
   return { dir, candidateBranch: 'main', candidateSha };
+}
+
+function schemaOnlyClone(bareDir) {
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'control-plane-result-clone-'));
+  const dir = path.join(parent, 'repo');
+  const clone = spawnSync('git', ['clone', '-q', bareDir, dir], { encoding: 'utf8' });
+  if (clone.status !== 0) throw new Error(`git clone failed: ${clone.stderr || clone.stdout}`);
+  git(dir, ['config', 'user.name', 'Test']);
+  git(dir, ['config', 'user.email', 'test@example.invalid']);
+  return dir;
+}
+
+/**
+ * A bare "GitHub" remote plus two independent clones of it, both already
+ * carrying the same candidate commit and both with `origin` configured —
+ * exactly the shape of two real workers checking out the same reviewed
+ * candidate. Returns {bareDir, writer1, writer2, candidateSha}. Callers are
+ * responsible for cleanup of every returned directory's parent.
+ */
+function initTwoWriterSandbox() {
+  const bareDir = fs.mkdtempSync(path.join(os.tmpdir(), 'control-plane-result-bare-'));
+  fs.rmSync(bareDir, { recursive: true, force: true });
+  const init = spawnSync('git', ['init', '-q', '--bare', '-b', 'main', bareDir], { encoding: 'utf8' });
+  if (init.status !== 0) throw new Error(`git init --bare failed: ${init.stderr || init.stdout}`);
+
+  const writer1 = schemaOnlyClone(bareDir);
+  git(writer1, ['checkout', '-q', '-b', 'main']);
+  fs.mkdirSync(path.join(writer1, 'automation', 'control-plane'), { recursive: true });
+  fs.copyFileSync(
+    path.join(ROOT, 'automation', 'control-plane', 'task-result.schema.json'),
+    path.join(writer1, 'automation', 'control-plane', 'task-result.schema.json')
+  );
+  git(writer1, ['add', '-A']);
+  git(writer1, ['commit', '-q', '-m', 'candidate baseline']);
+  const candidateSha = git(writer1, ['rev-parse', 'main']);
+  git(writer1, ['push', '-q', 'origin', 'main']);
+
+  const writer2 = schemaOnlyClone(bareDir);
+  git(writer2, ['checkout', '-q', 'main']);
+
+  return { bareDir, writer1, writer2, candidateSha };
 }
 
 function baseFields(overrides = {}) {
@@ -415,6 +459,126 @@ harness.equal('one committed example fixture exists per result_type', exampleFil
 for (const file of exampleFiles) {
   const record = JSON.parse(fs.readFileSync(path.join(exampleDir, file), 'utf8'));
   harness.equal(`fixture ${file}: validates cleanly`, validateResult(record, { root: ROOT }), []);
+}
+
+// --- Remote durability proof: one candidate repo, one bare fake origin, ---
+// --- two independent writer clones. Requirements A-G from the second ------
+// --- independent review, in order. ------------------------------------
+
+{
+  const { bareDir, writer1, writer2, candidateSha } = initTwoWriterSandbox();
+  const cleanupDirs = [path.dirname(writer1), path.dirname(writer2), bareDir];
+  try {
+    // A. Writer 1 publishes REVIEW_PASSED for candidate SHA A to the
+    //    dedicated remote results ref.
+    const review = buildResult({
+      resultType: 'REVIEW_PASSED',
+      candidateId: 'main',
+      repositorySha: candidateSha,
+      reason: 'Independent exact-head review found no defects (remote-durability proof).',
+      requiredInput: 'None; ready for founder approval.',
+      evidenceDigest: DIGEST_A,
+      upstreamRefs: [{ kind: 'GITHUB_SHA', ref: candidateSha }],
+      reviewer: { role: 'INDEPENDENT_REVIEWER', identity: 'Remote-durability proof reviewer' }
+    });
+    const publishA = publishResult(writer1, review);
+    harness.equal('A: writer 1 publishes REVIEW_PASSED (published:true)', publishA.published, true);
+    harness.ok('A: publish reports a real remote tip commit', /^[a-f0-9]{40}$/.test(publishA.remote_tip));
+
+    // B. Candidate branch SHA A remains unchanged — checked on the bare
+    //    remote itself, not just writer 1's local view of it.
+    const candidateOnRemoteAfterA = git(bareDir, ['rev-parse', 'main']);
+    harness.equal('B: the candidate branch on the remote is unchanged by the publish', candidateOnRemoteAfterA, candidateSha);
+
+    // C. Writer 2, starting from another checkout that has never seen the
+    //    results ref, fetches and reads the same persisted result.
+    const fetchedTip = fetchResultsRef(writer2);
+    harness.equal('C: writer 2 fetches the same tip writer 1 published', fetchedTip, publishA.remote_tip);
+    const readBack = readPersistedResult(writer2, review.result_id);
+    harness.equal('C: writer 2 reads back the exact record writer 1 published', readBack, review);
+    harness.equal('C: writer 2 independently validates the fetched record', validateResult(readBack, { root: writer2 }), []);
+
+    // D. Retrying the same logical result from writer 2 is idempotent and
+    //    creates no duplicate result or commit.
+    const remoteTipBeforeD = git(bareDir, ['rev-parse', DEFAULT_RESULTS_REF]);
+    const retryFromWriter2 = buildResult({
+      resultType: 'REVIEW_PASSED',
+      candidateId: 'main',
+      repositorySha: candidateSha,
+      reason: 'Independent exact-head review found no defects (remote-durability proof).',
+      requiredInput: 'None; ready for founder approval.',
+      evidenceDigest: DIGEST_A,
+      upstreamRefs: [{ kind: 'GITHUB_SHA', ref: candidateSha }],
+      reviewer: { role: 'INDEPENDENT_REVIEWER', identity: 'Remote-durability proof reviewer' },
+      createdAt: '2099-01-01T00:00:00Z' // a much later instant; identity must still match
+    });
+    harness.equal('D: the retry shares the original result_id despite a different created_at', retryFromWriter2.result_id, review.result_id);
+    const publishD = publishResult(writer2, retryFromWriter2);
+    harness.equal('D: replaying the same logical result from writer 2 is a no-op (published:false)', publishD.published, false);
+    harness.equal('D: the remote results ref does not advance on replay', git(bareDir, ['rev-parse', DEFAULT_RESULTS_REF]), remoteTipBeforeD);
+
+    // E. A genuinely new result appends safely.
+    const secondResult = buildResult({
+      resultType: 'NEEDS_EVIDENCE_VERIFICATION',
+      candidateId: 'TTD-REMOTE-PROOF-0002',
+      repositorySha: candidateSha,
+      reason: 'A genuinely different, second logical event (remote-durability proof).',
+      requiredInput: 'Corroborating source.',
+      evidenceDigest: DIGEST_A,
+      upstreamRefs: [{ kind: 'AUDIT_RECORD', ref: 'synthetic:audit:remote-proof-0002' }]
+    });
+    const publishE = publishResult(writer2, secondResult);
+    harness.equal('E: a genuinely new result publishes (published:true)', publishE.published, true);
+    harness.ok('E: the remote tip advances past the previous tip', publishE.remote_tip !== remoteTipBeforeD);
+    fetchResultsRef(writer1); // writer 1 catches up
+    const bothFromWriter1 = listPersistedResults(writer1);
+    harness.equal('E: both results are present after the append (nothing was replaced)', bothFromWriter1.length, 2);
+
+    // F. A simulated concurrent stale writer cannot overwrite the newer
+    //    remote results-ref tip. Writer 3 reads the SAME tip writer 2 read
+    //    before E (i.e. before E was published), builds its own genuinely
+    //    different third result on top of that now-stale tip using the same
+    //    writeResult primitive real writers use, then attempts a plain,
+    //    non-forced push after E has already moved the remote past it.
+    const writer3 = schemaOnlyClone(bareDir);
+    cleanupDirs.push(path.dirname(writer3));
+    git(writer3, ['checkout', '-q', 'main']);
+    git(writer3, ['update-ref', `refs/heads/${DEFAULT_RESULTS_REF}`, remoteTipBeforeD]); // writer 3's stale starting point
+    const staleWriterResult = buildResult({
+      resultType: 'TECHNICAL_VALIDATION_FAILED',
+      taskId: 'TTD-2026-REMOTE-PROOF-STALE',
+      repositorySha: candidateSha,
+      reason: 'A third, concurrently-built result from a stale base (remote-durability proof).',
+      requiredInput: 'N/A.',
+      evidenceDigest: DIGEST_A,
+      upstreamRefs: [{ kind: 'AUDIT_RECORD', ref: 'synthetic:audit:remote-proof-stale' }]
+    });
+    const staleLocalCommit = writeResult(writer3, staleWriterResult).commit;
+    const remoteTipBeforeStalePush = git(bareDir, ['rev-parse', DEFAULT_RESULTS_REF]);
+    const stalePush = spawnSync('git', ['push', 'origin', `${staleLocalCommit}:refs/heads/${DEFAULT_RESULTS_REF}`], { cwd: writer3, encoding: 'utf8' });
+    harness.ok('F: the stale writer\'s plain (non-forced) push is rejected', stalePush.status !== 0);
+    harness.equal('F: the remote results ref is unchanged by the rejected stale push', git(bareDir, ['rev-parse', DEFAULT_RESULTS_REF]), remoteTipBeforeStalePush);
+    harness.equal('F: the remote results ref still matches writer 2\'s successful publish from E', remoteTipBeforeStalePush, publishE.remote_tip);
+
+    // G. No candidate branch or main is pushed/moved as a side effect, across
+    //    the entire scenario above.
+    harness.equal('G: the candidate branch on the bare remote is still exactly A', git(bareDir, ['rev-parse', 'main']), candidateSha);
+  } finally {
+    for (const dir of cleanupDirs) fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+// --- Remote reachability failure is distinguished from "ref absent" -------
+
+{
+  const { dir } = initSandboxRepo();
+  try {
+    git(dir, ['remote', 'add', 'origin', '/nonexistent/not-a-real-remote']);
+    harness.throws('resolveAuthoritativeRemoteTip fails closed on an unreachable remote rather than treating it as absent',
+      () => resolveAuthoritativeRemoteTip(dir, {}));
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 }
 
 harness.finish([`result_types=${RESULT_TYPES.length}`, `example_fixtures=${exampleFiles.length}`]);

@@ -19,13 +19,21 @@
 //     Additionally asserts the result is not stale: for REVIEW_PASSED and
 //     REVIEW_FAILED, --candidate-sha must equal the record's repository.sha,
 //     or validation fails closed with STALE_REVIEW_RESULT.
+//
+//   ... --fetch[=<remote>]
+//     Explicitly fetches the results ref from the remote (default origin)
+//     into this local checkout before validating — the "a later worker
+//     fetches the result" step. This is opt-in and never implicit: a plain
+//     validate call never touches the network.
 
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import {
+  DEFAULT_REMOTE,
   DEFAULT_RESULTS_REF,
+  fetchResultsRef,
   isResultCurrent,
   listPersistedResults,
   readPersistedResult,
@@ -36,8 +44,14 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const resultArg = process.argv.find((arg) => arg.startsWith('--result='));
 const refArg = process.argv.find((arg) => arg.startsWith('--ref='));
 const candidateShaArg = process.argv.find((arg) => arg.startsWith('--candidate-sha='));
+const fetchArg = process.argv.find((arg) => arg === '--fetch' || arg.startsWith('--fetch='));
 const candidateSha = candidateShaArg ? candidateShaArg.slice('--candidate-sha='.length) : null;
 const ref = refArg ? refArg.slice('--ref='.length) : DEFAULT_RESULTS_REF;
+
+if (fetchArg) {
+  const remote = fetchArg.includes('=') ? fetchArg.slice('--fetch='.length) : DEFAULT_REMOTE;
+  fetchResultsRef(ROOT, { remote, ref });
+}
 
 function checkStaleness(record) {
   if (candidateSha === null) return null;

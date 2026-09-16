@@ -18,7 +18,7 @@
 // identity. created_at is therefore not itself tamper-evident — the fields
 // that gate any authority decision (repository.sha, evidence_digest) remain
 // digest-protected, and the persisting git commit's own committer timestamp
-// (see persistToRef below) supplies an independently tamper-evident
+// (see writeResult below) supplies an independently tamper-evident
 // occurrence record at the git-object layer.
 //
 // Persistence: a REVIEW_PASSED/REVIEW_FAILED record binds to an exact
@@ -29,6 +29,13 @@
 // — the working tree, the index, and HEAD of whatever branch happens to be
 // checked out are never touched, so persisting review evidence about a
 // candidate can never move that candidate's own head.
+//
+// Remote durability: writeResult alone is local-only, so it is durable only
+// inside the checkout that produced it — not across an ephemeral CI/worker
+// environment. publishResult (below) extends the same local mechanism with a
+// push to a remote (GitHub), treating the remote's current tip as
+// authoritative on every call and advancing it only with a fast-forward
+// push — never forced. See its own doc comment for the full lifecycle.
 //
 // The repository carries no JSON Schema library, so structural validation is
 // a small hand-rolled subset (matching the existing duplicated validator in
@@ -481,4 +488,116 @@ export function isResultCurrent(record, actualSha) {
   const reviewTypes = new Set(['REVIEW_PASSED', 'REVIEW_FAILED']);
   if (!reviewTypes.has(record.result_type)) return true;
   return record.repository.sha === actualSha;
+}
+
+// --- Remote durability -----------------------------------------------------
+//
+// A result committed only to a local ref is durable only inside the checkout
+// that produced it, which is not durable at all across ephemeral CI/worker
+// environments. GitHub is the authoritative technical source for this
+// project, so publishResult treats the remote results ref as ground truth:
+// it always reconciles against the remote's current tip before building, and
+// it only ever advances the remote with an ordinary fast-forward push — the
+// same mechanism git and GitHub already use to refuse a stale write, so no
+// custom locking is needed. --force is never used anywhere in this module.
+
+export const DEFAULT_REMOTE = 'origin';
+
+/**
+ * The remote's current tip for the results ref, or null if that ref does not
+ * exist there yet. Throws rather than returning null when the remote cannot
+ * be reached at all — treating "unreachable" the same as "doesn't exist"
+ * would let a writer build from an empty base while real history exists,
+ * silently duplicating or shadowing it.
+ */
+export function resolveAuthoritativeRemoteTip(root, { remote = DEFAULT_REMOTE, ref = DEFAULT_RESULTS_REF } = {}) {
+  const probe = git(root, ['ls-remote', '--exit-code', remote, `refs/heads/${ref}`], { allowFailure: true });
+  if (probe.status === 2) return null; // git's documented exit code for "no matching refs"
+  if (probe.status !== 0) {
+    throw new Error(`REMOTE_UNREACHABLE: ls-remote ${remote} refs/heads/${ref} failed (${probe.status}): ${(probe.stderr || probe.stdout || '').trim()}`);
+  }
+  const sha = probe.stdout.trim().split('\n')[0]?.split(/\s+/)[0];
+  if (!/^[a-f0-9]{40}$/.test(sha ?? '')) throw new Error(`REMOTE_REF_MALFORMED: unexpected ls-remote output for refs/heads/${ref}`);
+  return sha;
+}
+
+/** Fetches one exact commit's objects from the remote without touching any local branch/ref name. */
+function fetchCommitObjects(root, remote, sha) {
+  git(root, ['fetch', remote, sha]);
+}
+
+/**
+ * Publishes a result durably: reconciles the local staging ref against the
+ * remote's authoritative tip, builds/appends via writeResult (unchanged,
+ * already-proven local logic), and advances the remote with a fast-forward-
+ * only push — never the candidate branch, never forced.
+ *
+ * Concurrency is handled by relying on git's own non-fast-forward rejection:
+ * if another writer published between our fetch and our push, our push is
+ * refused; we re-fetch, confirm the remote genuinely moved (as opposed to an
+ * unrelated network/auth failure, which is surfaced rather than retried),
+ * rebuild on the new tip, and try again, up to maxAttempts. A push is never
+ * retried by forcing it through.
+ */
+export function publishResult(root, record, {
+  ref = DEFAULT_RESULTS_REF,
+  remote = DEFAULT_REMOTE,
+  maxAttempts = 3
+} = {}) {
+  const errors = validateResult(record, { root });
+  if (errors.length > 0) throw new Error(`INVALID_TASK_RESULT: ${errors.join('; ')}`);
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const remoteTipBefore = resolveAuthoritativeRemoteTip(root, { remote, ref });
+    if (remoteTipBefore !== null) {
+      fetchCommitObjects(root, remote, remoteTipBefore);
+      git(root, ['update-ref', `refs/heads/${ref}`, remoteTipBefore]);
+    } else {
+      git(root, ['update-ref', '-d', `refs/heads/${ref}`], { allowFailure: true });
+    }
+
+    const local = writeResult(root, record, { ref });
+
+    if (!local.written) {
+      // The identical logical result is already reachable from the
+      // authoritative remote tip; there is nothing to push.
+      return { ...local, published: false, remote, remote_tip: remoteTipBefore };
+    }
+
+    const pushProbe = git(root, ['push', remote, `${local.commit}:refs/heads/${ref}`], { allowFailure: true });
+
+    if (pushProbe.status === 0) {
+      const verifiedTip = resolveAuthoritativeRemoteTip(root, { remote, ref });
+      if (verifiedTip !== local.commit) {
+        throw new Error(`REMOTE_VERIFY_FAILED: pushed ${local.commit} but remote now reports ${verifiedTip}`);
+      }
+      return { ...local, published: true, remote, remote_tip: verifiedTip };
+    }
+
+    const remoteTipAfterFailure = resolveAuthoritativeRemoteTip(root, { remote, ref });
+    if (remoteTipAfterFailure === remoteTipBefore) {
+      // The remote did not move; this was not a concurrency race, so
+      // retrying blindly would not help and could mask a real problem
+      // (auth, network, permissions).
+      throw new Error(`REMOTE_PUBLISH_FAILED: push rejected and remote tip is unchanged (${remoteTipBefore ?? 'absent'}): ${(pushProbe.stderr || pushProbe.stdout || '').trim()}`);
+    }
+    // A concurrent writer advanced the remote first. Loop: rebuild on the
+    // new authoritative tip and try again. Never force past it.
+  }
+
+  throw new Error(`REMOTE_PUBLISH_CONTENDED: exceeded ${maxAttempts} attempts to publish against a moving remote ref refs/heads/${ref}`);
+}
+
+/**
+ * Fetches the results ref from the remote into the same local ref name, so a
+ * later worker's checkout can read what an earlier one published. This is
+ * the explicit "later worker fetches" step in the publish lifecycle — it is
+ * never performed implicitly by validateResult/readPersistedResult, since a
+ * validation command silently reaching the network would be surprising.
+ */
+export function fetchResultsRef(root, { remote = DEFAULT_REMOTE, ref = DEFAULT_RESULTS_REF } = {}) {
+  const remoteTip = resolveAuthoritativeRemoteTip(root, { remote, ref });
+  if (remoteTip === null) return null;
+  git(root, ['fetch', remote, `+refs/heads/${ref}:refs/heads/${ref}`]);
+  return remoteTip;
 }

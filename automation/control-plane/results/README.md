@@ -17,13 +17,25 @@ persisted — invalidating it by its own rule. Persisting on a separate ref
 means writing a review never moves the candidate it describes.
 
 Read results with `scripts/validate-control-plane-result.mjs` (no
-`--result` flag reads every result on the ref) or
-`scripts/lib/control-plane-result.mjs`'s `readPersistedResult` /
-`listPersistedResults`, not by looking in this directory on disk.
+`--result` flag reads every result on the ref; `--fetch` fetches it from the
+remote first) or `scripts/lib/control-plane-result.mjs`'s
+`readPersistedResult` / `listPersistedResults`, not by looking in this
+directory on disk.
+
+A result written only with `scripts/write-control-plane-result.mjs` (no
+`--publish`) is durable only inside the checkout that wrote it — an
+ephemeral CI/worker environment loses it when the environment ends. Add
+`--publish` to push it to the remote (GitHub) via `publishResult`, which
+reconciles against the remote's current tip first and only ever advances it
+with a plain, non-forced, fast-forward push, retrying against a moved remote
+rather than clobbering it. That push targets `refs/heads/control-plane-task-results`
+exclusively — never the candidate branch.
 
 See `automation/control-plane/README.md` ("Persistence: a separate ref,
-never the candidate's own branch") for the full lifecycle, and
-`automation/control-plane/task-result.schema.json` for the record shape.
+never the candidate's own branch" and "Remote durability") for the full
+lifecycle and why this stays a normal branch ref rather than a custom
+namespace, and `automation/control-plane/task-result.schema.json` for the
+record shape.
 
 Synthetic examples used for schema and regression testing are committed
 normally, as ordinary files, in
@@ -33,5 +45,3 @@ SHA, so the self-invalidation concern above does not apply to them.
 
 A result never grants publication, merge, or deploy authority
 (`grants_publication_authority` is a schema `const: false` on every record).
-Whether and when the results ref is pushed to a remote is an operational
-decision outside this layer.

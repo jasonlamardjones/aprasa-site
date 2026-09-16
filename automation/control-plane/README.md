@@ -160,7 +160,7 @@ real index, and HEAD of whatever branch happens to be checked out are never
 touched, so writing a result can never move the candidate branch it
 describes.
 
-The lifecycle:
+The local-only lifecycle (`writeResult`, no network):
 
 ```
 candidate branch at SHA A
@@ -174,13 +174,6 @@ writeResult(root, record)              -- plumbing only, targets
         v
 control-plane-task-results ref advances to a NEW commit B
         |                                  (candidate branch is still at A)
-        v
-validate-control-plane-result.mjs --candidate-sha=A
-        |                                  reads the record from B, compares
-        |                                  record.repository.sha (A) to A -> current
-        v
-founder merge gate                     -- unaffected; still manual, still
-                                           outside this layer's authority
 ```
 
 `B` and `A` are commits on two different refs; persisting `B` never rewrites
@@ -190,10 +183,91 @@ candidate branch's own SHA and asserts it is byte-identical to what it was
 before the write — and separately proves the review does, correctly, go
 stale once the candidate branch receives *its own* later, unrelated commit.
 
+`writeResult` alone is durable only inside the checkout that produced it —
+an ephemeral CI/worker environment loses it when the environment ends. See
+"Remote durability" below for the layer that fixes that.
+
 Reading is symmetric: `readPersistedResult`/`listPersistedResults` use `git
 show <ref>:<path>` and `git ls-tree`, so a checkout that has never fetched
 the results ref simply reports no results, and one that has can validate
 every result on it without checking it out.
+
+### Remote durability
+
+A local-only result vanishes with its checkout. GitHub is the authoritative
+technical source for this project (see "Source-of-truth boundaries" above),
+so `publishResult` treats the *remote's* current tip of the results ref as
+ground truth on every call, and only ever advances the remote with an
+ordinary fast-forward push. No custom locking is invented: git and GitHub
+already refuse a non-fast-forward update to a branch ref, and that refusal
+*is* the concurrency control this layer relies on. `--force` is never used
+anywhere in this module.
+
+The full lifecycle:
+
+```
+candidate SHA A
+        v
+independent review of A (no commit on A's own branch)
+        v
+buildResult({ resultType: REVIEW_PASSED, repositorySha: A, ... })
+        v
+publishResult(root, record)
+        |  1. resolveAuthoritativeRemoteTip  -- ls-remote the results ref;
+        |                                        null only means "never
+        |                                        published", never
+        |                                        "unreachable" (that throws)
+        |  2. sync the local staging ref to exactly that remote tip
+        |     (or delete it, if the remote has none yet)
+        |  3. writeResult (unchanged) builds on top of it -- a same-identity
+        |     replay is a no-op here already, before any network write
+        |  4. git push <remote> <new-commit>:refs/heads/<ref>  -- plain,
+        |     never forced
+        |  5a. push succeeds -> ls-remote again to verify the remote now
+        |      reports exactly the commit just pushed
+        |  5b. push rejected (non-fast-forward) -> re-resolve the remote tip;
+        |      if it moved, a concurrent writer won -- rebuild on the new
+        |      tip and retry (bounded); if it did not move, this was not a
+        |      race and the failure is surfaced, never retried blindly
+        v
+control-plane-task-results ref on GitHub advances to commit B
+        |                                  (candidate branch is still at A)
+        v
+a later worker: fetchResultsRef(root)  -- explicit; validate never fetches
+        |                                  implicitly
+        v
+validate-control-plane-result.mjs --candidate-sha=A
+        |                                  reads the record from B, compares
+        |                                  record.repository.sha (A) to A -> current
+        v
+founder merge gate                     -- unaffected; still manual, still
+                                           outside this layer's authority
+```
+
+**Why `refs/heads/control-plane-task-results` and not a custom namespace.**
+This stays a normal branch ref rather than moving to `refs/notes/*` or a
+bespoke `refs/task-results/*` namespace, specifically for GitHub
+compatibility: `refs/heads/*` is the only namespace GitHub's web UI renders
+specially (branch dropdown, file browser, compare view), the only one a
+plain `git fetch <remote> <name>` or `actions/checkout` with `ref:` reaches
+without extra configuration, and the only one every git tool assumes by
+default. A custom namespace would be invisible in GitHub's own UI and would
+need bespoke fetch/checkout configuration everywhere it was read — worse on
+exactly the discoverability and tool-compatibility grounds this choice is
+made on. The cost is that it appears as an ordinary-looking branch that is
+never meant to be merged; that is an already-familiar, well-precedented git
+pattern (`gh-pages`, changelog branches), not a new one.
+
+**Concurrency, precisely.** Two writers resolving the same remote tip and
+building on it concurrently is not prevented — it is *detected*, by the
+plain git push each performs. Whichever push reaches GitHub first wins; the
+second is rejected as non-fast-forward (proven in the sandbox test below by
+fabricating exactly that race and confirming the rejected push changes
+nothing on the remote). `publishResult`'s own retry loop reacts to that by
+re-resolving the remote and rebuilding, which is what turns a rejection into
+forward progress for a real writer without ever forcing past someone else's
+work; the raw git-level protection holds even if a caller bypasses the retry
+loop entirely.
 
 ### Exact-SHA binding
 
@@ -209,8 +283,17 @@ validator failure rather than a verdict on a specific commit.
 ### Writing and reading a result
 
 ```sh
+# Local only -- durable inside this checkout.
 node scripts/write-control-plane-result.mjs --draft=<path-to-draft.json> [--ref=<name>] [--root=<repo>]
-node scripts/validate-control-plane-result.mjs                                   # validates every result on the ref
+
+# Durable across workers/checkouts: reconciles against the remote first,
+# pushes only refs/heads/<ref>, never forces, retries against a moved remote.
+node scripts/write-control-plane-result.mjs --draft=<path-to-draft.json> --publish [--remote=<name>]
+
+# A later worker: fetch, then validate against the exact candidate SHA.
+node scripts/validate-control-plane-result.mjs --fetch                           # fetch, default remote/ref
+node scripts/validate-control-plane-result.mjs --fetch=<remote>                  # a non-default remote
+node scripts/validate-control-plane-result.mjs                                   # validates every result on the (local) ref
 node scripts/validate-control-plane-result.mjs --ref=<name>                      # a non-default results ref
 node scripts/validate-control-plane-result.mjs --result=<path>                   # validates one local file
 node scripts/validate-control-plane-result.mjs --result=<path> --candidate-sha=<sha>
@@ -221,10 +304,10 @@ The draft file supplies only what varies per instance — `resultType`,
 `evidenceDigest`, `reviewer` (required for the two review types, forbidden
 otherwise), and `upstreamRefs` (at least one, tracing back to whatever
 produced this result — an adjudication audit record, a publication run
-artifact, a reviewed commit SHA). Neither script commits onto a candidate
-branch, pushes, merges, or deploys. Whether and when the results ref itself
-is pushed to a remote remains an operational decision outside this layer —
-these scripts only ever advance a local ref.
+artifact, a reviewed commit SHA). Neither script ever commits onto,
+pushes, or moves a candidate branch, and neither merges or deploys.
+`validate-control-plane-result.mjs` never touches the network unless
+`--fetch` is passed explicitly.
 
 ## Validation
 
