@@ -478,7 +478,7 @@
         "street": "Rua Pedonal, Mindelo"
       },
       "source_url": "https://cvcultural.cv/eventos/agenda-semanal-musica-ao-vivo-na-taverna-11",
-      "source_type": "official-schedule-listing",
+      "source_type": "third-party-cultural-schedule-listing",
       "checked_at": "2026-09-16",
       "publication_state": "published",
       "media_policy": "fallback_allowed",
@@ -530,7 +530,7 @@
         "street": "Avenida Marginal, Mindelo"
       },
       "source_url": "https://cvcultural.cv/eventos/agenda-musica-ao-vivo-no-nautilus",
-      "source_type": "official-schedule-listing",
+      "source_type": "third-party-cultural-schedule-listing",
       "checked_at": "2026-09-16",
       "publication_state": "published",
       "media_policy": "fallback_allowed",

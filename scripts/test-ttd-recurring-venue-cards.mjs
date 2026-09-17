@@ -47,6 +47,7 @@ const EXPECTED = {
   'taverna-live-music': {
     provider: 'Taverna',
     url: 'https://cvcultural.cv/eventos/agenda-semanal-musica-ao-vivo-na-taverna-11',
+    sourceType: 'third-party-cultural-schedule-listing',
     en: {
       title: 'Live Music at Taverna / Rua Pedonal',
       where: 'Taverna · Rua Pedonal, Mindelo',
@@ -65,6 +66,7 @@ const EXPECTED = {
   'nautilus-live-music': {
     provider: 'Nautilus',
     url: 'https://cvcultural.cv/eventos/agenda-musica-ao-vivo-no-nautilus',
+    sourceType: 'third-party-cultural-schedule-listing',
     en: {
       title: 'Live Music at Nautilus',
       where: 'Nautilus · Avenida Marginal, beside Centro Cultural do Mindelo',
@@ -97,6 +99,13 @@ for (const id of ids) {
   // clock, a commit time, a file mtime or the source page.
   check(`${id}: governed checked_at is 2026-09-16`, rec.checked_at === '2026-09-16', rec.checked_at);
   check(`${id}: outbound source_url is the approved source`, rec.source_url === spec.url, rec.source_url);
+  // Project 03 classified these sources on 17 September 2026. cvcultural.cv is
+  // a THIRD-PARTY cultural agenda, not the venue's own channel, and the
+  // classification is what tells a later reader how much weight the linked
+  // schedule carries. It is internal metadata and renders nowhere, which is
+  // exactly why it needs pinning here: no public surface would ever reveal a
+  // regression in it.
+  check(`${id}: governed source_type classification`, rec.source_type === spec.sourceType, rec.source_type);
   check(`${id}: card action points at the approved source`, rec.card_action?.url === spec.url, rec.card_action?.url);
   check(`${id}: makes no admission claim`, rec.free_admission === null, String(rec.free_admission));
   check(`${id}: carries no occurrence field`,
@@ -287,6 +296,16 @@ check('the Movie Night / Cinema master is not committed',
   }
   fs.rmSync(dir, { recursive: true, force: true });
   check('regenerating both locales reproduces the committed surfaces byte-for-byte', ok, detail);
+}
+
+// The superseded classification must not reappear anywhere in the corpus --
+// on these two records or on any record added later.
+{
+  const offenders = events.records
+    .filter((r) => r.source_type === 'official-schedule-listing')
+    .map((r) => r.id);
+  check('the superseded "official-schedule-listing" classification is absent from the corpus',
+    offenders.length === 0, offenders.join(', '));
 }
 
 console.log(`\nRecurring-venue card tests: ${passed}/${passed + failures.length} passed.`);
