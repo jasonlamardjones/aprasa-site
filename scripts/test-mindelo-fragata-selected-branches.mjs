@@ -128,6 +128,16 @@ for (const id of Object.keys(EXPECTED)) {
   check(`record.${id}.description is REQUIRED_FOR_PT_LAUNCH`, description?.scope_status === 'REQUIRED_FOR_PT_LAUNCH');
 }
 
+console.log('[8] no fabricated checked-date copy: task order supplied checked_at only, never an approved display pair');
+for (const id of Object.keys(EXPECTED)) {
+  check(`record.${id}.checked_display does not exist in governed locale data`, !locale.keys[`record.${id}.checked_display`]);
+  const enBlockMatch = enHtml.match(new RegExp(`data-record-id="${id}"[\\s\\S]*?<\\/details>`));
+  const ptBlockMatch = ptHtml.match(new RegExp(`data-record-id="${id}"[\\s\\S]*?<\\/details>`));
+  check(`${id} EN block carries no <p class="checked"> paragraph`, !!enBlockMatch && !enBlockMatch[0].includes('class="checked"'));
+  check(`${id} PT block carries no <p class="checked"> paragraph`, !!ptBlockMatch && !ptBlockMatch[0].includes('class="checked"'));
+}
+check('checked_at is retained as internal directory metadata (matches the task order, not rendered as approved copy)', Object.keys(EXPECTED).every((id) => directory.records.find((r) => r.id === id)?.checked === '17 September 2026'));
+
 console.log(`\n[test-mindelo-fragata-selected-branches] ${checks - failures}/${checks} checks passed.`);
 if (failures) {
   console.error(`[test-mindelo-fragata-selected-branches] FAILED with ${failures} failing check(s).`);

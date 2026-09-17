@@ -3,7 +3,7 @@
   "revision_class": "ADDITIVE_NEW_KEYS",
   "source_revision": "P04-2026-09-17-MINDELO-FRAGATA-SELECTED-BRANCHES",
   "previous_revision": "P04-2026-09-17-PORTUGUESE-IN-PROGRESS-SIGNAL",
-  "revision_type": "DIRECTORY_RECORD_TYPE_LABEL_DESCRIPTION_CHECKED_DISPLAY",
+  "revision_type": "DIRECTORY_RECORD_TYPE_LABEL_DESCRIPTION",
   "semantic_authority": "Project 03 publication/selection authority and Project 26 spatial authority, bound by the Project 04 Manager / Control Tower task order \"Mindelo Essentials — Fragata Selected Branches\", 17 September 2026",
   "linguistic_authority": "Project 09 EN/PT localization authority — the task order carries Project 09 EN/PT localization authority as an explicit upstream authority and supplies the description_en/description_pt and type_en/type_pt values as approved, with an explicit instruction not to retranslate, paraphrase, or shorten them",
   "target_language": "pt",
@@ -13,12 +13,12 @@
   "project_09_review_date": "2026-09-17",
   "project_09_package_id": null,
   "project_09_revision_id": null,
-  "project_09_provenance_note": "No formal Project 09 package/revision ID accompanied the task order's approved EN/PT values; none is fabricated here. The task order states Project 09 EN/PT localization authority as an upstream authority and supplies the description and type values as approved for verbatim use.",
-  "intent": "Supplies the governed EN/PT type_label, description and checked_display presentation values for the two Project 03-selected Fragata branch records newly added to the Mindelo Essentials canonical directory: SV-MIN-MKT-003 (Fragata — Central) and SV-MIN-MKT-004 (Fragata — Monte Sossego). Strictly additive: introduces six new keys, reopens no existing key, and changes no lifecycle, publication, spatial or identity field.",
-  "declared_new_row_count_in_handoff": 6,
-  "actual_row_objects_supplied": 6,
+  "project_09_provenance_note": "No formal Project 09 package/revision ID accompanied the task order's approved EN/PT values; none is fabricated here. The task order states Project 09 EN/PT localization authority as an upstream authority and supplies the description and type values as approved for verbatim use. checked_display EN/PT strings are deliberately NOT included in this package: the task order supplied only the raw checked_at date (2026-09-17), not approved display copy, and this repository has no generic/mechanical checked-date-to-display-string formatting rule to inherit from — every checked_display value elsewhere in the corpus is an individually hand-governed Project 09 string pair. Inventing EN/PT wording here and labeling it approved would overstate the linguistic authority actually granted, so the two checked_display keys are withheld pending an explicit Project 09 EN/PT pair for \"Checked 17 September 2026\". The Mindelo Essentials checked-date paragraph is correspondingly omitted from both records' markup; checked_at is retained as internal directory metadata only.",
+  "intent": "Supplies the governed EN/PT type_label and description presentation values for the two Project 03-selected Fragata branch records newly added to the Mindelo Essentials canonical directory: SV-MIN-MKT-003 (Fragata — Central) and SV-MIN-MKT-004 (Fragata — Monte Sossego). Strictly additive: introduces four new keys, reopens no existing key, and changes no lifecycle, publication, spatial or identity field. Deliberately excludes checked_display (see project_09_provenance_note) pending Project 09 approval of that exact EN/PT pair.",
+  "declared_new_row_count_in_handoff": 4,
+  "actual_row_objects_supplied": 4,
   "missing_or_unaccounted_row_count": 0,
-  "supplied_rows_approved": 6,
+  "supplied_rows_approved": 4,
   "review_required": 0,
   "semantic_escalations_required": 0,
   "semantic_change": false,
@@ -30,7 +30,7 @@
   "linguistic_refinements": [],
   "blocking_issue": null,
   "change_control_status": {
-    "new_keys_introduced": 6,
+    "new_keys_introduced": 4,
     "existing_keys_overridden": 0,
     "english_source_values_modified": 0,
     "lifecycle_or_publication_state_modified": 0,
@@ -64,18 +64,6 @@
       "linguistic_notes": "Task-order-approved description_en/description_pt pair, carried verbatim."
     },
     {
-      "key": "record.SV-MIN-MKT-003.checked_display",
-      "source_revision": "P04-2026-09-17-MINDELO-FRAGATA-SELECTED-BRANCHES",
-      "source_en": "Checked 17 September 2026",
-      "pt": "Revisto em 17 de setembro de 2026",
-      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
-      "identity_policy": "TRANSLATE_AND_LOCALIZE_DATE_DISPLAY",
-      "record_id": "SV-MIN-MKT-003",
-      "translation_status": "APPROVED",
-      "context_notes": "Directory record checked-date display, matching the checked_at date on the task order (2026-09-17).",
-      "linguistic_notes": ""
-    },
-    {
       "key": "record.SV-MIN-MKT-004.type_label",
       "source_revision": "P04-2026-09-17-MINDELO-FRAGATA-SELECTED-BRANCHES",
       "source_en": "Supermarket",
@@ -98,18 +86,6 @@
       "translation_status": "APPROVED",
       "context_notes": "Provider-level description shared by both selected Fragata branches; deliberately does not claim branch-specific delivery, online ordering, stock or pricing.",
       "linguistic_notes": "Task-order-approved description_en/description_pt pair, carried verbatim."
-    },
-    {
-      "key": "record.SV-MIN-MKT-004.checked_display",
-      "source_revision": "P04-2026-09-17-MINDELO-FRAGATA-SELECTED-BRANCHES",
-      "source_en": "Checked 17 September 2026",
-      "pt": "Revisto em 17 de setembro de 2026",
-      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
-      "identity_policy": "TRANSLATE_AND_LOCALIZE_DATE_DISPLAY",
-      "record_id": "SV-MIN-MKT-004",
-      "translation_status": "APPROVED",
-      "context_notes": "Directory record checked-date display, matching the checked_at date on the task order (2026-09-17).",
-      "linguistic_notes": ""
     }
   ]
 }
