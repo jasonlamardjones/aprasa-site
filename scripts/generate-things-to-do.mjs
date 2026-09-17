@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { t, hasKey } from './lib/locale.mjs';
 import { bodyParagraphs, factKeyBase } from './lib/things-to-do-keys.mjs';
 import { currentnessState, isExpired as recordIsExpired, EXPIRED, REVIEW_DUE } from './lib/things-to-do-currentness.mjs';
-import { isRecurringVenue } from './lib/things-to-do-kinds.mjs';
+import { isRecurringVenue, RECURRING_VENUE_SCHEMA_TYPE } from './lib/things-to-do-kinds.mjs';
 import { HOME_PREVIEW_LIMIT, THINGS_TO_DO_HUB_PUBLIC, collectionRecords, homePreviewIds, hubOutputPath, hubCanonical } from './lib/things-to-do-collection.mjs';
 import { LAUNCHER_SURFACE_KEYS, resolveRuntimeStrings, renderRuntimeStringsBlock } from './lib/runtime-strings.mjs';
 import { renderContactConfigBlock } from './lib/contact-channels.mjs';
@@ -306,10 +306,20 @@ function renderSchema(record, loc, expired) {
   // makes no admission claim). The venue's own address is deliberately not
   // serialized either: it would read as a Place/LocalBusiness assertion about
   // the venue, which this page is not.
+  //
+  // The @type is HARD-CODED, not read from seo.schema_type. This kind's records
+  // are the obvious thing to create by copying an existing one, and a dated
+  // event's seo block carries "Event" or "ExhibitionEvent"; reading the field
+  // would let that survive the copy and publish the exact Event node this
+  // branch exists to prevent. The canonical validator rejects a recurring-venue
+  // record whose seo.schema_type is anything else, so the field and the output
+  // cannot disagree -- but the generator does not depend on the validator
+  // having run (scripts/build-all.mjs does not invoke it), so it refuses to
+  // trust the field at all.
   if (isRecurringVenue(record)) {
     return JSON.stringify({
       '@context': 'https://schema.org',
-      '@type': record.seo?.schema_type ?? 'WebPage',
+      '@type': RECURRING_VENUE_SCHEMA_TYPE,
       name: loc.title,
       url: `https://aprasa.org/${localeRoutePrefix()}${record.detail_page}`,
       description: loc.summary,

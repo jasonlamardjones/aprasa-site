@@ -80,6 +80,29 @@ export const OCCURRENCE_DATE_FIELDS = Object.freeze([
   'end_month',
 ]);
 
+/**
+ * The ONLY Schema.org @type a recurring-venue record may publish.
+ *
+ * The kind exists to be an evergreen discovery gateway, not an occurrence, so
+ * Event-family structured data is the one thing it must never emit: an Event
+ * node on a page with no startDate and no eventStatus asserts to search
+ * engines exactly the scheduled occurrence the card refuses to promise.
+ *
+ * It is pinned here, in the shared module, because BOTH the generator and the
+ * canonical validator have to agree on it and neither one runs the other --
+ * scripts/build-all.mjs drives the generator directly and never invokes
+ * scripts/validate-things-to-do-events.mjs, so a validator-only rule would not
+ * stop a bad record from being rendered, and a renderer-only rule would let
+ * the bad value sit in the corpus unreported. Both read this constant:
+ *
+ *   * the generator hard-codes it rather than reading seo.schema_type, so a
+ *     record copied from a dated event cannot carry "Event" or
+ *     "ExhibitionEvent" through into published JSON-LD;
+ *   * the validator requires seo.schema_type to equal it, so such a record is
+ *     reported rather than silently overridden at render time.
+ */
+export const RECURRING_VENUE_SCHEMA_TYPE = 'WebPage';
+
 export function isDatedEvent(record) {
   return record?.kind === DATED_EVENT;
 }

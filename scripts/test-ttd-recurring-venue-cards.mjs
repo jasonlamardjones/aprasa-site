@@ -106,6 +106,9 @@ for (const id of ids) {
   // exactly why it needs pinning here: no public surface would ever reveal a
   // regression in it.
   check(`${id}: governed source_type classification`, rec.source_type === spec.sourceType, rec.source_type);
+  // Evergreen gateway, never an occurrence: Event-family structured data is
+  // invalid for this kind at the record level as well as at render time.
+  check(`${id}: declares WebPage structured data`, rec.seo?.schema_type === 'WebPage', rec.seo?.schema_type);
   check(`${id}: card action points at the approved source`, rec.card_action?.url === spec.url, rec.card_action?.url);
   check(`${id}: makes no admission claim`, rec.free_admission === null, String(rec.free_admission));
   check(`${id}: carries no occurrence field`,
@@ -296,6 +299,68 @@ check('the Movie Night / Cinema master is not committed',
   }
   fs.rmSync(dir, { recursive: true, force: true });
   check('regenerating both locales reproduces the committed surfaces byte-for-byte', ok, detail);
+}
+
+// --- 8. the renderer never trusts a copied schema_type ---------------------
+//
+// Independent review (Codex, PR #105) found that the recurring-venue branch
+// read `record.seo?.schema_type ?? 'WebPage'`, so a record created by copying a
+// dated event -- the obvious way to add the next one -- could carry "Event" or
+// "ExhibitionEvent" straight through into published JSON-LD.
+//
+// The canonical validator now rejects that record, but the validator is NOT a
+// precondition of generation: scripts/build-all.mjs drives the generator
+// directly and never invokes it. So this proves the renderer itself, by
+// poisoning the corpus and generating WITHOUT validating -- exactly the path a
+// real build would take.
+{
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'aprasa-schema-type-'));
+  fs.cpSync(ROOT, dir, { recursive: true, filter: (src) => !src.includes(`${path.sep}.git`) });
+  const eventsPath = path.join(dir, 'data', 'things-to-do-events.json');
+  const doc = JSON.parse(fs.readFileSync(eventsPath, 'utf8'));
+  const poisoned = { 'taverna-live-music': 'Event', 'nautilus-live-music': 'ExhibitionEvent' };
+  for (const rec of doc.records) {
+    if (poisoned[rec.id]) rec.seo.schema_type = poisoned[rec.id];
+  }
+  fs.writeFileSync(eventsPath, `${JSON.stringify(doc, null, 2)}\n`);
+
+  // Confirm the poisoned corpus is exactly what the validator is there to
+  // catch -- otherwise this case could pass vacuously against clean data.
+  const validated = spawnSync('node', [path.join(dir, 'scripts', 'validate-things-to-do-events.mjs')],
+    { cwd: dir, encoding: 'utf8' });
+  check('the canonical validator rejects a poisoned recurring-venue schema_type',
+    validated.status !== 0 && /must set seo\.schema_type to "WebPage"/.test(`${validated.stdout}${validated.stderr}`),
+    `exit ${validated.status}`);
+
+  // Generate anyway, the way build-all.mjs does: no validator in the path.
+  let generated = true;
+  let detail = '';
+  for (const args of [['--locale=en', '--write'], ['--locale=pt', '--home=pt/index.html', '--write']]) {
+    const r = spawnSync('node', [path.join(dir, 'scripts', 'generate-things-to-do.mjs'), `--as-of=${asOf}`, ...args],
+      { cwd: dir, encoding: 'utf8' });
+    if (r.status !== 0) { generated = false; detail = `generator exited ${r.status}: ${r.stderr}`; }
+  }
+  check('generation still succeeds against the poisoned corpus', generated, detail);
+
+  if (generated) {
+    for (const id of ids) {
+      for (const prefix of ['', 'pt/']) {
+        const rel = `${prefix}things-to-do/${id}/index.html`;
+        const html = fs.readFileSync(path.join(dir, rel), 'utf8');
+        const ld = html.slice(html.indexOf('<script type="application/ld+json">'),
+          html.indexOf('</script>', html.indexOf('<script type="application/ld+json">')));
+        check(`poisoned ${rel}: still serializes @type WebPage`, ld.includes('"@type": "WebPage"'), ld.trim().slice(0, 120));
+        check(`poisoned ${rel}: emits no Event-family @type`, !/"@type":\s*"\w*Event"/.test(ld));
+        check(`poisoned ${rel}: emits no occurrence properties`, !/"(startDate|endDate|eventStatus)"/.test(ld));
+      }
+    }
+    // The guard is scoped to this kind. A dated event in the same generated
+    // run keeps reading its own governed schema_type.
+    const datedEn = fs.readFileSync(path.join(dir, 'things-to-do', 'sinergia-da-materia', 'index.html'), 'utf8');
+    check('dated-event structured data is unaffected by the recurring-venue guard',
+      datedEn.includes('"@type": "ExhibitionEvent"') && datedEn.includes('"startDate"'));
+  }
+  fs.rmSync(dir, { recursive: true, force: true });
 }
 
 // The superseded classification must not reappear anywhere in the corpus --

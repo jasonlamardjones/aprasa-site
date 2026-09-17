@@ -210,6 +210,28 @@ expectRejectVenue('recurring-venue rejects a card_action pointing away from the 
 expectRejectVenue('recurring-venue rejects a missing card_action',
   { card_action: undefined }, /require a card_action.url/);
 
+// --- structured data can never be Event-family -----------------------------
+// The kind exists to be an evergreen gateway, not an occurrence. These records
+// are the obvious thing to create by copying an existing one, and every dated
+// event in the corpus carries an Event-family seo.schema_type -- so the copy
+// path is exactly how "Event" would arrive here.
+const SCHEMA_ERR = /must set seo\.schema_type to "WebPage"/;
+for (const bad of ['Event', 'ExhibitionEvent', 'SportsEvent', 'MusicEvent']) {
+  expectRejectVenue(`recurring-venue rejects seo.schema_type "${bad}"`,
+    { seo: { ...taverna.seo, schema_type: bad } }, SCHEMA_ERR);
+}
+expectRejectVenue('recurring-venue rejects an absent seo.schema_type',
+  { seo: { ...taverna.seo, schema_type: undefined } }, SCHEMA_ERR);
+expectAcceptVenue('recurring-venue accepts seo.schema_type "WebPage"',
+  { seo: { ...taverna.seo, schema_type: 'WebPage' } });
+
+// The rule is scoped to this kind: a dated event's Event-family schema_type is
+// untouched by it, in both the incumbent and the month-precision shapes.
+expectAccept('dated-event keeps its ExhibitionEvent schema_type',
+  { seo: { ...sinergia.seo, schema_type: 'ExhibitionEvent' } });
+expectAccept('dated-event keeps a plain Event schema_type',
+  { seo: { ...sinergia.seo, schema_type: 'Event' } });
+
 // --- provenance stays mandatory -------------------------------------------
 // The checked date is the governed verification of the source relationship. It
 // is required for this kind exactly as it is for a dated event.

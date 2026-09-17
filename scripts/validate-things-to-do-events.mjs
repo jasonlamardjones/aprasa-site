@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import { END_PRECISIONS, MONTH_PRECISION, endPrecisionOf, isValidIsoMonth, startMonthOf } from './lib/things-to-do-currentness.mjs';
-import { RECORD_KINDS, OCCURRENCE_DATE_FIELDS, isDatedEvent, isRecurringVenue } from './lib/things-to-do-kinds.mjs';
+import { RECORD_KINDS, OCCURRENCE_DATE_FIELDS, RECURRING_VENUE_SCHEMA_TYPE, isDatedEvent, isRecurringVenue } from './lib/things-to-do-kinds.mjs';
 
 const file = new URL('../data/things-to-do-events.json', import.meta.url);
 const manifestFile = new URL('../internal/provider-media-manifest.json', import.meta.url);
@@ -100,6 +100,15 @@ for (const record of data.records ?? []) {
       errors.push(`${label}: recurring-venue records require a card_action.url pointing at the approved current-schedule source`);
     } else if (record.card_action.url !== record.source_url) {
       errors.push(`${label}: recurring-venue card_action.url must be the approved source_url`);
+    }
+    // Structured data. The generator already hard-codes the @type, so a stray
+    // value here cannot reach a published page -- but it must still be reported
+    // rather than silently overridden, because a record carrying
+    // seo.schema_type "Event" is a record whose author believed it was an
+    // occurrence, and that belief is the actual defect. Absent is rejected too:
+    // this kind states its structured-data type explicitly.
+    if (record.seo?.schema_type !== RECURRING_VENUE_SCHEMA_TYPE) {
+      errors.push(`${label}: recurring-venue records must set seo.schema_type to "${RECURRING_VENUE_SCHEMA_TYPE}", got ${JSON.stringify(record.seo?.schema_type)} (Event-family structured data is never valid for an evergreen discovery gateway)`);
     }
   }
 
