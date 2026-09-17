@@ -101,8 +101,11 @@
     "delta22_revision": "P04-2026-09-17-PORTUGUESE-IN-PROGRESS-SIGNAL",
     "delta22_revision_class": "ADDITIVE_NEW_KEYS",
     "delta22_row_count": 1,
-    "delta22_project_09_status": "not_applicable_task_supplied_copy",
-    "delta22_project_09_verdict": "NO_PROJECT_09_HANDOFF_FOR_THIS_PACKAGE",
+    "delta22_project_09_status": "approved",
+    "delta22_project_09_verdict": "APPROVED_FOR_PUBLIC_USE",
+    "delta22_project_09_review_date": "2026-09-17",
+    "delta22_project_09_package_id": null,
+    "delta22_project_09_revision_id": null,
     "delta9_superseding_ruling": "P03-SINERGIA-CURRENTNESS-2026-09-01",
     "delta9_owning_project": "Project 03",
     "event_delta_packages": [
@@ -12885,7 +12888,7 @@
       "translation_status": "APPROVED",
       "source_revision": "P04-2026-09-17-PORTUGUESE-IN-PROGRESS-SIGNAL",
       "context_notes": "Shared secondary informational line, rendered immediately after the EN/PT lang-switch nav on every surface that carries it. Presentation only — never an alert/warning/banner/modal/badge; keeps the switcher's own href/lang/hreflang/aria-current markup untouched.",
-      "linguistic_notes": "Exact approved copy pair carried verbatim from the Project 04 task order of 17 September 2026, under Project 03 semantic authority. This is the approved localization input for this bounded signal, not a Project 09 linguistic-review output — recorded honestly rather than as a fabricated Project 09 approval. Carries no protected brand string and no placeholder."
+      "linguistic_notes": "Exact copy pair carried verbatim under Project 03 semantic authority (Project 04 task order, 17 September 2026) and Project 09 linguistic authority: a recovered Project 09 public-language review of this exact EN/PT pair, dated 17 September 2026, disposition APPROVED_FOR_PUBLIC_USE. That recovered approval record carries no formal Project 09 package/revision ID, so none is fabricated here. Carries no protected brand string and no placeholder."
     }
   }
 }

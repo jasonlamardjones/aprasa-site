@@ -2498,12 +2498,16 @@ if (delta21Unchanged !== EXPECTED_DELTA21.intentionally_unchanged) {
 
 // --- r22 delta: additive merge for the shared lang-switch secondary note ---
 // Single key, same strictly additive lane as r17/r18/r19/r21: it must be new,
-// never reopen an existing key. Unlike those packages, this one is NOT a
-// Project 09 linguistic-review handoff — Project 03 approved the bounded
-// implementation directly and supplied the EN/PT copy pair itself (Project 04
-// task order, 17 September 2026), so the package records that honestly
-// (project_09_status/verdict below) rather than reusing the "approved by
-// Project 09" fields those other packages are entitled to.
+// never reopen an existing key. A Project 09 public-language review of this
+// exact EN/PT pair was later recovered (17 September 2026, disposition
+// APPROVED_FOR_PUBLIC_USE) — Project 03 remains the semantic/product
+// authority for the bounded implementation itself (Project 04 task order,
+// 17 September 2026), and Project 09 is the linguistic authority for the
+// wording. That recovered approval record carries no formal Project 09
+// package/revision ID, so none is fabricated below: this package's own
+// source_revision (P04-2026-09-17-PORTUGUESE-IN-PROGRESS-SIGNAL) stays the
+// technical identity for THIS implementation binding, never restated as a
+// substitute Project 09 revision label.
 const EXPECTED_DELTA22 = {
   package_id: "aprasa-pt-lang-switch-note-r22",
   revision_class: "ADDITIVE_NEW_KEYS",
@@ -2523,11 +2527,24 @@ for (const field of ["package_id", "revision_class", "source_revision", "previou
     fail(`r22 ${field} mismatch: got ${JSON.stringify(delta22[field])}, expected ${JSON.stringify(EXPECTED_DELTA22[field])}`);
   }
 }
-if (delta22.project_09_status !== "not_applicable_task_supplied_copy") {
-  fail(`r22 must record its non-Project-09 provenance honestly: got project_09_status ${JSON.stringify(delta22.project_09_status)}`);
+if (delta22.project_09_status !== "approved") {
+  fail(`r22 Project 09 status is not approved: ${JSON.stringify(delta22.project_09_status)}`);
 }
-if (delta22.project_09_verdict !== "NO_PROJECT_09_HANDOFF_FOR_THIS_PACKAGE") {
-  fail(`r22 must record its non-Project-09 provenance honestly: got project_09_verdict ${JSON.stringify(delta22.project_09_verdict)}`);
+if (delta22.project_09_verdict !== "APPROVED_FOR_PUBLIC_USE") {
+  fail(`r22 Project 09 verdict is not APPROVED_FOR_PUBLIC_USE: ${JSON.stringify(delta22.project_09_verdict)}`);
+}
+if (delta22.project_09_review_date !== "2026-09-17") {
+  fail(`r22 project_09_review_date mismatch: got ${JSON.stringify(delta22.project_09_review_date)}`);
+}
+// No formal Project 09 package/revision ID exists in the recovered approval
+// record — these must stay null rather than carrying a fabricated P09-*
+// label. This is the honesty check, not an oversight: a future edit that
+// invents one to "fill in" these fields fails here.
+if (delta22.project_09_package_id !== null) {
+  fail(`r22 must not fabricate a Project 09 package id: got ${JSON.stringify(delta22.project_09_package_id)}`);
+}
+if (delta22.project_09_revision_id !== null) {
+  fail(`r22 must not fabricate a Project 09 revision id: got ${JSON.stringify(delta22.project_09_revision_id)}`);
 }
 if (!Array.isArray(delta22.rows) || delta22.rows.length !== EXPECTED_DELTA22.row_count) {
   fail(`r22 row count mismatch: got ${delta22.rows?.length}, expected ${EXPECTED_DELTA22.row_count}`);
@@ -2749,6 +2766,9 @@ const output = {
     delta22_row_count: delta22.rows.length,
     delta22_project_09_status: delta22.project_09_status,
     delta22_project_09_verdict: delta22.project_09_verdict,
+    delta22_project_09_review_date: delta22.project_09_review_date,
+    delta22_project_09_package_id: delta22.project_09_package_id,
+    delta22_project_09_revision_id: delta22.project_09_revision_id,
     delta9_superseding_ruling: delta9.superseding_ruling,
     delta9_owning_project: delta9.owning_project,
     event_delta_packages: eventDeltaPackages,

@@ -12,10 +12,13 @@
 // document order, not an alert/warning/banner/modal/badge, and not a live
 // region. It never touches the switcher's own href/lang/hreflang/aria-current
 // markup. Governed by the single additive key ui.pt_expansion_note (see
-// data/locales/pt-overlay-r22-lang-switch-note.source.json) — Project 03
-// semantic authority; the approved EN/PT copy pair was supplied directly by
-// the Project 04 task order of 17 September 2026, not by a Project 09
-// linguistic-review handoff.
+// data/locales/pt-overlay-r22-lang-switch-note.source.json) — Project 03 is
+// semantic/product authority for the bounded implementation (Project 04 task
+// order, 17 September 2026); Project 09 is linguistic authority for the
+// exact EN/PT wording (public-language review recovered after initial
+// implementation, dated 17 September 2026, APPROVED_FOR_PUBLIC_USE — no
+// formal Project 09 package/revision ID was present in that recovered
+// record, so none is fabricated here or in the overlay package).
 
 import { t } from './locale.mjs';
 

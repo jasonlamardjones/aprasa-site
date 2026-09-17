@@ -64,8 +64,9 @@ for (const fileName of eventDeltaFiles) {
 // quick-action starter messages prefilled into WhatsApp, r20 the 13 governed
 // presentation keys for the incoming Start CV Learning Spotlight record, r21
 // the single About-footer Privacy link label, and r22 the single shared
-// lang-switch secondary informational line (Project 03-supplied copy, not a
-// Project 09 handoff) — all required. ---
+// lang-switch secondary informational line (Project 03 semantic authority;
+// Project 09 approved the exact wording, APPROVED_FOR_PUBLIC_USE, 17
+// September 2026, recovered after initial implementation) — all required. ---
 if (keys.length !== 958 + eventDeltaRequired + eventDeltaUnchanged) fail(`expected ${958 + eventDeltaRequired + eventDeltaUnchanged} total keys including approved event deltas, got ${keys.length}`);
 const required = keys.filter((k) => k.scope_status === "REQUIRED_FOR_PT_LAUNCH");
 const unchanged = keys.filter((k) => k.scope_status === "INTENTIONALLY_UNCHANGED");
@@ -236,12 +237,17 @@ if (data.provenance.delta21_row_count !== 1) {
 }
 
 // --- r22 delta spot check (shared lang-switch secondary note) ---
-// Single-key package binding the Project 03-approved, task-supplied EN/PT
-// copy pair into the shared secondary line rendered after the EN/PT
-// lang-switch control. Pinned here so the key cannot drift and so this
-// package's honest non-Project-09 provenance (it is a Project 04 task-order
-// binding, not a Project 09 linguistic-review handoff) cannot be quietly
-// restated as an approved Project 09 package later.
+// Single-key package binding this exact EN/PT copy pair into the shared
+// secondary line rendered after the EN/PT lang-switch control. Project 03 is
+// semantic/product authority for the bounded implementation (Project 04 task
+// order, 17 September 2026); Project 09 is linguistic authority for the
+// wording — a Project 09 public-language review of this exact pair was
+// recovered after initial implementation, dated 17 September 2026,
+// disposition APPROVED_FOR_PUBLIC_USE. Pinned here so the key cannot drift
+// and so this honest provenance (approved by Project 09, but with no formal
+// Project 09 package/revision ID in the recovered record — none fabricated)
+// cannot be quietly restated as either an ordinary Project 09 handoff or a
+// non-Project-09 package later.
 if (data.provenance.delta22_package_id !== "aprasa-pt-lang-switch-note-r22") {
   fail(`unexpected delta22_package_id: ${data.provenance.delta22_package_id}`);
 }
@@ -254,8 +260,22 @@ if (data.provenance.delta22_revision_class !== "ADDITIVE_NEW_KEYS") {
 if (data.provenance.delta22_row_count !== 1) {
   fail(`unexpected delta22_row_count: ${data.provenance.delta22_row_count}`);
 }
-if (data.provenance.delta22_project_09_status !== "not_applicable_task_supplied_copy") {
+if (data.provenance.delta22_project_09_status !== "approved") {
   fail(`unexpected delta22_project_09_status: ${data.provenance.delta22_project_09_status}`);
+}
+if (data.provenance.delta22_project_09_verdict !== "APPROVED_FOR_PUBLIC_USE") {
+  fail(`unexpected delta22_project_09_verdict: ${data.provenance.delta22_project_09_verdict}`);
+}
+if (data.provenance.delta22_project_09_review_date !== "2026-09-17") {
+  fail(`unexpected delta22_project_09_review_date: ${data.provenance.delta22_project_09_review_date}`);
+}
+// No formal Project 09 package/revision ID exists in the recovered approval
+// record — these must stay null, never a fabricated P09-* label.
+if (data.provenance.delta22_project_09_package_id !== null) {
+  fail(`r22 must not fabricate a Project 09 package id: got ${JSON.stringify(data.provenance.delta22_project_09_package_id)}`);
+}
+if (data.provenance.delta22_project_09_revision_id !== null) {
+  fail(`r22 must not fabricate a Project 09 revision id: got ${JSON.stringify(data.provenance.delta22_project_09_revision_id)}`);
 }
 {
   const row = data.keys["ui.pt_expansion_note"];

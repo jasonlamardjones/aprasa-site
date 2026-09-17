@@ -5,11 +5,15 @@
   "previous_revision": "P09-PRIVACY-PT-2026-09-15-v1.0",
   "revision_type": "SHARED_UI_LANG_SWITCH_SECONDARY_NOTE",
   "semantic_authority": "Project 03 — implementation approval for the Project 04 task \"Portuguese-in-progress signal\" (17 September 2026)",
-  "linguistic_authority": "Approved EN/PT copy pair supplied directly by that Project 04 task order and carried verbatim; this package is NOT a Project 09 linguistic-review handoff and makes no claim of one.",
+  "linguistic_authority": "Project 09 — public-language review of this exact EN/PT copy pair, dated 17 September 2026, disposition APPROVED_FOR_PUBLIC_USE (Project 03 → Project 09 public-language package). The recovered approval record carries no formal Project 09 package/revision ID; none is invented here — this package's own source_revision (P04-2026-09-17-PORTUGUESE-IN-PROGRESS-SIGNAL) remains the technical package identity for THIS implementation binding, not a substitute Project 09 revision label.",
   "target_language": "pt",
   "target_variant": "European Portuguese appropriate to Cabo Verde",
-  "project_09_status": "not_applicable_task_supplied_copy",
-  "project_09_verdict": "NO_PROJECT_09_HANDOFF_FOR_THIS_PACKAGE",
+  "project_09_status": "approved",
+  "project_09_verdict": "APPROVED_FOR_PUBLIC_USE",
+  "project_09_review_date": "2026-09-17",
+  "project_09_package_id": null,
+  "project_09_revision_id": null,
+  "project_09_provenance_note": "No formal Project 09 package/revision ID was present in the recovered approval record; none has been fabricated. The review is identified descriptively (Project 03 → Project 09 public-language package, reviewed 17 September 2026, APPROVED_FOR_PUBLIC_USE) rather than by an invented P09-* label.",
   "intent": "Supplies the governed EN/PT value for the small secondary informational line rendered immediately after the shared EN/PT lang-switch control (nav.lang-switch), on every generated surface that carries that control: Home, About, Mindelo Essentials, the Things-to-Do collection hub and its detail pages. The line communicates that Portuguese coverage is expanding; it is informational only — not an alert, warning, banner, modal, or badge — and is visually subordinate to the switcher it accompanies. Strictly additive: introduces one new key, reopens nothing, and alters no lifecycle, publication, currentness, media, route-availability, or hreflang policy.",
   "declared_new_row_count_in_handoff": 1,
   "actual_row_objects_supplied": 1,
@@ -44,7 +48,7 @@
       "record_id": null,
       "translation_status": "APPROVED",
       "context_notes": "Shared secondary informational line, rendered immediately after the EN/PT lang-switch nav on every surface that carries it. Presentation only — never an alert/warning/banner/modal/badge; keeps the switcher's own href/lang/hreflang/aria-current markup untouched.",
-      "linguistic_notes": "Exact approved copy pair carried verbatim from the Project 04 task order of 17 September 2026, under Project 03 semantic authority. This is the approved localization input for this bounded signal, not a Project 09 linguistic-review output — recorded honestly rather than as a fabricated Project 09 approval. Carries no protected brand string and no placeholder."
+      "linguistic_notes": "Exact copy pair carried verbatim under Project 03 semantic authority (Project 04 task order, 17 September 2026) and Project 09 linguistic authority: a recovered Project 09 public-language review of this exact EN/PT pair, dated 17 September 2026, disposition APPROVED_FOR_PUBLIC_USE. That recovered approval record carries no formal Project 09 package/revision ID, so none is fabricated here. Carries no protected brand string and no placeholder."
     }
   ]
 }
