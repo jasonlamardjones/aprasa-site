@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { t, hasKey } from './lib/locale.mjs';
+import { renderLangSwitchNote } from './lib/lang-switch-note.mjs';
 import { bodyParagraphs, factKeyBase } from './lib/things-to-do-keys.mjs';
 import { currentnessState, isExpired as recordIsExpired, EXPIRED, REVIEW_DUE } from './lib/things-to-do-currentness.mjs';
 import { isRecurringVenue, RECURRING_VENUE_SCHEMA_TYPE } from './lib/things-to-do-kinds.mjs';
@@ -538,6 +539,7 @@ ${renderSchema(record, loc, expired)}
         <a href="${links.enHref}" lang="en" hreflang="en"${locale === 'en' ? ' aria-current="true" class="lang-current"' : ''}>EN</a>
         <a href="${links.ptHref}" lang="pt" hreflang="pt"${locale === 'pt' ? ' aria-current="true" class="lang-current"' : ''}>PT</a>
       </nav>
+      ${renderLangSwitchNote(locale)}
     </div>
   </div>
 </header>
@@ -732,6 +734,7 @@ ${renderHubSchema()}
         <a href="${links.enHref}" lang="en" hreflang="en"${locale === 'en' ? ' aria-current="true" class="lang-current"' : ''}>EN</a>
         <a href="${links.ptHref}" lang="pt" hreflang="pt"${locale === 'pt' ? ' aria-current="true" class="lang-current"' : ''}>PT</a>
       </nav>
+      ${renderLangSwitchNote(locale)}
     </div>
   </div>
 </header>

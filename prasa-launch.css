@@ -994,3 +994,16 @@ body.dialog-open .floating-utilities { display: none; }
   text-underline-offset: .22em;
   text-decoration-thickness: .1em;
 }
+
+/* Shared secondary line associated with the lang-switch control above,
+   communicating that Portuguese coverage is expanding (governed copy:
+   ui.pt_expansion_note). Informational only, visually subordinate to the
+   switcher via smaller size and reduced contrast — never an alert, banner,
+   modal, or badge. Plain flowed text; no change to the switcher itself. */
+.lang-switch-note {
+  margin: .2rem 0 0;
+  font-size: .74rem;
+  line-height: 1.35;
+  color: rgba(17,17,17,.65);
+  text-align: right;
+}
