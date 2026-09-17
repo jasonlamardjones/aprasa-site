@@ -14,6 +14,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { t } from './lib/locale.mjs';
+import { renderLangSwitchNote, LANG_SWITCH_NOTE_KEY } from './lib/lang-switch-note.mjs';
 import { localizeStaticHtml } from './lib/static-page-transform.mjs';
 import { deepenSharedAssetPaths } from './lib/asset-paths.mjs';
 import { normalizeCanonicalHomeLinks } from './lib/canonical-links.mjs';
@@ -59,12 +60,28 @@ function injectHeadLinks(html, { selfCanonical, lang }) {
 // like any other attribute via the governed nav.site_navigation key, so
 // this function never bakes in PT text itself (which would otherwise be
 // re-scanned as unmatched English on the next run).
+//
+// The shared secondary note (scripts/lib/lang-switch-note.mjs) is injected
+// as its own paragraph right after the nav, for both locales together (this
+// function is called once per locale, unlike build-static-pages.mjs's
+// single-EN-then-regex-derive-PT shape). Its PT text IS already final text
+// at this point — wrapped in <!--i18n:skip--> so the localizeStaticHtml
+// pass below does not re-scan governed Portuguese prose as unmatched
+// English, the one deliberate exception to the "never bake in PT text"
+// rule above.
 function injectLangSwitch(html, { enHref, ptHref, locale }) {
   const switchNav = `<nav class="lang-switch" aria-label="Language / Idioma"><a href="${enHref}" lang="en" hreflang="en"${locale === 'en' ? ' aria-current="true" class="lang-current"' : ''}>EN</a><a href="${ptHref}" lang="pt" hreflang="pt"${locale === 'pt' ? ' aria-current="true" class="lang-current"' : ''}>PT</a></nav>`;
+  const note = locale === 'pt'
+    ? `<p class="lang-switch-note"><!--i18n:skip-->${t(LANG_SWITCH_NOTE_KEY, 'pt')}<!--/i18n:skip--></p>`
+    : renderLangSwitchNote('en');
+  const block = `${switchNav}${note}`;
   if (/class="lang-switch"/.test(html)) {
-    return html.replace(/<nav class="lang-switch"[\s\S]*?<\/nav>/, switchNav);
+    // Replace the nav AND any already-injected note together so a re-run
+    // stays idempotent (no duplicate note) instead of leaving a stale note
+    // behind the freshly-swapped nav.
+    return html.replace(/<nav class="lang-switch"[\s\S]*?<\/nav>(<p class="lang-switch-note">[\s\S]*?<\/p>)?/, block);
   }
-  return html.replace(/(<nav[^>]*class="site-nav"[^>]*>[\s\S]*?<\/nav>)/, `$1${switchNav}`);
+  return html.replace(/(<nav[^>]*class="site-nav"[^>]*>[\s\S]*?<\/nav>)/, `$1${block}`);
 }
 
 // "TRANSCOR information ... go directly to <a>TRANSCOR's official Carreiras

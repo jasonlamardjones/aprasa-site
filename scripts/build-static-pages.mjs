@@ -17,6 +17,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { t } from './lib/locale.mjs';
+import { renderLangSwitchNote, LANG_SWITCH_NOTE_KEY } from './lib/lang-switch-note.mjs';
 import { RUNTIME_STRING_KEYS, LAUNCHER_SURFACE_KEYS, applyRuntimeStrings } from './lib/runtime-strings.mjs';
 import { applyContactConfig } from './lib/contact-channels.mjs';
 import { localizeStaticHtml } from './lib/static-page-transform.mjs';
@@ -178,6 +179,20 @@ function injectLangSwitch(html, { navHtml, enHref, ptHref, locale }) {
   return html.replace(/<nav class="site-nav"[\s\S]*?<\/nav>/, () => wrapped).replace(/aria-label="Site navigation"/, `aria-label="${navAria}"`);
 }
 
+// Injects the shared secondary "Portuguese coverage is expanding" note
+// (scripts/lib/lang-switch-note.mjs) immediately after the lang-switch nav —
+// presentation only, never touching the switcher's own
+// href/lang/hreflang/aria-current markup. Gated by its own idempotency check
+// (rather than folded into injectLangSwitch above) because every EN source
+// file this builder owns already carries lang-switch infrastructure from
+// earlier runs, so injectLangSwitch's own "!/lang-switch/" guard above never
+// fires again for them; this note needs to land on top of that already-
+// bootstrapped markup exactly once, on its own.
+function injectLangSwitchNote(html, locale) {
+  if (/lang-switch-note/.test(html)) return html;
+  return html.replace(/(<nav class="lang-switch"[\s\S]*?<\/nav>)/, (m) => `${m}\n      ${renderLangSwitchNote(locale)}`);
+}
+
 // About's founder paragraph wraps the founder's name in a link mid-sentence
 // ("A PRASA was founded by <a>Jason La Mard Jones</a>, who serves as..."),
 // fragmenting the governed about.founder.body_2 sentence across 3 text
@@ -272,6 +287,7 @@ function buildPage({ name, enPath, ptPath, canonicalEn, canonicalPt, enHrefFromR
   if (!/lang-switch/.test(enSource)) {
     enSource = injectLangSwitch(enSource, { navHtml: enSource.match(/<nav class="site-nav"[\s\S]*?<\/nav>/)[0], enHref: enHrefFromRoot.en, ptHref: enHrefFromRoot.pt, locale: 'en' });
   }
+  enSource = injectLangSwitchNote(enSource, 'en');
 
   // 2. Derive the PT page from the (now infrastructure-complete) EN source.
   let ptSource = injectHeadLinks(enSource, { canonicalEn, canonicalPt, selfCanonical: canonicalPt, lang: 'pt' });
@@ -281,6 +297,16 @@ function buildPage({ name, enPath, ptPath, canonicalEn, canonicalPt, enHrefFromR
       .replace(/href="[^"]*"(\s+lang="pt")/, `href="${ptHrefFromRoot.pt}"$1`)
       .replace(/ aria-current="true" class="lang-current"/g, '')
       .replace(/lang="pt" hreflang="pt"/, 'lang="pt" hreflang="pt" aria-current="true" class="lang-current"')
+  );
+  // The note was baked into enSource above in English; re-derive it here
+  // explicitly for PT, idempotently on every run. Wrapped in <!--i18n:skip-->
+  // like the other page-specific fixups below: it is already the final PT
+  // text (governed by the same ui.pt_expansion_note key the EN copy came
+  // from), and re-scanning Portuguese prose through the EN->PT text matcher
+  // a few lines down would just report it as unmatched English.
+  ptSource = ptSource.replace(
+    /<p class="lang-switch-note">[\s\S]*?<\/p>/,
+    () => `<p class="lang-switch-note"><!--i18n:skip-->${t(LANG_SWITCH_NOTE_KEY, 'pt')}<!--/i18n:skip--></p>`
   );
   ptSource = deepenSharedAssetPaths(ptSource);
   // The PT page sits one directory deeper, so its inherited "../"-relative

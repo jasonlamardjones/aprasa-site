@@ -52,7 +52,8 @@ for (const fileName of eventDeltaFiles) {
 // + r5 delta (2) + r7 delta (19) + r8 delta (21) + r13 delta (8) + r14 delta (1)
 // + r15 delta (96) + r16 provider-media alt delta (4) + r17 contact-panel delta (8)
 // + r18 Down-control delta (1) + r19 quick-action prefill delta (4)
-// + r20 Start CV Learning Spotlight delta (13) + r21 Privacy-link delta (1).
+// + r20 Start CV Learning Spotlight delta (13) + r21 Privacy-link delta (1)
+// + r22 lang-switch secondary note delta (1).
 // The r6 brand-voice delta overrides 42 existing PT values and adds
 // no keys, so every count below is unchanged by it; r13 adds the 8 Things-to-Do
 // collection-hub keys, r14 the runtime section fallback note, and r15 the 96
@@ -61,12 +62,15 @@ for (const fileName of eventDeltaFiles) {
 // contact-panel strings the floating WhatsApp launcher renders, r18 the
 // accessible name of the floating Down control off Home, r19 the four
 // quick-action starter messages prefilled into WhatsApp, r20 the 13 governed
-// presentation keys for the incoming Start CV Learning Spotlight record, and
-// r21 the single About-footer Privacy link label — all required. ---
-if (keys.length !== 957 + eventDeltaRequired + eventDeltaUnchanged) fail(`expected ${957 + eventDeltaRequired + eventDeltaUnchanged} total keys including approved event deltas, got ${keys.length}`);
+// presentation keys for the incoming Start CV Learning Spotlight record, r21
+// the single About-footer Privacy link label, and r22 the single shared
+// lang-switch secondary informational line (Project 03 semantic authority;
+// Project 09 approved the exact wording, APPROVED_FOR_PUBLIC_USE, 17
+// September 2026, recovered after initial implementation) — all required. ---
+if (keys.length !== 958 + eventDeltaRequired + eventDeltaUnchanged) fail(`expected ${958 + eventDeltaRequired + eventDeltaUnchanged} total keys including approved event deltas, got ${keys.length}`);
 const required = keys.filter((k) => k.scope_status === "REQUIRED_FOR_PT_LAUNCH");
 const unchanged = keys.filter((k) => k.scope_status === "INTENTIONALLY_UNCHANGED");
-if (required.length !== 929 + eventDeltaRequired) fail(`expected ${929 + eventDeltaRequired} REQUIRED_FOR_PT_LAUNCH keys, got ${required.length}`);
+if (required.length !== 930 + eventDeltaRequired) fail(`expected ${930 + eventDeltaRequired} REQUIRED_FOR_PT_LAUNCH keys, got ${required.length}`);
 if (unchanged.length !== 28 + eventDeltaUnchanged) fail(`expected ${28 + eventDeltaUnchanged} INTENTIONALLY_UNCHANGED keys, got ${unchanged.length}`);
 if (data.provenance.delta_revision !== "P03-PT-SOURCE-2026-08-25-r3") {
   fail(`unexpected delta_revision: ${data.provenance.delta_revision}`);
@@ -229,6 +233,60 @@ if (data.provenance.delta21_row_count !== 1) {
     if (row.scope_status !== "REQUIRED_FOR_PT_LAUNCH") fail("nav.privacy must be REQUIRED_FOR_PT_LAUNCH");
     if (row.record_id !== null) fail(`nav.privacy must not be record-scoped: got ${JSON.stringify(row.record_id)}`);
     if (row.source_revision !== "P09-PRIVACY-PT-2026-09-15-v1.0") fail("nav.privacy provenance is not the r21 revision");
+  }
+}
+
+// --- r22 delta spot check (shared lang-switch secondary note) ---
+// Single-key package binding this exact EN/PT copy pair into the shared
+// secondary line rendered after the EN/PT lang-switch control. Project 03 is
+// semantic/product authority for the bounded implementation (Project 04 task
+// order, 17 September 2026); Project 09 is linguistic authority for the
+// wording — a Project 09 public-language review of this exact pair was
+// recovered after initial implementation, dated 17 September 2026,
+// disposition APPROVED_FOR_PUBLIC_USE. Pinned here so the key cannot drift
+// and so this honest provenance (approved by Project 09, but with no formal
+// Project 09 package/revision ID in the recovered record — none fabricated)
+// cannot be quietly restated as either an ordinary Project 09 handoff or a
+// non-Project-09 package later.
+if (data.provenance.delta22_package_id !== "aprasa-pt-lang-switch-note-r22") {
+  fail(`unexpected delta22_package_id: ${data.provenance.delta22_package_id}`);
+}
+if (data.provenance.delta22_revision !== "P04-2026-09-17-PORTUGUESE-IN-PROGRESS-SIGNAL") {
+  fail(`unexpected delta22_revision: ${data.provenance.delta22_revision}`);
+}
+if (data.provenance.delta22_revision_class !== "ADDITIVE_NEW_KEYS") {
+  fail(`unexpected delta22_revision_class: ${data.provenance.delta22_revision_class}`);
+}
+if (data.provenance.delta22_row_count !== 1) {
+  fail(`unexpected delta22_row_count: ${data.provenance.delta22_row_count}`);
+}
+if (data.provenance.delta22_project_09_status !== "approved") {
+  fail(`unexpected delta22_project_09_status: ${data.provenance.delta22_project_09_status}`);
+}
+if (data.provenance.delta22_project_09_verdict !== "APPROVED_FOR_PUBLIC_USE") {
+  fail(`unexpected delta22_project_09_verdict: ${data.provenance.delta22_project_09_verdict}`);
+}
+if (data.provenance.delta22_project_09_review_date !== "2026-09-17") {
+  fail(`unexpected delta22_project_09_review_date: ${data.provenance.delta22_project_09_review_date}`);
+}
+// No formal Project 09 package/revision ID exists in the recovered approval
+// record — these must stay null, never a fabricated P09-* label.
+if (data.provenance.delta22_project_09_package_id !== null) {
+  fail(`r22 must not fabricate a Project 09 package id: got ${JSON.stringify(data.provenance.delta22_project_09_package_id)}`);
+}
+if (data.provenance.delta22_project_09_revision_id !== null) {
+  fail(`r22 must not fabricate a Project 09 revision id: got ${JSON.stringify(data.provenance.delta22_project_09_revision_id)}`);
+}
+{
+  const row = data.keys["ui.pt_expansion_note"];
+  if (!row) {
+    fail("r22 key missing from generated locale data: ui.pt_expansion_note");
+  } else {
+    if (row.en !== "More Portuguese content is coming soon.") fail(`ui.pt_expansion_note EN does not match the approved copy: got ${JSON.stringify(row.en)}`);
+    if (row.pt !== "Mais conteúdos em português estarão disponíveis em breve.") fail(`ui.pt_expansion_note PT does not match the approved copy: got ${JSON.stringify(row.pt)}`);
+    if (row.scope_status !== "REQUIRED_FOR_PT_LAUNCH") fail("ui.pt_expansion_note must be REQUIRED_FOR_PT_LAUNCH");
+    if (row.record_id !== null) fail(`ui.pt_expansion_note must not be record-scoped: got ${JSON.stringify(row.record_id)}`);
+    if (row.source_revision !== "P04-2026-09-17-PORTUGUESE-IN-PROGRESS-SIGNAL") fail("ui.pt_expansion_note provenance is not the r22 revision");
   }
 }
 

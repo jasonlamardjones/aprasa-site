@@ -34,7 +34,8 @@
       "data/locales/pt-overlay-r18-ui-scroll-down.source.json",
       "data/locales/pt-overlay-r19-runtime-whatsapp-prefill.source.json",
       "data/locales/pt-overlay-r20-start-cv-learning-spotlight.source.json",
-      "data/locales/pt-overlay-r21-privacy-link.source.json"
+      "data/locales/pt-overlay-r21-privacy-link.source.json",
+      "data/locales/pt-overlay-r22-lang-switch-note.source.json"
     ],
     "base_revision": "P03-PT-SOURCE-2026-08-25-r2",
     "delta_revision": "P03-PT-SOURCE-2026-08-25-r3",
@@ -96,6 +97,15 @@
     "delta21_revision": "P09-PRIVACY-PT-2026-09-15-v1.0",
     "delta21_revision_class": "ADDITIVE_NEW_KEYS",
     "delta21_row_count": 1,
+    "delta22_package_id": "aprasa-pt-lang-switch-note-r22",
+    "delta22_revision": "P04-2026-09-17-PORTUGUESE-IN-PROGRESS-SIGNAL",
+    "delta22_revision_class": "ADDITIVE_NEW_KEYS",
+    "delta22_row_count": 1,
+    "delta22_project_09_status": "approved",
+    "delta22_project_09_verdict": "APPROVED_FOR_PUBLIC_USE",
+    "delta22_project_09_review_date": "2026-09-17",
+    "delta22_project_09_package_id": null,
+    "delta22_project_09_revision_id": null,
     "delta9_superseding_ruling": "P03-SINERGIA-CURRENTNESS-2026-09-01",
     "delta9_owning_project": "Project 03",
     "event_delta_packages": [
@@ -176,10 +186,10 @@
     "governed_override_authorization": "fixed code-side contract in scripts/build-locale-data.mjs (GOVERNED_OVERRIDE_CONTRACTS)"
   },
   "counts": {
-    "total_rows": 1053,
-    "required_for_pt_launch": 1025,
+    "total_rows": 1054,
+    "required_for_pt_launch": 1026,
     "intentionally_unchanged": 28,
-    "approved_rows_total": 1053,
+    "approved_rows_total": 1054,
     "r3_delta_rows": 21,
     "r4_delta_rows": 26,
     "r5_delta_rows": 2,
@@ -194,6 +204,7 @@
     "r19_delta_rows": 4,
     "r20_delta_rows": 13,
     "r21_delta_rows": 1,
+    "r22_delta_rows": 1,
     "r10_renamed_rows": 76,
     "governed_override_rows": 6
   },
@@ -12866,6 +12877,18 @@
       "source_revision": "P09-PRIVACY-PT-2026-09-15-v1.0",
       "context_notes": "Global/public policy-link label used by the About footer (about/index.html, pt/about/index.html) to point to the Privacy page.",
       "linguistic_notes": "PT value reused verbatim from the approved Privacy v1.0 page title (P09-PRIVACY-PT-2026-09-15-v1.0, APPROVED_FINAL_PT), already shipped as the <h1>/<title> of pt/privacy/index.html. Carries no protected brand string and no placeholder."
+    },
+    "ui.pt_expansion_note": {
+      "key": "ui.pt_expansion_note",
+      "en": "More Portuguese content is coming soon.",
+      "pt": "Mais conteúdos em português estarão disponíveis em breve.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P04-2026-09-17-PORTUGUESE-IN-PROGRESS-SIGNAL",
+      "context_notes": "Shared secondary informational line, rendered immediately after the EN/PT lang-switch nav on every surface that carries it. Presentation only — never an alert/warning/banner/modal/badge; keeps the switcher's own href/lang/hreflang/aria-current markup untouched.",
+      "linguistic_notes": "Exact copy pair carried verbatim under Project 03 semantic authority (Project 04 task order, 17 September 2026) and Project 09 linguistic authority: a recovered Project 09 public-language review of this exact EN/PT pair, dated 17 September 2026, disposition APPROVED_FOR_PUBLIC_USE. That recovered approval record carries no formal Project 09 package/revision ID, so none is fabricated here. Carries no protected brand string and no placeholder."
     }
   }
 }

@@ -28,7 +28,7 @@ button, input, select { font:inherit; }
 .header-inner { min-height:4.7rem; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:.5rem .65rem; row-gap:.4rem; padding:.5rem 0; }
 .brand, .footer-brand { display:inline-flex; min-height:44px; align-items:center; flex:0 0 auto; }
 .brand img { width:8rem; }
-.header-actions { display:flex; align-items:center; justify-content:flex-end; gap:.5rem .8rem; min-width:0; }
+.header-actions { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:.5rem .8rem; min-width:0; }
 .site-nav { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:.2rem .7rem; }
 .site-nav a { display:inline-flex; align-items:center; min-height:44px; font-size:.86rem; font-weight:600; }
 
@@ -483,4 +483,21 @@ body.dialog-open .floating-utilities { display: none; }
   text-decoration: underline;
   text-underline-offset: .22em;
   text-decoration-thickness: .1em;
+}
+
+/* Shared secondary line associated with the lang-switch control above,
+   communicating that Portuguese coverage is expanding (governed copy:
+   ui.pt_expansion_note). Informational only, visually subordinate to the
+   switcher via smaller size and reduced contrast — never an alert, banner,
+   modal, or badge. flex-basis:100% forces it onto its own row inside this
+   page's flex-row .header-actions (unlike prasa-launch.css's plain block
+   .header-actions, this file's own .header-actions is display:flex without
+   flex-direction:column, so the note needs the explicit break). */
+.lang-switch-note {
+  flex-basis: 100%;
+  margin: .2rem 0 0;
+  font-size: .74rem;
+  line-height: 1.35;
+  color: rgba(17,17,17,.65);
+  text-align: right;
 }
