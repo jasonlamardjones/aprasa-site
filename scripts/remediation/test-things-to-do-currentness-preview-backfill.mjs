@@ -14,7 +14,35 @@
 // Eclipse-CLASS expiry is constructed on demand:
 //
 //   preview before  cartinha (active) · eclipse (expires at the boundary) · sinergia
-//   preview after   cartinha (active) · sinergia · 50-anos (PROMOTED)
+//   preview after   cartinha (active) · sinergia
+//
+// PROMOTION IS NO LONGER PART OF THIS SCENARIO, and cannot be.
+//
+// Home membership used to be "the first N eligible records", so an expiry
+// UNSELECTED the next eligible record onto Home and the repair had to backfill
+// its slot. Since Project 03's EXPAND_HOME_PREVIEW ruling (17 September 2026)
+// membership is a governed curated list (HOME_PREVIEW_IDS) intersected with
+// eligibility. Eligibility only ever shrinks, so preview membership can only
+// ever shrink: no record is promoted into a freed slot, by construction.
+//
+// What survives, and is still exercised below, is everything the backfill case
+// was wrapped around: that a preview-boundary expiry authorizes Home at all,
+// that the derived write set stays bounded, that Home moves only inside its own
+// generated-event regions, and that unrelated or unauthorized Home drift fails
+// closed. What is gone is the single assertion that canonical generation fills
+// a promoted record's slot - unreachable while a curated list governs Home.
+//
+// IF MEMBERSHIP EVER RETURNS TO A COUNT-BASED RULE, the promotion assertions
+// must come back with it; see git history for this file at
+// 0dcf1babd8e115fcdc71e8f0698069ef917b2793.
+//
+// So the fixture assigns its ROLES from the governed selection rather than
+// patching it: the record it expires is one HOME_PREVIEW_IDS actually selects,
+// so the expiry is still a real preview-boundary event, and 50-anos stays as
+// the eligible-but-UNSELECTED control. Only end dates are synthetic, exactly as
+// before. (Patching the selection in the sandbox would not work anyway: the
+// transition below is derived IN THIS PROCESS from the real module, while the
+// sandbox only governs what the child generator processes see.)
 //
 // Nothing here writes to the repository: every step runs in a temporary
 // sandbox copy, and no step contacts GitHub.
@@ -43,10 +71,16 @@ const root = path.resolve(scriptDir, '..', '..');
 
 const BEFORE = '2026-10-01';
 const AFTER = '2026-10-02';
+// Roles, all drawn from the governed Home selection except UNSELECTED.
+// ACTIVE, EXPIRING, RETAINED and the two EVERGREEN records are selected by
+// HOME_PREVIEW_IDS; UNSELECTED deliberately is not, and is the control that
+// proves a freed slot is never backfilled.
 const ACTIVE = 'cartinha-dholanda-mindelo-2026';
-const EXPIRING = 'eclipse-yuran-henrique';
+const EXPIRING = 'voyage-obi-margo-kafe-djan-djan-2026';
 const RETAINED = 'sinergia-da-materia';
-const PROMOTED = '50-anos-de-memoria-criacao-e-resistencia';
+const UNSELECTED = '50-anos-de-memoria-criacao-e-resistencia';
+// Selected, evergreen and therefore current on both sides of every transition.
+const EVERGREEN = ['taverna-live-music', 'nautilus-live-music'];
 
 const TEXT_EXTENSIONS = new Set(['.css', '.html', '.js', '.json', '.md', '.mjs', '.svg', '.txt', '.xml', '.yaml', '.yml']);
 
@@ -113,7 +147,7 @@ function sandbox() {
     filter: (src) => !['.git', 'node_modules'].includes(path.basename(src)),
   });
   const events = readJson(dir, 'data/things-to-do-events.json');
-  const keep = { [ACTIVE]: '2026-12-31', [RETAINED]: '2026-12-31', [PROMOTED]: '2026-12-31', [EXPIRING]: BEFORE };
+  const keep = { [ACTIVE]: '2026-12-31', [RETAINED]: '2026-12-31', [UNSELECTED]: '2026-12-31', [EXPIRING]: BEFORE };
   for (const record of events.records) {
     // Only DATED EVENTS take part in a preview-boundary expiry, so only they
     // are given a synthetic end. An evergreen recurring-venue record states no
@@ -136,6 +170,7 @@ function sandbox() {
     delete record.end_month;
   }
   writeJson(dir, 'data/things-to-do-events.json', events);
+
   const currentness = readJson(dir, 'data/things-to-do-currentness.json');
   currentness.as_of = BEFORE;
   writeJson(dir, 'data/things-to-do-currentness.json', currentness);
@@ -182,21 +217,27 @@ try {
   // --- The transition this repair exists for -------------------------------
   const records = readJson(work, 'data/things-to-do-events.json').records;
   const transition = resolvePreviewTransition({ records, fromAsOf: BEFORE, toAsOf: AFTER });
-  assert.deepEqual(transition.previewBefore, [ACTIVE, EXPIRING, RETAINED].sort());
-  assert.deepEqual(transition.previewAfter, [ACTIVE, PROMOTED, RETAINED].sort());
+  assert.deepEqual(transition.previewBefore, [ACTIVE, EXPIRING, RETAINED, ...EVERGREEN].sort());
+  assert.deepEqual(transition.previewAfter, [ACTIVE, RETAINED, ...EVERGREEN].sort());
   assert.ok(!transition.previewAfter.includes(EXPIRING), 'the expiring record must leave the preview');
-  assert.ok(!transition.previewBefore.includes(PROMOTED), 'the promoted record must be absent before the transition');
-  // Only the expiring record's own currentness state moves. The promoted record
-  // stays CURRENT across the transition, which is why it earns a Home slot but
-  // no detail-page authority.
+  // The curated selection is why nothing takes its place. 50-anos is eligible on
+  // BOTH sides of the transition and simply is not selected, so it is on neither
+  // side of the preview -- this is the assertion that fails if Home membership
+  // ever silently reverts to "the first N eligible records".
+  assert.ok(!transition.previewBefore.includes(UNSELECTED), 'the unselected record must be absent before the transition');
+  assert.ok(!transition.previewAfter.includes(UNSELECTED), 'the unselected record must not be promoted into the freed slot');
+  // Only the expiring record's own currentness state moves.
   assert.deepEqual(transition.stateChangedIds, [EXPIRING]);
   // Detail authority follows RENDERED currentness, which is narrower still:
   // renderDetailPage() consults isExpired() alone.
   assert.deepEqual(transition.detailRenderingChangedIds, [EXPIRING]);
 
   nodeOk(work, 'scripts/build-all.mjs', [`--as-of=${BEFORE}`]);
-  assert.deepEqual(homeCardIds(work, 'index.html'), [ACTIVE, EXPIRING, RETAINED]);
-  assert.deepEqual(homeCardIds(work, 'pt/index.html'), [ACTIVE, EXPIRING, RETAINED]);
+  // Rendered order is Home's marker-slot order, not the selection's order.
+  const HOME_BEFORE = [ACTIVE, RETAINED, EXPIRING, ...EVERGREEN];
+  const HOME_AFTER = [ACTIVE, RETAINED, ...EVERGREEN];
+  assert.deepEqual(homeCardIds(work, 'index.html'), HOME_BEFORE);
+  assert.deepEqual(homeCardIds(work, 'pt/index.html'), HOME_BEFORE);
   assert.doesNotThrow(() => assertValidatorResults(incumbentValidatorResults(work, BEFORE)),
     'the synthetic BEFORE baseline must itself be a valid published state');
 
@@ -206,12 +247,18 @@ try {
   const driftIds = parseValidatorDriftIds(currentness.stderr);
   assert.deepEqual(driftIds, [EXPIRING]);
 
-  // --- NEGATIVE PROOF: the incumbent drift-id-only generation cannot repair
-  // this. It empties the expired record's own Home slot and never fills the
-  // promoted record's, so Home ships two cards and surface equivalence fails —
-  // which is exactly the PHASE2B_INCUMBENT_VALIDATOR_FAILED abort the audit
-  // reproduced. This must keep failing: if it ever passes, the fix below is no
-  // longer the thing that makes the repair work.
+  // --- DRIFT-ID-ONLY GENERATION, the case the audit was about --------------
+  //
+  // This block used to be a NEGATIVE proof: under "first N eligible", an expiry
+  // promoted a record whose slot drift-id-only generation never filled, Home
+  // shipped a short preview, and surface equivalence failed with
+  // PHASE2B_INCUMBENT_VALIDATOR_FAILED.
+  //
+  // Under a curated selection there is nothing to backfill, so the same
+  // generation is now SUFFICIENT and the proof inverts. That inversion is the
+  // point: it is asserted rather than deleted, because the day it starts
+  // failing again is the day Home membership has silently gone back to being
+  // count-derived, and the backfill machinery below is load-bearing again.
   const narrow = freshSandbox();
   nodeOk(narrow, 'scripts/build-all.mjs', [`--as-of=${BEFORE}`]);
   const narrowCurrentness = readJson(narrow, 'data/things-to-do-currentness.json');
@@ -221,16 +268,15 @@ try {
     nodeOk(narrow, 'scripts/generate-things-to-do.mjs', [`--as-of=${AFTER}`, `--id=${id}`, '--locale=en', '--write']);
     nodeOk(narrow, 'scripts/generate-things-to-do.mjs', [`--as-of=${AFTER}`, `--id=${id}`, '--locale=pt', '--home=pt/index.html', '--write']);
   }
-  assert.deepEqual(homeCardIds(narrow, 'index.html'), [ACTIVE, RETAINED],
-    'drift-id-only generation leaves the promoted record unbackfilled');
+  assert.deepEqual(homeCardIds(narrow, 'index.html'), HOME_AFTER,
+    'emptying the expired record\'s own slot is the whole repair under a curated selection');
+  assert.ok(!homeCardIds(narrow, 'index.html').includes(UNSELECTED),
+    'no unselected eligible record may appear, however Home was generated');
   const narrowResults = incumbentValidatorResults(narrow, AFTER);
-  assert.throws(() => assertValidatorResults(narrowResults), /PHASE2B_INCUMBENT_VALIDATOR_FAILED/);
-  assert.ok(
-    narrowResults.some((item) => item.step.startsWith('scripts/validate-things-to-do-surface-equivalence.mjs') && item.status !== 0),
-    'surface equivalence is the gate drift-id-only generation fails',
-  );
+  assert.doesNotThrow(() => assertValidatorResults(narrowResults),
+    'with no promotion to backfill, drift-id-only generation now produces a valid published state');
 
-  // --- 1. PREVIEW-BOUNDARY EXPIRY: canonical generation backfills ----------
+  // --- 1. PREVIEW-BOUNDARY EXPIRY: canonical generation stays correct ------
   const baseline = inventory(work);
   const homeBefore = new Map(['index.html', 'pt/index.html'].map(
     (file) => [file, fs.readFileSync(path.join(work, file), 'utf8')],
@@ -238,10 +284,10 @@ try {
   runCanonicalGeneration(work, AFTER);
   const changed = changedFiles(baseline, inventory(work));
 
-  assert.deepEqual(homeCardIds(work, 'index.html'), [ACTIVE, RETAINED, PROMOTED],
-    'the promoted record must be backfilled into the EN Home preview');
-  assert.deepEqual(homeCardIds(work, 'pt/index.html'), [ACTIVE, RETAINED, PROMOTED],
-    'the promoted record must be backfilled into the PT Home preview');
+  assert.deepEqual(homeCardIds(work, 'index.html'), HOME_AFTER,
+    'the expired record must leave the EN Home preview, with nothing promoted into its slot');
+  assert.deepEqual(homeCardIds(work, 'pt/index.html'), HOME_AFTER,
+    'the expired record must leave the PT Home preview, with nothing promoted into its slot');
   assert.doesNotThrow(() => assertValidatorResults(incumbentValidatorResults(work, AFTER)),
     'remediation must complete rather than abort with PHASE2B_INCUMBENT_VALIDATOR_FAILED');
 
@@ -261,7 +307,7 @@ try {
     assert.ok(allowed.includes(`things-to-do/${id}/index.html`), `EN detail page for ${id} must be permitted`);
     assert.ok(allowed.includes(`pt/things-to-do/${id}/index.html`), `PT detail page for ${id} must be permitted`);
   }
-  for (const id of [ACTIVE, RETAINED, PROMOTED]) {
+  for (const id of [ACTIVE, RETAINED, UNSELECTED, ...EVERGREEN]) {  // currentness unchanged across the transition
     assert.ok(!allowed.includes(`things-to-do/${id}/index.html`),
       `${id} keeps its currentness state, so its detail page must NOT be authorized`);
     assert.ok(!allowed.includes(`pt/things-to-do/${id}/index.html`),
@@ -286,7 +332,13 @@ try {
   // loc) takes no asOf and reads only record fields, so a retained member's slot
   // cannot move for a lifecycle reason; authorizing it would let unrelated drift
   // inside that slot ride along on a repair.
-  assert.deepEqual(regionIds, [EXPIRING, PROMOTED].sort());
+  //
+  // Under a curated selection only the LEAVING record qualifies, so authority
+  // narrows to the expiring record alone. The derivation is unchanged; it simply
+  // has one fewer kind of membership change to describe.
+  assert.deepEqual(regionIds, [EXPIRING]);
+  assert.ok(!regionIds.includes(UNSELECTED),
+    'an eligible but unselected record never enters the preview, so its slot is never authorized');
   for (const retained of [ACTIVE, RETAINED]) {
     assert.ok(!regionIds.includes(retained),
       `${retained} is retained across the transition, so its Home slot must NOT be authorized`);
@@ -295,9 +347,9 @@ try {
     const afterHtml = fs.readFileSync(path.join(work, file), 'utf8');
     const regionDiff = homeRegionChange(beforeHtml, afterHtml);
     assert.equal(regionDiff.outsideChanged, false, `${file} must not change outside its generated-event regions`);
-    assert.deepEqual(regionDiff.changedIds, [EXPIRING, PROMOTED].sort(),
-      `${file} must move exactly the expiring and promoted slots`);
-    assert.deepEqual(assertHomeRegionChangeBounded(beforeHtml, afterHtml, regionIds, file), [EXPIRING, PROMOTED].sort());
+    assert.deepEqual(regionDiff.changedIds, [EXPIRING],
+      `${file} must move exactly the expiring slot and nothing else`);
+    assert.deepEqual(assertHomeRegionChangeBounded(beforeHtml, afterHtml, regionIds, file), [EXPIRING]);
   }
   // Unrelated Home drift outside the regions fails closed, and so does a region
   // belonging to a record this transition never touched.
@@ -308,8 +360,11 @@ try {
     () => assertHomeRegionChangeBounded(driftedHome, fs.readFileSync(path.join(work, 'index.html'), 'utf8'), regionIds, 'index.html'),
     /PHASE2B_HOME_CHANGE_OUTSIDE_GENERATED_REGIONS/,
   );
+  // Authority narrowed below what actually moved must still fail closed. This
+  // used to pass [EXPIRING] against an authority of [EXPIRING, UNSELECTED]; with
+  // authority now [EXPIRING], the under-authorized set is the empty one.
   assert.throws(
-    () => assertHomeRegionChangeBounded(firstHome, fs.readFileSync(path.join(work, 'index.html'), 'utf8'), [EXPIRING], 'index.html'),
+    () => assertHomeRegionChangeBounded(firstHome, fs.readFileSync(path.join(work, 'index.html'), 'utf8'), [], 'index.html'),
     /PHASE2B_HOME_REGION_CHANGE_UNAUTHORIZED/,
   );
 

@@ -23,6 +23,7 @@ import {
   HUB_ROUTE,
   collectionRecords,
   homePreviewRecords,
+  unknownHomePreviewIds,
   hubCanonical,
   hubOutputPath,
   THINGS_TO_DO_HUB_PUBLIC,
@@ -44,7 +45,16 @@ if (!/^\d{4}-\d{2}-\d{2}$/.test(asOf)) {
 const records = JSON.parse(fs.readFileSync(path.join(root, 'data', 'things-to-do-events.json'), 'utf8')).records ?? [];
 const eligible = collectionRecords(records, asOf);
 const preview = homePreviewRecords(records, asOf);
+
 const errors = [];
+
+// A governed id list can select a record that does not exist -- a typo, or an
+// id left behind by a rename. That selects nothing, and a silently missing Home
+// card is indistinguishable from an expired one, so it is reported here rather
+// than left to be noticed by eye.
+for (const id of unknownHomePreviewIds(records)) {
+  errors.push(`HOME_PREVIEW_IDS selects "${id}", which matches no canonical Things-to-Do record`);
+}
 
 function toPosixPath(value) {
   return value.split(path.sep).join('/');
@@ -61,8 +71,9 @@ function renderedOrder(html) {
 }
 
 // --- Home preview -----------------------------------------------------------
-// Home shows exactly the approved preview: the first HOME_PREVIEW_LIMIT
-// eligible records in canonical order, no more and no fewer.
+// Home shows exactly the approved preview: the governed HOME_PREVIEW_IDS
+// selection in approved order, restricted to eligible records, no more and no
+// fewer.
 for (const [locale, homeFile] of [['en', 'index.html'], ['pt', 'pt/index.html']]) {
   const html = read(homeFile);
   if (html === null) {

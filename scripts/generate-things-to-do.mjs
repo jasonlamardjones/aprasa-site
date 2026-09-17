@@ -5,7 +5,7 @@ import { t, hasKey } from './lib/locale.mjs';
 import { bodyParagraphs, factKeyBase } from './lib/things-to-do-keys.mjs';
 import { currentnessState, isExpired as recordIsExpired, EXPIRED, REVIEW_DUE } from './lib/things-to-do-currentness.mjs';
 import { isRecurringVenue, RECURRING_VENUE_SCHEMA_TYPE } from './lib/things-to-do-kinds.mjs';
-import { HOME_PREVIEW_LIMIT, THINGS_TO_DO_HUB_PUBLIC, collectionRecords, homePreviewIds, hubOutputPath, hubCanonical } from './lib/things-to-do-collection.mjs';
+import { THINGS_TO_DO_HUB_PUBLIC, collectionRecords, homePreviewIds, hubOutputPath, hubCanonical } from './lib/things-to-do-collection.mjs';
 import { LAUNCHER_SURFACE_KEYS, resolveRuntimeStrings, renderRuntimeStringsBlock } from './lib/runtime-strings.mjs';
 import { renderContactConfigBlock } from './lib/contact-channels.mjs';
 
@@ -182,15 +182,16 @@ function isExpired(record) {
   return recordIsExpired(record, asOf);
 }
 
-// The approved Home preview. Project 03 approved Home as a LIMITED PREVIEW of
-// the first three eligible records in canonical order, with the full eligible
-// collection living on the dedicated hub — so eligibility alone no longer puts
-// a record on Home. Membership and ordering come from the shared collection
+// The approved Home preview. Project 03 approved Home as a LIMITED PREVIEW —
+// since EXPAND_HOME_PREVIEW (17 September 2026) an explicitly governed curated
+// selection of records, not "the first N eligible" — with the full eligible
+// collection living on the dedicated hub, so eligibility alone does not put a
+// record on Home. Membership and ordering come from the shared collection
 // module, never from a second copy of the rule here.
 //
-// Ordering is canonical record order filtered to eligible records. It is not
-// popularity, SEO demand, provider status, commercial relationship, payment or
-// sponsorship, and must never become any of those.
+// Hub ordering is canonical record order filtered to eligible records. Neither
+// surface is ordered by popularity, SEO demand, provider status, commercial
+// relationship, payment or sponsorship, and neither must ever become so.
 const hubRecords = collectionRecords(records, asOf);
 const homePreview = homePreviewIds(records, asOf);
 
@@ -785,9 +786,10 @@ function replaceGeneratedEvent(homeHtml, record, loc) {
   // distinct reasons empty a slot, and they are not interchangeable:
   //   EXPIRED           the record has left the collection entirely and is
   //                     absent from Home AND from the hub.
-  //   not in preview    the record is eligible and IS on the hub; Home simply
-  //                     shows the first three. Nothing about the record's
-  //                     currentness state changes, and the hub CTA leads to it.
+  //   not in preview    the record is eligible and IS on the hub; Home shows
+  //                     only the governed curated selection. Nothing about the
+  //                     record's currentness state changes, and the hub CTA
+  //                     leads to it.
   // CURRENT and REVIEW_DUE are both eligible; only EXPIRED is not.
   const body = homePreview.has(record.id) ? `\n${renderHomeArticle(record, loc)}\n        ` : '';
   return homeHtml.slice(0, contentStart) + body + homeHtml.slice(endIndex);
@@ -868,7 +870,7 @@ if (!THINGS_TO_DO_HUB_PUBLIC) {
   const hubTarget = path.join(root, hubRelativePath);
   fs.mkdirSync(path.dirname(hubTarget), { recursive: true });
   fs.writeFileSync(hubTarget, renderHubPage(hubRecords));
-  console.log(`Wrote ${hubRelativePath} — ${hubRecords.length} eligible record(s), ${Math.min(hubRecords.length, HOME_PREVIEW_LIMIT)} on the Home preview, as of ${asOf}`);
+  console.log(`Wrote ${hubRelativePath} — ${hubRecords.length} eligible record(s), ${homePreview.size} on the Home preview, as of ${asOf}`);
 } else {
-  console.log(`Prepared ${hubRelativePath}: ${hubRecords.length} eligible record(s), ${Math.min(hubRecords.length, HOME_PREVIEW_LIMIT)} on the Home preview, as of ${asOf}`);
+  console.log(`Prepared ${hubRelativePath}: ${hubRecords.length} eligible record(s), ${homePreview.size} on the Home preview, as of ${asOf}`);
 }

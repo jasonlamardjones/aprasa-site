@@ -6,7 +6,7 @@ import { HOME_PREVIEW_LIMIT, THINGS_TO_DO_HUB_PUBLIC, homePreviewIds, hubOutputP
 // EN public-surface equivalence for the canonical Things-to-Do corpus.
 //
 // Project 03 approved Home as a LIMITED PREVIEW of the collection: the first
-// HOME_PREVIEW_LIMIT eligible records in canonical order, with the full
+// governed HOME_PREVIEW_IDS selection of eligible records, with the full
 // eligible collection on the dedicated hub at /things-to-do/. This validator
 // therefore polices membership across BOTH surfaces rather than requiring
 // every eligible record on Home — the assertion is re-pointed, not dropped:
