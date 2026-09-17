@@ -110,7 +110,7 @@
     "delta23_package_id": "aprasa-pt-mindelo-fragata-selected-branches-r23",
     "delta23_revision": "P04-2026-09-17-MINDELO-FRAGATA-SELECTED-BRANCHES",
     "delta23_revision_class": "ADDITIVE_NEW_KEYS",
-    "delta23_row_count": 4,
+    "delta23_row_count": 6,
     "delta23_project_09_status": "approved",
     "delta23_project_09_verdict": "APPROVED_FOR_PUBLIC_USE",
     "delta23_project_09_review_date": "2026-09-17",
@@ -196,10 +196,10 @@
     "governed_override_authorization": "fixed code-side contract in scripts/build-locale-data.mjs (GOVERNED_OVERRIDE_CONTRACTS)"
   },
   "counts": {
-    "total_rows": 1058,
-    "required_for_pt_launch": 1030,
+    "total_rows": 1060,
+    "required_for_pt_launch": 1032,
     "intentionally_unchanged": 28,
-    "approved_rows_total": 1058,
+    "approved_rows_total": 1060,
     "r3_delta_rows": 21,
     "r4_delta_rows": 26,
     "r5_delta_rows": 2,
@@ -215,7 +215,7 @@
     "r20_delta_rows": 13,
     "r21_delta_rows": 1,
     "r22_delta_rows": 1,
-    "r23_delta_rows": 4,
+    "r23_delta_rows": 6,
     "r10_renamed_rows": 76,
     "governed_override_rows": 6
   },
@@ -12925,6 +12925,18 @@
       "context_notes": "Provider-level description shared by both selected Fragata branches; deliberately does not claim branch-specific delivery, online ordering, stock or pricing.",
       "linguistic_notes": "Task-order-approved description_en/description_pt pair, carried verbatim."
     },
+    "record.SV-MIN-MKT-003.checked_display": {
+      "key": "record.SV-MIN-MKT-003.checked_display",
+      "en": "Checked 17 September 2026",
+      "pt": "Revisto em 17 de setembro de 2026",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_AND_LOCALIZE_DATE_DISPLAY",
+      "record_id": "SV-MIN-MKT-003",
+      "translation_status": "APPROVED",
+      "source_revision": "P04-2026-09-17-MINDELO-FRAGATA-CHECKED-DATE-APPROVED",
+      "context_notes": "Directory record checked-date display, matching the checked_at date on the task order (2026-09-17).",
+      "linguistic_notes": "Project 09-approved EN/PT checked-date pair, relayed by the Project 04 Manager on 17 September 2026 with an explicit reuse_ruling authorizing the same pair for both selected Fragata branches. No formal Project 09 package/revision ID was supplied with the relay; none is fabricated."
+    },
     "record.SV-MIN-MKT-004.type_label": {
       "key": "record.SV-MIN-MKT-004.type_label",
       "en": "Supermarket",
@@ -12948,6 +12960,18 @@
       "source_revision": "P04-2026-09-17-MINDELO-FRAGATA-SELECTED-BRANCHES",
       "context_notes": "Provider-level description shared by both selected Fragata branches; deliberately does not claim branch-specific delivery, online ordering, stock or pricing.",
       "linguistic_notes": "Task-order-approved description_en/description_pt pair, carried verbatim."
+    },
+    "record.SV-MIN-MKT-004.checked_display": {
+      "key": "record.SV-MIN-MKT-004.checked_display",
+      "en": "Checked 17 September 2026",
+      "pt": "Revisto em 17 de setembro de 2026",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_AND_LOCALIZE_DATE_DISPLAY",
+      "record_id": "SV-MIN-MKT-004",
+      "translation_status": "APPROVED",
+      "source_revision": "P04-2026-09-17-MINDELO-FRAGATA-CHECKED-DATE-APPROVED",
+      "context_notes": "Directory record checked-date display, matching the checked_at date on the task order (2026-09-17).",
+      "linguistic_notes": "Project 09-approved EN/PT checked-date pair, relayed by the Project 04 Manager on 17 September 2026 with an explicit reuse_ruling authorizing the same pair for both selected Fragata branches. No formal Project 09 package/revision ID was supplied with the relay; none is fabricated."
     }
   }
 }

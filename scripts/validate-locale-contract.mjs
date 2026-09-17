@@ -66,15 +66,15 @@ for (const fileName of eventDeltaFiles) {
 // the single About-footer Privacy link label, and r22 the single shared
 // lang-switch secondary informational line (Project 03 semantic authority;
 // Project 09 approved the exact wording, APPROVED_FOR_PUBLIC_USE, 17
-// September 2026, recovered after initial implementation), and r23 the four
-// record-scoped type_label/description keys for the two Project 03-selected
-// Fragata branch records (SV-MIN-MKT-003, SV-MIN-MKT-004) — checked_display is
-// deliberately excluded from r23 pending Project 09 approval of that exact
-// EN/PT pair — all required. ---
-if (keys.length !== 962 + eventDeltaRequired + eventDeltaUnchanged) fail(`expected ${962 + eventDeltaRequired + eventDeltaUnchanged} total keys including approved event deltas, got ${keys.length}`);
+// September 2026, recovered after initial implementation), and r23 the six
+// record-scoped type_label/description/checked_display keys for the two
+// Project 03-selected Fragata branch records (SV-MIN-MKT-003, SV-MIN-MKT-004)
+// — the checked_display pair was approved by Project 09 in a later relay and
+// carries its own source_revision tag — all required. ---
+if (keys.length !== 964 + eventDeltaRequired + eventDeltaUnchanged) fail(`expected ${964 + eventDeltaRequired + eventDeltaUnchanged} total keys including approved event deltas, got ${keys.length}`);
 const required = keys.filter((k) => k.scope_status === "REQUIRED_FOR_PT_LAUNCH");
 const unchanged = keys.filter((k) => k.scope_status === "INTENTIONALLY_UNCHANGED");
-if (required.length !== 934 + eventDeltaRequired) fail(`expected ${934 + eventDeltaRequired} REQUIRED_FOR_PT_LAUNCH keys, got ${required.length}`);
+if (required.length !== 936 + eventDeltaRequired) fail(`expected ${936 + eventDeltaRequired} REQUIRED_FOR_PT_LAUNCH keys, got ${required.length}`);
 if (unchanged.length !== 28 + eventDeltaUnchanged) fail(`expected ${28 + eventDeltaUnchanged} INTENTIONALLY_UNCHANGED keys, got ${unchanged.length}`);
 if (data.provenance.delta_revision !== "P03-PT-SOURCE-2026-08-25-r3") {
   fail(`unexpected delta_revision: ${data.provenance.delta_revision}`);
@@ -297,14 +297,14 @@ if (data.provenance.delta22_project_09_revision_id !== null) {
 // --- r23 delta spot check (Mindelo Essentials — Fragata Selected Branches) ---
 // Project 04 task order, 17 September 2026: two Project 03-selected Fragata
 // branch records (SV-MIN-MKT-003 Fragata — Central, SV-MIN-MKT-004 Fragata —
-// Monte Sossego), each with type_label/description keys. Same honest-
-// provenance shape as r22: Project 09 EN/PT localization authority is an
-// upstream authority on the task order, which supplies the exact approved
+// Monte Sossego), each with type_label/description/checked_display keys. Same
+// honest-provenance shape as r22: Project 09 EN/PT localization authority is
+// an upstream authority on the task order, which supplies the exact approved
 // EN/PT description and type values directly, so no Project 09 package/
-// revision ID is fabricated. checked_display is deliberately absent: the task
-// order supplied only the raw checked_at date, not approved display copy, and
-// no generic date-to-display-string rule exists to inherit from — see the r23
-// package's project_09_provenance_note.
+// revision ID is fabricated. checked_display was approved separately, later
+// (Project 04 Manager relay, 17 September 2026, reuse_ruling APPROVED for
+// both records) and carries its own source_revision tag — see the r23
+// package's project_09_provenance_note and checked_display_approval.
 if (data.provenance.delta23_package_id !== "aprasa-pt-mindelo-fragata-selected-branches-r23") {
   fail(`unexpected delta23_package_id: ${data.provenance.delta23_package_id}`);
 }
@@ -314,7 +314,7 @@ if (data.provenance.delta23_revision !== "P04-2026-09-17-MINDELO-FRAGATA-SELECTE
 if (data.provenance.delta23_revision_class !== "ADDITIVE_NEW_KEYS") {
   fail(`unexpected delta23_revision_class: ${data.provenance.delta23_revision_class}`);
 }
-if (data.provenance.delta23_row_count !== 4) {
+if (data.provenance.delta23_row_count !== 6) {
   fail(`unexpected delta23_row_count: ${data.provenance.delta23_row_count}`);
 }
 if (data.provenance.delta23_project_09_status !== "approved") {
@@ -333,27 +333,24 @@ if (data.provenance.delta23_project_09_revision_id !== null) {
   fail(`r23 must not fabricate a Project 09 revision id: got ${JSON.stringify(data.provenance.delta23_project_09_revision_id)}`);
 }
 {
+  const CHECKED_DATE_SOURCE_REVISION = "P04-2026-09-17-MINDELO-FRAGATA-CHECKED-DATE-APPROVED";
   const expected = {
-    "record.SV-MIN-MKT-003.type_label": ["Supermarket", "Supermercado"],
+    "record.SV-MIN-MKT-003.type_label": ["Supermarket", "Supermercado", "P04-2026-09-17-MINDELO-FRAGATA-SELECTED-BRANCHES"],
     "record.SV-MIN-MKT-003.description": [
       "Fragata is a local supermarket network. The provider advertises customer support and scheduled delivery; check directly with Fragata for current availability and coverage.",
       "A Fragata é uma rede local de supermercados. O prestador anuncia apoio ao cliente e entregas programadas; confirme diretamente com a Fragata a disponibilidade atual e a área de cobertura.",
+      "P04-2026-09-17-MINDELO-FRAGATA-SELECTED-BRANCHES",
     ],
-    "record.SV-MIN-MKT-004.type_label": ["Supermarket", "Supermercado"],
+    "record.SV-MIN-MKT-003.checked_display": ["Checked 17 September 2026", "Revisto em 17 de setembro de 2026", CHECKED_DATE_SOURCE_REVISION],
+    "record.SV-MIN-MKT-004.type_label": ["Supermarket", "Supermercado", "P04-2026-09-17-MINDELO-FRAGATA-SELECTED-BRANCHES"],
     "record.SV-MIN-MKT-004.description": [
       "Fragata is a local supermarket network. The provider advertises customer support and scheduled delivery; check directly with Fragata for current availability and coverage.",
       "A Fragata é uma rede local de supermercados. O prestador anuncia apoio ao cliente e entregas programadas; confirme diretamente com a Fragata a disponibilidade atual e a área de cobertura.",
+      "P04-2026-09-17-MINDELO-FRAGATA-SELECTED-BRANCHES",
     ],
+    "record.SV-MIN-MKT-004.checked_display": ["Checked 17 September 2026", "Revisto em 17 de setembro de 2026", CHECKED_DATE_SOURCE_REVISION],
   };
-  // No fabricated checked_display: the task order supplied only checked_at,
-  // never an approved EN/PT display pair, and no generic date-to-display
-  // formatting rule exists in this corpus to derive one from.
-  for (const id of ["SV-MIN-MKT-003", "SV-MIN-MKT-004"]) {
-    if (data.keys[`record.${id}.checked_display`]) {
-      fail(`record.${id}.checked_display must not exist — no approved EN/PT display pair was supplied for it`);
-    }
-  }
-  for (const [key, [en, pt]] of Object.entries(expected)) {
+  for (const [key, [en, pt, revision]] of Object.entries(expected)) {
     const row = data.keys[key];
     if (!row) {
       fail(`r23 key missing from generated locale data: ${key}`);
@@ -362,7 +359,7 @@ if (data.provenance.delta23_project_09_revision_id !== null) {
     if (row.en !== en) fail(`${key} EN does not match the approved copy: got ${JSON.stringify(row.en)}`);
     if (row.pt !== pt) fail(`${key} PT does not match the approved copy: got ${JSON.stringify(row.pt)}`);
     if (row.scope_status !== "REQUIRED_FOR_PT_LAUNCH") fail(`${key} must be REQUIRED_FOR_PT_LAUNCH`);
-    if (row.source_revision !== "P04-2026-09-17-MINDELO-FRAGATA-SELECTED-BRANCHES") fail(`${key} provenance is not the r23 revision`);
+    if (row.source_revision !== revision) fail(`${key} provenance is not the expected r23 revision: got ${JSON.stringify(row.source_revision)}, expected ${JSON.stringify(revision)}`);
   }
 }
 

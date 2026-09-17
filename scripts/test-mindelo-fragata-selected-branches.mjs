@@ -128,15 +128,22 @@ for (const id of Object.keys(EXPECTED)) {
   check(`record.${id}.description is REQUIRED_FOR_PT_LAUNCH`, description?.scope_status === 'REQUIRED_FOR_PT_LAUNCH');
 }
 
-console.log('[8] no fabricated checked-date copy: task order supplied checked_at only, never an approved display pair');
+console.log('[8] Project 09-approved checked-date copy renders exactly, for both records, in both locales');
+const APPROVED_CHECKED_DISPLAY_EN = 'Checked 17 September 2026';
+const APPROVED_CHECKED_DISPLAY_PT = 'Revisto em 17 de setembro de 2026';
 for (const id of Object.keys(EXPECTED)) {
-  check(`record.${id}.checked_display does not exist in governed locale data`, !locale.keys[`record.${id}.checked_display`]);
+  const checkedDisplay = locale.keys[`record.${id}.checked_display`];
+  check(`record.${id}.checked_display exists and is approved`, checkedDisplay?.translation_status === 'APPROVED');
+  check(`record.${id}.checked_display EN is the exact approved string`, checkedDisplay?.en === APPROVED_CHECKED_DISPLAY_EN);
+  check(`record.${id}.checked_display PT is the exact approved string`, checkedDisplay?.pt === APPROVED_CHECKED_DISPLAY_PT);
+  check(`record.${id}.checked_display is REQUIRED_FOR_PT_LAUNCH`, checkedDisplay?.scope_status === 'REQUIRED_FOR_PT_LAUNCH');
+
   const enBlockMatch = enHtml.match(new RegExp(`data-record-id="${id}"[\\s\\S]*?<\\/details>`));
   const ptBlockMatch = ptHtml.match(new RegExp(`data-record-id="${id}"[\\s\\S]*?<\\/details>`));
-  check(`${id} EN block carries no <p class="checked"> paragraph`, !!enBlockMatch && !enBlockMatch[0].includes('class="checked"'));
-  check(`${id} PT block carries no <p class="checked"> paragraph`, !!ptBlockMatch && !ptBlockMatch[0].includes('class="checked"'));
+  check(`${id} EN block renders the exact approved checked-date line`, !!enBlockMatch && enBlockMatch[0].includes(`<p class="checked">${APPROVED_CHECKED_DISPLAY_EN}</p>`));
+  check(`${id} PT block renders the exact approved checked-date line`, !!ptBlockMatch && ptBlockMatch[0].includes(`<p class="checked">${APPROVED_CHECKED_DISPLAY_PT}</p>`));
 }
-check('checked_at is retained as internal directory metadata (matches the task order, not rendered as approved copy)', Object.keys(EXPECTED).every((id) => directory.records.find((r) => r.id === id)?.checked === '17 September 2026'));
+check('checked_at directory metadata matches the rendered checked-date (2026-09-17 / 17 September 2026)', Object.keys(EXPECTED).every((id) => directory.records.find((r) => r.id === id)?.checked === '17 September 2026'));
 
 console.log(`\n[test-mindelo-fragata-selected-branches] ${checks - failures}/${checks} checks passed.`);
 if (failures) {
