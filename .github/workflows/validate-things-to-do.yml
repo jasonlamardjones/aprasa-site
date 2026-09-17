@@ -233,10 +233,13 @@ jobs:
           set -e
           git reset --hard HEAD
 
-          # Home is the approved LIMITED PREVIEW (the first three eligible
-          # records in canonical order). The full eligible collection used to
-          # live on the hub at things-to-do/index.html, and the two surfaces
-          # were asserted separately.
+          # Home is the approved LIMITED PREVIEW. Since Project 03's
+          # EXPAND_HOME_PREVIEW ruling it is a GOVERNED CURATED SELECTION
+          # (HOME_PREVIEW_IDS), not "the first N eligible records", so both its
+          # size and its membership are read from the shipped resolver below
+          # rather than restated here. The full eligible collection used to live
+          # on the hub at things-to-do/index.html, and the two surfaces were
+          # asserted separately.
           #
           # The hub is TEMPORARILY UNPUBLISHED (THINGS_TO_DO_HUB_PUBLIC in
           # scripts/lib/things-to-do-collection.mjs), so there is no hub file to
@@ -250,6 +253,13 @@ jobs:
           # sandbox and asserts membership and ordering against the real
           # renderer. What CI loses here is the cross-date shell spot-check, not
           # the rule.
+          # Home preview SIZE is read from the shipped collection library for the same
+          # reason its MEMBERSHIP is (check_preview_matches_canonical below): a literal
+          # here is a second copy of a governed decision, and it went stale the moment
+          # Project 03 approved a five-record preview (EXPAND_HOME_PREVIEW).
+          PREVIEW_LIMIT=$(node -e 'import("./scripts/lib/things-to-do-collection.mjs").then((m) => process.stdout.write(String(m.HOME_PREVIEW_LIMIT)))')
+          echo "Approved Home preview size: $PREVIEW_LIMIT"
+
           # Publication state is read from the governed flag, not inferred
           # from the generator's output. Inferring it from the file would make
           # check_hub_present vacuous in exactly the case it exists for: a
@@ -260,18 +270,6 @@ jobs:
           echo "Collection hub publication state: $HUB_PUBLISHED"
           hub_published() {
             [ "$HUB_PUBLISHED" = "true" ]
-          }
-          check_home_present() {
-            if ! grep -q "<h3>$2</h3>" index.html; then
-              echo "$1 incorrectly absent from the Home preview as of $3."
-              exit 1
-            fi
-          }
-          check_home_absent() {
-            if grep -q "<h3>$2</h3>" index.html; then
-              echo "$1 incorrectly present on the Home preview as of $3."
-              exit 1
-            fi
           }
           check_hub_present() {
             hub_published || return 0
@@ -304,22 +302,32 @@ jobs:
               fi
             done
           }
-          # The preview is capped at three generated cards. Every generated
+          # The preview is capped at the governed preview size. Every generated
           # Home card carries data-event-id, so this counts exactly those and
           # never the hand-authored evergreen cards in the same section.
           check_preview_cap() {
             count=$(grep -c '<article class="resource-card" data-event-id="' index.html || true)
-            if [ "$count" -gt 3 ]; then
-              echo "Home shows $count generated Things-to-Do cards as of $1; the approved preview is at most 3."
+            if [ "$count" -gt "$PREVIEW_LIMIT" ]; then
+              echo "Home shows $count generated Things-to-Do cards as of $1; the approved preview is at most $PREVIEW_LIMIT."
               exit 1
             fi
           }
-          # The preview identity, asked of the shipped collection library rather
-          # than hard-coded a second time: Home must render exactly the first
-          # three eligible records in canonical order, in that order. The
-          # per-title checks below stay as they are; this one additionally
-          # cannot go stale when the canonical corpus changes, which is the
-          # failure mode that made the titles below wrong in the first place.
+          # THE Home-membership assertion, asked of the shipped collection library
+          # rather than hard-coded a second time: Home must render exactly the
+          # governed preview for this date -- HOME_PREVIEW_IDS intersected with the
+          # records that are publishable and current -- in the approved order.
+          #
+          # It replaces the per-title check_home_present/check_home_absent layer that
+          # used to sit beside it. Those titles encoded the superseded "first three
+          # eligible records in canonical order" rule, so under a governed curated
+          # selection they were either wrong (asserting an unselected record onto
+          # Home) or vacuous (asserting the absence of a record that can no longer
+          # be selected at all). This check is strictly stronger than all of them:
+          # it pins the exact set AND the exact order, and it cannot go stale when
+          # either the corpus or the governed selection changes.
+          #
+          # Hub membership keeps its per-title assertions below -- collectionRecords()
+          # is unchanged, so those are still the rule they always were.
           check_preview_matches_canonical() {
             expected=$(node -e '
               const fs = require("node:fs");
@@ -400,32 +408,20 @@ jobs:
           node scripts/generate-things-to-do.mjs --as-of=2026-08-24 --write
           node scripts/validate-things-to-do-currentness.mjs --as-of=2026-08-24
           node scripts/validate-things-to-do-surface-equivalence.mjs --as-of=2026-08-24
-          check_home_absent part-ilhas "PART_ILHAS — ciclo de conversas com Nuno Miranda" 2026-08-24
-          check_home_absent arquitectura "Arquitectura da Imperfeição" 2026-08-24
           check_preview_cap 2026-08-24
           refute_hub_surfaces 2026-08-24
           check_preview_matches_canonical 2026-08-24
-          # First three eligible records in canonical order as of 2026-08-24.
-          # cartinha-dholanda-mindelo-2026 sits at canonical index 3, ahead of
-          # eclipse and sinergia, so it holds the second preview slot and
-          # sinergia is the sixth eligible record — hub only, not Home.
-          check_home_present mon-pikenin "Mon Pikenin" 2026-08-24
-          check_home_present cartinha "CARTINHA D’HOLANDA" 2026-08-24
-          check_home_present eclipse "Exposição “Eclipse”" 2026-08-24
-          # Eligible but beyond the preview: hub only, and never lost.
-          check_home_absent oficina "Exposição dos trabalhos finais do projeto Oficina Contemporânea Lata" 2026-08-24
+          # Eligible but outside the governed Home selection: hub only, never lost.
           check_hub_present oficina "Exposição dos trabalhos finais do projeto Oficina Contemporânea Lata" 2026-08-24
           check_hub_present artemisa "PART_ILHAS — ciclo de conversas com Artemisa Ferreira" 2026-08-24
-          check_home_absent sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-08-24
           check_hub_present sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-08-24
           check_hub_present mon-pikenin "Mon Pikenin" 2026-08-24
           # An explicit editorial expiry wins at every --as-of: the generator
           # reads publication_state from the CURRENT canonical corpus and does
           # not reconstruct a historical snapshot of it, so a record marked
-          # expired is absent from both surfaces even at a past date.
-          check_home_absent boxe "4.º Campeonato Nacional Sénior de Boxe" 2026-08-24
+          # expired is absent from the collection even at a past date.
           check_hub_absent boxe "4.º Campeonato Nacional Sénior de Boxe" 2026-08-24
-          # Expired records are absent from both public surfaces.
+          # Expired records are absent from the collection.
           check_hub_absent part-ilhas "PART_ILHAS — ciclo de conversas com Nuno Miranda" 2026-08-24
           check_hub_absent arquitectura "Arquitectura da Imperfeição" 2026-08-24
           require_past_event part-ilhas-nuno-miranda 2026-08-24
@@ -445,22 +441,12 @@ jobs:
           node scripts/generate-things-to-do.mjs --as-of=2026-08-30 --write
           node scripts/validate-things-to-do-currentness.mjs --as-of=2026-08-30
           node scripts/validate-things-to-do-surface-equivalence.mjs --as-of=2026-08-30
-          check_home_absent part-ilhas "PART_ILHAS — ciclo de conversas com Nuno Miranda" 2026-08-30
-          check_home_absent artemisa "PART_ILHAS — ciclo de conversas com Artemisa Ferreira" 2026-08-30
-          check_home_absent arquitectura "Arquitectura da Imperfeição" 2026-08-30
-          check_home_absent mon-pikenin "Mon Pikenin" 2026-08-30
-          check_home_absent oficina "Exposição dos trabalhos finais do projeto Oficina Contemporânea Lata" 2026-08-30
           check_preview_cap 2026-08-30
           refute_hub_surfaces 2026-08-30
           check_preview_matches_canonical 2026-08-30
-          check_home_present cartinha "CARTINHA D’HOLANDA" 2026-08-30
-          check_home_present eclipse "Exposição “Eclipse”" 2026-08-30
-          check_home_present sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-08-30
-          # Eligible but beyond the three-card preview: hub only, never lost.
-          check_home_absent 50-anos "50 Anos de Memória, Criação e Resistência" 2026-08-30
+          # Eligible but outside the governed Home selection: hub only, never lost.
           check_hub_present 50-anos "50 Anos de Memória, Criação e Resistência" 2026-08-30
-          # Editorially expired: absent from both surfaces, as at 2026-08-24.
-          check_home_absent boxe "4.º Campeonato Nacional Sénior de Boxe" 2026-08-30
+          # Editorially expired: absent from the collection, as at 2026-08-24.
           check_hub_absent boxe "4.º Campeonato Nacional Sénior de Boxe" 2026-08-30
           check_hub_absent oficina "Exposição dos trabalhos finais do projeto Oficina Contemporânea Lata" 2026-08-30
           check_hub_absent artemisa "PART_ILHAS — ciclo de conversas com Artemisa Ferreira" 2026-08-30
@@ -483,11 +469,9 @@ jobs:
           check_preview_cap 2026-09-01
           refute_hub_surfaces 2026-09-01
           check_preview_matches_canonical 2026-09-01
-          check_home_present sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-09-01
           check_hub_present sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-09-01
           refute_past_event sinergia-da-materia 2026-09-01
           refute_exact_november_day 2026-09-01
-          check_home_present eclipse "Exposição “Eclipse”" 2026-09-01
           if grep -rq 'https://schema.org/EventCompleted' things-to-do/*/index.html; then
             echo 'A generated detail page emits invalid Schema.org EventCompleted status.'
             exit 1
@@ -500,11 +484,8 @@ jobs:
           check_preview_cap 2026-10-31
           refute_hub_surfaces 2026-10-31
           check_preview_matches_canonical 2026-10-31
-          check_home_present sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-10-31
-          check_home_present 50-anos "50 Anos de Memória, Criação e Resistência" 2026-10-31
           refute_past_event sinergia-da-materia 2026-10-31
           refute_exact_november_day 2026-10-31
-          check_home_absent eclipse "Exposição “Eclipse”" 2026-10-31
           check_hub_absent eclipse "Exposição “Eclipse”" 2026-10-31
           check_hub_absent boxe "4.º Campeonato Nacional Sénior de Boxe" 2026-10-31
           require_past_event eclipse-yuran-henrique 2026-10-31
@@ -517,7 +498,11 @@ jobs:
           expect_currentness_exit 2026-11-01 3
           refute_hub_surfaces 2026-11-01
           node scripts/validate-things-to-do-surface-equivalence.mjs --as-of=2026-11-01
-          check_home_present sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-11-01
+          # Home membership is asserted at EVERY tracked date, this one included: a
+          # review-due record is still publishable and current, so it must keep its
+          # governed preview slot rather than quietly leaving Home.
+          check_preview_cap 2026-11-01
+          check_preview_matches_canonical 2026-11-01
           # A review-due record stays an ordinary public card on the collection
           # surface too — it is not expired, so it is never dropped from it.
           check_hub_present sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-11-01
