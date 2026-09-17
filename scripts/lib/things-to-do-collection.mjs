@@ -15,15 +15,28 @@
 //
 // --- Ordering -------------------------------------------------------------
 //
-// Order is the canonical record order of data/things-to-do-events.json,
+// Hub order is the canonical record order of data/things-to-do-events.json,
 // filtered to the eligible records. That is the incumbent deterministic
 // ordering: Home's generated marker slots already sit in canonical record
-// order, so the hub and the Home preview simply keep it.
+// order, so the hub keeps it.
 //
 // It is deliberately NOT ordered by popularity, SEO demand, provider status,
 // commercial relationship, payment or sponsorship, and nothing here may make
-// it so. "First three" means the first three eligible records in canonical
-// order and nothing else.
+// it so.
+//
+// --- Home preview membership ----------------------------------------------
+//
+// Home membership is a GOVERNED CURATED SUBSET (HOME_PREVIEW_IDS below), not a
+// count. It used to be "the first three eligible records in canonical order",
+// which is a rule that decides for itself which records appear the moment the
+// corpus changes. Project 03's EXPAND_HOME_PREVIEW ruling of 17 September 2026
+// is not expressible that way: it approved five specific records, and the
+// eligible record sitting fourth in canonical order is deliberately NOT one of
+// them. Raising a limit from 3 to 5 would have surfaced it.
+//
+// So the selection is stated, not derived. This is the only editorial ranking
+// input in the module, it is an explicit approved list and nothing more, and
+// it must never grow into a scoring or popularity rule.
 
 import { isPubliclyCurrent } from './things-to-do-currentness.mjs';
 
@@ -80,8 +93,39 @@ import { isPubliclyCurrent } from './things-to-do-currentness.mjs';
 // later change.
 export const THINGS_TO_DO_HUB_PUBLIC = false;
 
-/** Number of eligible records the approved Home preview shows. */
-export const HOME_PREVIEW_LIMIT = 3;
+/**
+ * The approved Home preview, in approved order.
+ *
+ * Project 03, EXPAND_HOME_PREVIEW, 17 September 2026: Home shows exactly these
+ * five records -- the three already visible, in their existing positions, plus
+ * the two evergreen recurring-venue gateways appended after them.
+ *
+ * Membership here is NECESSARY, NOT SUFFICIENT. A listed record still has to be
+ * publicly current to appear: homePreviewRecords() resolves this list against
+ * collectionRecords(), so a selected record that expires or is withdrawn drops
+ * off Home exactly as it does today. Selecting an id can add a record to the
+ * preview; it can never keep a stale one alive.
+ *
+ * The order is the approved order and is what the hub validator compares the
+ * rendered Home against. It currently coincides with canonical record order,
+ * but this list is the authority, not that coincidence.
+ */
+export const HOME_PREVIEW_IDS = Object.freeze([
+  'cartinha-dholanda-mindelo-2026',
+  'sinergia-da-materia',
+  'voyage-obi-margo-kafe-djan-djan-2026',
+  'taverna-live-music',
+  'nautilus-live-music',
+]);
+
+/**
+ * Number of records the approved Home preview shows.
+ *
+ * Derived from the governed list so the two can never disagree. It remains the
+ * upper bound consumers assert against; it is no longer the thing that DECIDES
+ * membership.
+ */
+export const HOME_PREVIEW_LIMIT = HOME_PREVIEW_IDS.length;
 
 /** Route of the collection hub, relative to a locale root. */
 export const HUB_ROUTE = 'things-to-do/';
@@ -91,9 +135,63 @@ export function collectionRecords(records, asOf) {
   return (records ?? []).filter((record) => isPubliclyCurrent(record, asOf));
 }
 
-/** The approved Home preview: the first HOME_PREVIEW_LIMIT eligible records. */
+/**
+ * True only for a record whose publication state permits public display.
+ *
+ * currentness and publication state are DIFFERENT AXES, and collectionRecords()
+ * resolves only the first. isPubliclyCurrent() treats publication_state
+ * "expired" as expired and says nothing about the other two canonical states,
+ * so a "withdrawn" or "draft" record reads as perfectly current -- which is
+ * correct for what that resolver means, and wrong as a publication decision.
+ * Independent review (Codex, PR #106) found that gap: naming such a record in
+ * HOME_PREVIEW_IDS would keep it on Home after it was withdrawn.
+ *
+ * This is a WHITELIST, not a list of excluded states, so it fails closed: a
+ * publication_state added later is not publishable until someone decides it is,
+ * rather than becoming publicly visible by default.
+ */
+export function isPubliclyPublishable(record) {
+  return record?.publication_state === 'published';
+}
+
+/**
+ * The approved Home preview: the governed HOME_PREVIEW_IDS selection, in
+ * approved order, restricted to the records that may actually be shown.
+ *
+ * Membership requires BOTH conditions, and selection satisfies neither on its
+ * own:
+ *   1. the id is in HOME_PREVIEW_IDS;
+ *   2. the record is publicly publishable AND publicly current.
+ *
+ * The currentness half is collectionRecords() itself -- the same eligibility
+ * every other Things-to-Do surface consumes -- so this adds no currentness rule
+ * of its own and cannot bypass one. The publication half is the whitelist above.
+ *
+ * Scope is deliberately Home: collectionRecords() is untouched, so the hub's
+ * (dormant) membership semantics are unchanged by this repair.
+ */
 export function homePreviewRecords(records, asOf) {
-  return collectionRecords(records, asOf).slice(0, HOME_PREVIEW_LIMIT);
+  const eligible = new Map(
+    collectionRecords(records, asOf)
+      .filter((record) => isPubliclyPublishable(record))
+      .map((record) => [record.id, record]),
+  );
+  return HOME_PREVIEW_IDS.map((id) => eligible.get(id)).filter((record) => record !== undefined);
+}
+
+/**
+ * Selected ids that no canonical record carries at all.
+ *
+ * A governed list of ids has one failure mode the old count-based rule did not:
+ * a typo, or an id left behind when a record is renamed or removed, silently
+ * selects nothing and Home quietly shrinks. That is invisible in the output --
+ * a missing card looks exactly like an expired one -- so it is reported instead
+ * of inferred. Deliberately distinct from "selected but not currently
+ * eligible", which is normal, expected and must stay silent.
+ */
+export function unknownHomePreviewIds(records) {
+  const known = new Set((records ?? []).map((record) => record.id));
+  return HOME_PREVIEW_IDS.filter((id) => !known.has(id));
 }
 
 /** Ids of the approved Home preview records. */

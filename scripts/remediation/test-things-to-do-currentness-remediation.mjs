@@ -64,7 +64,7 @@ import {
   parseValidatorDriftIds,
   resolvePreviewTransition,
 } from './lib/things-to-do-currentness-remediation.mjs';
-import { THINGS_TO_DO_HUB_PUBLIC, hubOutputPath } from '../lib/things-to-do-collection.mjs';
+import { HOME_PREVIEW_IDS, THINGS_TO_DO_HUB_PUBLIC, hubOutputPath } from '../lib/things-to-do-collection.mjs';
 import {
   FAILURE_SIGNAL,
   buildIssueBody,
@@ -169,23 +169,50 @@ assert.throws(() => assertDriftShapeUnchanged(['a'], []), /DRIFT_DISAPPEARED/);
 assert.throws(() => assertDriftShapeUnchanged(['a'], ['b']), /DRIFT_CHANGED_SHAPE/);
 
 // --- Derived bounded write set --------------------------------------------
-// The write set is derived from the lifecycle transition. A preview-boundary
-// expiry promotes a record, and the promoted record's surfaces must be
-// permitted even though it is not a drift ID — that omission is what made the
-// incumbent repair abort.
+// The write set is derived from the lifecycle transition.
+//
+// Home membership is a GOVERNED CURATED LIST (HOME_PREVIEW_IDS) intersected
+// with eligibility, so invented ids can no longer be in a preview at all and
+// the subjects below are drawn from that list. It also means membership can
+// only ever SHRINK -- eligibility never comes back -- so a freed slot is never
+// backfilled by another record. RETAINED_A/B and EXPIRING are selected;
+// UNSELECTED is eligible throughout and deliberately outside the list, which is
+// what proves no promotion happens.
+const [RETAINED_A, RETAINED_B, EXPIRING] = HOME_PREVIEW_IDS;
+const UNSELECTED = 'unselected-control';
+// publication_state is explicit on every record here because Home membership
+// requires BOTH publication and currentness (isPubliclyPublishable is a
+// whitelist, so a record that declares no state is correctly not publishable).
+// Every real canonical record declares it; a synthetic one that did not would
+// be testing a shape the corpus cannot contain.
 const previewRecords = [
-  { id: 'active-one', kind: 'dated-event', end_date: '2026-12-31' },
-  { id: 'expiring-two', kind: 'dated-event', end_date: '2026-10-01' },
-  { id: 'retained-three', kind: 'dated-event', end_date: '2026-12-31' },
-  { id: 'promoted-four', kind: 'dated-event', end_date: '2026-12-31' },
-  { id: 'beyond-five', kind: 'dated-event', end_date: '2026-12-31' },
+  { id: RETAINED_A, kind: 'dated-event', publication_state: 'published', end_date: '2026-12-31' },
+  { id: RETAINED_B, kind: 'dated-event', publication_state: 'published', end_date: '2026-12-31' },
+  { id: EXPIRING, kind: 'dated-event', publication_state: 'published', end_date: '2026-10-01' },
+  { id: UNSELECTED, kind: 'dated-event', publication_state: 'published', end_date: '2026-12-31' },
 ];
 const transition = resolvePreviewTransition({ records: previewRecords, fromAsOf: '2026-10-01', toAsOf: '2026-10-02' });
-assert.deepEqual(transition.previewBefore, ['active-one', 'expiring-two', 'retained-three']);
-assert.deepEqual(transition.previewAfter, ['active-one', 'promoted-four', 'retained-three']);
-// Only the expiring record's own state moves; the promoted record stays CURRENT.
-assert.deepEqual(transition.stateChangedIds, ['expiring-two']);
-assert.deepEqual(transition.detailRenderingChangedIds, ['expiring-two']);
+assert.deepEqual(transition.previewBefore, [RETAINED_A, RETAINED_B, EXPIRING].sort());
+assert.deepEqual(transition.previewAfter, [RETAINED_A, RETAINED_B].sort());
+assert.ok(!transition.previewBefore.includes(UNSELECTED) && !transition.previewAfter.includes(UNSELECTED),
+  'an eligible record outside the governed selection is never in the preview, before or after');
+// Only the expiring record's own state moves.
+assert.deepEqual(transition.stateChangedIds, [EXPIRING]);
+// Publication state is a SECOND axis, independent of currentness: a selected
+// record that is withdrawn or still a draft is not on Home even though
+// isPubliclyCurrent() reports it current (Codex, PR #106).
+for (const state of ['withdrawn', 'draft']) {
+  const withheld = previewRecords.map((record) => (record.id === RETAINED_A
+    ? { ...record, publication_state: state }
+    : record));
+  const t = resolvePreviewTransition({ records: withheld, fromAsOf: '2026-10-01', toAsOf: '2026-10-02' });
+  assert.ok(!t.previewBefore.includes(RETAINED_A), `a ${state} record must not be in the preview before`);
+  assert.ok(!t.previewAfter.includes(RETAINED_A), `a ${state} record must not be in the preview after`);
+  assert.ok(t.previewBefore.includes(RETAINED_B), `only the ${state} record is affected`);
+  assert.ok(!t.previewBefore.includes(UNSELECTED) && !t.previewAfter.includes(UNSELECTED),
+    'the unselected record is still never promoted into the freed slot');
+}
+assert.deepEqual(transition.detailRenderingChangedIds, [EXPIRING]);
 
 // Rendered currentness is NARROWER than currentness state. renderDetailPage()
 // consults isExpired() alone, so CURRENT <-> REVIEW_DUE renders identically and
@@ -250,7 +277,7 @@ assert.ok(runnerSourceForGuard.includes('resolvePreviewTransition('),
   'the adapter must resolve its transition through the guarded resolver');
 
 const allowed = expectedWriteSetForTransition({
-  driftIds: ['expiring-two'],
+  driftIds: [EXPIRING],
   previewBefore: transition.previewBefore,
   previewAfter: transition.previewAfter,
   detailRenderingChangedIds: transition.detailRenderingChangedIds,
@@ -260,9 +287,9 @@ const allowed = expectedWriteSetForTransition({
 // Home-only concept, so entering or leaving the preview must not by itself
 // authorize a detail page — otherwise unrelated drift in a promoted record's
 // page would ride along on a repair.
-assert(allowed.includes('things-to-do/expiring-two/index.html'));
-assert(allowed.includes('pt/things-to-do/expiring-two/index.html'));
-for (const id of ['active-one', 'retained-three', 'promoted-four', 'beyond-five']) {
+assert(allowed.includes(`things-to-do/${EXPIRING}/index.html`));
+assert(allowed.includes(`pt/things-to-do/${EXPIRING}/index.html`));
+for (const id of [RETAINED_A, RETAINED_B, UNSELECTED]) {
   assert(!allowed.includes(`things-to-do/${id}/index.html`), `${id} keeps its state: no EN detail authority`);
   assert(!allowed.includes(`pt/things-to-do/${id}/index.html`), `${id} keeps its state: no PT detail authority`);
 }
@@ -291,13 +318,15 @@ assert.throws(() => expectedWriteSetForTransition({ driftIds: ['../escape'] }), 
 // renderHomeArticle(record, loc) takes no asOf and reads only record fields, so
 // a retained member's slot cannot move for a lifecycle reason — admitting it
 // would let unrelated drift inside that slot ride along.
+// Under a curated selection the only membership change is the LEAVING record,
+// so authority is exactly that record's slot -- nothing is promoted into it.
 assert.deepEqual(
-  homeRegionAuthorizedIds({ driftIds: ['expiring-two'], previewBefore: transition.previewBefore, previewAfter: transition.previewAfter }),
-  ['expiring-two', 'promoted-four'],
+  homeRegionAuthorizedIds({ driftIds: [EXPIRING], previewBefore: transition.previewBefore, previewAfter: transition.previewAfter }),
+  [EXPIRING],
 );
-for (const retained of ['active-one', 'retained-three']) {
-  assert.ok(!homeRegionAuthorizedIds({ driftIds: ['expiring-two'], previewBefore: transition.previewBefore, previewAfter: transition.previewAfter }).includes(retained),
-    `${retained} is retained on both sides, so its Home slot must NOT be authorized`);
+for (const retained of [RETAINED_A, RETAINED_B, UNSELECTED]) {
+  assert.ok(!homeRegionAuthorizedIds({ driftIds: [EXPIRING], previewBefore: transition.previewBefore, previewAfter: transition.previewAfter }).includes(retained),
+    `${retained} does not change preview membership, so its Home slot must NOT be authorized`);
 }
 // A drifted record outside the preview on both sides still needs its slot
 // emptied, which is why drift IDs are unioned in rather than derived.

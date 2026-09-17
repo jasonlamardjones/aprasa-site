@@ -31,7 +31,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { t } from './lib/locale.mjs';
-import { THINGS_TO_DO_HUB_PUBLIC, hubOutputPath, hubCanonical } from './lib/things-to-do-collection.mjs';
+import { THINGS_TO_DO_HUB_PUBLIC, hubOutputPath, hubCanonical, homePreviewRecords, isPubliclyPublishable } from './lib/things-to-do-collection.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -219,10 +219,41 @@ function monthPrecisionIds(dir) {
     const enHome = cardIds(read(dir, 'index.html'));
     const ptHome = cardIds(read(dir, 'pt/index.html'));
 
-    check('Home preview is capped at 3 records (EN)', enHome.length <= 3, `got ${enHome.length}`);
-    check('Home preview is capped at 3 records (PT)', ptHome.length <= 3, `got ${ptHome.length}`);
-    check('Home preview is the first eligible records in hub order (EN)',
-      JSON.stringify(enHome) === JSON.stringify(enHub.slice(0, enHome.length)),
+    // Home membership is the GOVERNED CURATED SELECTION (Project 03,
+    // EXPAND_HOME_PREVIEW, 17 September 2026), not a count and not a prefix of
+    // hub order. The expected ids are stated here independently of the module
+    // that produces them, so a change to HOME_PREVIEW_IDS has to be made
+    // deliberately in two places rather than silently redefining "approved".
+    const APPROVED_HOME_PREVIEW = [
+      'cartinha-dholanda-mindelo-2026',
+      'sinergia-da-materia',
+      'voyage-obi-margo-kafe-djan-djan-2026',
+      'taverna-live-music',
+      'nautilus-live-music',
+    ];
+    check('Home preview is exactly the approved curated selection (EN)',
+      JSON.stringify(enHome) === JSON.stringify(APPROVED_HOME_PREVIEW), `got [${enHome}]`);
+    check('Home preview is exactly the approved curated selection (PT)',
+      JSON.stringify(ptHome) === JSON.stringify(APPROVED_HOME_PREVIEW), `got [${ptHome}]`);
+    check('Home preview shows exactly 5 records (EN)', enHome.length === 5, `got ${enHome.length}`);
+    check('Home preview shows exactly 5 records (PT)', ptHome.length === 5, `got ${ptHome.length}`);
+    // The eligible record Project 03 deliberately did NOT select stays off Home
+    // while remaining a full member of the collection. This is the assertion
+    // that would fail if the curated selection ever decayed back into
+    // "the first N eligible records".
+    check('the unselected eligible record is absent from Home but present on the hub (EN)',
+      !enHome.includes('50-anos-de-memoria-criacao-e-resistencia')
+      && enHub.includes('50-anos-de-memoria-criacao-e-resistencia'),
+      `home=[${enHome}] hub=[${enHub}]`);
+    check('the unselected eligible record is absent from Home (PT)',
+      !ptHome.includes('50-anos-de-memoria-criacao-e-resistencia'), `home=[${ptHome}]`);
+    // Home is a SUBSEQUENCE of hub order, not a prefix of it: every Home record
+    // is a collection member, and the two surfaces never contradict each other
+    // on relative order, but the curated selection may skip records.
+    check('every Home preview record is a hub collection member (EN)',
+      enHome.every((id) => enHub.includes(id)), `home=[${enHome}] hub=[${enHub}]`);
+    check('Home preview preserves hub relative order (EN)',
+      JSON.stringify(enHub.filter((id) => enHome.includes(id))) === JSON.stringify(enHome),
       `home=[${enHome}] hub=[${enHub}]`);
     check('EN and PT hubs present identical record membership and order',
       JSON.stringify(enHub) === JSON.stringify(ptHub), `en=[${enHub}] pt=[${ptHub}]`);
@@ -632,6 +663,106 @@ function monthPrecisionIds(dir) {
   for (const key of ['home.things.hub_action', 'things.hub.h1', 'things.hub.intro', 'things.hub.empty_state']) {
     check(`governed key ${key} is retained for reactivation`,
       Boolean(t(key, 'en')) && Boolean(t(key, 'pt')));
+  }
+}
+
+// ---------------------------------------------------------------------------
+// N. The curated selection is NECESSARY, NOT SUFFICIENT.
+//
+// Naming a record in HOME_PREVIEW_IDS may add it to Home; it must never keep a
+// record there that may not be shown. Two independent axes decide that, and
+// selection satisfies neither:
+//
+//   currentness        collectionRecords() / isPubliclyCurrent()
+//   publication state  isPubliclyPublishable() -- a whitelist of "published"
+//
+// Independent review (Codex, PR #106) found the second axis missing: membership
+// resolved through currentness alone, and isPubliclyCurrent() treats only
+// publication_state "expired" as expired, so a WITHDRAWN or DRAFT record read as
+// perfectly current and would have stayed on Home. Each state is driven through
+// the real generator, in both locales, end to end.
+// ---------------------------------------------------------------------------
+for (const state of ['expired', 'withdrawn', 'draft']) {
+  const asOf = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'things-to-do-currentness.json'), 'utf8')).as_of;
+  const dir = sandbox();
+  try {
+    // Move one SELECTED record out of public publication, in the sandbox only.
+    const eventsPath = path.join(dir, EVENTS);
+    const doc = JSON.parse(fs.readFileSync(eventsPath, 'utf8'));
+    const target = doc.records.find((record) => record.id === 'taverna-live-music');
+    check(`${state}: the fixture found its selected subject`, Boolean(target));
+    target.publication_state = state;
+    fs.writeFileSync(eventsPath, `${JSON.stringify(doc, null, 2)}\n`);
+
+    generate(dir, asOf);
+    const enHome = cardIds(read(dir, 'index.html'));
+    const ptHome = cardIds(read(dir, 'pt/index.html'));
+
+    check(`${state}: a SELECTED record in this state is absent from Home (EN)`,
+      !enHome.includes('taverna-live-music'), `home=[${enHome}]`);
+    check(`${state}: a SELECTED record in this state is absent from Home (PT)`,
+      !ptHome.includes('taverna-live-music'), `home=[${ptHome}]`);
+    // The rest of the selection is untouched, and the gap is NOT backfilled by
+    // the next eligible record -- that would be the count-based rule returning.
+    check(`${state}: the remaining selected records are unaffected (EN)`,
+      JSON.stringify(enHome) === JSON.stringify([
+        'cartinha-dholanda-mindelo-2026',
+        'sinergia-da-materia',
+        'voyage-obi-margo-kafe-djan-djan-2026',
+        'nautilus-live-music',
+      ]), `home=[${enHome}]`);
+    check(`${state}: EN and PT stay identical`,
+      JSON.stringify(enHome) === JSON.stringify(ptHome), `en=[${enHome}] pt=[${ptHome}]`);
+    check(`${state}: the unselected eligible record is NOT promoted into the freed slot`,
+      !enHome.includes('50-anos-de-memoria-criacao-e-resistencia'), `home=[${enHome}]`);
+
+    // Only "expired" removes a record from the COLLECTION. withdrawn/draft are
+    // publication decisions, not currentness ones, so the hub's own membership
+    // is deliberately left alone by this repair -- asserted so that a later
+    // broadening of collectionRecords() is a visible decision, not a silent one.
+    const onHub = cardIds(read(dir, EN_HUB)).includes('taverna-live-music');
+    check(`${state}: collection membership follows currentness only, as before`,
+      onHub === (state !== 'expired'), `onHub=${onHub}`);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+// The positive control for the same rule: published AND current IS visible.
+// (The exhaustive five-ID/order assertions live in block 1 above; this states
+// the pairing explicitly so the negative cases cannot pass vacuously.)
+{
+  const asOf = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'things-to-do-currentness.json'), 'utf8')).as_of;
+  const records = JSON.parse(fs.readFileSync(path.join(ROOT, EVENTS), 'utf8')).records;
+  const selected = records.find((record) => record.id === 'taverna-live-music');
+  check('control: the subject really is published and current in the committed corpus',
+    selected?.publication_state === 'published' && isPubliclyPublishable(selected));
+  check('control: selected + published + current IS visible',
+    homePreviewRecords(records, asOf).map((record) => record.id).includes('taverna-live-music'));
+}
+
+// ---------------------------------------------------------------------------
+// N+1. A selected id that matches no record is reported, not silently dropped.
+//
+// A missing Home card is indistinguishable from an expired one by eye, so the
+// hub validator names the bad id instead of letting Home quietly shrink.
+// ---------------------------------------------------------------------------
+{
+  const asOf = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'things-to-do-currentness.json'), 'utf8')).as_of;
+  const dir = sandbox();
+  try {
+    const modulePath = path.join(dir, 'scripts', 'lib', 'things-to-do-collection.mjs');
+    const module = fs.readFileSync(modulePath, 'utf8');
+    const patched = module.replace("'nautilus-live-music',", "'nautilus-live-music',\n  'no-such-record',");
+    check('the unknown-id fixture patched the governed list', patched !== module);
+    fs.writeFileSync(modulePath, patched);
+
+    const result = run(dir, 'validate-things-to-do-hub.mjs', [`--as-of=${asOf}`]);
+    check('the hub validator rejects a selected id that matches no record',
+      result.status !== 0 && /HOME_PREVIEW_IDS selects "no-such-record"/.test(result.out),
+      `exit ${result.status}: ${String(result.out).trim().split('\n').slice(-2).join(' / ')}`);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
   }
 }
 
