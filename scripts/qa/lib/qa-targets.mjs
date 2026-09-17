@@ -11,6 +11,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { isExpired as recordIsExpired } from '../../lib/things-to-do-currentness.mjs';
+import { hasDetailRoute } from '../../lib/things-to-do-kinds.mjs';
 import { HUB_ROUTE, THINGS_TO_DO_HUB_PUBLIC, homePreviewIds } from '../../lib/things-to-do-collection.mjs';
 
 /** Public route of the collection hub in each locale. */
@@ -90,7 +91,10 @@ export function loadTargets(root, { affectedRoutes = [] } = {}) {
   const currentness = readJson(path.join(root, 'data', 'things-to-do-currentness.json'));
   const asOf = currentness.as_of;
   const today = todayInCapeVerde();
-  const records = (events.records ?? []).filter((record) => record.kind === 'dated-event');
+  // Both canonical kinds publish a real, crawlable detail page, so both are
+  // live-QA targets. Restricting this to dated events would leave every
+  // evergreen recurring-venue route unchecked in production.
+  const records = (events.records ?? []).filter((record) => hasDetailRoute(record));
 
   const sitemap = sitemapRoutes(root);
   const sitemapSet = new Set(sitemap);

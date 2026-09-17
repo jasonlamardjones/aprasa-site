@@ -136,6 +136,6 @@ if (errors.length) {
 }
 
 console.log(
-  `Surface equivalence passed for ${data.records.length} canonical dated-event records as of ${asOf}`
+  `Surface equivalence passed for ${data.records.length} canonical Things-to-Do records as of ${asOf}`
   + ` (${previewIds.size} on the approved Home preview, ${homeGeneratedCardCount} generated Home card(s)).`
 );

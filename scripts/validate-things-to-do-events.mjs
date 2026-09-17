@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import { END_PRECISIONS, MONTH_PRECISION, endPrecisionOf, isValidIsoMonth, startMonthOf } from './lib/things-to-do-currentness.mjs';
+import { RECORD_KINDS, OCCURRENCE_DATE_FIELDS, RECURRING_VENUE_SCHEMA_TYPE, isDatedEvent, isRecurringVenue } from './lib/things-to-do-kinds.mjs';
 
 const file = new URL('../data/things-to-do-events.json', import.meta.url);
 const manifestFile = new URL('../internal/provider-media-manifest.json', import.meta.url);
@@ -23,7 +24,9 @@ for (const record of data.records ?? []) {
   if (ids.has(record.id)) errors.push(`${label}: duplicate id`);
   ids.add(record.id);
 
-  if (record.kind !== 'dated-event') errors.push(`${label}: invalid kind`);
+  if (!RECORD_KINDS.includes(record.kind)) {
+    errors.push(`${label}: invalid kind ${JSON.stringify(record.kind)} (expected one of ${RECORD_KINDS.join(', ')})`);
+  }
   if (!record.title) errors.push(`${label}: missing title`);
   if (!record.provider) errors.push(`${label}: missing provider`);
   if (!record.source_url) errors.push(`${label}: missing source_url`);
@@ -36,41 +39,77 @@ for (const record of data.records ?? []) {
   routes.add(record.detail_page);
 
   if (!isoDate.test(record.checked_at)) errors.push(`${label}: invalid checked_at`);
-  if (record.start_date && !isoDate.test(record.start_date)) errors.push(`${label}: invalid start_date`);
-  if (record.end_date && !isoDate.test(record.end_date)) errors.push(`${label}: invalid end_date`);
-  if (record.start_datetime && !isoDateTime.test(record.start_datetime)) errors.push(`${label}: invalid start_datetime`);
-  if (record.end_datetime && !isoDateTime.test(record.end_datetime)) errors.push(`${label}: invalid end_datetime`);
+  // Occurrence-date semantics belong to dated-event records. A recurring-venue
+  // record is an evergreen discovery gateway: it states no occurrence, so every
+  // rule below would be checking a field it must not have in the first place.
+  if (isDatedEvent(record)) {
+    if (record.start_date && !isoDate.test(record.start_date)) errors.push(`${label}: invalid start_date`);
+    if (record.end_date && !isoDate.test(record.end_date)) errors.push(`${label}: invalid end_date`);
+    if (record.start_datetime && !isoDateTime.test(record.start_datetime)) errors.push(`${label}: invalid start_datetime`);
+    if (record.end_datetime && !isoDateTime.test(record.end_datetime)) errors.push(`${label}: invalid end_datetime`);
 
-  if (record.end_date && record.start_date && record.end_date < record.start_date) {
-    errors.push(`${label}: end_date before start_date`);
+    if (record.end_date && record.start_date && record.end_date < record.start_date) {
+      errors.push(`${label}: end_date before start_date`);
+    }
+
+    // End precision. Absent end_precision means "day", so every record written
+    // before this field existed keeps exactly the semantics it already had.
+    if (record.end_precision !== undefined && !END_PRECISIONS.includes(record.end_precision)) {
+      errors.push(`${label}: invalid end_precision "${record.end_precision}" (expected "day" or "month")`);
+    } else if (endPrecisionOf(record) === MONTH_PRECISION) {
+      // Month precision states the month a record ends in and nothing finer.
+      // The exact-day fields must be empty, or the record would be asserting a
+      // closing day its source never established.
+      // A real calendar month, not merely YYYY-MM shaped: 2026-00, 2026-13,
+      // 2026-99 and 9999-99 all match the shape and none of them is a month.
+      if (!isValidIsoMonth(record.end_month)) {
+        errors.push(`${label}: end_precision "month" requires end_month as a valid calendar month YYYY-MM (01-12)`);
+      } else {
+        // The end month cannot precede the month the record starts in. The start
+        // may be given as start_date OR start_datetime, so read whichever the
+        // record validly supplies rather than start_date alone -- a record whose
+        // start is expressed only as start_datetime was previously unchecked.
+        const startMonth = startMonthOf(record);
+        if (startMonth && record.end_month < startMonth) {
+          errors.push(`${label}: end_month ${record.end_month} before start month ${startMonth}`);
+        }
+      }
+      if (record.end_date != null) errors.push(`${label}: end_precision "month" requires end_date null`);
+      if (record.end_datetime != null) errors.push(`${label}: end_precision "month" requires end_datetime null`);
+    } else if (record.end_month !== undefined) {
+      errors.push(`${label}: end_month is only valid with end_precision "month"`);
+    }
   }
 
-  // End precision. Absent end_precision means "day", so every record written
-  // before this field existed keeps exactly the semantics it already had.
-  if (record.end_precision !== undefined && !END_PRECISIONS.includes(record.end_precision)) {
-    errors.push(`${label}: invalid end_precision "${record.end_precision}" (expected "day" or "month")`);
-  } else if (endPrecisionOf(record) === MONTH_PRECISION) {
-    // Month precision states the month a record ends in and nothing finer.
-    // The exact-day fields must be empty, or the record would be asserting a
-    // closing day its source never established.
-    // A real calendar month, not merely YYYY-MM shaped: 2026-00, 2026-13,
-    // 2026-99 and 9999-99 all match the shape and none of them is a month.
-    if (!isValidIsoMonth(record.end_month)) {
-      errors.push(`${label}: end_precision "month" requires end_month as a valid calendar month YYYY-MM (01-12)`);
-    } else {
-      // The end month cannot precede the month the record starts in. The start
-      // may be given as start_date OR start_datetime, so read whichever the
-      // record validly supplies rather than start_date alone -- a record whose
-      // start is expressed only as start_datetime was previously unchecked.
-      const startMonth = startMonthOf(record);
-      if (startMonth && record.end_month < startMonth) {
-        errors.push(`${label}: end_month ${record.end_month} before start month ${startMonth}`);
+  // The evergreen counterpart of the block above. A recurring-venue record must
+  // carry NO occurrence field at all -- not even set to null -- so the shape
+  // itself cannot be quietly filled in later with schedule facts the card
+  // explicitly does not promise.
+  if (isRecurringVenue(record)) {
+    for (const field of OCCURRENCE_DATE_FIELDS) {
+      if (field in record) {
+        errors.push(`${label}: recurring-venue records must not carry the occurrence field "${field}"`);
       }
     }
-    if (record.end_date != null) errors.push(`${label}: end_precision "month" requires end_date null`);
-    if (record.end_datetime != null) errors.push(`${label}: end_precision "month" requires end_datetime null`);
-  } else if (record.end_month !== undefined) {
-    errors.push(`${label}: end_month is only valid with end_precision "month"`);
+    // Admission is never asserted on an evergreen card: the linked source owns
+    // it and it can change. null is "no claim"; true or false would be one.
+    if (record.free_admission !== null) {
+      errors.push(`${label}: recurring-venue records must set free_admission to null (no admission claim)`);
+    }
+    if (!record.card_action?.url) {
+      errors.push(`${label}: recurring-venue records require a card_action.url pointing at the approved current-schedule source`);
+    } else if (record.card_action.url !== record.source_url) {
+      errors.push(`${label}: recurring-venue card_action.url must be the approved source_url`);
+    }
+    // Structured data. The generator already hard-codes the @type, so a stray
+    // value here cannot reach a published page -- but it must still be reported
+    // rather than silently overridden, because a record carrying
+    // seo.schema_type "Event" is a record whose author believed it was an
+    // occurrence, and that belief is the actual defect. Absent is rejected too:
+    // this kind states its structured-data type explicitly.
+    if (record.seo?.schema_type !== RECURRING_VENUE_SCHEMA_TYPE) {
+      errors.push(`${label}: recurring-venue records must set seo.schema_type to "${RECURRING_VENUE_SCHEMA_TYPE}", got ${JSON.stringify(record.seo?.schema_type)} (Event-family structured data is never valid for an evergreen discovery gateway)`);
+    }
   }
 
   if (!allowedMediaPolicies.has(record.media_policy)) {
@@ -132,4 +171,7 @@ if (errors.length) {
   process.exit(1);
 }
 
-console.log(`Validated ${data.records.length} dated Things to Do records and media-manifest relationships.`);
+const kindCounts = RECORD_KINDS
+  .map((kind) => `${data.records.filter((record) => record.kind === kind).length} ${kind}`)
+  .join(', ');
+console.log(`Validated ${data.records.length} Things to Do records (${kindCounts}) and media-manifest relationships.`);

@@ -34,4 +34,4 @@ if (errors.length) {
   process.exit(1);
 }
 
-console.log(`Sitemap validation passed for ${data.records.length} canonical dated-event routes and ${hubRoutes} collection-hub route(s).`);
+console.log(`Sitemap validation passed for ${data.records.length} canonical record detail routes and ${hubRoutes} collection-hub route(s).`);
