@@ -31,7 +31,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { t } from './lib/locale.mjs';
-import { THINGS_TO_DO_HUB_PUBLIC, hubOutputPath, hubCanonical } from './lib/things-to-do-collection.mjs';
+import { THINGS_TO_DO_HUB_PUBLIC, hubOutputPath, hubCanonical, homePreviewRecords, isPubliclyPublishable } from './lib/things-to-do-collection.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -670,48 +670,75 @@ function monthPrecisionIds(dir) {
 // N. The curated selection is NECESSARY, NOT SUFFICIENT.
 //
 // Naming a record in HOME_PREVIEW_IDS may add it to Home; it must never keep a
-// stale one there. Selection is resolved against collectionRecords(), so the
-// incumbent currentness gate still decides, and a selected record that leaves
-// the collection leaves Home with it. Without this, an explicit id list is a
-// standing invitation for an expired card to sit on Home indefinitely.
+// record there that may not be shown. Two independent axes decide that, and
+// selection satisfies neither:
+//
+//   currentness        collectionRecords() / isPubliclyCurrent()
+//   publication state  isPubliclyPublishable() -- a whitelist of "published"
+//
+// Independent review (Codex, PR #106) found the second axis missing: membership
+// resolved through currentness alone, and isPubliclyCurrent() treats only
+// publication_state "expired" as expired, so a WITHDRAWN or DRAFT record read as
+// perfectly current and would have stayed on Home. Each state is driven through
+// the real generator, in both locales, end to end.
 // ---------------------------------------------------------------------------
-{
+for (const state of ['expired', 'withdrawn', 'draft']) {
   const asOf = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'things-to-do-currentness.json'), 'utf8')).as_of;
   const dir = sandbox();
   try {
-    // Withdraw one SELECTED record, editorially, in the sandbox only.
+    // Move one SELECTED record out of public publication, in the sandbox only.
     const eventsPath = path.join(dir, EVENTS);
     const doc = JSON.parse(fs.readFileSync(eventsPath, 'utf8'));
     const target = doc.records.find((record) => record.id === 'taverna-live-music');
-    check('the currentness-gate fixture found its selected subject', Boolean(target));
-    target.publication_state = 'expired';
+    check(`${state}: the fixture found its selected subject`, Boolean(target));
+    target.publication_state = state;
     fs.writeFileSync(eventsPath, `${JSON.stringify(doc, null, 2)}\n`);
 
     generate(dir, asOf);
     const enHome = cardIds(read(dir, 'index.html'));
     const ptHome = cardIds(read(dir, 'pt/index.html'));
-    const enHub = cardIds(read(dir, EN_HUB));
 
-    check('an expired SELECTED record drops off Home despite being selected (EN)',
+    check(`${state}: a SELECTED record in this state is absent from Home (EN)`,
       !enHome.includes('taverna-live-music'), `home=[${enHome}]`);
-    check('an expired SELECTED record drops off Home despite being selected (PT)',
+    check(`${state}: a SELECTED record in this state is absent from Home (PT)`,
       !ptHome.includes('taverna-live-music'), `home=[${ptHome}]`);
-    check('it leaves the collection too, not just Home',
-      !enHub.includes('taverna-live-music'), `hub=[${enHub}]`);
     // The rest of the selection is untouched, and the gap is NOT backfilled by
     // the next eligible record -- that would be the count-based rule returning.
-    check('the remaining selected records are unaffected (EN)',
+    check(`${state}: the remaining selected records are unaffected (EN)`,
       JSON.stringify(enHome) === JSON.stringify([
         'cartinha-dholanda-mindelo-2026',
         'sinergia-da-materia',
         'voyage-obi-margo-kafe-djan-djan-2026',
         'nautilus-live-music',
       ]), `home=[${enHome}]`);
-    check('the unselected eligible record is NOT promoted into the freed slot',
+    check(`${state}: EN and PT stay identical`,
+      JSON.stringify(enHome) === JSON.stringify(ptHome), `en=[${enHome}] pt=[${ptHome}]`);
+    check(`${state}: the unselected eligible record is NOT promoted into the freed slot`,
       !enHome.includes('50-anos-de-memoria-criacao-e-resistencia'), `home=[${enHome}]`);
+
+    // Only "expired" removes a record from the COLLECTION. withdrawn/draft are
+    // publication decisions, not currentness ones, so the hub's own membership
+    // is deliberately left alone by this repair -- asserted so that a later
+    // broadening of collectionRecords() is a visible decision, not a silent one.
+    const onHub = cardIds(read(dir, EN_HUB)).includes('taverna-live-music');
+    check(`${state}: collection membership follows currentness only, as before`,
+      onHub === (state !== 'expired'), `onHub=${onHub}`);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
+}
+
+// The positive control for the same rule: published AND current IS visible.
+// (The exhaustive five-ID/order assertions live in block 1 above; this states
+// the pairing explicitly so the negative cases cannot pass vacuously.)
+{
+  const asOf = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'things-to-do-currentness.json'), 'utf8')).as_of;
+  const records = JSON.parse(fs.readFileSync(path.join(ROOT, EVENTS), 'utf8')).records;
+  const selected = records.find((record) => record.id === 'taverna-live-music');
+  check('control: the subject really is published and current in the committed corpus',
+    selected?.publication_state === 'published' && isPubliclyPublishable(selected));
+  check('control: selected + published + current IS visible',
+    homePreviewRecords(records, asOf).map((record) => record.id).includes('taverna-live-music'));
 }
 
 // ---------------------------------------------------------------------------

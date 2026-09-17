@@ -180,11 +180,16 @@ assert.throws(() => assertDriftShapeUnchanged(['a'], ['b']), /DRIFT_CHANGED_SHAP
 // what proves no promotion happens.
 const [RETAINED_A, RETAINED_B, EXPIRING] = HOME_PREVIEW_IDS;
 const UNSELECTED = 'unselected-control';
+// publication_state is explicit on every record here because Home membership
+// requires BOTH publication and currentness (isPubliclyPublishable is a
+// whitelist, so a record that declares no state is correctly not publishable).
+// Every real canonical record declares it; a synthetic one that did not would
+// be testing a shape the corpus cannot contain.
 const previewRecords = [
-  { id: RETAINED_A, kind: 'dated-event', end_date: '2026-12-31' },
-  { id: RETAINED_B, kind: 'dated-event', end_date: '2026-12-31' },
-  { id: EXPIRING, kind: 'dated-event', end_date: '2026-10-01' },
-  { id: UNSELECTED, kind: 'dated-event', end_date: '2026-12-31' },
+  { id: RETAINED_A, kind: 'dated-event', publication_state: 'published', end_date: '2026-12-31' },
+  { id: RETAINED_B, kind: 'dated-event', publication_state: 'published', end_date: '2026-12-31' },
+  { id: EXPIRING, kind: 'dated-event', publication_state: 'published', end_date: '2026-10-01' },
+  { id: UNSELECTED, kind: 'dated-event', publication_state: 'published', end_date: '2026-12-31' },
 ];
 const transition = resolvePreviewTransition({ records: previewRecords, fromAsOf: '2026-10-01', toAsOf: '2026-10-02' });
 assert.deepEqual(transition.previewBefore, [RETAINED_A, RETAINED_B, EXPIRING].sort());
@@ -193,6 +198,20 @@ assert.ok(!transition.previewBefore.includes(UNSELECTED) && !transition.previewA
   'an eligible record outside the governed selection is never in the preview, before or after');
 // Only the expiring record's own state moves.
 assert.deepEqual(transition.stateChangedIds, [EXPIRING]);
+// Publication state is a SECOND axis, independent of currentness: a selected
+// record that is withdrawn or still a draft is not on Home even though
+// isPubliclyCurrent() reports it current (Codex, PR #106).
+for (const state of ['withdrawn', 'draft']) {
+  const withheld = previewRecords.map((record) => (record.id === RETAINED_A
+    ? { ...record, publication_state: state }
+    : record));
+  const t = resolvePreviewTransition({ records: withheld, fromAsOf: '2026-10-01', toAsOf: '2026-10-02' });
+  assert.ok(!t.previewBefore.includes(RETAINED_A), `a ${state} record must not be in the preview before`);
+  assert.ok(!t.previewAfter.includes(RETAINED_A), `a ${state} record must not be in the preview after`);
+  assert.ok(t.previewBefore.includes(RETAINED_B), `only the ${state} record is affected`);
+  assert.ok(!t.previewBefore.includes(UNSELECTED) && !t.previewAfter.includes(UNSELECTED),
+    'the unselected record is still never promoted into the freed slot');
+}
 assert.deepEqual(transition.detailRenderingChangedIds, [EXPIRING]);
 
 // Rendered currentness is NARROWER than currentness state. renderDetailPage()

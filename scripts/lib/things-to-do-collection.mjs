@@ -136,15 +136,46 @@ export function collectionRecords(records, asOf) {
 }
 
 /**
- * The approved Home preview: the governed HOME_PREVIEW_IDS selection, in
- * approved order, restricted to the records that are actually eligible.
+ * True only for a record whose publication state permits public display.
  *
- * The currentness gate is collectionRecords() itself -- the same eligibility
+ * currentness and publication state are DIFFERENT AXES, and collectionRecords()
+ * resolves only the first. isPubliclyCurrent() treats publication_state
+ * "expired" as expired and says nothing about the other two canonical states,
+ * so a "withdrawn" or "draft" record reads as perfectly current -- which is
+ * correct for what that resolver means, and wrong as a publication decision.
+ * Independent review (Codex, PR #106) found that gap: naming such a record in
+ * HOME_PREVIEW_IDS would keep it on Home after it was withdrawn.
+ *
+ * This is a WHITELIST, not a list of excluded states, so it fails closed: a
+ * publication_state added later is not publishable until someone decides it is,
+ * rather than becoming publicly visible by default.
+ */
+export function isPubliclyPublishable(record) {
+  return record?.publication_state === 'published';
+}
+
+/**
+ * The approved Home preview: the governed HOME_PREVIEW_IDS selection, in
+ * approved order, restricted to the records that may actually be shown.
+ *
+ * Membership requires BOTH conditions, and selection satisfies neither on its
+ * own:
+ *   1. the id is in HOME_PREVIEW_IDS;
+ *   2. the record is publicly publishable AND publicly current.
+ *
+ * The currentness half is collectionRecords() itself -- the same eligibility
  * every other Things-to-Do surface consumes -- so this adds no currentness rule
- * of its own and cannot bypass one.
+ * of its own and cannot bypass one. The publication half is the whitelist above.
+ *
+ * Scope is deliberately Home: collectionRecords() is untouched, so the hub's
+ * (dormant) membership semantics are unchanged by this repair.
  */
 export function homePreviewRecords(records, asOf) {
-  const eligible = new Map(collectionRecords(records, asOf).map((record) => [record.id, record]));
+  const eligible = new Map(
+    collectionRecords(records, asOf)
+      .filter((record) => isPubliclyPublishable(record))
+      .map((record) => [record.id, record]),
+  );
   return HOME_PREVIEW_IDS.map((id) => eligible.get(id)).filter((record) => record !== undefined);
 }
 
