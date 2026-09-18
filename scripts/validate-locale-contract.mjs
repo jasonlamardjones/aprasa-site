@@ -79,11 +79,16 @@ for (const fileName of eventDeltaFiles) {
 //
 // r24 is absent from these tallies on purpose: it is an OVERRIDE_EXISTING_KEYS
 // package that replaces two ibm-skillsbuild currentness values in place and
-// introduces no key, so it moves no count here. ---
-if (keys.length !== 972 + eventDeltaRequired + eventDeltaUnchanged) fail(`expected ${972 + eventDeltaRequired + eventDeltaUnchanged} total keys including approved event deltas, got ${keys.length}`);
+// introduces no key, so it moves no count here.
+//
+// r26 adds the same bounded eight presentation keys for the new
+// timbuktoo-edtech-pan-african-incubation open call (Project 03
+// EDTECH_LIFECYCLE_RESOLVED of 18 September 2026) — same eight-field shape as
+// r25, same NULL slots left keyless. ---
+if (keys.length !== 980 + eventDeltaRequired + eventDeltaUnchanged) fail(`expected ${980 + eventDeltaRequired + eventDeltaUnchanged} total keys including approved event deltas, got ${keys.length}`);
 const required = keys.filter((k) => k.scope_status === "REQUIRED_FOR_PT_LAUNCH");
 const unchanged = keys.filter((k) => k.scope_status === "INTENTIONALLY_UNCHANGED");
-if (required.length !== 944 + eventDeltaRequired) fail(`expected ${944 + eventDeltaRequired} REQUIRED_FOR_PT_LAUNCH keys, got ${required.length}`);
+if (required.length !== 952 + eventDeltaRequired) fail(`expected ${952 + eventDeltaRequired} REQUIRED_FOR_PT_LAUNCH keys, got ${required.length}`);
 if (unchanged.length !== 28 + eventDeltaUnchanged) fail(`expected ${28 + eventDeltaUnchanged} INTENTIONALLY_UNCHANGED keys, got ${unchanged.length}`);
 if (data.provenance.delta_revision !== "P03-PT-SOURCE-2026-08-25-r3") {
   fail(`unexpected delta_revision: ${data.provenance.delta_revision}`);
@@ -516,6 +521,112 @@ if (data.provenance.delta25_project_09_revision_id !== null) {
     }
     if (typeof value === "string" && value.includes("Timbuktoo")) {
       fail(`r25 governed programme identity was capitalized in the ${locale} title: ${JSON.stringify(value)}`);
+    }
+  }
+}
+
+// --- r26 delta spot check (timbuktoo EdTech Pan-African Incubation) ---
+// Project 03 EDTECH_LIFECYCLE_RESOLVED, 18 September 2026, relayed by the
+// Project 04 Manager / Control Tower. Same eight-field bounded shape and same
+// honest-provenance shape as r25; the order states no new Project 09 round is
+// required, so no Project 09 package/revision ID is fabricated.
+//
+// The record's lifecycle class (open-call-unknown-deadline) is internal
+// governance architecture. This block asserts it never reaches public copy in
+// either locale, and that the approved status/body wording was not reworded to
+// describe it.
+if (data.provenance.delta26_package_id !== "aprasa-trainings-home-expansion-edtech-r26") {
+  fail(`unexpected delta26_package_id: ${data.provenance.delta26_package_id}`);
+}
+if (data.provenance.delta26_revision !== "P04-2026-09-18-TRAININGS-HOME-EXPANSION-EDTECH") {
+  fail(`unexpected delta26_revision: ${data.provenance.delta26_revision}`);
+}
+if (data.provenance.delta26_revision_class !== "ADDITIVE_NEW_KEYS") {
+  fail(`unexpected delta26_revision_class: ${data.provenance.delta26_revision_class}`);
+}
+if (data.provenance.delta26_row_count !== 8) {
+  fail(`unexpected delta26_row_count: ${data.provenance.delta26_row_count}`);
+}
+if (data.provenance.delta26_project_09_status !== "approved") {
+  fail(`unexpected delta26_project_09_status: ${data.provenance.delta26_project_09_status}`);
+}
+if (data.provenance.delta26_project_09_verdict !== "APPROVED_FOR_PUBLIC_USE") {
+  fail(`unexpected delta26_project_09_verdict: ${data.provenance.delta26_project_09_verdict}`);
+}
+if (data.provenance.delta26_project_09_review_date !== "2026-09-18") {
+  fail(`unexpected delta26_project_09_review_date: ${data.provenance.delta26_project_09_review_date}`);
+}
+if (data.provenance.delta26_project_09_package_id !== null) {
+  fail(`r26 must not fabricate a Project 09 package id: got ${JSON.stringify(data.provenance.delta26_project_09_package_id)}`);
+}
+if (data.provenance.delta26_project_09_revision_id !== null) {
+  fail(`r26 must not fabricate a Project 09 revision id: got ${JSON.stringify(data.provenance.delta26_project_09_revision_id)}`);
+}
+if (data.provenance.delta26_lifecycle_disclosure_policy !== "INTERNAL_TOKEN_NEVER_PUBLIC") {
+  fail(`unexpected delta26_lifecycle_disclosure_policy: ${data.provenance.delta26_lifecycle_disclosure_policy}`);
+}
+{
+  const R26_RECORD = "timbuktoo-edtech-pan-african-incubation";
+  const R26_REVISION = "P04-2026-09-18-TRAININGS-HOME-EXPANSION-EDTECH";
+  const INTERNAL_TOKEN = "open-call-unknown-deadline";
+  const expected = {
+    title: [
+      "timbuktoo EdTech Pan-African Incubation Programme",
+      "timbuktoo — Programa Pan-Africano de Incubação EdTech",
+    ],
+    status: ["Currently shown as open", "Atualmente apresentada como aberta"],
+    body: [
+      "A pan-African incubation opportunity for startups working in education, training or skills development. The opportunity is currently shown as open and requires an Africa-based team with a prototype.",
+      "Uma oportunidade pan-africana de incubação para startups que trabalham nas áreas da educação, formação ou desenvolvimento de competências. A oportunidade é atualmente apresentada como aberta e requer uma equipa sediada em África com um protótipo.",
+    ],
+    requirements: [
+      "Applicants must be based in Africa, offer a solution related to education, training or skills development, have a prototype that can be tested or deployed in a local context, and have a committed team available to participate in the incubation programme.",
+      "Os candidatos devem estar sediados em África, apresentar uma solução relacionada com educação, formação ou desenvolvimento de competências, dispor de um protótipo que possa ser testado ou implementado num contexto local e contar com uma equipa empenhada e disponível para participar no programa de incubação.",
+    ],
+    good: [
+      "The opportunity is currently shown as open. No authoritative closing date or rolling-intake rule has been established. The programme offers incubation and investment-readiness support, but funding or investment is not guaranteed.",
+      "A oportunidade é atualmente apresentada como aberta. Não foi estabelecida qualquer data-limite oficial nem uma regra de candidaturas contínuas. O programa oferece incubação e apoio à preparação para investimento, mas o financiamento ou o investimento não são garantidos.",
+    ],
+    action: ["Apply", "Candidatar-se"],
+    checked: ["Checked 17 September 2026", "Revisto em 17 de setembro de 2026"],
+    detail_checked: ["Checked 17 September 2026", "Revisto em 17 de setembro de 2026"],
+  };
+  for (const [field, [en, pt]] of Object.entries(expected)) {
+    const key = `training.record.${R26_RECORD}.${field}`;
+    const row = data.keys[key];
+    if (!row) {
+      fail(`r26 key missing from generated locale data: ${key}`);
+      continue;
+    }
+    if (row.en !== en) fail(`r26 ${key} EN does not match the approved copy: got ${JSON.stringify(row.en)}`);
+    if (row.pt !== pt) fail(`r26 ${key} PT does not match the approved copy: got ${JSON.stringify(row.pt)}`);
+    if (row.scope_status !== "REQUIRED_FOR_PT_LAUNCH") fail(`r26 ${key} must be REQUIRED_FOR_PT_LAUNCH`);
+    if (row.record_id !== R26_RECORD) fail(`r26 ${key} is not scoped to its own record`);
+    if (row.source_revision !== R26_REVISION) {
+      fail(`r26 ${key} provenance is not the r26 revision: got ${JSON.stringify(row.source_revision)}`);
+    }
+    if (typeof row.pt !== "string" || row.pt === "") fail(`r26 ${key} has no governed Portuguese value`);
+    // The internal lifecycle token is never public copy, in either locale.
+    for (const [locale, value] of [["EN", row.en], ["PT", row.pt]]) {
+      if (typeof value === "string" && value.includes(INTERNAL_TOKEN)) {
+        fail(`r26 ${key} leaks the internal lifecycle token "${INTERNAL_TOKEN}" into ${locale} public copy`);
+      }
+    }
+  }
+  // Exactly these eight keys — nothing added for a NULL slot.
+  const namespace = `training.record.${R26_RECORD}.`;
+  const actual = Object.keys(data.keys).filter((key) => key.startsWith(namespace)).map((key) => key.slice(namespace.length)).sort();
+  const authorized = Object.keys(expected).sort();
+  if (JSON.stringify(actual) !== JSON.stringify(authorized)) {
+    fail(`r26 ${R26_RECORD} key set is not the authorized eight fields: got ${JSON.stringify(actual)}, authorized ${JSON.stringify(authorized)}`);
+  }
+  const title = data.keys[`${namespace}title`];
+  for (const [locale, value] of [["EN", title?.en], ["PT", title?.pt]]) {
+    if (typeof value !== "string" || !value.includes("timbuktoo")) {
+      fail(`r26 governed programme identity "timbuktoo" is not preserved in the ${locale} title`);
+    }
+    if (typeof value === "string" && value.includes("Timbuktoo")) {
+      fail(`r26 governed programme identity was capitalized in the ${locale} title: ${JSON.stringify(value)}`);
     }
   }
 }

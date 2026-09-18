@@ -28,7 +28,8 @@
     "institutional-training-catalog",
     "fixed-window-opportunity",
     "rolling-opportunity",
-    "recurring-opportunity"
+    "recurring-opportunity",
+    "open-call-unknown-deadline"
   ],
   "publication_states": {
     "CURRENT": "visible on the current surface",
@@ -1663,6 +1664,68 @@
           "href": "https://airtable.com/appYbpSCCV1VosC1M/pagMQfKHj9mIYPFyN/form",
           "label": {
             "locale_key": "training.record.timbuktoo-greentech-launchpad.action"
+          }
+        }
+      }
+    },
+    {
+      "id": "timbuktoo-edtech-pan-african-incubation",
+      "lifecycle_class": "open-call-unknown-deadline",
+      "publication_state": "CURRENT",
+      "ordinary_publication_eligibility": "ELIGIBLE",
+      "ordinary_publication_reason": null,
+      "provider": "United Nations Development Programme (UNDP) — timbuktoo",
+      "source": {
+        "source_url": "https://www.undp.org/africa/waca/news/call-applications",
+        "provenance": "Official UNDP call for applications published by timbuktoo. The call is shown as open; the source establishes no closing date and no rolling-intake rule, and none is inferred."
+      },
+      "checked_at": "2026-09-17",
+      "media_manifest_title": null,
+      "card": {
+        "action_tags": null,
+        "status": {
+          "locale_key": "training.record.timbuktoo-edtech-pan-african-incubation.status"
+        },
+        "title": {
+          "locale_key": "training.record.timbuktoo-edtech-pan-african-incubation.title"
+        },
+        "meta": null,
+        "body": {
+          "locale_key": "training.record.timbuktoo-edtech-pan-african-incubation.body"
+        },
+        "checked": {
+          "locale_key": "training.record.timbuktoo-edtech-pan-african-incubation.checked"
+        },
+        "action": {
+          "href": "https://airtable.com/appYbpSCCV1VosC1M/pagMQfKHj9mIYPFyN/form",
+          "label": {
+            "locale_key": "training.record.timbuktoo-edtech-pan-african-incubation.action"
+          }
+        }
+      },
+      "detail": {
+        "action_tags": null,
+        "title": {
+          "locale_key": "training.record.timbuktoo-edtech-pan-african-incubation.title"
+        },
+        "facts": null,
+        "details_body": {
+          "locale_key": "training.record.timbuktoo-edtech-pan-african-incubation.body"
+        },
+        "requirements": {
+          "locale_key": "training.record.timbuktoo-edtech-pan-african-incubation.requirements"
+        },
+        "original_posting": null,
+        "good_to_know": {
+          "locale_key": "training.record.timbuktoo-edtech-pan-african-incubation.good"
+        },
+        "checked": {
+          "locale_key": "training.record.timbuktoo-edtech-pan-african-incubation.detail_checked"
+        },
+        "action": {
+          "href": "https://airtable.com/appYbpSCCV1VosC1M/pagMQfKHj9mIYPFyN/form",
+          "label": {
+            "locale_key": "training.record.timbuktoo-edtech-pan-african-incubation.action"
           }
         }
       }

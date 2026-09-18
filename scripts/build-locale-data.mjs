@@ -82,6 +82,7 @@ const DELTA21_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r21-privacy-
 const DELTA22_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r22-lang-switch-note.source.json");
 const DELTA23_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r23-mindelo-fragata-selected-branches.source.json");
 const DELTA25_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r25-trainings-home-expansion-timbuktoo.source.json");
+const DELTA26_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r26-trainings-home-expansion-edtech.source.json");
 const LOCALE_DIR = path.join(ROOT, "data", "locales");
 const OUT_PATH = path.join(ROOT, "data", "locales", "locale-data.generated.json");
 
@@ -3051,6 +3052,177 @@ if (delta25Unchanged !== EXPECTED_DELTA25.intentionally_unchanged) {
   fail(`r25 intentionally_unchanged mismatch: got ${delta25Unchanged}`);
 }
 
+// --- r26 delta: additive merge for the new timbuktoo EdTech open call
+// (Project 03 return EDTECH_LIFECYCLE_RESOLVED, 18 September 2026, relayed by
+// the Project 04 Manager / Control Tower). Supplies the same bounded eight
+// record-scoped presentation keys r25 established, for
+// timbuktoo-edtech-pan-african-incubation.
+//
+// Same honest-provenance shape as r22/r23/r25: Project 09 EN/PT localization
+// authority is an upstream authority on the order, which supplies the exact
+// approved EN/PT values directly and states that no new Project 09 round is
+// required, so no Project 09 package/revision ID is fabricated below.
+//
+// This record's lifecycle class is open-call-unknown-deadline. That token is
+// governance architecture and must NEVER reach public copy, so it is asserted
+// absent from every governed string here — a localization-side guard on top of
+// the surface-side one. The approved status/body wording is carried verbatim
+// and is deliberately NOT reworded to describe the internal class.
+const EXPECTED_DELTA26 = {
+  package_id: "aprasa-trainings-home-expansion-edtech-r26",
+  revision_class: "ADDITIVE_NEW_KEYS",
+  source_revision: "P04-2026-09-18-TRAININGS-HOME-EXPANSION-EDTECH",
+  previous_revision: "P04-2026-09-18-TRAININGS-HOME-EXPANSION-TIMBUKTOO",
+  row_count: 8,
+  approved: 8,
+  required_for_pt_launch: 8,
+  intentionally_unchanged: 0,
+  review_required: 0,
+  records: ["timbuktoo-edtech-pan-african-incubation"],
+};
+// The internal lifecycle token this record carries. Pinned here so the guard
+// below cannot drift away from the class it is guarding.
+const EDTECH_INTERNAL_LIFECYCLE_TOKEN = "open-call-unknown-deadline";
+
+const delta26 = JSON.parse(readFileSync(DELTA26_PATH, "utf8"));
+
+for (const field of ["package_id", "revision_class", "source_revision", "previous_revision"]) {
+  if (delta26[field] !== EXPECTED_DELTA26[field]) {
+    fail(`r26 ${field} mismatch: got ${JSON.stringify(delta26[field])}, expected ${JSON.stringify(EXPECTED_DELTA26[field])}`);
+  }
+}
+if (delta26.project_09_status !== "approved") {
+  fail(`r26 Project 09 status is not approved: ${JSON.stringify(delta26.project_09_status)}`);
+}
+if (delta26.project_09_verdict !== "APPROVED_FOR_PUBLIC_USE") {
+  fail(`r26 Project 09 verdict is not APPROVED_FOR_PUBLIC_USE: ${JSON.stringify(delta26.project_09_verdict)}`);
+}
+if (delta26.project_09_package_id !== null) {
+  fail(`r26 must not fabricate a Project 09 package id: got ${JSON.stringify(delta26.project_09_package_id)}`);
+}
+if (delta26.project_09_revision_id !== null) {
+  fail(`r26 must not fabricate a Project 09 revision id: got ${JSON.stringify(delta26.project_09_revision_id)}`);
+}
+if (delta26.lifecycle_disclosure_policy !== "INTERNAL_TOKEN_NEVER_PUBLIC") {
+  fail(`r26 lifecycle_disclosure_policy mismatch: got ${JSON.stringify(delta26.lifecycle_disclosure_policy)}`);
+}
+if (!Array.isArray(delta26.rows) || delta26.rows.length !== EXPECTED_DELTA26.row_count) {
+  fail(`r26 row count mismatch: got ${delta26.rows?.length}, expected ${EXPECTED_DELTA26.row_count}`);
+}
+if (delta26.supplied_rows_approved !== EXPECTED_DELTA26.approved) {
+  fail(`r26 supplied_rows_approved mismatch: got ${delta26.supplied_rows_approved}`);
+}
+if (delta26.review_required !== EXPECTED_DELTA26.review_required
+  || delta26.semantic_escalations_required !== 0
+  || delta26.blocking_issue != null) {
+  fail("r26 has unresolved localization review state");
+}
+if (delta26.missing_or_unaccounted_row_count !== 0) {
+  fail(`r26 missing_or_unaccounted_row_count is non-zero: ${delta26.missing_or_unaccounted_row_count}`);
+}
+for (const listField of ["duplicate_keys", "placeholder_mismatches", "a_prasa_to_a_praca_violations"]) {
+  if ((delta26[listField] || []).length !== 0) fail(`r26 ${listField} is non-empty: ${JSON.stringify(delta26[listField])}`);
+}
+if (delta26.source_english_changed !== false || delta26.change_control_status?.existing_keys_overridden !== 0) {
+  fail("r26 declares a non-additive change (source_english_changed/existing_keys_overridden)");
+}
+if (delta26.change_control_status?.new_keys_introduced !== EXPECTED_DELTA26.row_count) {
+  fail(`r26 new_keys_introduced mismatch: got ${delta26.change_control_status?.new_keys_introduced}`);
+}
+if (delta26.change_control_status?.lifecycle_or_publication_state_modified !== 0) {
+  fail("r26 must not modify lifecycle or publication state");
+}
+if (delta26.localization_architecture_reopened !== false) {
+  fail("r26 must not reopen the localization architecture");
+}
+if (delta26.target_language !== "pt") {
+  fail(`r26 target_language mismatch: got ${JSON.stringify(delta26.target_language)}`);
+}
+const DELTA26_RECORDS = new Set(EXPECTED_DELTA26.records);
+const DELTA26_ALLOWED_FIELDS = new Set([
+  "title", "status", "body", "requirements", "good", "action", "checked", "detail_checked",
+]);
+const delta26SeenKeysByRecord = new Map(EXPECTED_DELTA26.records.map((id) => [id, new Set()]));
+let delta26Required = 0;
+let delta26Unchanged = 0;
+for (const row of delta26.rows) {
+  if (seen.has(row.key)) {
+    fail(`r26 key "${row.key}" collides with an existing key — r26 must be strictly additive, never reopen an existing key`);
+  }
+  seen.add(row.key);
+
+  if (!DELTA26_RECORDS.has(row.record_id)) {
+    fail(`r26 key "${row.key}" targets unauthorized record ${JSON.stringify(row.record_id)}`);
+  }
+  const expectedPrefix = `training.record.${row.record_id}.`;
+  if (!row.key.startsWith(expectedPrefix) || !DELTA26_ALLOWED_FIELDS.has(row.key.slice(expectedPrefix.length))) {
+    fail(`r26 key "${row.key}" is outside the authorized field set for its own record namespace`);
+  }
+  const recordKeys = delta26SeenKeysByRecord.get(row.record_id);
+  if (recordKeys.has(row.key)) fail(`r26 declares more than one row for key "${row.key}"`);
+  recordKeys.add(row.key);
+
+  if (row.source_revision !== EXPECTED_DELTA26.source_revision) {
+    fail(`r26 ${row.key} source_revision mismatch: got ${JSON.stringify(row.source_revision)}`);
+  }
+  if (row.translation_status !== "APPROVED") fail(`r26 key "${row.key}" is not APPROVED (status: ${row.translation_status})`);
+  // No silent PT fallback: both locales must carry a governed, non-empty value.
+  if (!row.source_en || !row.pt) fail(`r26 key "${row.key}" requires non-empty EN and PT values`);
+  if (row.scope_status !== "REQUIRED_FOR_PT_LAUNCH") fail(`r26 key "${row.key}" scope_status must be REQUIRED_FOR_PT_LAUNCH`);
+  if (row.scope_status === "REQUIRED_FOR_PT_LAUNCH") delta26Required += 1;
+  else if (row.scope_status === "INTENTIONALLY_UNCHANGED") delta26Unchanged += 1;
+
+  // The internal lifecycle token never becomes public copy, in either locale.
+  for (const [locale, value] of [["EN", row.source_en], ["PT", row.pt]]) {
+    if (value.includes(EDTECH_INTERNAL_LIFECYCLE_TOKEN)) {
+      fail(`r26 key "${row.key}" leaks the internal lifecycle token "${EDTECH_INTERNAL_LIFECYCLE_TOKEN}" into ${locale} public copy`);
+    }
+  }
+
+  if (row.key.endsWith(".title")) {
+    for (const [locale, value] of [["EN", row.source_en], ["PT", row.pt]]) {
+      if (!value.includes(TIMBUKTOO_PROGRAMME_IDENTITY)) {
+        fail(`r26 governed programme identity "${TIMBUKTOO_PROGRAMME_IDENTITY}" is not preserved in the ${locale} title`);
+      }
+    }
+  }
+
+  const enPlaceholders = (row.source_en.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+  const ptPlaceholders = (row.pt.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+  if (JSON.stringify(enPlaceholders) !== JSON.stringify(ptPlaceholders)) {
+    fail(`r26 key "${row.key}" placeholder mismatch`);
+  }
+  if ([row.source_en, row.pt].some((value) => value.includes("A PRAÇA"))) {
+    fail(`r26 key "${row.key}" violates protected A PRASA brand spelling`);
+  }
+
+  keys[row.key] = {
+    key: row.key,
+    en: row.source_en,
+    pt: row.pt,
+    scope_status: row.scope_status,
+    identity_policy: row.identity_policy,
+    record_id: row.record_id,
+    translation_status: row.translation_status,
+    source_revision: row.source_revision,
+    context_notes: row.context_notes || "",
+    linguistic_notes: row.linguistic_notes || "",
+  };
+}
+for (const recordId of EXPECTED_DELTA26.records) {
+  for (const field of DELTA26_ALLOWED_FIELDS) {
+    if (!delta26SeenKeysByRecord.get(recordId).has(`training.record.${recordId}.${field}`)) {
+      fail(`r26 is missing the "${field}" key for authorized record "${recordId}"`);
+    }
+  }
+}
+if (delta26Required !== EXPECTED_DELTA26.required_for_pt_launch) {
+  fail(`r26 required_for_pt_launch mismatch: got ${delta26Required}`);
+}
+if (delta26Unchanged !== EXPECTED_DELTA26.intentionally_unchanged) {
+  fail(`r26 intentionally_unchanged mismatch: got ${delta26Unchanged}`);
+}
+
 // Aggregate tallies, read off the finished key map that is about to be written.
 const assembled = (() => {
   const values = Object.values(keys);
@@ -3119,6 +3291,7 @@ const output = {
       "data/locales/pt-overlay-r22-lang-switch-note.source.json",
       "data/locales/pt-overlay-r23-mindelo-fragata-selected-branches.source.json",
       "data/locales/pt-overlay-r25-trainings-home-expansion-timbuktoo.source.json",
+      "data/locales/pt-overlay-r26-trainings-home-expansion-edtech.source.json",
     ],
     base_revision: pkg.source_revision,
     delta_revision: delta.source_revision,
@@ -3202,6 +3375,16 @@ const output = {
     delta25_project_09_review_date: delta25.project_09_review_date,
     delta25_project_09_package_id: delta25.project_09_package_id,
     delta25_project_09_revision_id: delta25.project_09_revision_id,
+    delta26_package_id: delta26.package_id,
+    delta26_revision: delta26.source_revision,
+    delta26_revision_class: delta26.revision_class,
+    delta26_row_count: delta26.rows.length,
+    delta26_project_09_status: delta26.project_09_status,
+    delta26_project_09_verdict: delta26.project_09_verdict,
+    delta26_project_09_review_date: delta26.project_09_review_date,
+    delta26_project_09_package_id: delta26.project_09_package_id,
+    delta26_project_09_revision_id: delta26.project_09_revision_id,
+    delta26_lifecycle_disclosure_policy: delta26.lifecycle_disclosure_policy,
     delta9_superseding_ruling: delta9.superseding_ruling,
     delta9_owning_project: delta9.owning_project,
     event_delta_packages: eventDeltaPackages,
