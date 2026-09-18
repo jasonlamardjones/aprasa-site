@@ -28,7 +28,8 @@
     "institutional-training-catalog",
     "fixed-window-opportunity",
     "rolling-opportunity",
-    "recurring-opportunity"
+    "recurring-opportunity",
+    "open-call-unknown-deadline"
   ],
   "publication_states": {
     "CURRENT": "visible on the current surface",
@@ -713,7 +714,7 @@
         "source_url": "https://skillsbuild.org/",
         "provenance": "Information published by the provider."
       },
-      "checked_at": "2026-08-10",
+      "checked_at": "2026-09-17",
       "media_manifest_title": "IBM SkillsBuild",
       "card": {
         "action_tags": [
@@ -1601,6 +1602,130 @@
           "href": "https://www.unicv.edu.cv/pt/nots-geral/5949-regea-prorroga-ate-30-de-setembro-chamada-para-comunicacoes-orais-em-16-grupos-de-trabalho",
           "label": {
             "locale_key": "training.record.regea-oral-communications-call-2026.action"
+          }
+        }
+      }
+    },
+    {
+      "id": "timbuktoo-greentech-launchpad",
+      "lifecycle_class": "rolling-opportunity",
+      "publication_state": "CURRENT",
+      "ordinary_publication_eligibility": "ELIGIBLE",
+      "ordinary_publication_reason": null,
+      "provider": "United Nations Development Programme (UNDP) — timbuktoo",
+      "source": {
+        "source_url": "https://www.undp.org/kenya/news/call-applications-join-timbuktoo-launchpad-greentech-startups",
+        "provenance": "Official UNDP call for applications published by timbuktoo."
+      },
+      "checked_at": "2026-09-17",
+      "media_manifest_title": null,
+      "card": {
+        "action_tags": null,
+        "status": {
+          "locale_key": "training.record.timbuktoo-greentech-launchpad.status"
+        },
+        "title": {
+          "locale_key": "training.record.timbuktoo-greentech-launchpad.title"
+        },
+        "meta": null,
+        "body": {
+          "locale_key": "training.record.timbuktoo-greentech-launchpad.body"
+        },
+        "checked": {
+          "locale_key": "training.record.timbuktoo-greentech-launchpad.checked"
+        },
+        "action": {
+          "href": "https://airtable.com/appYbpSCCV1VosC1M/pagMQfKHj9mIYPFyN/form",
+          "label": {
+            "locale_key": "training.record.timbuktoo-greentech-launchpad.action"
+          }
+        }
+      },
+      "detail": {
+        "action_tags": null,
+        "title": {
+          "locale_key": "training.record.timbuktoo-greentech-launchpad.title"
+        },
+        "facts": null,
+        "details_body": {
+          "locale_key": "training.record.timbuktoo-greentech-launchpad.body"
+        },
+        "requirements": {
+          "locale_key": "training.record.timbuktoo-greentech-launchpad.requirements"
+        },
+        "original_posting": null,
+        "good_to_know": {
+          "locale_key": "training.record.timbuktoo-greentech-launchpad.good"
+        },
+        "checked": {
+          "locale_key": "training.record.timbuktoo-greentech-launchpad.detail_checked"
+        },
+        "action": {
+          "href": "https://airtable.com/appYbpSCCV1VosC1M/pagMQfKHj9mIYPFyN/form",
+          "label": {
+            "locale_key": "training.record.timbuktoo-greentech-launchpad.action"
+          }
+        }
+      }
+    },
+    {
+      "id": "timbuktoo-edtech-pan-african-incubation",
+      "lifecycle_class": "open-call-unknown-deadline",
+      "publication_state": "CURRENT",
+      "ordinary_publication_eligibility": "ELIGIBLE",
+      "ordinary_publication_reason": null,
+      "provider": "United Nations Development Programme (UNDP) — timbuktoo",
+      "source": {
+        "source_url": "https://www.undp.org/africa/waca/news/call-applications",
+        "provenance": "Official UNDP call for applications published by timbuktoo. The call is shown as open; the source establishes no closing date and no rolling-intake rule, and none is inferred."
+      },
+      "checked_at": "2026-09-17",
+      "media_manifest_title": null,
+      "card": {
+        "action_tags": null,
+        "status": {
+          "locale_key": "training.record.timbuktoo-edtech-pan-african-incubation.status"
+        },
+        "title": {
+          "locale_key": "training.record.timbuktoo-edtech-pan-african-incubation.title"
+        },
+        "meta": null,
+        "body": {
+          "locale_key": "training.record.timbuktoo-edtech-pan-african-incubation.body"
+        },
+        "checked": {
+          "locale_key": "training.record.timbuktoo-edtech-pan-african-incubation.checked"
+        },
+        "action": {
+          "href": "https://airtable.com/appYbpSCCV1VosC1M/pagMQfKHj9mIYPFyN/form",
+          "label": {
+            "locale_key": "training.record.timbuktoo-edtech-pan-african-incubation.action"
+          }
+        }
+      },
+      "detail": {
+        "action_tags": null,
+        "title": {
+          "locale_key": "training.record.timbuktoo-edtech-pan-african-incubation.title"
+        },
+        "facts": null,
+        "details_body": {
+          "locale_key": "training.record.timbuktoo-edtech-pan-african-incubation.body"
+        },
+        "requirements": {
+          "locale_key": "training.record.timbuktoo-edtech-pan-african-incubation.requirements"
+        },
+        "original_posting": null,
+        "good_to_know": {
+          "locale_key": "training.record.timbuktoo-edtech-pan-african-incubation.good"
+        },
+        "checked": {
+          "locale_key": "training.record.timbuktoo-edtech-pan-african-incubation.detail_checked"
+        },
+        "action": {
+          "href": "https://airtable.com/appYbpSCCV1VosC1M/pagMQfKHj9mIYPFyN/form",
+          "label": {
+            "locale_key": "training.record.timbuktoo-edtech-pan-african-incubation.action"
           }
         }
       }

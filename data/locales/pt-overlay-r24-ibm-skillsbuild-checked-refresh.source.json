@@ -1,0 +1,72 @@
+{
+  "package_id": "aprasa-ibm-skillsbuild-checked-refresh-r24",
+  "revision_class": "OVERRIDE_EXISTING_KEYS",
+  "source_revision": "P03-PT-SOURCE-2026-09-17-r24",
+  "previous_revision": "P03-PT-SOURCE-2026-09-01-r12",
+  "revision_type": "EVERGREEN_RECORD_CHECKED_DATE_REFRESH",
+  "semantic_authority": "Project 03 — IMPLEMENTATION_INPUTS_COMPLETE, relayed by the Project 04 Manager / Control Tower task order \"Trainings & Opportunities Home Expansion\", 18 September 2026",
+  "linguistic_authority": "Project 09 — approved EN/PT strings",
+  "project_09_status": "approved",
+  "project_09_verdict": "APPROVED_FOR_PUBLIC_USE",
+  "project_09_review_date": "2026-09-17",
+  "project_09_package_id": null,
+  "project_09_revision_id": null,
+  "project_09_provenance_note": "The Project 04 Manager / Control Tower closeout order of 18 September 2026 supplies the approved EN/PT pairs for both keys under Project 09 linguistic authority and rules PROVENANCE RETAINED for detail_checked: the provider-publication provenance meaning must remain and only the verification date changes. No formal Project 09 package/revision ID accompanied the approved pairs; none is fabricated here. This supersedes the earlier partial r24 treatment in this branch, which dropped the provenance clause because no approved pair carrying it had yet been supplied. The clause is now restored from the approved pair rather than reconstructed. The governed PT clause is \"com base em informações publicadas pelo prestador.\"; it differs from the incumbent \"pela entidade\" wording and is carried exactly as approved.",
+  "intent": "Refreshes the currentness display copy for the evergreen ibm-skillsbuild record to the Project 03 checked date of 17 September 2026. Strictly a currentness refresh: introduces no new keys, adds no record, changes no lifecycle_class, publication_state or ordinary_publication_eligibility, reopens no descriptive copy, and makes no claim about credential availability or enhanced-feature access.",
+  "affected_records": [
+    "ibm-skillsbuild"
+  ],
+  "declared_new_row_count_in_handoff": 0,
+  "declared_overridden_row_count_in_handoff": 2,
+  "actual_row_objects_supplied": 2,
+  "missing_or_unaccounted_row_count": 0,
+  "supplied_rows_approved": 2,
+  "review_required": 0,
+  "semantic_escalations_required": 0,
+  "source_english_changed": true,
+  "localization_architecture_reopened": false,
+  "duplicate_keys": [],
+  "placeholder_mismatches": [],
+  "a_prasa_to_a_praca_violations": [],
+  "blocking_issue": null,
+  "change_control_status": {
+    "new_keys_introduced": 0,
+    "existing_keys_overridden": 2,
+    "english_source_values_modified": 2,
+    "lifecycle_or_publication_state_modified": 0,
+    "protected_identities_modified": 0,
+    "additional_languages_authorized": 0
+  },
+  "rows": [
+    {
+      "key": "training.record.ibm-skillsbuild.checked",
+      "source_revision": "P03-PT-SOURCE-2026-09-17-r24",
+      "baseline_source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "old_en": "Checked 10 August 2026",
+      "new_en": "Checked 17 September 2026",
+      "old_pt": "Revisto em 10 de agosto de 2026",
+      "new_pt": "Revisto em 17 de setembro de 2026",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "ibm-skillsbuild",
+      "semantic_change": true,
+      "ruling_note": "Card checked line advanced from 10 August 2026 to the Project 03 checked date of 17 September 2026. The approved pair is carried verbatim and matches the incumbent bare card pattern exactly.",
+      "translation_status": "APPROVED"
+    },
+    {
+      "key": "training.record.ibm-skillsbuild.detail_checked",
+      "source_revision": "P03-PT-SOURCE-2026-09-17-r24",
+      "baseline_source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "old_en": "Checked 10 August 2026 against information published by the provider.",
+      "new_en": "Checked 17 September 2026 against information published by the provider.",
+      "old_pt": "Revisto em 10 de agosto de 2026 com base em informações publicadas pela entidade.",
+      "new_pt": "Revisto em 17 de setembro de 2026 com base em informações publicadas pelo prestador.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "ibm-skillsbuild",
+      "semantic_change": true,
+      "ruling_note": "Detail checked line advanced to the Project 03 checked date of 17 September 2026. The Project 04 Manager / Control Tower closeout order of 18 September 2026 rules the provider-publication provenance meaning RETAINED: only the verification date changes. The approved EN/PT pair carrying the provenance clause at the new date is supplied by that order and is carried verbatim. Note the governed PT clause is \"com base em informações publicadas pelo prestador.\", which supersedes the incumbent \"pela entidade\" wording; the supplied value is used exactly as approved and is not normalized back.",
+      "translation_status": "APPROVED"
+    }
+  ]
+}

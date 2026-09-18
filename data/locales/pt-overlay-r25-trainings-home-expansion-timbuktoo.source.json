@@ -1,0 +1,143 @@
+{
+  "package_id": "aprasa-trainings-home-expansion-timbuktoo-r25",
+  "revision_class": "ADDITIVE_NEW_KEYS",
+  "source_revision": "P04-2026-09-18-TRAININGS-HOME-EXPANSION-TIMBUKTOO",
+  "previous_revision": "P03-PT-SOURCE-2026-09-17-r24",
+  "revision_type": "ROLLING_OPPORTUNITY_PUBLICATION",
+  "semantic_authority": "Project 03 — IMPLEMENTATION_COPY_COMPLETE, 18 September 2026, relayed by the Project 04 Manager / Control Tower closeout order \"#8 RESUME AFTER #10 CLOSEOUT\"",
+  "linguistic_authority": "Project 09 — approved EN/PT strings",
+  "project_09_status": "approved",
+  "project_09_verdict": "APPROVED_FOR_PUBLIC_USE",
+  "project_09_review_date": "2026-09-18",
+  "project_09_package_id": null,
+  "project_09_revision_id": null,
+  "project_09_provenance_note": "The Project 03 return labeled IMPLEMENTATION_COPY_COMPLETE (18 September 2026), relayed by the Project 04 Manager / Control Tower, supplies the exact approved EN and PT strings for every key below under Project 09 linguistic authority, with an explicit instruction not to invent optional filler copy. No formal Project 09 package/revision ID accompanied the package; none is fabricated here. Every value is carried verbatim: nothing is paraphrased, extended or reconstructed, and no key is created for a field the package marked NULL (meta, facts, original_posting).",
+  "intent": "Publishes the governed EN/PT presentation for the new rolling opportunity timbuktoo-greentech-launchpad on Home — Trainings, Tools & Opportunities. Strictly additive: overrides no existing key, reopens no approved copy, and changes no other record's lifecycle_class, publication_state or ordinary_publication_eligibility.",
+  "target_language": "pt",
+  "affected_records": [
+    "timbuktoo-greentech-launchpad"
+  ],
+  "declared_new_row_count_in_handoff": 8,
+  "actual_row_objects_supplied": 8,
+  "missing_or_unaccounted_row_count": 0,
+  "supplied_rows_approved": 8,
+  "review_required": 0,
+  "semantic_escalations_required": 0,
+  "source_english_changed": false,
+  "semantic_change": false,
+  "localization_architecture_reopened": false,
+  "duplicate_keys": [],
+  "placeholder_mismatches": [],
+  "a_prasa_to_a_praca_violations": [],
+  "blocking_issue": null,
+  "change_control_status": {
+    "new_keys_introduced": 8,
+    "existing_keys_overridden": 0,
+    "english_source_values_modified": 0,
+    "lifecycle_or_publication_state_modified": 0,
+    "protected_identities_modified": 0,
+    "additional_languages_authorized": 0
+  },
+  "governed_identity_preservation": [
+    "The programme identity \"timbuktoo\" is carried byte-exact in both locales, including its lowercase initial; it is never capitalized, normalized or respelled.",
+    "Provider identity, source URL, action URL, record id and the checked date are preserved verbatim from the governed package."
+  ],
+  "rows": [
+    {
+      "key": "training.record.timbuktoo-greentech-launchpad.title",
+      "source_revision": "P04-2026-09-18-TRAININGS-HOME-EXPANSION-TIMBUKTOO",
+      "source_en": "timbuktoo GreenTech Launchpad",
+      "pt": "timbuktoo GreenTech Launchpad",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "PRESERVE_PROVIDER_OR_PROGRAM_IDENTITY",
+      "record_id": "timbuktoo-greentech-launchpad",
+      "translation_status": "APPROVED",
+      "context_notes": "Governed presentation for the rolling opportunity timbuktoo-greentech-launchpad on Home — Trainings, Tools & Opportunities.",
+      "linguistic_notes": "Programme identity is preserved byte-exact in both locales, including the lowercase initial of \"timbuktoo\". Not a silent PT fallback: the approved PT value is deliberately identical because the programme name is not translated."
+    },
+    {
+      "key": "training.record.timbuktoo-greentech-launchpad.status",
+      "source_revision": "P04-2026-09-18-TRAININGS-HOME-EXPANSION-TIMBUKTOO",
+      "source_en": "Rolling opportunity",
+      "pt": "Oportunidade com candidaturas contínuas",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "timbuktoo-greentech-launchpad",
+      "translation_status": "APPROVED",
+      "context_notes": "Governed presentation for the rolling opportunity timbuktoo-greentech-launchpad on Home — Trainings, Tools & Opportunities.",
+      "linguistic_notes": "Card status line for the rolling lifecycle class. States the intake shape only; asserts no deadline."
+    },
+    {
+      "key": "training.record.timbuktoo-greentech-launchpad.body",
+      "source_revision": "P04-2026-09-18-TRAININGS-HOME-EXPANSION-TIMBUKTOO",
+      "source_en": "A rolling incubation opportunity for Africa-based or Africa-focused green and climate startups with a prototype or MVP. The programme offers mentoring, investment-readiness support and access to wider acceleration and investment pathways.",
+      "pt": "Uma oportunidade de incubação com candidaturas contínuas para startups verdes e climáticas sediadas em África ou focadas no continente, com um protótipo ou MVP. O programa oferece mentoria, apoio à preparação para investimento e acesso a outras oportunidades de aceleração e investimento.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "timbuktoo-greentech-launchpad",
+      "translation_status": "APPROVED",
+      "context_notes": "Governed presentation for the rolling opportunity timbuktoo-greentech-launchpad on Home — Trainings, Tools & Opportunities.",
+      "linguistic_notes": "Approved descriptive body. Serves as both the card body and the principal detail body under the task order's explicit ruling that the same approved body may serve as the detail body; no separate detail paragraph is authored."
+    },
+    {
+      "key": "training.record.timbuktoo-greentech-launchpad.requirements",
+      "source_revision": "P04-2026-09-18-TRAININGS-HOME-EXPANSION-TIMBUKTOO",
+      "source_en": "Applicants must be based in Africa or build solutions targeting African green and climate markets, have a prototype or MVP, have a committed founding team, address a relevant climate or environmental challenge, and demonstrate growth or scalability potential.",
+      "pt": "Os candidatos devem estar sediados em África ou desenvolver soluções dirigidas aos mercados africanos nas áreas verde e climática, ter um protótipo ou MVP, contar com uma equipa fundadora empenhada, responder a um desafio climático ou ambiental relevante e demonstrar potencial de crescimento ou de escalabilidade.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "timbuktoo-greentech-launchpad",
+      "translation_status": "APPROVED",
+      "context_notes": "Governed presentation for the rolling opportunity timbuktoo-greentech-launchpad on Home — Trainings, Tools & Opportunities.",
+      "linguistic_notes": "Approved eligibility requirements, carried verbatim."
+    },
+    {
+      "key": "training.record.timbuktoo-greentech-launchpad.good",
+      "source_revision": "P04-2026-09-18-TRAININGS-HOME-EXPANSION-TIMBUKTOO",
+      "source_en": "The programme offers incubation, mentoring and investment-readiness support, with potential pathways to acceleration and early-stage investment opportunities. Acceptance, funding and investment are not guaranteed.",
+      "pt": "O programa oferece incubação, mentoria e apoio à preparação para investimento, com possíveis vias de acesso a aceleração e a oportunidades de investimento em fase inicial. A aceitação, o financiamento e o investimento não são garantidos.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "timbuktoo-greentech-launchpad",
+      "translation_status": "APPROVED",
+      "context_notes": "Governed presentation for the rolling opportunity timbuktoo-greentech-launchpad on Home — Trainings, Tools & Opportunities.",
+      "linguistic_notes": "Approved good-to-know copy. Carries the explicit non-guarantee of acceptance, funding and investment."
+    },
+    {
+      "key": "training.record.timbuktoo-greentech-launchpad.action",
+      "source_revision": "P04-2026-09-18-TRAININGS-HOME-EXPANSION-TIMBUKTOO",
+      "source_en": "Apply",
+      "pt": "Candidatar-se",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "timbuktoo-greentech-launchpad",
+      "translation_status": "APPROVED",
+      "context_notes": "Governed presentation for the rolling opportunity timbuktoo-greentech-launchpad on Home — Trainings, Tools & Opportunities.",
+      "linguistic_notes": "Action label for the governed application form."
+    },
+    {
+      "key": "training.record.timbuktoo-greentech-launchpad.checked",
+      "source_revision": "P04-2026-09-18-TRAININGS-HOME-EXPANSION-TIMBUKTOO",
+      "source_en": "Checked 17 September 2026",
+      "pt": "Revisto em 17 de setembro de 2026",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_AND_LOCALIZE_DATE_DISPLAY",
+      "record_id": "timbuktoo-greentech-launchpad",
+      "translation_status": "APPROVED",
+      "context_notes": "Governed presentation for the rolling opportunity timbuktoo-greentech-launchpad on Home — Trainings, Tools & Opportunities.",
+      "linguistic_notes": "Card checked line for the Project 03 checked date of 17 September 2026. Matches the incumbent bare card pattern."
+    },
+    {
+      "key": "training.record.timbuktoo-greentech-launchpad.detail_checked",
+      "source_revision": "P04-2026-09-18-TRAININGS-HOME-EXPANSION-TIMBUKTOO",
+      "source_en": "Checked 17 September 2026",
+      "pt": "Revisto em 17 de setembro de 2026",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_AND_LOCALIZE_DATE_DISPLAY",
+      "record_id": "timbuktoo-greentech-launchpad",
+      "translation_status": "APPROVED",
+      "context_notes": "Governed presentation for the rolling opportunity timbuktoo-greentech-launchpad on Home — Trainings, Tools & Opportunities.",
+      "linguistic_notes": "Detail checked line. The task order supplies the bare date pair for this record with no provenance clause; none is composed, so the approved pair is carried verbatim."
+    }
+  ]
+}

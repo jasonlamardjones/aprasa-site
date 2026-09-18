@@ -152,13 +152,24 @@ jobs:
       - name: Validate training opportunity currentness (EN + PT Home)
         run: node scripts/validate-training-opportunities-currentness.mjs --as-of="$AS_OF_EMAR" --home=index.html --home=pt/index.html
 
-      # Two bounded checks that were not previously in CI, so the canonical
+      # Three bounded checks that were not previously in CI, so the canonical
       # training records are guarded the same way the Things-to-Do records
       # already are:
       #
       #   1. the structured-data validator, which proves every record resolves
       #      against the governed locale overlay and the media manifest;
-      #   2. the generator drift-check, run WITHOUT --write on both locales, so
+      #   2. the open-call-unknown-deadline lifecycle regression suite, which
+      #      proves the class accepts a CURRENT record with no end_date and
+      #      rejects one carrying a date, AND that the fixed-window invariant
+      #      (a governed end_date is REQUIRED) is still enforced in both
+      #      directions. That second half is the load-bearing part: the class
+      #      was added by extending two lifecycle registries and writing no
+      #      date rule of its own, so its whole risk is a later edit "tidying"
+      #      the shared date branch. It also asserts the internal lifecycle
+      #      token never reaches public copy on either Home surface. Runs in
+      #      throwaway copies of the repository, so it cannot dirty the
+      #      checkout the later drift and diff-scope steps depend on;
+      #   3. the generator drift-check, run WITHOUT --write on both locales, so
       #      a Home training region that no longer matches what the canonical
       #      data would produce fails the build instead of shipping.
       #
@@ -171,6 +182,7 @@ jobs:
       - name: Validate training opportunity structured data and generator drift
         run: |
           node scripts/validate-training-opportunities-data.mjs
+          node scripts/test-training-lifecycle-open-call.mjs
           node scripts/generate-training-opportunities.mjs --locale=en --as-of="$AS_OF"
           node scripts/generate-training-opportunities.mjs --locale=pt --as-of="$AS_OF" --home=pt/index.html
 

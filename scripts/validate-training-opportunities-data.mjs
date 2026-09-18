@@ -30,6 +30,17 @@ const LIFECYCLE_CLASSES = new Set([
   'fixed-window-opportunity',
   'rolling-opportunity',
   'recurring-opportunity',
+  // Project 03 ruling EDTECH_LIFECYCLE_RESOLVED, 18 September 2026. A bounded
+  // call whose authoritative evidence affirmatively shows applications are
+  // OPEN, but where no closing date and no rolling-intake rule has been
+  // established. Reusable, never record-specific.
+  //
+  // It deliberately needs no new date logic: the end_date invariant below
+  // already requires a governed end_date for fixed-window-opportunity and
+  // forbids one on every other class, so this class inherits "no end_date,
+  // ever" by being outside fixed-window — not by a rule of its own. That is
+  // why fixed-window semantics are untouched by adding it.
+  'open-call-unknown-deadline',
 ]);
 const PUBLICATION_STATES = new Set([
   'CURRENT',
