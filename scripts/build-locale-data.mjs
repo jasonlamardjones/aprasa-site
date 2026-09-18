@@ -80,6 +80,7 @@ const DELTA19_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r19-runtime-
 const DELTA20_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r20-start-cv-learning-spotlight.source.json");
 const DELTA21_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r21-privacy-link.source.json");
 const DELTA22_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r22-lang-switch-note.source.json");
+const DELTA23_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r23-mindelo-fragata-selected-branches.source.json");
 const LOCALE_DIR = path.join(ROOT, "data", "locales");
 const OUT_PATH = path.join(ROOT, "data", "locales", "locale-data.generated.json");
 
@@ -2638,6 +2639,208 @@ if (delta22Unchanged !== EXPECTED_DELTA22.intentionally_unchanged) {
   fail(`r22 intentionally_unchanged mismatch: got ${delta22Unchanged}`);
 }
 
+// --- r23 delta: additive merge for the two Project 03-selected Fragata branch
+// records (Mindelo Essentials — Fragata Selected Branches, Project 04 task
+// order dated 17 September 2026). Supplies record-scoped type_label and
+// description keys for SV-MIN-MKT-003 (Fragata — Central) and SV-MIN-MKT-004
+// (Fragata — Monte Sossego). Like r22, the task order carries Project 09
+// EN/PT localization authority as an upstream authority and supplies the
+// exact approved EN/PT description/type values directly, so no formal
+// Project 09 package/revision ID is fabricated below.
+//
+// checked_display was originally withheld: the task order supplied only the
+// raw checked_at date (2026-09-17), not approved display copy, and no generic
+// checked-date-to-display-string formatting rule exists anywhere in this
+// pipeline to inherit from (every checked_display in the corpus is an
+// individually hand-governed Project 09 string pair). Project 09 has since
+// approved the exact EN/PT checked-date pair for reuse across both selected
+// Fragata branches (Project 04 Manager relay, 17 September 2026, reuse_ruling
+// APPROVED, FINAL_STATUS READY_FOR_PROJECT_04) — see the r23 package's
+// project_09_provenance_note and checked_display_approval. Those two rows
+// carry their own, later source_revision tag (CHECKED_DATE_SOURCE_REVISION
+// below) distinct from the type_label/description rows', so the two-step
+// provenance stays auditable rather than being folded into the original
+// task-order date.
+const EXPECTED_DELTA23 = {
+  package_id: "aprasa-pt-mindelo-fragata-selected-branches-r23",
+  revision_class: "ADDITIVE_NEW_KEYS",
+  source_revision: "P04-2026-09-17-MINDELO-FRAGATA-SELECTED-BRANCHES",
+  previous_revision: "P04-2026-09-17-PORTUGUESE-IN-PROGRESS-SIGNAL",
+  row_count: 6,
+  approved: 6,
+  required_for_pt_launch: 6,
+  intentionally_unchanged: 0,
+  review_required: 0,
+  records: ["SV-MIN-MKT-003", "SV-MIN-MKT-004"],
+};
+const CHECKED_DATE_SOURCE_REVISION = "P04-2026-09-17-MINDELO-FRAGATA-CHECKED-DATE-APPROVED";
+const APPROVED_CHECKED_DISPLAY_EN = "Checked 17 September 2026";
+const APPROVED_CHECKED_DISPLAY_PT = "Revisto em 17 de setembro de 2026";
+
+const delta23 = JSON.parse(readFileSync(DELTA23_PATH, "utf8"));
+
+for (const field of ["package_id", "revision_class", "source_revision", "previous_revision"]) {
+  if (delta23[field] !== EXPECTED_DELTA23[field]) {
+    fail(`r23 ${field} mismatch: got ${JSON.stringify(delta23[field])}, expected ${JSON.stringify(EXPECTED_DELTA23[field])}`);
+  }
+}
+if (delta23.project_09_status !== "approved") {
+  fail(`r23 Project 09 status is not approved: ${JSON.stringify(delta23.project_09_status)}`);
+}
+if (delta23.project_09_verdict !== "APPROVED_FOR_PUBLIC_USE") {
+  fail(`r23 Project 09 verdict is not APPROVED_FOR_PUBLIC_USE: ${JSON.stringify(delta23.project_09_verdict)}`);
+}
+if (delta23.project_09_review_date !== "2026-09-17") {
+  fail(`r23 project_09_review_date mismatch: got ${JSON.stringify(delta23.project_09_review_date)}`);
+}
+if (delta23.project_09_package_id !== null) {
+  fail(`r23 must not fabricate a Project 09 package id: got ${JSON.stringify(delta23.project_09_package_id)}`);
+}
+if (delta23.project_09_revision_id !== null) {
+  fail(`r23 must not fabricate a Project 09 revision id: got ${JSON.stringify(delta23.project_09_revision_id)}`);
+}
+// The checked_display approval arrived as a separate, later Project 04
+// Manager relay of a Project 09 ruling — its own honesty gate, parallel to
+// the package-level project_09_package_id/revision_id checks above but
+// scoped to that specific approval rather than the whole package.
+const approval = delta23.checked_display_approval;
+if (approval?.relayed_by !== "Project 04 Manager / Control Tower") {
+  fail(`r23 checked_display_approval.relayed_by mismatch: got ${JSON.stringify(approval?.relayed_by)}`);
+}
+if (approval?.relay_date !== "2026-09-17") {
+  fail(`r23 checked_display_approval.relay_date mismatch: got ${JSON.stringify(approval?.relay_date)}`);
+}
+if (approval?.reuse_ruling !== "APPROVED — the exact same EN/PT checked-date pair may be reused for both Fragata — Central and Fragata — Monte Sossego.") {
+  fail(`r23 checked_display_approval.reuse_ruling is not the exact authorized ruling: got ${JSON.stringify(approval?.reuse_ruling)}`);
+}
+if (approval?.project_09_package_id !== null) {
+  fail(`r23 checked_display_approval must not fabricate a Project 09 package id: got ${JSON.stringify(approval?.project_09_package_id)}`);
+}
+if (approval?.project_09_revision_id !== null) {
+  fail(`r23 checked_display_approval must not fabricate a Project 09 revision id: got ${JSON.stringify(approval?.project_09_revision_id)}`);
+}
+if (approval?.final_status_cited !== "READY_FOR_PROJECT_04") {
+  fail(`r23 checked_display_approval.final_status_cited mismatch: got ${JSON.stringify(approval?.final_status_cited)}`);
+}
+if (!Array.isArray(delta23.rows) || delta23.rows.length !== EXPECTED_DELTA23.row_count) {
+  fail(`r23 row count mismatch: got ${delta23.rows?.length}, expected ${EXPECTED_DELTA23.row_count}`);
+}
+if (delta23.supplied_rows_approved !== EXPECTED_DELTA23.approved) {
+  fail(`r23 supplied_rows_approved mismatch: got ${delta23.supplied_rows_approved}`);
+}
+if (delta23.review_required !== EXPECTED_DELTA23.review_required
+  || delta23.blocking_issue != null
+  || delta23.semantic_escalations_required !== 0) {
+  fail("r23 has unresolved localization review state");
+}
+if (delta23.missing_or_unaccounted_row_count !== 0) {
+  fail(`r23 missing_or_unaccounted_row_count is non-zero: ${delta23.missing_or_unaccounted_row_count}`);
+}
+for (const listField of ["duplicate_keys", "placeholder_mismatches", "a_prasa_to_a_praca_violations"]) {
+  if ((delta23[listField] || []).length !== 0) fail(`r23 ${listField} is non-empty: ${JSON.stringify(delta23[listField])}`);
+}
+if (delta23.source_english_changed !== false || delta23.change_control_status?.existing_keys_overridden !== 0) {
+  fail("r23 declares a non-additive change (source_english_changed/existing_keys_overridden)");
+}
+if (delta23.change_control_status?.new_keys_introduced !== EXPECTED_DELTA23.row_count) {
+  fail(`r23 new_keys_introduced mismatch: got ${delta23.change_control_status?.new_keys_introduced}`);
+}
+if (delta23.change_control_status?.lifecycle_or_publication_state_modified !== 0) {
+  fail("r23 must not modify lifecycle or publication state");
+}
+if (delta23.semantic_change !== false) {
+  fail("r23 declares a semantic change; this package is a pure implementation binding");
+}
+if (delta23.localization_architecture_reopened !== false) {
+  fail("r23 must not reopen the localization architecture");
+}
+if (delta23.target_language !== "pt") {
+  fail(`r23 target_language mismatch: got ${JSON.stringify(delta23.target_language)}`);
+}
+
+const DELTA23_RECORDS = new Set(EXPECTED_DELTA23.records);
+const delta23SeenKeysByRecord = new Map(EXPECTED_DELTA23.records.map((id) => [id, new Set()]));
+const DELTA23_ALLOWED_FIELDS = new Set(["type_label", "description", "checked_display"]);
+let delta23Required = 0;
+let delta23Unchanged = 0;
+for (const row of delta23.rows) {
+  if (seen.has(row.key)) {
+    fail(`r23 key "${row.key}" collides with an existing key — r23 must be strictly additive, never reopen an existing key`);
+  }
+  seen.add(row.key);
+
+  if (!DELTA23_RECORDS.has(row.record_id)) {
+    fail(`r23 key "${row.key}" targets unauthorized record ${JSON.stringify(row.record_id)}`);
+  }
+  const expectedPrefix = `record.${row.record_id}.`;
+  if (!row.key.startsWith(expectedPrefix) || !DELTA23_ALLOWED_FIELDS.has(row.key.slice(expectedPrefix.length))) {
+    fail(`r23 key "${row.key}" is outside the authorized type_label/description/checked_display fields`);
+  }
+  const recordKeys = delta23SeenKeysByRecord.get(row.record_id);
+  if (recordKeys.has(row.key)) fail(`r23 declares more than one row for key "${row.key}"`);
+  recordKeys.add(row.key);
+
+  const expectedRowRevision = row.key.endsWith(".checked_display") ? CHECKED_DATE_SOURCE_REVISION : EXPECTED_DELTA23.source_revision;
+  if (row.source_revision !== expectedRowRevision) fail(`r23 ${row.key} source_revision mismatch: got ${JSON.stringify(row.source_revision)}, expected ${JSON.stringify(expectedRowRevision)}`);
+  if (row.translation_status !== "APPROVED") fail(`r23 key "${row.key}" is not APPROVED (status: ${row.translation_status})`);
+  if (!row.source_en || !row.pt) fail(`r23 key "${row.key}" requires non-empty EN and PT values`);
+
+  if (row.key.endsWith(".type_label")) {
+    if (row.source_en !== "Supermarket") fail(`r23 key "${row.key}" source_en must be the exact approved type_en "Supermarket"`);
+    if (row.pt !== "Supermercado") fail(`r23 key "${row.key}" pt must be the exact approved type_pt "Supermercado"`);
+  }
+  if (row.key.endsWith(".description")) {
+    const approvedEn = "Fragata is a local supermarket network. The provider advertises customer support and scheduled delivery; check directly with Fragata for current availability and coverage.";
+    const approvedPt = "A Fragata é uma rede local de supermercados. O prestador anuncia apoio ao cliente e entregas programadas; confirme diretamente com a Fragata a disponibilidade atual e a área de cobertura.";
+    if (row.source_en !== approvedEn) fail(`r23 key "${row.key}" source_en must be the exact approved description_en`);
+    if (row.pt !== approvedPt) fail(`r23 key "${row.key}" pt must be the exact approved description_pt`);
+  }
+  if (row.key.endsWith(".checked_display")) {
+    if (row.source_en !== APPROVED_CHECKED_DISPLAY_EN) fail(`r23 key "${row.key}" source_en must be the exact Project 09-approved "${APPROVED_CHECKED_DISPLAY_EN}"`);
+    if (row.pt !== APPROVED_CHECKED_DISPLAY_PT) fail(`r23 key "${row.key}" pt must be the exact Project 09-approved "${APPROVED_CHECKED_DISPLAY_PT}"`);
+    if (row.identity_policy !== "TRANSLATE_AND_LOCALIZE_DATE_DISPLAY") fail(`r23 key "${row.key}" identity_policy must be TRANSLATE_AND_LOCALIZE_DATE_DISPLAY`);
+  }
+
+  if (row.scope_status !== "REQUIRED_FOR_PT_LAUNCH") fail(`r23 key "${row.key}" scope_status must be REQUIRED_FOR_PT_LAUNCH`);
+  if (row.scope_status === "REQUIRED_FOR_PT_LAUNCH") delta23Required += 1;
+  else if (row.scope_status === "INTENTIONALLY_UNCHANGED") delta23Unchanged += 1;
+
+  const enPlaceholders = (row.source_en.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+  const ptPlaceholders = (row.pt.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+  if (JSON.stringify(enPlaceholders) !== JSON.stringify(ptPlaceholders)) {
+    fail(`r23 key "${row.key}" placeholder mismatch`);
+  }
+  if ([row.source_en, row.pt].some((value) => value.includes("A PRAÇA"))) {
+    fail(`r23 key "${row.key}" violates protected A PRASA brand spelling`);
+  }
+
+  keys[row.key] = {
+    key: row.key,
+    en: row.source_en,
+    pt: row.pt,
+    scope_status: row.scope_status,
+    identity_policy: row.identity_policy,
+    record_id: row.record_id,
+    translation_status: row.translation_status,
+    source_revision: row.source_revision,
+    context_notes: row.context_notes || "",
+    linguistic_notes: row.linguistic_notes || "",
+  };
+}
+for (const recordId of EXPECTED_DELTA23.records) {
+  for (const field of DELTA23_ALLOWED_FIELDS) {
+    if (!delta23SeenKeysByRecord.get(recordId).has(`record.${recordId}.${field}`)) {
+      fail(`r23 is missing the "${field}" key for authorized record "${recordId}"`);
+    }
+  }
+}
+if (delta23Required !== EXPECTED_DELTA23.required_for_pt_launch) {
+  fail(`r23 required_for_pt_launch mismatch: got ${delta23Required}`);
+}
+if (delta23Unchanged !== EXPECTED_DELTA23.intentionally_unchanged) {
+  fail(`r23 intentionally_unchanged mismatch: got ${delta23Unchanged}`);
+}
+
 // Aggregate tallies, read off the finished key map that is about to be written.
 const assembled = (() => {
   const values = Object.values(keys);
@@ -2704,6 +2907,7 @@ const output = {
       "data/locales/pt-overlay-r20-start-cv-learning-spotlight.source.json",
       "data/locales/pt-overlay-r21-privacy-link.source.json",
       "data/locales/pt-overlay-r22-lang-switch-note.source.json",
+      "data/locales/pt-overlay-r23-mindelo-fragata-selected-branches.source.json",
     ],
     base_revision: pkg.source_revision,
     delta_revision: delta.source_revision,
@@ -2769,6 +2973,15 @@ const output = {
     delta22_project_09_review_date: delta22.project_09_review_date,
     delta22_project_09_package_id: delta22.project_09_package_id,
     delta22_project_09_revision_id: delta22.project_09_revision_id,
+    delta23_package_id: delta23.package_id,
+    delta23_revision: delta23.source_revision,
+    delta23_revision_class: delta23.revision_class,
+    delta23_row_count: delta23.rows.length,
+    delta23_project_09_status: delta23.project_09_status,
+    delta23_project_09_verdict: delta23.project_09_verdict,
+    delta23_project_09_review_date: delta23.project_09_review_date,
+    delta23_project_09_package_id: delta23.project_09_package_id,
+    delta23_project_09_revision_id: delta23.project_09_revision_id,
     delta9_superseding_ruling: delta9.superseding_ruling,
     delta9_owning_project: delta9.owning_project,
     event_delta_packages: eventDeltaPackages,
@@ -2817,6 +3030,7 @@ const output = {
     r20_delta_rows: delta20.rows.length,
     r21_delta_rows: delta21.rows.length,
     r22_delta_rows: delta22.rows.length,
+    r23_delta_rows: delta23.rows.length,
     r10_renamed_rows: r10Renamed.length,
     governed_override_rows: governedOverrideCount,
   },

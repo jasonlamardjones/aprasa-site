@@ -75,6 +75,18 @@
     },
     {
       "type": "Feature",
+      "id": "SV-MIN-MKT-003",
+      "geometry": {"type": "Point", "coordinates": [-24.9884169, 16.8876964]},
+      "properties": {"id": "SV-MIN-MKT-003", "name": "Fragata — Central", "category": "Groceries & Everyday Shopping", "location": "Avenida 5 de Julho, Mindelo"}
+    },
+    {
+      "type": "Feature",
+      "id": "SV-MIN-MKT-004",
+      "geometry": {"type": "Point", "coordinates": [-24.98805, 16.87799]},
+      "properties": {"id": "SV-MIN-MKT-004", "name": "Fragata — Monte Sossego", "category": "Groceries & Everyday Shopping", "location": "Rua Academia de Música Jotamont, Monte Sossego, Mindelo"}
+    },
+    {
+      "type": "Feature",
       "id": "SV-MIN-LDM-PRACA-NOVA",
       "geometry": {"type": "Point", "coordinates": [-24.9879524, 16.8896754]},
       "properties": {

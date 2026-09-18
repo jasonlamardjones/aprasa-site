@@ -35,7 +35,8 @@
       "data/locales/pt-overlay-r19-runtime-whatsapp-prefill.source.json",
       "data/locales/pt-overlay-r20-start-cv-learning-spotlight.source.json",
       "data/locales/pt-overlay-r21-privacy-link.source.json",
-      "data/locales/pt-overlay-r22-lang-switch-note.source.json"
+      "data/locales/pt-overlay-r22-lang-switch-note.source.json",
+      "data/locales/pt-overlay-r23-mindelo-fragata-selected-branches.source.json"
     ],
     "base_revision": "P03-PT-SOURCE-2026-08-25-r2",
     "delta_revision": "P03-PT-SOURCE-2026-08-25-r3",
@@ -106,6 +107,15 @@
     "delta22_project_09_review_date": "2026-09-17",
     "delta22_project_09_package_id": null,
     "delta22_project_09_revision_id": null,
+    "delta23_package_id": "aprasa-pt-mindelo-fragata-selected-branches-r23",
+    "delta23_revision": "P04-2026-09-17-MINDELO-FRAGATA-SELECTED-BRANCHES",
+    "delta23_revision_class": "ADDITIVE_NEW_KEYS",
+    "delta23_row_count": 6,
+    "delta23_project_09_status": "approved",
+    "delta23_project_09_verdict": "APPROVED_FOR_PUBLIC_USE",
+    "delta23_project_09_review_date": "2026-09-17",
+    "delta23_project_09_package_id": null,
+    "delta23_project_09_revision_id": null,
     "delta9_superseding_ruling": "P03-SINERGIA-CURRENTNESS-2026-09-01",
     "delta9_owning_project": "Project 03",
     "event_delta_packages": [
@@ -186,10 +196,10 @@
     "governed_override_authorization": "fixed code-side contract in scripts/build-locale-data.mjs (GOVERNED_OVERRIDE_CONTRACTS)"
   },
   "counts": {
-    "total_rows": 1054,
-    "required_for_pt_launch": 1026,
+    "total_rows": 1060,
+    "required_for_pt_launch": 1032,
     "intentionally_unchanged": 28,
-    "approved_rows_total": 1054,
+    "approved_rows_total": 1060,
     "r3_delta_rows": 21,
     "r4_delta_rows": 26,
     "r5_delta_rows": 2,
@@ -205,6 +215,7 @@
     "r20_delta_rows": 13,
     "r21_delta_rows": 1,
     "r22_delta_rows": 1,
+    "r23_delta_rows": 6,
     "r10_renamed_rows": 76,
     "governed_override_rows": 6
   },
@@ -12889,6 +12900,78 @@
       "source_revision": "P04-2026-09-17-PORTUGUESE-IN-PROGRESS-SIGNAL",
       "context_notes": "Shared secondary informational line, rendered immediately after the EN/PT lang-switch nav on every surface that carries it. Presentation only — never an alert/warning/banner/modal/badge; keeps the switcher's own href/lang/hreflang/aria-current markup untouched.",
       "linguistic_notes": "Exact copy pair carried verbatim under Project 03 semantic authority (Project 04 task order, 17 September 2026) and Project 09 linguistic authority: a recovered Project 09 public-language review of this exact EN/PT pair, dated 17 September 2026, disposition APPROVED_FOR_PUBLIC_USE. That recovered approval record carries no formal Project 09 package/revision ID, so none is fabricated here. Carries no protected brand string and no placeholder."
+    },
+    "record.SV-MIN-MKT-003.type_label": {
+      "key": "record.SV-MIN-MKT-003.type_label",
+      "en": "Supermarket",
+      "pt": "Supermercado",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "SV-MIN-MKT-003",
+      "translation_status": "APPROVED",
+      "source_revision": "P04-2026-09-17-MINDELO-FRAGATA-SELECTED-BRANCHES",
+      "context_notes": "Directory record type/category descriptor.",
+      "linguistic_notes": "Task-order-approved type_en/type_pt pair, carried verbatim."
+    },
+    "record.SV-MIN-MKT-003.description": {
+      "key": "record.SV-MIN-MKT-003.description",
+      "en": "Fragata is a local supermarket network. The provider advertises customer support and scheduled delivery; check directly with Fragata for current availability and coverage.",
+      "pt": "A Fragata é uma rede local de supermercados. O prestador anuncia apoio ao cliente e entregas programadas; confirme diretamente com a Fragata a disponibilidade atual e a área de cobertura.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "SV-MIN-MKT-003",
+      "translation_status": "APPROVED",
+      "source_revision": "P04-2026-09-17-MINDELO-FRAGATA-SELECTED-BRANCHES",
+      "context_notes": "Provider-level description shared by both selected Fragata branches; deliberately does not claim branch-specific delivery, online ordering, stock or pricing.",
+      "linguistic_notes": "Task-order-approved description_en/description_pt pair, carried verbatim."
+    },
+    "record.SV-MIN-MKT-003.checked_display": {
+      "key": "record.SV-MIN-MKT-003.checked_display",
+      "en": "Checked 17 September 2026",
+      "pt": "Revisto em 17 de setembro de 2026",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_AND_LOCALIZE_DATE_DISPLAY",
+      "record_id": "SV-MIN-MKT-003",
+      "translation_status": "APPROVED",
+      "source_revision": "P04-2026-09-17-MINDELO-FRAGATA-CHECKED-DATE-APPROVED",
+      "context_notes": "Directory record checked-date display, matching the checked_at date on the task order (2026-09-17).",
+      "linguistic_notes": "Project 09-approved EN/PT checked-date pair, relayed by the Project 04 Manager on 17 September 2026 with an explicit reuse_ruling authorizing the same pair for both selected Fragata branches. No formal Project 09 package/revision ID was supplied with the relay; none is fabricated."
+    },
+    "record.SV-MIN-MKT-004.type_label": {
+      "key": "record.SV-MIN-MKT-004.type_label",
+      "en": "Supermarket",
+      "pt": "Supermercado",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "SV-MIN-MKT-004",
+      "translation_status": "APPROVED",
+      "source_revision": "P04-2026-09-17-MINDELO-FRAGATA-SELECTED-BRANCHES",
+      "context_notes": "Directory record type/category descriptor.",
+      "linguistic_notes": "Task-order-approved type_en/type_pt pair, carried verbatim."
+    },
+    "record.SV-MIN-MKT-004.description": {
+      "key": "record.SV-MIN-MKT-004.description",
+      "en": "Fragata is a local supermarket network. The provider advertises customer support and scheduled delivery; check directly with Fragata for current availability and coverage.",
+      "pt": "A Fragata é uma rede local de supermercados. O prestador anuncia apoio ao cliente e entregas programadas; confirme diretamente com a Fragata a disponibilidade atual e a área de cobertura.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "SV-MIN-MKT-004",
+      "translation_status": "APPROVED",
+      "source_revision": "P04-2026-09-17-MINDELO-FRAGATA-SELECTED-BRANCHES",
+      "context_notes": "Provider-level description shared by both selected Fragata branches; deliberately does not claim branch-specific delivery, online ordering, stock or pricing.",
+      "linguistic_notes": "Task-order-approved description_en/description_pt pair, carried verbatim."
+    },
+    "record.SV-MIN-MKT-004.checked_display": {
+      "key": "record.SV-MIN-MKT-004.checked_display",
+      "en": "Checked 17 September 2026",
+      "pt": "Revisto em 17 de setembro de 2026",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_AND_LOCALIZE_DATE_DISPLAY",
+      "record_id": "SV-MIN-MKT-004",
+      "translation_status": "APPROVED",
+      "source_revision": "P04-2026-09-17-MINDELO-FRAGATA-CHECKED-DATE-APPROVED",
+      "context_notes": "Directory record checked-date display, matching the checked_at date on the task order (2026-09-17).",
+      "linguistic_notes": "Project 09-approved EN/PT checked-date pair, relayed by the Project 04 Manager on 17 September 2026 with an explicit reuse_ruling authorizing the same pair for both selected Fragata branches. No formal Project 09 package/revision ID was supplied with the relay; none is fabricated."
     }
   }
 }
