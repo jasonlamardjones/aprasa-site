@@ -107,6 +107,17 @@ const ALLOWED_UNTRANSLATED = new Set([
   'Universidade de Cabo Verde / CIGEF',
   'Instituto Confúcio na Universidade de Cabo Verde',
   'Direção-Geral das Artes (DGARTES)',
+  // timbuktoo (UNDP): institutional provider identity for the
+  // timbuktoo-greentech-launchpad rolling opportunity, carried verbatim from
+  // the Project 03 IMPLEMENTATION_COPY_COMPLETE package of 18 September 2026.
+  // The governed package supplies exactly one provider value and explicitly
+  // reserves provider identity from reopening, so it is preserved as a
+  // locale-independent institutional fact here rather than translated. No
+  // Portuguese rendering of the UNDP name is composed: authoring one would be
+  // inventing governed copy, which this lane has no authority to do. The
+  // programme identity "timbuktoo" keeps its lowercase initial in both
+  // locales.
+  'United Nations Development Programme (UNDP) — timbuktoo',
 ]);
 
 // Two spots in Home's hero use inline markup to control visual line-breaks

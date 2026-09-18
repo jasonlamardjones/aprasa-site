@@ -1604,6 +1604,68 @@
           }
         }
       }
+    },
+    {
+      "id": "timbuktoo-greentech-launchpad",
+      "lifecycle_class": "rolling-opportunity",
+      "publication_state": "CURRENT",
+      "ordinary_publication_eligibility": "ELIGIBLE",
+      "ordinary_publication_reason": null,
+      "provider": "United Nations Development Programme (UNDP) — timbuktoo",
+      "source": {
+        "source_url": "https://www.undp.org/kenya/news/call-applications-join-timbuktoo-launchpad-greentech-startups",
+        "provenance": "Official UNDP call for applications published by timbuktoo."
+      },
+      "checked_at": "2026-09-17",
+      "media_manifest_title": null,
+      "card": {
+        "action_tags": null,
+        "status": {
+          "locale_key": "training.record.timbuktoo-greentech-launchpad.status"
+        },
+        "title": {
+          "locale_key": "training.record.timbuktoo-greentech-launchpad.title"
+        },
+        "meta": null,
+        "body": {
+          "locale_key": "training.record.timbuktoo-greentech-launchpad.body"
+        },
+        "checked": {
+          "locale_key": "training.record.timbuktoo-greentech-launchpad.checked"
+        },
+        "action": {
+          "href": "https://airtable.com/appYbpSCCV1VosC1M/pagMQfKHj9mIYPFyN/form",
+          "label": {
+            "locale_key": "training.record.timbuktoo-greentech-launchpad.action"
+          }
+        }
+      },
+      "detail": {
+        "action_tags": null,
+        "title": {
+          "locale_key": "training.record.timbuktoo-greentech-launchpad.title"
+        },
+        "facts": null,
+        "details_body": {
+          "locale_key": "training.record.timbuktoo-greentech-launchpad.body"
+        },
+        "requirements": {
+          "locale_key": "training.record.timbuktoo-greentech-launchpad.requirements"
+        },
+        "original_posting": null,
+        "good_to_know": {
+          "locale_key": "training.record.timbuktoo-greentech-launchpad.good"
+        },
+        "checked": {
+          "locale_key": "training.record.timbuktoo-greentech-launchpad.detail_checked"
+        },
+        "action": {
+          "href": "https://airtable.com/appYbpSCCV1VosC1M/pagMQfKHj9mIYPFyN/form",
+          "label": {
+            "locale_key": "training.record.timbuktoo-greentech-launchpad.action"
+          }
+        }
+      }
     }
   ]
 }
