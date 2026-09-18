@@ -1894,6 +1894,35 @@ const GOVERNED_OVERRIDE_CONTRACTS = Object.freeze([
       }),
     ]),
   }),
+  Object.freeze({
+    label: "r24",
+    file: "pt-overlay-r24-ibm-skillsbuild-checked-refresh.source.json",
+    package_id: "aprasa-ibm-skillsbuild-checked-refresh-r24",
+    revision_class: "OVERRIDE_EXISTING_KEYS",
+    source_revision: "P03-PT-SOURCE-2026-09-17-r24",
+    previous_revision: "P03-PT-SOURCE-2026-09-01-r12",
+    semantic_authority:
+      'Project 03 — IMPLEMENTATION_INPUTS_COMPLETE, relayed by the Project 04 Manager / Control Tower task order "Trainings & Opportunities Home Expansion", 18 September 2026',
+    linguistic_authority: "Project 09 — approved EN/PT strings",
+    records: Object.freeze(["ibm-skillsbuild"]),
+    tuples_digest: "395527b1117b7340b01e41e83bbd43ecc6f6607a1979636448bc281ff5674032",
+    tuples: Object.freeze([
+      Object.freeze({
+        key: "training.record.ibm-skillsbuild.checked",
+        old_en: "Checked 10 August 2026",
+        new_en: "Checked 17 September 2026",
+        old_pt: "Revisto em 10 de agosto de 2026",
+        new_pt: "Revisto em 17 de setembro de 2026",
+      }),
+      Object.freeze({
+        key: "training.record.ibm-skillsbuild.detail_checked",
+        old_en: "Checked 10 August 2026 against information published by the provider.",
+        new_en: "Checked 17 September 2026",
+        old_pt: "Revisto em 10 de agosto de 2026 com base em informações publicadas pela entidade.",
+        new_pt: "Revisto em 17 de setembro de 2026",
+      }),
+    ]),
+  }),
 ]);
 
 function tuplesDigest(tuples) {

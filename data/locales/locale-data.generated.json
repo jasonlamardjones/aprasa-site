@@ -191,6 +191,14 @@
         "revision_class": "OVERRIDE_EXISTING_KEYS",
         "overridden_keys": 1,
         "tuples_digest": "bd6f76798ad163aea53d8b3c9dcd58a532ea6ca70979f239bfef66271b9752cb"
+      },
+      {
+        "label": "r24",
+        "package_id": "aprasa-ibm-skillsbuild-checked-refresh-r24",
+        "source_revision": "P03-PT-SOURCE-2026-09-17-r24",
+        "revision_class": "OVERRIDE_EXISTING_KEYS",
+        "overridden_keys": 2,
+        "tuples_digest": "395527b1117b7340b01e41e83bbd43ecc6f6607a1979636448bc281ff5674032"
       }
     ],
     "governed_override_authorization": "fixed code-side contract in scripts/build-locale-data.mjs (GOVERNED_OVERRIDE_CONTRACTS)"
@@ -217,7 +225,7 @@
     "r22_delta_rows": 1,
     "r23_delta_rows": 6,
     "r10_renamed_rows": 76,
-    "governed_override_rows": 6
+    "governed_override_rows": 8
   },
   "keys": {
     "global.skip_to_content": {
@@ -2514,13 +2522,13 @@
     },
     "training.record.ibm-skillsbuild.checked": {
       "key": "training.record.ibm-skillsbuild.checked",
-      "en": "Checked 10 August 2026",
-      "pt": "Revisto em 10 de agosto de 2026",
+      "en": "Checked 17 September 2026",
+      "pt": "Revisto em 17 de setembro de 2026",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": "ibm-skillsbuild",
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-09-17-r24",
       "context_notes": "Home training/opportunity card and detail presentation.",
       "linguistic_notes": ""
     },
@@ -2550,13 +2558,13 @@
     },
     "training.record.ibm-skillsbuild.detail_checked": {
       "key": "training.record.ibm-skillsbuild.detail_checked",
-      "en": "Checked 10 August 2026 against information published by the provider.",
-      "pt": "Revisto em 10 de agosto de 2026 com base em informações publicadas pela entidade.",
+      "en": "Checked 17 September 2026",
+      "pt": "Revisto em 17 de setembro de 2026",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": "ibm-skillsbuild",
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
+      "source_revision": "P03-PT-SOURCE-2026-09-17-r24",
       "context_notes": "Home training/opportunity card and detail presentation.",
       "linguistic_notes": ""
     },
