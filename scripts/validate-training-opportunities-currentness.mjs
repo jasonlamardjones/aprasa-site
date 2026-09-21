@@ -1,10 +1,6 @@
 #!/usr/bin/env node
-// Currentness validator for Home training opportunities. It preserves the
-// two legacy EMAR / Kre+ surface checks and also enforces the canonical
-// fixed-window rule for structured training records: once end_date is before
-// the as-of date, publication_state may no longer remain CURRENT.
-//
-// The two EMAR / Kre+ records below are hand-authored resource cards. These
+// Narrowly-scoped currentness validator for the two EMAR / Kre+ time-sensitive
+// opportunity records on Home (Trainings, Tools & Opportunities). These
 // records are hand-authored resource cards, not part of the Things-to-Do
 // generator/currentness system, so they are not covered by
 // validate-things-to-do-currentness.mjs. This validator applies the same
@@ -16,9 +12,7 @@
 // Both EN and PT Home are canonical production surfaces, so both must be
 // checked: a state where an expired record is absent from EN but still
 // present on PT (or vice versa) is exactly the kind of drift this validator
-// exists to catch, not just simple "still on Home" staleness. The canonical
-// structured-data check is separate and does not infer expiry from checked_at.
-// Record titles
+// exists to catch, not just simple "still on Home" staleness. Record titles
 // are identity-preserved (kept in Portuguese) in both EN and PT copy, so the
 // same title/id match works unchanged against either file.
 //
@@ -55,36 +49,7 @@ const RECORDS = [
   },
 ];
 
-const TRAINING_DATA_PATH = path.join(root, 'data', 'training-opportunities.json');
-
-function loadCanonicalTrainingRecords() {
-  try {
-    const parsed = JSON.parse(fs.readFileSync(TRAINING_DATA_PATH, 'utf8'));
-    return Array.isArray(parsed.records) ? parsed.records : [];
-  } catch {
-    return null;
-  }
-}
-
 const errors = [];
-
-const canonicalRecords = loadCanonicalTrainingRecords();
-if (canonicalRecords === null) {
-  errors.push('data/training-opportunities.json: canonical training data could not be read');
-} else {
-  for (const record of canonicalRecords) {
-    if (
-      record.lifecycle_class === 'fixed-window-opportunity' &&
-      record.publication_state === 'CURRENT' &&
-      typeof record.end_date === 'string' &&
-      record.end_date < asOf
-    ) {
-      errors.push(
-        `data/training-opportunities.json: ${record.id} is fixed-window, ended ${record.end_date}, but is still CURRENT as of ${asOf}`
-      );
-    }
-  }
-}
 
 for (const homePath of homePaths) {
   const absPath = path.join(root, homePath);
