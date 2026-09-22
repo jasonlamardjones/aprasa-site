@@ -252,7 +252,7 @@ function checkProse(slot, where, recordId) {
   slot.forEach((entry, i) => checkSlot(entry, `${where}[${i}]`, recordId));
 }
 
-const MAILTO_ACTION_RE = /^mailto:[^\\s@?]+@[^\\s@?]+\\.[^\\s@?]+$/i;
+const MAILTO_ACTION_RE = /^mailto:[^\s@?]+@[^\s@?]+\.[^\s@?]+$/i;
 
 function isAllowedActionHref(href) {
   if (typeof href !== 'string') return false;
