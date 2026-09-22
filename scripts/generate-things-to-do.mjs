@@ -294,6 +294,13 @@ function renderFacts(facts = []) {
   }).join('');
 }
 
+function publicActionUrl(record) {
+  // Project 03 has approved durable provider destinations for the two current
+  // recurring-venue cards. Keep dated-event detail actions on source_url;
+  // only the recurring-venue kind resolves its public action from card_action.
+  return isRecurringVenue(record) ? (record.card_action?.url ?? record.source_url) : record.source_url;
+}
+
 function renderSchema(record, loc, expired) {
   // An evergreen recurring-venue record states no occurrence, so it must not
   // serialize Event semantics. An Event node with no startDate and an
@@ -384,7 +391,7 @@ function renderHomeArticle(record, loc) {
   const externalAction = record.card_action ? `\n            <a class="resource-link" href="${escapeHtml(record.card_action.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(loc.cardActionLabel)} <span aria-hidden="true">↗</span></a>` : '';
   const dialogMedia = record.media ? `\n              <div class="dialog-media"><img src="${homeMediaPrefix}${escapeHtml(record.media.asset)}" alt="${escapeHtml(loc.mediaAlt)}" loading="lazy" width="${record.media.width}" height="${record.media.height}"></div>` : '';
   const goodToKnow = loc.goodToKnow ? `\n              <h3>${escapeHtml(CHROME.goodToKnowHeading)}</h3>\n              ${renderBodyParagraphs(loc.goodToKnow, '              ')}` : '';
-  const dialogAction = loc.actionLabel ? `\n              <a class="dialog-link" href="${escapeHtml(record.source_url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(loc.actionLabel)} <span aria-hidden="true">↗</span></a>` : '';
+  const dialogAction = loc.actionLabel ? `\n              <a class="dialog-link" href="${escapeHtml(publicActionUrl(record))}" target="_blank" rel="noopener noreferrer">${escapeHtml(loc.actionLabel)} <span aria-hidden="true">↗</span></a>` : '';
   // Only an exact day-precision end is published here. A month-precision
   // record has no verified closing day, so no end attribute is emitted --
   // never a day synthesized from end_month.
@@ -485,7 +492,7 @@ function renderDetailPage(record, loc) {
   const media = record.media ? `\n      <div class="${detailMediaClass(record)}"><img src="${links.rootPrefix}${escapeHtml(record.media.asset)}" alt="${escapeHtml(loc.mediaAlt)}" loading="lazy" width="${record.media.width}" height="${record.media.height}"></div>` : '';
   const pastStatus = expired ? `\n      <p class="card-status">${escapeHtml(CHROME.pastEvent)}</p>` : '';
   const goodToKnow = loc.goodToKnow ? `\n      <h2>${escapeHtml(CHROME.goodToKnowHeading)}</h2>\n      ${renderBodyParagraphs(loc.goodToKnow, '      ')}` : '';
-  const action = loc.actionLabel ? `\n      <a class="dialog-link" href="${escapeHtml(record.source_url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(loc.actionLabel)} <span aria-hidden="true">↗</span></a>` : '';
+  const action = loc.actionLabel ? `\n      <a class="dialog-link" href="${escapeHtml(publicActionUrl(record))}" target="_blank" rel="noopener noreferrer">${escapeHtml(loc.actionLabel)} <span aria-hidden="true">↗</span></a>` : '';
 
   return `<!DOCTYPE html>
 <html lang="${locale}">
