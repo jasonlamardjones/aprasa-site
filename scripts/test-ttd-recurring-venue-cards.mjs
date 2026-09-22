@@ -46,7 +46,8 @@ const SOURCE_MASTER = 'assets/card-media/things-to-do/source/A_PRASA_TTD_Fallbac
 const EXPECTED = {
   'taverna-live-music': {
     provider: 'Taverna',
-    url: 'https://cvcultural.cv/eventos/agenda-semanal-musica-ao-vivo-na-taverna-11',
+    sourceUrl: 'https://cvcultural.cv/eventos/agenda-semanal-musica-ao-vivo-na-taverna-11',
+    actionUrl: 'https://www.facebook.com/TavernaMindelo',
     sourceType: 'third-party-cultural-schedule-listing',
     en: {
       title: 'Live Music at Taverna / Rua Pedonal',
@@ -65,7 +66,8 @@ const EXPECTED = {
   },
   'nautilus-live-music': {
     provider: 'Nautilus',
-    url: 'https://cvcultural.cv/eventos/agenda-musica-ao-vivo-no-nautilus',
+    sourceUrl: 'https://cvcultural.cv/eventos/agenda-musica-ao-vivo-no-nautilus',
+    actionUrl: 'https://www.facebook.com/Nautilus.Mindelo',
     sourceType: 'third-party-cultural-schedule-listing',
     en: {
       title: 'Live Music at Nautilus',
@@ -98,7 +100,7 @@ for (const id of ids) {
   // The governed checked date, byte-exact. Nothing may derive it from a build
   // clock, a commit time, a file mtime or the source page.
   check(`${id}: governed checked_at is 2026-09-16`, rec.checked_at === '2026-09-16', rec.checked_at);
-  check(`${id}: outbound source_url is the approved source`, rec.source_url === spec.url, rec.source_url);
+  check(`${id}: evidence source_url remains the approved source`, rec.source_url === spec.sourceUrl, rec.source_url);
   // Project 03 classified these sources on 17 September 2026. cvcultural.cv is
   // a THIRD-PARTY cultural agenda, not the venue's own channel, and the
   // classification is what tells a later reader how much weight the linked
@@ -109,7 +111,7 @@ for (const id of ids) {
   // Evergreen gateway, never an occurrence: Event-family structured data is
   // invalid for this kind at the record level as well as at render time.
   check(`${id}: declares WebPage structured data`, rec.seo?.schema_type === 'WebPage', rec.seo?.schema_type);
-  check(`${id}: card action points at the approved source`, rec.card_action?.url === spec.url, rec.card_action?.url);
+  check(`${id}: card action points at the approved durable provider destination`, rec.card_action?.url === spec.actionUrl, rec.card_action?.url);
   check(`${id}: makes no admission claim`, rec.free_admission === null, String(rec.free_admission));
   check(`${id}: carries no occurrence field`,
     OCCURRENCE_DATE_FIELDS.every((f) => !(f in rec)),
@@ -178,7 +180,7 @@ for (const id of ids) {
     check(`${rel}: renders the approved evergreen description`, html.includes(want.body));
     check(`${rel}: renders the approved outbound action label`, html.includes(want.action));
     check(`${rel}: renders the approved checked line`, html.includes(want.checked));
-    check(`${rel}: links the exact approved source`, html.includes(`href="${spec.url}"`));
+    check(`${rel}: links the exact approved durable provider destination`, html.includes(`href="${spec.actionUrl}"`));
     check(`${rel}: uses the shared category asset`, html.includes('live-performance-category-fallback.webp'));
     // Evergreen cards state no occurrence, so no Event node may be serialized.
     check(`${rel}: serializes no Event structured data`,

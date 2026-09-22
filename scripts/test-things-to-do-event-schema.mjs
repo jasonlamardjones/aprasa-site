@@ -203,10 +203,21 @@ expectRejectVenue('recurring-venue rejects a free-admission claim', { free_admis
 expectRejectVenue('recurring-venue rejects a paid-admission claim', { free_admission: false }, ADMISSION_ERR);
 expectRejectVenue('recurring-venue rejects an absent free_admission', { free_admission: undefined }, ADMISSION_ERR);
 
-// --- the outbound action must be the approved source ----------------------
-expectRejectVenue('recurring-venue rejects a card_action pointing away from the approved source',
+// --- the outbound action must be the approved schedule destination --------
+// Taverna and Nautilus have two record-specific durable provider destinations
+// approved by Project 03. Other recurring venues continue to default to the
+// evidence source_url unless separately governed.
+expectAcceptVenue('Taverna accepts its approved durable provider destination', {
+  card_action: { ...taverna.card_action, url: 'https://www.facebook.com/TavernaMindelo' },
+});
+record('Nautilus accepts its approved durable provider destination',
+  validate({
+    ...nautilus,
+    card_action: { ...nautilus.card_action, url: 'https://www.facebook.com/Nautilus.Mindelo' },
+  }).status === 0);
+expectRejectVenue('recurring-venue rejects an unapproved action destination',
   { card_action: { label: 'View current schedule', url: 'https://example.invalid/schedule' } },
-  /card_action.url must be the approved source_url/);
+  /card_action.url must match the approved schedule destination/);
 expectRejectVenue('recurring-venue rejects a missing card_action',
   { card_action: undefined }, /require a card_action.url/);
 
