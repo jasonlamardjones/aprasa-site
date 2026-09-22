@@ -743,6 +743,73 @@ for (const removedState of ['EXPIRED', 'WITHDRAWN', 'SUPERSEDED']) {
   }
 }
 
+// --- action href contract regression tests ---------------------------------
+// The contract is scheme-generic, never record-specific. Use a throwaway
+// currently-renderable HTTPS-backed record as the probe, then mutate only its
+// action hrefs inside the sandbox. This proves the validator accepts governed
+// HTTPS and mailto actions while continuing to reject unsupported or malformed
+// schemes. The mailto case also proves both EN and PT generators preserve the
+// href verbatim after attribute escaping.
+{
+  const cases = [
+    { label: 'valid HTTPS', href: 'https://example.org/apply', accepted: true },
+    { label: 'valid mailto', href: 'mailto:apply@example.org', accepted: true, render: true },
+    { label: 'unsupported HTTP', href: 'http://example.org/apply', accepted: false },
+    { label: 'unsupported javascript', href: 'javascript:alert(1)', accepted: false },
+    { label: 'malformed mailto', href: 'mailto:not-an-email', accepted: false },
+    { label: 'malformed HTTPS', href: 'https://', accepted: false },
+  ];
+
+  for (const probeCase of cases) {
+    const dir = sandbox();
+    const file = path.join(dir, 'data', 'training-opportunities.json');
+    const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+    const probe = data.records.find((record) =>
+      ['CURRENT', 'REVIEW-DUE'].includes(record.publication_state)
+      && record.ordinary_publication_eligibility === 'ELIGIBLE'
+      && record.card?.action
+      && record.detail?.action
+      && /^https:\/\//.test(record.card.action.href)
+      && /^https:\/\//.test(record.detail.action.href)
+    );
+
+    check(`ACTION CONTRACT (${probeCase.label}): found a generic renderable HTTPS action fixture`, Boolean(probe));
+    if (!probe) {
+      fs.rmSync(dir, { recursive: true, force: true });
+      continue;
+    }
+
+    probe.card.action.href = probeCase.href;
+    probe.detail.action.href = probeCase.href;
+    fs.writeFileSync(file, JSON.stringify(data, null, 2) + '\n');
+
+    const validation = dataValidator(dir);
+    if (probeCase.accepted) {
+      check(`ACTION CONTRACT (${probeCase.label}): structured-data validator accepts the action`,
+        validation.status === 0, validation.out.trim());
+    } else {
+      check(`ACTION CONTRACT (${probeCase.label}): structured-data validator rejects the action`,
+        validation.status === 1
+        && validation.out.includes('action href must be an absolute https URL or a valid mailto email action')
+        && validation.out.includes(probeCase.href),
+        validation.out.trim());
+    }
+
+    if (probeCase.render) {
+      for (const locale of ['en', 'pt']) {
+        const generated = run(dir, locale, ['--write']);
+        check(`ACTION CONTRACT (${probeCase.label}, ${locale.toUpperCase()}): generator succeeds`,
+          generated.status === 0, generated.stderr.trim());
+        const html = region(dir, locale, probe.id);
+        check(`ACTION CONTRACT (${probeCase.label}, ${locale.toUpperCase()}): rendered href is preserved`,
+          html !== null && html.includes(`href="${probeCase.href}"`), html ?? '');
+      }
+    }
+
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
 console.log(`\nGenerator ownership/state tests: ${passed}/${passed + failures.length} passed.`);
 if (failures.length) {
   console.error('\nFailures:');
