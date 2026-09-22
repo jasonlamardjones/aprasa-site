@@ -83,6 +83,7 @@ const DELTA22_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r22-lang-swi
 const DELTA23_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r23-mindelo-fragata-selected-branches.source.json");
 const DELTA25_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r25-trainings-home-expansion-timbuktoo.source.json");
 const DELTA26_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r26-trainings-home-expansion-edtech.source.json");
+const DELTA28_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r28-unicv-erasmus-unipvc-provider-identity.source.json");
 const LOCALE_DIR = path.join(ROOT, "data", "locales");
 const OUT_PATH = path.join(ROOT, "data", "locales", "locale-data.generated.json");
 
@@ -1925,6 +1926,97 @@ const GOVERNED_OVERRIDE_CONTRACTS = Object.freeze([
       }),
     ]),
   }),
+  Object.freeze({
+    label: "r27",
+    file: "pt-overlay-r27-unicv-erasmus-unipvc-deadline-extension.source.json",
+    package_id: "aprasa-unicv-erasmus-unipvc-deadline-extension-r27",
+    revision_class: "OVERRIDE_EXISTING_KEYS",
+    source_revision: "P03-PT-SOURCE-2026-09-22-r27",
+    previous_revision: "P03-PT-SOURCE-2026-09-07-r15",
+    semantic_authority: "Project 03 → Project 04 — URGENT ERASMUS+ UNIPVC PUBLICATION, 22 September 2026",
+    linguistic_authority: "Approved EN/PT public payload supplied in the Project 03 → Project 04 urgent implementation handoff of 22 September 2026; no separate Project 09 package/revision ID supplied.",
+    records: Object.freeze(["unicv-erasmus-viana-do-castelo-edital-027-2026"]),
+    tuples_digest: "661cd7fd3ab48b22f0578a5920d44aad1251f990d4853b1ce90edc1189983fa1",
+    tuples: Object.freeze([
+      Object.freeze({
+        key: "training.record.unicv-erasmus-viana-do-castelo-edital-027-2026.title",
+        old_en: "Uni-CV Erasmus+ Student Mobility — Universidade Politécnica de Viana do Castelo",
+        new_en: "Erasmus+ Study Mobility — UNIPVC, Portugal",
+        old_pt: "Mobilidade de Estudantes Erasmus+ da Uni-CV — Universidade Politécnica de Viana do Castelo",
+        new_pt: "Mobilidade de Estudos Erasmus+ — UNIPVC, Portugal",
+      }),
+      Object.freeze({
+        key: "training.record.unicv-erasmus-viana-do-castelo-edital-027-2026.status",
+        old_en: "10 September 2026",
+        new_en: "Apply by 25 September",
+        old_pt: "10 de setembro de 2026",
+        new_pt: "Candidate-se até 25 de setembro",
+      }),
+      Object.freeze({
+        key: "training.record.unicv-erasmus-viana-do-castelo-edital-027-2026.meta",
+        old_en: "2 Erasmus+ student mobility scholarships. No monetary scholarship amount is established in the approved evidence.",
+        new_en: "The call provides two Erasmus+ student-mobility scholarships for four months. The governing edital does not state the exact grant amount or a detailed covered-cost schedule.",
+        old_pt: "2 bolsas de mobilidade de estudantes Erasmus+. Não está estabelecido, na documentação aprovada, qualquer montante monetário da bolsa.",
+        new_pt: "A chamada disponibiliza duas bolsas de mobilidade Erasmus+ para estudantes, com a duração de quatro meses. O edital aplicável não indica o montante exato da bolsa nem uma discriminação detalhada dos custos cobertos.",
+      }),
+      Object.freeze({
+        key: "training.record.unicv-erasmus-viana-do-castelo-edital-027-2026.body",
+        old_en: "Uni-CV is accepting applications for two Erasmus+ student mobility scholarships with Universidade Politécnica de Viana do Castelo in Portugal.",
+        new_en: "Uni-CV students can apply for one of two four-month Erasmus+ study mobilities at Universidade Politécnica de Viana do Castelo in Portugal, planned for the second semester of 2026/27.",
+        old_pt: "A Uni-CV está a aceitar candidaturas para duas bolsas de mobilidade de estudantes Erasmus+ com a Universidade Politécnica de Viana do Castelo, em Portugal.",
+        new_pt: "Os estudantes da Uni-CV podem candidatar-se a uma de duas mobilidades de estudos Erasmus+ com a duração de quatro meses na Universidade Politécnica de Viana do Castelo, em Portugal, previstas para o segundo semestre de 2026/27.",
+      }),
+      Object.freeze({
+        key: "training.record.unicv-erasmus-viana-do-castelo-edital-027-2026.how_to_apply",
+        old_en: "Apply by email to gepc.mobilidade@unicv.cv with the required documents: updated academic transcript, proof of enrolment, CV, identification document and passport copy, motivation letter, institutional nomination or support declaration, proposed study plan, and English-proficiency certificate.",
+        new_en: "Applications must be submitted exclusively by email to gepc.mobilidade@unicv.cv. Open to current Uni-CV students. The governing edital does not state a campus restriction or a closed list of eligible study areas. Applications are assessed on study-plan relevance (30%), motivation (30%), language proficiency (20%) and no previous participation in mobility (20%). No closing hour stated",
+        old_pt: "Candidate-se por email para gepc.mobilidade@unicv.cv, enviando os documentos exigidos: histórico académico atualizado, comprovativo de matrícula, CV, documento de identificação e cópia do passaporte, carta de motivação, declaração institucional de nomeação ou apoio, plano de estudos proposto e certificado de proficiência em inglês.",
+        new_pt: "As candidaturas devem ser submetidas exclusivamente por email para gepc.mobilidade@unicv.cv. Aberto a atuais estudantes da Uni-CV. O edital aplicável não estabelece uma restrição de campus nem uma lista fechada de áreas de estudo elegíveis. As candidaturas são avaliadas com base na relevância do plano de estudos (30%), motivação (30%), proficiência linguística (20%) e ausência de participação anterior em mobilidade (20%). Não é indicada qualquer hora de encerramento",
+      }),
+      Object.freeze({
+        key: "training.record.unicv-erasmus-viana-do-castelo-edital-027-2026.requirements",
+        old_en: "Applicants must be students at Uni-CV.",
+        new_en: "Applicants must submit an updated academic transcript, proof of current enrollment, CV, copy of an identification document, passport, motivation letter, a valid support declaration from their Uni-CV academic department, a proposed study plan and an English-proficiency certificate. English proficiency must be at least B2.",
+        old_pt: "Os candidatos devem ser estudantes da Uni-CV.",
+        new_pt: "Os candidatos devem apresentar um histórico académico atualizado, comprovativo de matrícula atual, CV, cópia de um documento de identificação, passaporte, carta de motivação, uma declaração de apoio válida do respetivo departamento académico da Uni-CV, uma proposta de plano de estudos e um certificado de proficiência em inglês. A proficiência em inglês deve ser, no mínimo, de nível B2.",
+      }),
+      Object.freeze({
+        key: "training.record.unicv-erasmus-viana-do-castelo-edital-027-2026.good",
+        old_en: "Applications are competitive. Missing documentation or applications submitted after the deadline are not considered. Selection criteria include study-plan relevance, motivation, language proficiency and previous mobility participation.",
+        new_en: "The mobility is planned for the second semester of 2026/27, between February and July 2027. The mobility itself lasts four months. The governing edital does not state the exact scholarship amount, travel allowance, monthly support, green-travel supplement or detailed covered-cost structure.",
+        old_pt: "As candidaturas são sujeitas a seleção. Candidaturas incompletas ou submetidas após o prazo não são consideradas. Os critérios de seleção incluem a relevância do plano de estudos, a motivação, a proficiência linguística e a participação anterior em programas de mobilidade.",
+        new_pt: "A mobilidade está prevista para o segundo semestre de 2026/27, entre fevereiro e julho de 2027. A mobilidade propriamente dita tem a duração de quatro meses. O edital aplicável não indica o montante exato da bolsa, qualquer subsídio de viagem, apoio mensal, suplemento para viagens ecológicas nem uma estrutura detalhada dos custos cobertos.",
+      }),
+      Object.freeze({
+        key: "training.record.unicv-erasmus-viana-do-castelo-edital-027-2026.checked",
+        old_en: "Checked 7 September 2026 against the official Uni-CV Erasmus+ announcement and the supplied Edital 027.",
+        new_en: "Checked 22 September 2026",
+        old_pt: "Revisto em 7 de setembro de 2026 com base no anúncio oficial da Uni-CV sobre o Erasmus+ e no Edital 027 fornecido.",
+        new_pt: "Revisto em 22 de setembro de 2026",
+      }),
+      Object.freeze({
+        key: "training.record.unicv-erasmus-viana-do-castelo-edital-027-2026.detail_checked",
+        old_en: "Checked 7 September 2026 against the official Uni-CV Erasmus+ announcement and the supplied Edital 027.",
+        new_en: "Checked 22 September 2026 against the governing Uni-CV edital and the current deadline-extension notice.",
+        old_pt: "Revisto em 7 de setembro de 2026 com base no anúncio oficial da Uni-CV sobre o Erasmus+ e no Edital 027 fornecido.",
+        new_pt: "Revisto em 22 de setembro de 2026 com base no edital aplicável da Uni-CV e no aviso atual de prorrogação do prazo.",
+      }),
+      Object.freeze({
+        key: "training.record.unicv-erasmus-viana-do-castelo-edital-027-2026.action",
+        old_en: "View application details",
+        new_en: "Apply by email",
+        old_pt: "Ver detalhes da candidatura",
+        new_pt: "Candidatar-se por email",
+      }),
+      Object.freeze({
+        key: "training.record.unicv-erasmus-viana-do-castelo-edital-027-2026.fact.programme_dates",
+        old_en: "4-month mobility during the second semester of 2027; the official edital identifies February to July 2027 as the mobility period.",
+        new_en: "The mobility is planned for the second semester of 2026/27, between February and July 2027. The mobility itself lasts four months.",
+        old_pt: "Mobilidade de 4 meses durante o segundo semestre de 2027; o edital oficial identifica fevereiro a julho de 2027 como o período de mobilidade.",
+        new_pt: "A mobilidade está prevista para o segundo semestre de 2026/27, entre fevereiro e julho de 2027. A mobilidade propriamente dita tem a duração de quatro meses.",
+      })
+    ]),
+  }),
 ]);
 
 function tuplesDigest(tuples) {
@@ -3223,6 +3315,42 @@ if (delta26Unchanged !== EXPECTED_DELTA26.intentionally_unchanged) {
   fail(`r26 intentionally_unchanged mismatch: got ${delta26Unchanged}`);
 }
 
+// --- r28 delta: additive locale-independent provider identity -------------
+const delta28 = JSON.parse(readFileSync(DELTA28_PATH, "utf8"));
+if (delta28.package_id !== "aprasa-unicv-erasmus-unipvc-provider-identity-r28"
+  || delta28.revision_class !== "ADDITIVE_NEW_KEYS"
+  || delta28.source_revision !== "P03-PT-SOURCE-2026-09-22-r28"
+  || delta28.previous_revision !== "P03-PT-SOURCE-2026-09-22-r27") {
+  fail("r28 identity/provenance fields do not match the authorized values");
+}
+if (delta28.project_09_status !== "approved" || delta28.project_09_verdict !== "APPROVED_FOR_PUBLIC_USE") {
+  fail("r28 approval state is not public-use approved");
+}
+if (!Array.isArray(delta28.rows) || delta28.rows.length !== 1) fail("r28 must contain exactly one row");
+const r28row = delta28.rows[0];
+if (r28row.key !== "training.record.unicv-erasmus-viana-do-castelo-edital-027-2026.provider_identity"
+  || r28row.record_id !== "unicv-erasmus-viana-do-castelo-edital-027-2026"
+  || r28row.source_en !== "Universidade de Cabo Verde / Erasmus+"
+  || r28row.pt !== "Universidade de Cabo Verde / Erasmus+"
+  || r28row.scope_status !== "INTENTIONALLY_UNCHANGED"
+  || r28row.translation_status !== "APPROVED") {
+  fail("r28 provider identity row does not match the authorized value");
+}
+if (seen.has(r28row.key)) fail(`r28 key "${r28row.key}" collides with an existing key`);
+seen.add(r28row.key);
+keys[r28row.key] = {
+  key: r28row.key,
+  en: r28row.source_en,
+  pt: r28row.pt,
+  scope_status: r28row.scope_status,
+  identity_policy: r28row.identity_policy,
+  record_id: r28row.record_id,
+  translation_status: r28row.translation_status,
+  source_revision: r28row.source_revision,
+  context_notes: r28row.context_notes || "",
+  linguistic_notes: r28row.linguistic_notes || "",
+};
+
 // Aggregate tallies, read off the finished key map that is about to be written.
 const assembled = (() => {
   const values = Object.values(keys);
@@ -3292,6 +3420,7 @@ const output = {
       "data/locales/pt-overlay-r23-mindelo-fragata-selected-branches.source.json",
       "data/locales/pt-overlay-r25-trainings-home-expansion-timbuktoo.source.json",
       "data/locales/pt-overlay-r26-trainings-home-expansion-edtech.source.json",
+      "data/locales/pt-overlay-r28-unicv-erasmus-unipvc-provider-identity.source.json",
     ],
     base_revision: pkg.source_revision,
     delta_revision: delta.source_revision,
@@ -3385,6 +3514,10 @@ const output = {
     delta26_project_09_package_id: delta26.project_09_package_id,
     delta26_project_09_revision_id: delta26.project_09_revision_id,
     delta26_lifecycle_disclosure_policy: delta26.lifecycle_disclosure_policy,
+    delta28_package_id: delta28.package_id,
+    delta28_revision: delta28.source_revision,
+    delta28_revision_class: delta28.revision_class,
+    delta28_row_count: delta28.rows.length,
     delta9_superseding_ruling: delta9.superseding_ruling,
     delta9_owning_project: delta9.owning_project,
     event_delta_packages: eventDeltaPackages,
@@ -3436,6 +3569,7 @@ const output = {
     r23_delta_rows: delta23.rows.length,
     r10_renamed_rows: r10Renamed.length,
     governed_override_rows: governedOverrideCount,
+    r28_delta_rows: delta28.rows.length,
   },
   keys,
 };

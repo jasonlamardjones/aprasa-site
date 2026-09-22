@@ -252,10 +252,27 @@ function checkProse(slot, where, recordId) {
   slot.forEach((entry, i) => checkSlot(entry, `${where}[${i}]`, recordId));
 }
 
+const MAILTO_ACTION_RE = /^mailto:[^\s@?]+@[^\s@?]+\.[^\s@?]+$/i;
+
+function isAllowedActionHref(href) {
+  if (typeof href !== 'string') return false;
+
+  if (href.startsWith('https://')) {
+    try {
+      const parsed = new URL(href);
+      return parsed.protocol === 'https:' && Boolean(parsed.hostname);
+    } catch {
+      return false;
+    }
+  }
+
+  return MAILTO_ACTION_RE.test(href);
+}
+
 function checkAction(action, where, recordId) {
   if (action == null) return;
-  if (typeof action.href !== 'string' || !/^https:\/\//.test(action.href)) {
-    fail(`${where}: action href must be an absolute https URL, got ${JSON.stringify(action.href)}`);
+  if (!isAllowedActionHref(action.href)) {
+    fail(`${where}: action href must be an absolute https URL or a valid mailto email action, got ${JSON.stringify(action.href)}`);
   }
   checkSlot(action.label, `${where} label`, recordId);
 }
