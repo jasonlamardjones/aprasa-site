@@ -85,11 +85,11 @@ for (const fileName of eventDeltaFiles) {
 // timbuktoo-edtech-pan-african-incubation open call (Project 03
 // EDTECH_LIFECYCLE_RESOLVED of 18 September 2026) — same eight-field shape as
 // r25, same NULL slots left keyless. ---
-if (keys.length !== 980 + eventDeltaRequired + eventDeltaUnchanged) fail(`expected ${980 + eventDeltaRequired + eventDeltaUnchanged} total keys including approved event deltas, got ${keys.length}`);
+if (keys.length !== 981 + eventDeltaRequired + eventDeltaUnchanged) fail(`expected ${981 + eventDeltaRequired + eventDeltaUnchanged} total keys including approved event deltas, got ${keys.length}`);
 const required = keys.filter((k) => k.scope_status === "REQUIRED_FOR_PT_LAUNCH");
 const unchanged = keys.filter((k) => k.scope_status === "INTENTIONALLY_UNCHANGED");
 if (required.length !== 952 + eventDeltaRequired) fail(`expected ${952 + eventDeltaRequired} REQUIRED_FOR_PT_LAUNCH keys, got ${required.length}`);
-if (unchanged.length !== 28 + eventDeltaUnchanged) fail(`expected ${28 + eventDeltaUnchanged} INTENTIONALLY_UNCHANGED keys, got ${unchanged.length}`);
+if (unchanged.length !== 29 + eventDeltaUnchanged) fail(`expected ${29 + eventDeltaUnchanged} INTENTIONALLY_UNCHANGED keys, got ${unchanged.length}`);
 if (data.provenance.delta_revision !== "P03-PT-SOURCE-2026-08-25-r3") {
   fail(`unexpected delta_revision: ${data.provenance.delta_revision}`);
 }
@@ -169,7 +169,17 @@ for (const recordId of R15_RECORDS) {
       continue;
     }
     if (row.scope_status !== "REQUIRED_FOR_PT_LAUNCH") fail(`r15 ${key} must be REQUIRED_FOR_PT_LAUNCH`);
-    if (row.source_revision !== "P03-PT-SOURCE-2026-09-07-r15") fail(`r15 ${key} provenance is not the r15 revision`);
+    const r27RefreshedFields = new Set([
+      "title", "status", "meta", "body", "how_to_apply", "requirements",
+      "good", "checked", "detail_checked", "action", "fact.programme_dates",
+    ]);
+    const expectedRevision =
+      recordId === "unicv-erasmus-viana-do-castelo-edital-027-2026" && r27RefreshedFields.has(field)
+        ? "P03-PT-SOURCE-2026-09-22-r27"
+        : "P03-PT-SOURCE-2026-09-07-r15";
+    if (row.source_revision !== expectedRevision) {
+      fail(`r15/r27 ${key} provenance mismatch: got ${JSON.stringify(row.source_revision)}, expected ${JSON.stringify(expectedRevision)}`);
+    }
     if (row.record_id !== recordId) fail(`r15 ${key} is not scoped to its own record`);
     if (typeof row.pt !== "string" || row.pt === "") fail(`r15 ${key} has no governed Portuguese value`);
   }
@@ -191,6 +201,39 @@ for (const recordId of R15_RECORDS) {
       .map((id) => data.keys[`training.record.${id}.title`]?.en)
   );
   if (titles.size !== 3) fail("r15 the three Erasmus records do not carry three distinct governed titles");
+}
+
+// --- r27/r28 UNIPVC deadline-extension refresh ----------------------------
+{
+  const R = "unicv-erasmus-viana-do-castelo-edital-027-2026";
+  const R27 = "P03-PT-SOURCE-2026-09-22-r27";
+  const expected = {
+    title: ["Erasmus+ Study Mobility — UNIPVC, Portugal", "Mobilidade de Estudos Erasmus+ — UNIPVC, Portugal"],
+    status: ["Apply by 25 September", "Candidate-se até 25 de setembro"],
+    checked: ["Checked 22 September 2026", "Revisto em 22 de setembro de 2026"],
+    action: ["Apply by email", "Candidatar-se por email"],
+  };
+  for (const [field, [en, pt]] of Object.entries(expected)) {
+    const key = `training.record.${R}.${field}`;
+    const row = data.keys[key];
+    if (!row) fail(`r27 key missing: ${key}`);
+    else {
+      if (row.en !== en || row.pt !== pt) fail(`r27 ${key} does not match approved EN/PT copy`);
+      if (row.source_revision !== R27) fail(`r27 ${key} provenance mismatch`);
+    }
+  }
+  const providerKey = `training.record.${R}.provider_identity`;
+  const provider = data.keys[providerKey];
+  if (!provider) fail(`r28 key missing: ${providerKey}`);
+  else {
+    if (provider.en !== "Universidade de Cabo Verde / Erasmus+" || provider.pt !== "Universidade de Cabo Verde / Erasmus+") {
+      fail("r28 provider identity differs from the approved locale-independent value");
+    }
+    if (provider.scope_status !== "INTENTIONALLY_UNCHANGED"
+      || provider.source_revision !== "P03-PT-SOURCE-2026-09-22-r28") {
+      fail("r28 provider identity provenance/scope is incorrect");
+    }
+  }
 }
 
 // --- r16 delta spot checks (four provider-media alt descriptions) ---
