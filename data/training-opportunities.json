@@ -872,16 +872,16 @@
     {
       "id": "unicv-erasmus-viana-do-castelo-edital-027-2026",
       "lifecycle_class": "fixed-window-opportunity",
-      "publication_state": "EXPIRED",
+      "publication_state": "CURRENT",
       "ordinary_publication_eligibility": "ELIGIBLE",
       "ordinary_publication_reason": null,
-      "provider": "Universidade de Cabo Verde — Gabinete de Estudos, Planeamento e Cooperação (GEPC)",
+      "provider": "Universidade de Cabo Verde / Erasmus+",
       "source": {
         "source_url": "https://www.unicv.edu.cv/pt/nots-geral/5956-novas-oportunidades-erasmus-para-estudantes-da-uni-cv",
         "provenance": "Official Uni-CV Erasmus+ announcement; Edital 027/2026-27 supplied in the evidence packet with no separate public URL."
       },
-      "checked_at": "2026-09-07",
-      "end_date": "2026-09-10",
+      "checked_at": "2026-09-22",
+      "end_date": "2026-09-25",
       "card": {
         "action_tags": null,
         "status": {
@@ -900,7 +900,7 @@
           "locale_key": "training.record.unicv-erasmus-viana-do-castelo-edital-027-2026.checked"
         },
         "action": {
-          "href": "https://www.unicv.edu.cv/pt/nots-geral/5956-novas-oportunidades-erasmus-para-estudantes-da-uni-cv",
+          "href": "mailto:gepc.mobilidade@unicv.cv",
           "label": {
             "locale_key": "training.record.unicv-erasmus-viana-do-castelo-edital-027-2026.action"
           }
@@ -943,7 +943,7 @@
           "locale_key": "training.record.unicv-erasmus-viana-do-castelo-edital-027-2026.detail_checked"
         },
         "action": {
-          "href": "https://www.unicv.edu.cv/pt/nots-geral/5956-novas-oportunidades-erasmus-para-estudantes-da-uni-cv",
+          "href": "mailto:gepc.mobilidade@unicv.cv",
           "label": {
             "locale_key": "training.record.unicv-erasmus-viana-do-castelo-edital-027-2026.action"
           }
