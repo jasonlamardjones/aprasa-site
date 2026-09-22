@@ -16,6 +16,10 @@ const isoDateTime = /^\d{4}-\d{2}-\d{2}T/;
 const detailRoutePattern = /^things-to-do\/[a-z0-9]+(?:-[a-z0-9]+)*\/$/;
 const allowedPublicationStates = new Set(['draft', 'published', 'expired', 'withdrawn']);
 const allowedMediaPolicies = new Set(['required', 'fallback_allowed']);
+const RECURRING_VENUE_DURABLE_ACTION_URLS = new Map([
+  ['taverna-live-music', 'https://www.facebook.com/TavernaMindelo'],
+  ['nautilus-live-music', 'https://www.facebook.com/Nautilus.Mindelo'],
+]);
 
 for (const record of data.records ?? []) {
   const label = record.title ?? record.id ?? 'unknown';
@@ -96,10 +100,11 @@ for (const record of data.records ?? []) {
     if (record.free_admission !== null) {
       errors.push(`${label}: recurring-venue records must set free_admission to null (no admission claim)`);
     }
+    const approvedActionUrl = RECURRING_VENUE_DURABLE_ACTION_URLS.get(record.id) ?? record.source_url;
     if (!record.card_action?.url) {
-      errors.push(`${label}: recurring-venue records require a card_action.url pointing at the approved current-schedule source`);
-    } else if (record.card_action.url !== record.source_url) {
-      errors.push(`${label}: recurring-venue card_action.url must be the approved source_url`);
+      errors.push(`${label}: recurring-venue records require a card_action.url pointing at the approved schedule destination`);
+    } else if (record.card_action.url !== approvedActionUrl) {
+      errors.push(`${label}: recurring-venue card_action.url must match the approved schedule destination`);
     }
     // Structured data. The generator already hard-codes the @type, so a stray
     // value here cannot reach a published page -- but it must still be reported
