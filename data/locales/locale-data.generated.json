@@ -138,6 +138,10 @@
     "delta26_project_09_package_id": null,
     "delta26_project_09_revision_id": null,
     "delta26_lifecycle_disclosure_policy": "INTERNAL_TOKEN_NEVER_PUBLIC",
+    "delta28_package_id": "aprasa-unicv-erasmus-unipvc-provider-identity-r28",
+    "delta28_revision": "P03-PT-SOURCE-2026-09-22-r28",
+    "delta28_revision_class": "ADDITIVE_NEW_KEYS",
+    "delta28_row_count": 1,
     "delta9_superseding_ruling": "P03-SINERGIA-CURRENTNESS-2026-09-01",
     "delta9_owning_project": "Project 03",
     "event_delta_packages": [
@@ -231,11 +235,7 @@
         "tuples_digest": "661cd7fd3ab48b22f0578a5920d44aad1251f990d4853b1ce90edc1189983fa1"
       }
     ],
-    "governed_override_authorization": "fixed code-side contract in scripts/build-locale-data.mjs (GOVERNED_OVERRIDE_CONTRACTS)",
-    "delta28_package_id": "aprasa-unicv-erasmus-unipvc-provider-identity-r28",
-    "delta28_revision": "P03-PT-SOURCE-2026-09-22-r28",
-    "delta28_revision_class": "ADDITIVE_NEW_KEYS",
-    "delta28_row_count": 1
+    "governed_override_authorization": "fixed code-side contract in scripts/build-locale-data.mjs (GOVERNED_OVERRIDE_CONTRACTS)"
   },
   "counts": {
     "total_rows": 1077,
@@ -259,7 +259,8 @@
     "r22_delta_rows": 1,
     "r23_delta_rows": 6,
     "r10_renamed_rows": 76,
-    "governed_override_rows": 19
+    "governed_override_rows": 19,
+    "r28_delta_rows": 1
   },
   "keys": {
     "global.skip_to_content": {
