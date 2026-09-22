@@ -1271,12 +1271,23 @@ if (warnings.length) {
     if (!generatedFrom.includes(relative)) {
       fail(`additive package ${relative} is merged into the build but is not declared in provenance.generated_from`);
     }
+    const authorizedOverrideRevisions = new Set(
+      (data.provenance?.governed_override_packages ?? []).map((pkg) => pkg.source_revision)
+    );
     for (const row of source.rows ?? []) {
       const generated = data.keys[row.key];
       if (!generated) {
         fail(`additive package ${relative} declares key "${row.key}" which is absent from the generated artifact — it is therefore uncounted`);
       } else if (generated.en !== row.source_en || generated.pt !== row.pt) {
-        fail(`additive package ${relative} key "${row.key}" does not match the generated artifact`);
+        // An additive package can legitimately be superseded later by an
+        // authorized OVERRIDE_EXISTING_KEYS package. In that case the final
+        // artifact must carry the override package's source_revision; otherwise
+        // a mismatch remains an error. The builder independently pins every
+        // governed override tuple and digest, so this does not authorize free
+        // drift from the additive source.
+        if (!authorizedOverrideRevisions.has(generated.source_revision)) {
+          fail(`additive package ${relative} key "${row.key}" does not match the generated artifact and is not superseded by an authorized governed override`);
+        }
       }
     }
   }
