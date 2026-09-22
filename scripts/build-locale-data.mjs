@@ -1924,7 +1924,7 @@ const GOVERNED_OVERRIDE_CONTRACTS = Object.freeze([
         new_pt: "Revisto em 17 de setembro de 2026 com base em informações publicadas pelo prestador.",
       }),
     ]),
-  }),,
+  }),
   Object.freeze({
     label: "r27",
     file: "pt-overlay-r27-unicv-erasmus-unipvc-deadline-extension.source.json",
@@ -2016,7 +2016,7 @@ const GOVERNED_OVERRIDE_CONTRACTS = Object.freeze([
       })
     ]),
   }),
-);
+]);
 
 function tuplesDigest(tuples) {
   const canonical = [...tuples]
