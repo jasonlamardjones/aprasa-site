@@ -83,6 +83,7 @@ const DELTA22_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r22-lang-swi
 const DELTA23_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r23-mindelo-fragata-selected-branches.source.json");
 const DELTA25_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r25-trainings-home-expansion-timbuktoo.source.json");
 const DELTA26_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r26-trainings-home-expansion-edtech.source.json");
+const DELTA28_PATH = path.join(ROOT, "data", "locales", "pt-overlay-r28-unicv-erasmus-unipvc-provider-identity.source.json");
 const LOCALE_DIR = path.join(ROOT, "data", "locales");
 const OUT_PATH = path.join(ROOT, "data", "locales", "locale-data.generated.json");
 
@@ -1935,7 +1936,7 @@ const GOVERNED_OVERRIDE_CONTRACTS = Object.freeze([
     semantic_authority: "Project 03 → Project 04 — URGENT ERASMUS+ UNIPVC PUBLICATION, 22 September 2026",
     linguistic_authority: "Approved EN/PT public payload supplied in the Project 03 → Project 04 urgent implementation handoff of 22 September 2026; no separate Project 09 package/revision ID supplied.",
     records: Object.freeze(["unicv-erasmus-viana-do-castelo-edital-027-2026"]),
-    tuples_digest: "89ed7056100d378e44f683dfeb43b9caaf85ddf2b51f7b89a9c9a5067641e8f3",
+    tuples_digest: "661cd7fd3ab48b22f0578a5920d44aad1251f990d4853b1ce90edc1189983fa1",
     tuples: Object.freeze([
       Object.freeze({
         key: "training.record.unicv-erasmus-viana-do-castelo-edital-027-2026.title",
@@ -1968,9 +1969,9 @@ const GOVERNED_OVERRIDE_CONTRACTS = Object.freeze([
       Object.freeze({
         key: "training.record.unicv-erasmus-viana-do-castelo-edital-027-2026.how_to_apply",
         old_en: "Apply by email to gepc.mobilidade@unicv.cv with the required documents: updated academic transcript, proof of enrolment, CV, identification document and passport copy, motivation letter, institutional nomination or support declaration, proposed study plan, and English-proficiency certificate.",
-        new_en: "Applications must be submitted exclusively by email to gepc.mobilidade@unicv.cv.\n\nOpen to current Uni-CV students. The governing edital does not state a campus restriction or a closed list of eligible study areas.\n\nApplications are assessed on study-plan relevance (30%), motivation (30%), language proficiency (20%) and no previous participation in mobility (20%).\n\nNo closing hour stated",
+        new_en: "Applications must be submitted exclusively by email to gepc.mobilidade@unicv.cv. Open to current Uni-CV students. The governing edital does not state a campus restriction or a closed list of eligible study areas. Applications are assessed on study-plan relevance (30%), motivation (30%), language proficiency (20%) and no previous participation in mobility (20%). No closing hour stated",
         old_pt: "Candidate-se por email para gepc.mobilidade@unicv.cv, enviando os documentos exigidos: histórico académico atualizado, comprovativo de matrícula, CV, documento de identificação e cópia do passaporte, carta de motivação, declaração institucional de nomeação ou apoio, plano de estudos proposto e certificado de proficiência em inglês.",
-        new_pt: "As candidaturas devem ser submetidas exclusivamente por email para gepc.mobilidade@unicv.cv.\n\nAberto a atuais estudantes da Uni-CV. O edital aplicável não estabelece uma restrição de campus nem uma lista fechada de áreas de estudo elegíveis.\n\nAs candidaturas são avaliadas com base na relevância do plano de estudos (30%), motivação (30%), proficiência linguística (20%) e ausência de participação anterior em mobilidade (20%).\n\nNão é indicada qualquer hora de encerramento",
+        new_pt: "As candidaturas devem ser submetidas exclusivamente por email para gepc.mobilidade@unicv.cv. Aberto a atuais estudantes da Uni-CV. O edital aplicável não estabelece uma restrição de campus nem uma lista fechada de áreas de estudo elegíveis. As candidaturas são avaliadas com base na relevância do plano de estudos (30%), motivação (30%), proficiência linguística (20%) e ausência de participação anterior em mobilidade (20%). Não é indicada qualquer hora de encerramento",
       }),
       Object.freeze({
         key: "training.record.unicv-erasmus-viana-do-castelo-edital-027-2026.requirements",
@@ -3314,6 +3315,42 @@ if (delta26Unchanged !== EXPECTED_DELTA26.intentionally_unchanged) {
   fail(`r26 intentionally_unchanged mismatch: got ${delta26Unchanged}`);
 }
 
+// --- r28 delta: additive locale-independent provider identity -------------
+const delta28 = JSON.parse(readFileSync(DELTA28_PATH, "utf8"));
+if (delta28.package_id !== "aprasa-unicv-erasmus-unipvc-provider-identity-r28"
+  || delta28.revision_class !== "ADDITIVE_NEW_KEYS"
+  || delta28.source_revision !== "P03-PT-SOURCE-2026-09-22-r28"
+  || delta28.previous_revision !== "P03-PT-SOURCE-2026-09-22-r27") {
+  fail("r28 identity/provenance fields do not match the authorized values");
+}
+if (delta28.project_09_status !== "approved" || delta28.project_09_verdict !== "APPROVED_FOR_PUBLIC_USE") {
+  fail("r28 approval state is not public-use approved");
+}
+if (!Array.isArray(delta28.rows) || delta28.rows.length !== 1) fail("r28 must contain exactly one row");
+const r28row = delta28.rows[0];
+if (r28row.key !== "training.record.unicv-erasmus-viana-do-castelo-edital-027-2026.provider_identity"
+  || r28row.record_id !== "unicv-erasmus-viana-do-castelo-edital-027-2026"
+  || r28row.source_en !== "Universidade de Cabo Verde / Erasmus+"
+  || r28row.pt !== "Universidade de Cabo Verde / Erasmus+"
+  || r28row.scope_status !== "INTENTIONALLY_UNCHANGED"
+  || r28row.translation_status !== "APPROVED") {
+  fail("r28 provider identity row does not match the authorized value");
+}
+if (seen.has(r28row.key)) fail(`r28 key "${r28row.key}" collides with an existing key`);
+seen.add(r28row.key);
+keys[r28row.key] = {
+  key: r28row.key,
+  en: r28row.source_en,
+  pt: r28row.pt,
+  scope_status: r28row.scope_status,
+  identity_policy: r28row.identity_policy,
+  record_id: r28row.record_id,
+  translation_status: r28row.translation_status,
+  source_revision: r28row.source_revision,
+  context_notes: r28row.context_notes || "",
+  linguistic_notes: r28row.linguistic_notes || "",
+};
+
 // Aggregate tallies, read off the finished key map that is about to be written.
 const assembled = (() => {
   const values = Object.values(keys);
@@ -3383,6 +3420,7 @@ const output = {
       "data/locales/pt-overlay-r23-mindelo-fragata-selected-branches.source.json",
       "data/locales/pt-overlay-r25-trainings-home-expansion-timbuktoo.source.json",
       "data/locales/pt-overlay-r26-trainings-home-expansion-edtech.source.json",
+      "data/locales/pt-overlay-r28-unicv-erasmus-unipvc-provider-identity.source.json",
     ],
     base_revision: pkg.source_revision,
     delta_revision: delta.source_revision,
@@ -3476,6 +3514,10 @@ const output = {
     delta26_project_09_package_id: delta26.project_09_package_id,
     delta26_project_09_revision_id: delta26.project_09_revision_id,
     delta26_lifecycle_disclosure_policy: delta26.lifecycle_disclosure_policy,
+    delta28_package_id: delta28.package_id,
+    delta28_revision: delta28.source_revision,
+    delta28_revision_class: delta28.revision_class,
+    delta28_row_count: delta28.rows.length,
     delta9_superseding_ruling: delta9.superseding_ruling,
     delta9_owning_project: delta9.owning_project,
     event_delta_packages: eventDeltaPackages,
@@ -3527,6 +3569,7 @@ const output = {
     r23_delta_rows: delta23.rows.length,
     r10_renamed_rows: r10Renamed.length,
     governed_override_rows: governedOverrideCount,
+    r28_delta_rows: delta28.rows.length,
   },
   keys,
 };

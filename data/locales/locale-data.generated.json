@@ -38,7 +38,8 @@
       "data/locales/pt-overlay-r22-lang-switch-note.source.json",
       "data/locales/pt-overlay-r23-mindelo-fragata-selected-branches.source.json",
       "data/locales/pt-overlay-r25-trainings-home-expansion-timbuktoo.source.json",
-      "data/locales/pt-overlay-r26-trainings-home-expansion-edtech.source.json"
+      "data/locales/pt-overlay-r26-trainings-home-expansion-edtech.source.json",
+      "data/locales/pt-overlay-r28-unicv-erasmus-unipvc-provider-identity.source.json"
     ],
     "base_revision": "P03-PT-SOURCE-2026-08-25-r2",
     "delta_revision": "P03-PT-SOURCE-2026-08-25-r3",
@@ -227,16 +228,20 @@
         "source_revision": "P03-PT-SOURCE-2026-09-22-r27",
         "revision_class": "OVERRIDE_EXISTING_KEYS",
         "overridden_keys": 11,
-        "tuples_digest": "89ed7056100d378e44f683dfeb43b9caaf85ddf2b51f7b89a9c9a5067641e8f3"
+        "tuples_digest": "661cd7fd3ab48b22f0578a5920d44aad1251f990d4853b1ce90edc1189983fa1"
       }
     ],
-    "governed_override_authorization": "fixed code-side contract in scripts/build-locale-data.mjs (GOVERNED_OVERRIDE_CONTRACTS)"
+    "governed_override_authorization": "fixed code-side contract in scripts/build-locale-data.mjs (GOVERNED_OVERRIDE_CONTRACTS)",
+    "delta28_package_id": "aprasa-unicv-erasmus-unipvc-provider-identity-r28",
+    "delta28_revision": "P03-PT-SOURCE-2026-09-22-r28",
+    "delta28_revision_class": "ADDITIVE_NEW_KEYS",
+    "delta28_row_count": 1
   },
   "counts": {
-    "total_rows": 1076,
+    "total_rows": 1077,
     "required_for_pt_launch": 1048,
-    "intentionally_unchanged": 28,
-    "approved_rows_total": 1076,
+    "intentionally_unchanged": 29,
+    "approved_rows_total": 1077,
     "r3_delta_rows": 21,
     "r4_delta_rows": 26,
     "r5_delta_rows": 2,
@@ -11452,8 +11457,8 @@
     },
     "training.record.unicv-erasmus-viana-do-castelo-edital-027-2026.how_to_apply": {
       "key": "training.record.unicv-erasmus-viana-do-castelo-edital-027-2026.how_to_apply",
-      "en": "Applications must be submitted exclusively by email to gepc.mobilidade@unicv.cv.\n\nOpen to current Uni-CV students. The governing edital does not state a campus restriction or a closed list of eligible study areas.\n\nApplications are assessed on study-plan relevance (30%), motivation (30%), language proficiency (20%) and no previous participation in mobility (20%).\n\nNo closing hour stated",
-      "pt": "As candidaturas devem ser submetidas exclusivamente por email para gepc.mobilidade@unicv.cv.\n\nAberto a atuais estudantes da Uni-CV. O edital aplicável não estabelece uma restrição de campus nem uma lista fechada de áreas de estudo elegíveis.\n\nAs candidaturas são avaliadas com base na relevância do plano de estudos (30%), motivação (30%), proficiência linguística (20%) e ausência de participação anterior em mobilidade (20%).\n\nNão é indicada qualquer hora de encerramento",
+      "en": "Applications must be submitted exclusively by email to gepc.mobilidade@unicv.cv. Open to current Uni-CV students. The governing edital does not state a campus restriction or a closed list of eligible study areas. Applications are assessed on study-plan relevance (30%), motivation (30%), language proficiency (20%) and no previous participation in mobility (20%). No closing hour stated",
+      "pt": "As candidaturas devem ser submetidas exclusivamente por email para gepc.mobilidade@unicv.cv. Aberto a atuais estudantes da Uni-CV. O edital aplicável não estabelece uma restrição de campus nem uma lista fechada de áreas de estudo elegíveis. As candidaturas são avaliadas com base na relevância do plano de estudos (30%), motivação (30%), proficiência linguística (20%) e ausência de participação anterior em mobilidade (20%). Não é indicada qualquer hora de encerramento",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": "unicv-erasmus-viana-do-castelo-edital-027-2026",
@@ -13201,6 +13206,18 @@
       "source_revision": "P04-2026-09-18-TRAININGS-HOME-EXPANSION-EDTECH",
       "context_notes": "Governed presentation for the open-call-unknown-deadline opportunity timbuktoo-edtech-pan-african-incubation on Home — Trainings, Tools & Opportunities.",
       "linguistic_notes": "Detail checked line. The order supplies the bare date pair for this record with no provenance clause; none is composed."
+    },
+    "training.record.unicv-erasmus-viana-do-castelo-edital-027-2026.provider_identity": {
+      "key": "training.record.unicv-erasmus-viana-do-castelo-edital-027-2026.provider_identity",
+      "en": "Universidade de Cabo Verde / Erasmus+",
+      "pt": "Universidade de Cabo Verde / Erasmus+",
+      "scope_status": "INTENTIONALLY_UNCHANGED",
+      "identity_policy": "PRESERVE_IDENTITY_VERBATIM",
+      "record_id": "unicv-erasmus-viana-do-castelo-edital-027-2026",
+      "translation_status": "APPROVED",
+      "source_revision": "P03-PT-SOURCE-2026-09-22-r28",
+      "context_notes": "Locale-independent provider identity used by the static Home localizer for the approved Erasmus+ UNIPVC record.",
+      "linguistic_notes": "Proper-name provider identity supplied by Project 03; intentionally unchanged across locales."
     }
   }
 }
