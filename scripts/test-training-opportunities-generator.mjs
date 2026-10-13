@@ -70,6 +70,22 @@ function region(dir, locale, id) {
   return html.slice(html.lastIndexOf('\n', a) + 1, b + end.length);
 }
 
+// The governed Plan C (generic editorial-fallback) control subject. No
+// CURRENT + ELIGIBLE training record uses Plan C media today: this record was
+// the control while it was current, and it has been canonically EXPIRED since
+// its 20 September 2026 deadline (commit c1c3b1e). Plan C rendering is
+// therefore exercised through a controlled fixture: inside a throwaway sandbox
+// ONLY, the record is restored to CURRENT -- the state it really held at this
+// suite's fixed AS_OF (2026-09-01). The committed record is never touched, and
+// PLAN C EXPIRY GUARD below proves the expired record stays unrendered.
+const PLAN_C_CONTROL_ID = 'unicv-china-ambassador-scholarship-2026';
+
+function planCSandbox() {
+  const dir = sandbox();
+  setState(dir, PLAN_C_CONTROL_ID, 'CURRENT');
+  return dir;
+}
+
 function setState(dir, id, state) {
   const p = path.join(dir, 'data', 'training-opportunities.json');
   const data = JSON.parse(fs.readFileSync(p, 'utf8'));
@@ -419,11 +435,12 @@ for (const removedState of ['EXPIRED', 'WITHDRAWN', 'SUPERSEDED']) {
   // longer a Plan C fallback probe target. unicv-china-ambassador-scholarship
   // is the required PLAN C CONTROL: it must keep using the generic fallback
   // unchanged, proving Plan C was preserved rather than globally removed.
-  const FALLBACK_IDS = ['unicv-china-ambassador-scholarship-2026'];
+  // Rendered through the controlled Plan C fixture (see PLAN_C_CONTROL_ID).
+  const FALLBACK_IDS = [PLAN_C_CONTROL_ID];
 
   for (const id of FALLBACK_IDS) {
     for (const locale of ['en', 'pt']) {
-      const dir = sandbox();
+      const dir = planCSandbox();
       const written = run(dir, locale, ['--write']);
       check(`PROBE 6 (${id}): ${locale.toUpperCase()} generation succeeds`, written.status === 0, written.stderr.trim());
       const html = region(dir, locale, id);
@@ -691,15 +708,34 @@ for (const removedState of ['EXPIRED', 'WITHDRAWN', 'SUPERSEDED']) {
   // the generic Plan C fallback, proving Plan C was preserved rather than
   // globally removed.
   {
-    const dir = sandbox();
+    const dir = planCSandbox();
     run(dir, 'en', ['--write']);
-    const html = region(dir, 'en', 'unicv-china-ambassador-scholarship-2026');
+    const html = region(dir, 'en', PLAN_C_CONTROL_ID);
     check('CASE 8 (Plan C control): unicv-china-ambassador-scholarship-2026 still renders the generic fallback',
       html !== null && html.includes('media-fallback'), html ?? '');
     const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'internal', 'provider-media-manifest.json'), 'utf8'));
     const manifestEntry = manifest.records.find((r) => r.title === 'China Ambassador Scholarship for Uni-CV Students');
     check('CASE 8 (Plan C control): manifest entry is still media_type editorial-fallback',
       manifestEntry?.media_type === 'editorial-fallback');
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+
+  // PLAN C EXPIRY GUARD — the controlled fixture above must never stand in for
+  // public visibility. The committed record is EXPIRED, and with its committed
+  // state it renders marker-only in BOTH locales: no card, no fallback media.
+  {
+    const committed = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'training-opportunities.json'), 'utf8'))
+      .records.find((r) => r.id === PLAN_C_CONTROL_ID);
+    check('PLAN C EXPIRY GUARD: the committed control record is canonically EXPIRED',
+      committed?.publication_state === 'EXPIRED', committed?.publication_state);
+    const dir = sandbox();
+    for (const locale of ['en', 'pt']) {
+      const written = run(dir, locale, ['--write']);
+      check(`PLAN C EXPIRY GUARD (${locale.toUpperCase()}): generation succeeds`, written.status === 0, written.stderr.trim());
+      const html = region(dir, locale, PLAN_C_CONTROL_ID);
+      check(`PLAN C EXPIRY GUARD (${locale.toUpperCase()}): the expired control record renders marker-only`,
+        html === MARKER_ONLY(PLAN_C_CONTROL_ID), html ?? '');
+    }
     fs.rmSync(dir, { recursive: true, force: true });
   }
 

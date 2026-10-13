@@ -32,6 +32,7 @@ import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { t } from './lib/locale.mjs';
 import { THINGS_TO_DO_HUB_PUBLIC, hubOutputPath, hubCanonical, homePreviewRecords, isPubliclyPublishable } from './lib/things-to-do-collection.mjs';
+import { isPubliclyCurrent } from './lib/things-to-do-currentness.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -173,6 +174,38 @@ function generate(dir, asOf) {
   if (sitemap.status !== 0) throw new Error(`sitemap generation failed: ${sitemap.out}`);
 }
 
+// Home membership is the GOVERNED CURATED SELECTION (Project 03,
+// EXPAND_HOME_PREVIEW, 17 September 2026), not a count and not a prefix of
+// hub order. The expected ids are stated here independently of the module
+// that produces them, so a change to HOME_PREVIEW_IDS has to be made
+// deliberately in two places rather than silently redefining "approved".
+const APPROVED_HOME_PREVIEW = Object.freeze([
+  'cartinha-dholanda-mindelo-2026',
+  'sinergia-da-materia',
+  'voyage-obi-margo-kafe-djan-djan-2026',
+  'taverna-live-music',
+  'nautilus-live-music',
+]);
+
+// The last committed as_of at which every approved record was still current.
+// The full five-record selection is asserted here, at a fixed date, so that
+// assertion keeps running after a selected record factually expires.
+const ALL_SELECTED_CURRENT_AS_OF = '2026-09-21';
+
+/**
+ * The approved selection, in approved order, minus selected records that are
+ * not published or not publicly current at asOf. Selection is necessary, not
+ * sufficient: an expired selected record leaves Home and its slot is NOT
+ * backfilled. `exclude` names a record a fixture has moved out of publication.
+ */
+function expectedHomeAt(records, asOf, exclude = null) {
+  const byId = new Map(records.map((record) => [record.id, record]));
+  return APPROVED_HOME_PREVIEW.filter((id) => {
+    const record = byId.get(id);
+    return id !== exclude && record?.publication_state === 'published' && isPubliclyCurrent(record, asOf);
+  });
+}
+
 const cardIds = (html) => [...html.matchAll(/<article class="resource-card" data-event-id="([^"]+)"/g)].map((m) => m[1]);
 const read = (dir, relative) => fs.readFileSync(path.join(dir, relative), 'utf8');
 
@@ -219,24 +252,37 @@ function monthPrecisionIds(dir) {
     const enHome = cardIds(read(dir, 'index.html'));
     const ptHome = cardIds(read(dir, 'pt/index.html'));
 
-    // Home membership is the GOVERNED CURATED SELECTION (Project 03,
-    // EXPAND_HOME_PREVIEW, 17 September 2026), not a count and not a prefix of
-    // hub order. The expected ids are stated here independently of the module
-    // that produces them, so a change to HOME_PREVIEW_IDS has to be made
-    // deliberately in two places rather than silently redefining "approved".
-    const APPROVED_HOME_PREVIEW = [
-      'cartinha-dholanda-mindelo-2026',
-      'sinergia-da-materia',
-      'voyage-obi-margo-kafe-djan-djan-2026',
-      'taverna-live-music',
-      'nautilus-live-music',
-    ];
-    check('Home preview is exactly the approved curated selection (EN)',
-      JSON.stringify(enHome) === JSON.stringify(APPROVED_HOME_PREVIEW), `got [${enHome}]`);
-    check('Home preview is exactly the approved curated selection (PT)',
-      JSON.stringify(ptHome) === JSON.stringify(APPROVED_HOME_PREVIEW), `got [${ptHome}]`);
-    check('Home preview shows exactly 5 records (EN)', enHome.length === 5, `got ${enHome.length}`);
-    check('Home preview shows exactly 5 records (PT)', ptHome.length === 5, `got ${ptHome.length}`);
+    // At the committed as_of the approved selection may already have lost a
+    // record to factual expiry. The expectation is the approved list minus
+    // exactly those records -- never a backfill, never a reorder.
+    const records = JSON.parse(read(dir, EVENTS)).records;
+    const expectedHome = expectedHomeAt(records, asOf);
+    const droppedSelected = APPROVED_HOME_PREVIEW.filter((id) => !expectedHome.includes(id));
+    check('Home preview is exactly the approved curated selection less expired selected records (EN)',
+      JSON.stringify(enHome) === JSON.stringify(expectedHome), `got [${enHome}] expected [${expectedHome}]`);
+    check('Home preview is exactly the approved curated selection less expired selected records (PT)',
+      JSON.stringify(ptHome) === JSON.stringify(expectedHome), `got [${ptHome}] expected [${expectedHome}]`);
+    check('Home preview never exceeds the 5 approved records (EN)', enHome.length <= 5, `got ${enHome.length}`);
+    check('Home preview never exceeds the 5 approved records (PT)', ptHome.length <= 5, `got ${ptHome.length}`);
+    check('Home preview is not emptied at the committed as_of', enHome.length > 0, `got [${enHome}]`);
+    // Independent of the currentness module: every selected record that left
+    // Home did so because its own day-precision end date has passed, so the
+    // selection cannot shrink silently through a broken eligibility rule.
+    for (const id of droppedSelected) {
+      const record = records.find((r) => r.id === id);
+      check(`dropped selected record ${id} has a day-precision end_date before ${asOf}`,
+        Boolean(record?.end_date) && record.end_precision !== 'month' && record.end_date < asOf,
+        `end_date=${record?.end_date} end_precision=${record?.end_precision}`);
+    }
+    // The mirror rule, also independent of the currentness module: no record
+    // still on Home has a day-precision end date before asOf, so a broken
+    // eligibility rule cannot keep a factually past event on Home either.
+    for (const id of enHome) {
+      const record = records.find((r) => r.id === id);
+      check(`Home record ${id} has no day-precision end_date before ${asOf}`,
+        !(record?.end_date && record.end_precision !== 'month' && record.end_date < asOf),
+        `end_date=${record?.end_date} end_precision=${record?.end_precision}`);
+    }
     // The eligible record Project 03 deliberately did NOT select stays off Home
     // while remaining a full member of the collection. This is the assertion
     // that would fail if the curated selection ever decayed back into
@@ -262,6 +308,31 @@ function monthPrecisionIds(dir) {
     check('hub carries at least as many records as the Home preview', enHub.length >= enHome.length);
     check('hub validator passes on freshly generated surfaces',
       run(dir, 'validate-things-to-do-hub.mjs', [`--as-of=${asOf}`]).status === 0);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 1b. The full five-record approved selection, at a fixed as_of where every
+//     selected record is current. Kept separate from block 1 so it does not
+//     depend on the committed as_of advancing past a selected record's end.
+// ---------------------------------------------------------------------------
+{
+  const asOf = ALL_SELECTED_CURRENT_AS_OF;
+  const dir = sandbox();
+  try {
+    generate(dir, asOf);
+    const records = JSON.parse(read(dir, EVENTS)).records;
+    check(`fixture: every approved record is published and current at ${asOf}`,
+      JSON.stringify(expectedHomeAt(records, asOf)) === JSON.stringify(APPROVED_HOME_PREVIEW),
+      `got [${expectedHomeAt(records, asOf)}]`);
+    for (const [locale, file] of [['EN', 'index.html'], ['PT', 'pt/index.html']]) {
+      const home = cardIds(read(dir, file));
+      check(`Home preview is exactly the approved curated selection at ${asOf} (${locale})`,
+        JSON.stringify(home) === JSON.stringify(APPROVED_HOME_PREVIEW), `got [${home}]`);
+      check(`Home preview shows exactly 5 records at ${asOf} (${locale})`, home.length === 5, `got ${home.length}`);
+    }
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
@@ -704,13 +775,13 @@ for (const state of ['expired', 'withdrawn', 'draft']) {
       !ptHome.includes('taverna-live-music'), `home=[${ptHome}]`);
     // The rest of the selection is untouched, and the gap is NOT backfilled by
     // the next eligible record -- that would be the count-based rule returning.
+    // Expected: the approved selection, less records expired at asOf, less
+    // the subject. Computed from the UNMODIFIED corpus so the fixture's own
+    // state change cannot define its expectation.
+    const remaining = expectedHomeAt(JSON.parse(fs.readFileSync(path.join(ROOT, EVENTS), 'utf8')).records, asOf, 'taverna-live-music');
     check(`${state}: the remaining selected records are unaffected (EN)`,
-      JSON.stringify(enHome) === JSON.stringify([
-        'cartinha-dholanda-mindelo-2026',
-        'sinergia-da-materia',
-        'voyage-obi-margo-kafe-djan-djan-2026',
-        'nautilus-live-music',
-      ]), `home=[${enHome}]`);
+      remaining.length > 0 && JSON.stringify(enHome) === JSON.stringify(remaining),
+      `home=[${enHome}] expected=[${remaining}]`);
     check(`${state}: EN and PT stay identical`,
       JSON.stringify(enHome) === JSON.stringify(ptHome), `en=[${enHome}] pt=[${ptHome}]`);
     check(`${state}: the unselected eligible record is NOT promoted into the freed slot`,
