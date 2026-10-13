@@ -1007,3 +1007,18 @@ body.dialog-open .floating-utilities { display: none; }
   color: rgba(17,17,17,.65);
   text-align: right;
 }
+
+/* Temporary governed public-currentness notice. Remove only after 20 Oct review. */
+.limited-update-notice {
+  margin-top: .75rem;
+  padding: .75rem 1rem;
+  border-left: .25rem solid var(--ochre);
+  border-radius: var(--radius);
+  background: rgba(255,255,255,.65);
+  font-size: .86rem;
+  line-height: 1.45;
+}
+.limited-update-notice h2 { color: var(--green); font-size: .94rem; line-height: 1.4; margin: 0 0 .4rem; }
+.limited-update-notice p { margin: .3rem 0; }
+html[lang="en"] .limited-update-notice [lang="pt"],
+html[lang="pt"] .limited-update-notice [lang="en"] { display: none; }
