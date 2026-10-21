@@ -1,0 +1,100 @@
+{
+  "package_id": "aprasa-haliotis-local-spotlight-2026-09-27",
+  "revision_class": "ADDITIVE",
+  "source_revision": "aprasa-haliotis-local-spotlight-2026-09-27",
+  "semantic_authority": "Project 03 — frozen Haliotis EN/PT presentation dated 27 September 2026, relayed in the 21 October 2026 governing handoff",
+  "linguistic_authority": "Exact frozen EN/PT payload supplied by Project 03; no separate Project 09 package or revision identifier supplied",
+  "implementation_authority": "Project 04 Manager — baseline regression disposition, 21 October 2026",
+  "rows": [
+    {
+      "key": "home.haliotis_spotlight.status",
+      "source_en": "Diving / snorkeling / ocean activities · Subject to booking",
+      "pt": "Mergulho / snorkeling / atividades no mar · Sujeito a reserva",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "aprasa-haliotis-local-spotlight-2026-09-27"
+    },
+    {
+      "key": "home.haliotis_spotlight.title",
+      "source_en": "Diving & Snorkeling with Haliotis",
+      "pt": "Mergulho e Snorkeling com a Haliotis",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "aprasa-haliotis-local-spotlight-2026-09-27"
+    },
+    {
+      "key": "home.haliotis_spotlight.location",
+      "source_en": "Hotel Oásis Porto Grande · Praça Amílcar Cabral · Mindelo, São Vicente",
+      "pt": "Hotel Oásis Porto Grande · Praça Amílcar Cabral · Mindelo, São Vicente",
+      "scope_status": "INTENTIONALLY_UNCHANGED",
+      "identity_policy": "PRESERVE_EXACTLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "aprasa-haliotis-local-spotlight-2026-09-27"
+    },
+    {
+      "key": "home.haliotis_spotlight.provider",
+      "source_en": "Haliotis — Dive Center Mindelo",
+      "pt": "Haliotis — Dive Center Mindelo",
+      "scope_status": "INTENTIONALLY_UNCHANGED",
+      "identity_policy": "PRESERVE_EXACTLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "aprasa-haliotis-local-spotlight-2026-09-27"
+    },
+    {
+      "key": "home.haliotis_spotlight.price",
+      "source_en": "From €40 for selected snorkeling activities; other activities vary.",
+      "pt": "A partir de €40 para algumas atividades de snorkeling; os preços das restantes atividades variam.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "aprasa-haliotis-local-spotlight-2026-09-27"
+    },
+    {
+      "key": "home.haliotis_spotlight.description",
+      "source_en": "Haliotis operates a dive center in central Mindelo with diving, snorkeling, freediving and training options, with access to the marina for sea activities.",
+      "pt": "A Haliotis opera um centro de mergulho no centro do Mindelo, com opções de mergulho, snorkeling, mergulho livre e formação, com acesso à marina para atividades no mar.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "aprasa-haliotis-local-spotlight-2026-09-27"
+    },
+    {
+      "key": "home.haliotis_spotlight.good_to_know",
+      "source_en": "Activities are subject to booking, availability and activity conditions. Check current options, requirements and prices directly with Haliotis before booking.",
+      "pt": "As atividades estão sujeitas a reserva, disponibilidade e às condições da atividade. Confirma diretamente com a Haliotis as opções, requisitos e preços atuais antes de reservar.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "aprasa-haliotis-local-spotlight-2026-09-27"
+    },
+    {
+      "key": "home.haliotis_spotlight.checked",
+      "source_en": "Checked 27 September 2026 against Haliotis’s current São Vicente center and pricing pages.",
+      "pt": "Revisto em 27 de setembro de 2026 com base nas páginas atuais do centro de São Vicente e dos preços da Haliotis.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "aprasa-haliotis-local-spotlight-2026-09-27"
+    },
+    {
+      "key": "home.haliotis_spotlight.action",
+      "source_en": "Visit Haliotis",
+      "pt": "Visitar Haliotis",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "aprasa-haliotis-local-spotlight-2026-09-27"
+    }
+  ]
+}

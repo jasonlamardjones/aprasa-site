@@ -302,6 +302,15 @@ function buildPage({ name, enPath, ptPath, canonicalEn, canonicalPt, enHrefFromR
 
   // 2. Derive the PT page from the (now infrastructure-complete) EN source.
   let ptSource = injectHeadLinks(enSource, { canonicalEn, canonicalPt, selfCanonical: canonicalPt, lang: 'pt' });
+  // Only the Home Haliotis Spotlight has a governed locale-specific outbound
+  // target. Green Line's standalone page and all other provider links stay intact.
+  if (name === 'home' && enSource.includes('Diving &amp; Snorkeling with Haliotis')) {
+    ptSource = ptSource.replace(/<article\b[^>]*data-local-spotlight="true"[\s\S]*?<\/article>/g, (card) => {
+      const enUrl = 'https://haliotis.pt/en/centros/cabo-verde/';
+      if (card.split(enUrl).length - 1 !== 2) fail(name, 'Haliotis requires exactly two approved outbound links');
+      return card.replaceAll(enUrl, 'https://haliotis.pt/pt/centros/cabo-verde/');
+    });
+  }
   ptSource = ptSource.replace(/<nav class="lang-switch"[\s\S]*?<\/nav>/, (m) =>
     m
       .replace(/href="[^"]*"(\s+lang="en")/, `href="${ptHrefFromRoot.en}"$1`)

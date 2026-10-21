@@ -57,7 +57,9 @@ const PUBLICATION_STATES = new Set([
 // separate, editorial decision, and vice versa.
 const ORDINARY_PUBLICATION_ELIGIBILITY = new Set(['ELIGIBLE', 'NOT_ELIGIBLE']);
 // Project 03 approved exclusion reasons for NOT_ELIGIBLE records.
-const ORDINARY_PUBLICATION_REASONS = new Set(['PAID_LOCAL_SERVICE_TRAINING']);
+const ORDINARY_PUBLICATION_REASONS = new Set(['PAID_LOCAL_SERVICE_TRAINING', 'PENDING_CURRENTNESS_VERIFICATION']);
+// Project 03 decision, 21 October 2026: no age-based exclusion of other rows.
+const PENDING_CURRENTNESS_RECORDS = new Set(['academia-crescer', 'kafe-djan-djan']);
 // The space-separated spelling is a legacy form, not an accepted alias. It is
 // listed explicitly so a stray occurrence produces a precise error naming the
 // canonical token rather than a generic "invalid state".
@@ -294,9 +296,8 @@ for (const [index, record] of (data.records ?? []).entries()) {
 
   // Ordinary-publication eligibility. Required and explicit for every
   // canonical record — never silently optional — and independent of
-  // lifecycle_class/publication_state above: this loop never reads
-  // publication_state to decide eligibility validity, and the reverse must
-  // never happen either.
+  // lifecycle_class/publication_state above. The bounded pending-verification
+  // reason below must preserve the specifically authorized REVIEW-DUE state.
   if (!ORDINARY_PUBLICATION_ELIGIBILITY.has(record.ordinary_publication_eligibility)) {
     fail(`${where}: invalid or missing ordinary_publication_eligibility ${JSON.stringify(record.ordinary_publication_eligibility)}`);
   } else if (record.ordinary_publication_eligibility === 'ELIGIBLE') {
@@ -306,6 +307,15 @@ for (const [index, record] of (data.records ?? []).entries()) {
   } else if (record.ordinary_publication_eligibility === 'NOT_ELIGIBLE') {
     if (!ORDINARY_PUBLICATION_REASONS.has(record.ordinary_publication_reason)) {
       fail(`${where}: ordinary_publication_eligibility NOT_ELIGIBLE requires an approved ordinary_publication_reason, got ${JSON.stringify(record.ordinary_publication_reason)}`);
+    }
+  }
+
+  if (record.ordinary_publication_reason === 'PENDING_CURRENTNESS_VERIFICATION') {
+    if (!PENDING_CURRENTNESS_RECORDS.has(record.id)) {
+      fail(`${where}: PENDING_CURRENTNESS_VERIFICATION is authorized only for academia-crescer and kafe-djan-djan`);
+    }
+    if (record.publication_state !== 'REVIEW-DUE') {
+      fail(`${where}: PENDING_CURRENTNESS_VERIFICATION must retain publication_state REVIEW-DUE`);
     }
   }
 

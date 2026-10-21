@@ -3223,6 +3223,25 @@ if (delta26Unchanged !== EXPECTED_DELTA26.intentionally_unchanged) {
   fail(`r26 intentionally_unchanged mismatch: got ${delta26Unchanged}`);
 }
 
+// Frozen Project 03 Haliotis payload, additive so Green Line's historical
+// presentation keys remain untouched. Pin the supplied package byte-for-byte;
+// this does not authorize arbitrary new translations or provider research.
+const haliotisPackageFile = "data/locales/pt-overlay-haliotis-local-spotlight.source.json";
+const haliotisRaw = readFileSync(path.join(ROOT, haliotisPackageFile), "utf8");
+if (createHash("sha256").update(haliotisRaw).digest("hex") !== "80aa93ab04b80218df1a4908af0c0ca9663184d579ab61bc2df796ba6ea5e167") {
+  fail("Haliotis package differs from the frozen Project 03 EN/PT payload");
+}
+const haliotisPackage = JSON.parse(haliotisRaw);
+for (const row of haliotisPackage.rows) {
+  if (keys[row.key]) fail(`Haliotis additive key already exists: ${row.key}`);
+  keys[row.key] = {
+    key: row.key, en: row.source_en, pt: row.pt,
+    scope_status: row.scope_status, identity_policy: row.identity_policy,
+    record_id: row.record_id, translation_status: row.translation_status,
+    source_revision: row.source_revision, context_notes: "", linguistic_notes: "",
+  };
+}
+
 // Aggregate tallies, read off the finished key map that is about to be written.
 const assembled = (() => {
   const values = Object.values(keys);
@@ -3269,6 +3288,7 @@ const output = {
     implementation_reference: pkg.implementation_reference,
     generated_by: "scripts/build-locale-data.mjs",
     generated_from: [
+      haliotisPackageFile,
       "data/locales/pt-overlay-r2.source.json",
       "data/locales/pt-overlay-r3-delta.source.json",
       "data/locales/pt-overlay-r4-delta.source.json",

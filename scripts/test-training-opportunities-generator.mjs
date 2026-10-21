@@ -490,10 +490,17 @@ for (const removedState of ['EXPIRED', 'WITHDRAWN', 'SUPERSEDED']) {
     fs.rmSync(dir, { recursive: true, force: true });
   }
 
-  // A record with real record.media (academia-crescer) keeps rendering its
-  // own poster media, untouched by the new fallback branch.
+  // Exercise the authentic-media branch with an explicitly eligible TEST
+  // fixture. Academia is now held in production; the media assertions below
+  // remain intact rather than disappearing with that policy change.
   {
     const dir = sandbox();
+    const dataPath = path.join(dir, 'data', 'training-opportunities.json');
+    const data = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
+    const fixture = data.records.find((record) => record.id === 'academia-crescer');
+    fixture.ordinary_publication_eligibility = 'ELIGIBLE';
+    fixture.ordinary_publication_reason = null;
+    fs.writeFileSync(dataPath, JSON.stringify(data, null, 2) + '\n');
     run(dir, 'en', ['--write']);
     const html = region(dir, 'en', 'academia-crescer');
     check('PROBE 6 (academia-crescer): exactly one direct .card-media', html !== null && CARD_MEDIA_COUNT(html) === 1);

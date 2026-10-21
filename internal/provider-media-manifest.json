@@ -43,6 +43,7 @@
     {
       "section": "things-to-do",
       "title": "Green Line Tours — São Vicente Guided Tours",
+      "retained_detail_page": "things-to-do/water-adventure-activities-mindelo/index.html",
       "provider": "Green Line Tours, LDA",
       "source_url": "https://www.greenlinetourscv.com/sao-vicente-tours-cape-verde",
       "media_type": "provider-owned",
@@ -55,6 +56,22 @@
       "media_asset_source_url": "https://static.wixstatic.com/media/3836a4_ab51b23df3234d2bb51062e41dfc07ee~mv2.jpg",
       "media_checked_date": "2026-08-24",
       "media_alt": "View across Mindelo toward Porto Grande and Monte Cara."
+    },
+    {
+      "section": "things-to-do",
+      "title": "Diving & Snorkeling with Haliotis",
+      "provider": "Haliotis — Dive Center Mindelo",
+      "source_url": "https://haliotis.pt/en/centros/cabo-verde/",
+      "media_type": "editorial-fallback",
+      "media_state": "fallback-final",
+      "media_source": null,
+      "media_asset": null,
+      "fallback_category": "things-local-spotlight",
+      "fallback_reason": "Project 03 authorized existing A PRASA Local Spotlight editorial/section fallback only; no provider photography rights supplied.",
+      "media_provenance": "Existing standardized A PRASA section fallback, rendered by the incumbent card/dialog media foundation; it makes no claim to depict Haliotis or its activities. No imagery generated or provider media ingested.",
+      "media_asset_source_url": null,
+      "media_checked_date": null,
+      "media_alt": ""
     },
     {
       "section": "things-to-do",

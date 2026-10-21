@@ -61,6 +61,18 @@ const isIsoDate = (value) => {
     && date.getUTCDate() === day;
 };
 
+// The active Haliotis selection has a final section-fallback disposition,
+// not permission to reuse the retired provider's image or historical lane.
+const haliotisTitle = 'Diving & Snorkeling with Haliotis';
+const haliotisMedia = manifest.records.filter((record) => record.title === haliotisTitle);
+if (html.includes(`<h3>${escapeHtml(haliotisTitle)}</h3>`) && (haliotisMedia.length !== 1 || haliotisMedia[0].section !== 'things-to-do'
+  || haliotisMedia[0].media_type !== 'editorial-fallback'
+  || haliotisMedia[0].media_state !== 'fallback-final'
+  || haliotisMedia[0].media_asset !== null
+  || haliotisMedia[0].retained_detail_page != null)) {
+  errors.push('Haliotis active Spotlight requires exactly one final editorial-fallback media record, with no provider asset or historical binding');
+}
+
 if (!isIsoDate(asOf)) {
   errors.push(`things-to-do currentness: invalid as_of date ${asOf}`);
 }
@@ -116,11 +128,43 @@ function isOrdinaryPublicationSuppressed(trainingRecord) {
   return trainingRecord.ordinary_publication_eligibility === 'NOT_ELIGIBLE' && !hasApprovedSpotlightRole(trainingRecord);
 }
 
+// Only the approved rotated Spotlight may use this historical surface lane.
+// A new title/route pairing requires a reviewed contract change; declaring a
+// field in the manifest cannot itself authorize an orphaned media record.
+const RETAINED_SPOTLIGHT_DETAILS = new Map([
+  ['Green Line Tours — São Vicente Guided Tours', 'things-to-do/water-adventure-activities-mindelo/index.html'],
+]);
+
 for (const record of manifest.records) {
   const label = `${record.section} :: ${record.title}`;
   const titleHeading = `<h3>${escapeHtml(record.title)}</h3>`;
   const appearsOnHome = html.includes(titleHeading);
   const appearsOnHub = hubHtml.includes(titleHeading);
+  // A rotated Home Spotlight can retain its original static detail page and
+  // media history. Count that page only with an explicit manifest binding,
+  // its own exact title and its original provider link; an arbitrary file or
+  // another record's page never excuses a missing card.
+  let appearsOnRetainedDetail = false;
+  if (record.retained_detail_page != null) {
+    const route = record.retained_detail_page;
+    if (record.section !== 'things-to-do' || RETAINED_SPOTLIGHT_DETAILS.get(record.title) !== route) {
+      errors.push(`${label}: retained_detail_page is not an approved historical Spotlight binding`);
+    } else if (fs.existsSync(path.join(root, route))) {
+      const detail = fs.readFileSync(path.join(root, route), 'utf8');
+      const image = detail.match(/<div class="record-media">\s*(<img\b[^>]*>)/)?.[1];
+      const imageSrc = image?.match(/\bsrc="([^"]+)"/)?.[1];
+      const mediaMatches = record.media_type === 'provider-owned'
+        && record.media_state === 'authentic-present'
+        && typeof record.media_asset === 'string' && Boolean(imageSrc)
+        && path.resolve(root, path.dirname(route), imageSrc) === path.resolve(root, record.media_asset)
+        && image.includes(`alt="${escapeHtml(record.media_alt ?? '')}"`);
+      appearsOnRetainedDetail = detail.includes(`<h1>${escapeHtml(record.title)}</h1>`)
+        && detail.includes(`href="${escapeHtml(record.source_url)}"`) && mediaMatches;
+      if (!appearsOnRetainedDetail) errors.push(`${label}: retained detail title/provider link/media mismatch`);
+    } else {
+      errors.push(`${label}: retained detail page does not exist`);
+    }
+  }
   // While the collection hub is temporarily unpublished, Home carries only the
   // approved preview, so an eligible record beyond it is surfaced ONLY by its
   // own detail page. That page is still public at its unchanged canonical
@@ -147,7 +191,7 @@ for (const record of manifest.records) {
   const isSuppressedByEligibility = record.section === 'trainings-tools'
     && isOrdinaryPublicationSuppressed(trainingRecordForThisEntry);
 
-  if (!appearsOnHome && !appearsOnHub && !appearsOnDetail && !isExpiredDatedEvent && !isRemovedTrainingRecord && !isSuppressedByEligibility) {
+  if (!appearsOnHome && !appearsOnHub && !appearsOnDetail && !appearsOnRetainedDetail && !isExpiredDatedEvent && !isRemovedTrainingRecord && !isSuppressedByEligibility) {
     errors.push(`${label}: card title not found in index.html${THINGS_TO_DO_HUB_PUBLIC ? `, ${hubOutputPath('en')}` : ''} or its own detail page`);
   }
   if (!record.source_url) errors.push(`${label}: missing source_url`);

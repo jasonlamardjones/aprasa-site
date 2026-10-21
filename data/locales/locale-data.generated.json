@@ -10,6 +10,7 @@
     },
     "generated_by": "scripts/build-locale-data.mjs",
     "generated_from": [
+      "data/locales/pt-overlay-haliotis-local-spotlight.source.json",
       "data/locales/pt-overlay-r2.source.json",
       "data/locales/pt-overlay-r3-delta.source.json",
       "data/locales/pt-overlay-r4-delta.source.json",
@@ -225,10 +226,10 @@
     "governed_override_authorization": "fixed code-side contract in scripts/build-locale-data.mjs (GOVERNED_OVERRIDE_CONTRACTS)"
   },
   "counts": {
-    "total_rows": 1076,
-    "required_for_pt_launch": 1048,
-    "intentionally_unchanged": 28,
-    "approved_rows_total": 1076,
+    "total_rows": 1085,
+    "required_for_pt_launch": 1055,
+    "intentionally_unchanged": 30,
+    "approved_rows_total": 1085,
     "r3_delta_rows": 21,
     "r4_delta_rows": 26,
     "r5_delta_rows": 2,
@@ -13193,6 +13194,114 @@
       "source_revision": "P04-2026-09-18-TRAININGS-HOME-EXPANSION-EDTECH",
       "context_notes": "Governed presentation for the open-call-unknown-deadline opportunity timbuktoo-edtech-pan-african-incubation on Home — Trainings, Tools & Opportunities.",
       "linguistic_notes": "Detail checked line. The order supplies the bare date pair for this record with no provenance clause; none is composed."
+    },
+    "home.haliotis_spotlight.status": {
+      "key": "home.haliotis_spotlight.status",
+      "en": "Diving / snorkeling / ocean activities · Subject to booking",
+      "pt": "Mergulho / snorkeling / atividades no mar · Sujeito a reserva",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "aprasa-haliotis-local-spotlight-2026-09-27",
+      "context_notes": "",
+      "linguistic_notes": ""
+    },
+    "home.haliotis_spotlight.title": {
+      "key": "home.haliotis_spotlight.title",
+      "en": "Diving & Snorkeling with Haliotis",
+      "pt": "Mergulho e Snorkeling com a Haliotis",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "aprasa-haliotis-local-spotlight-2026-09-27",
+      "context_notes": "",
+      "linguistic_notes": ""
+    },
+    "home.haliotis_spotlight.location": {
+      "key": "home.haliotis_spotlight.location",
+      "en": "Hotel Oásis Porto Grande · Praça Amílcar Cabral · Mindelo, São Vicente",
+      "pt": "Hotel Oásis Porto Grande · Praça Amílcar Cabral · Mindelo, São Vicente",
+      "scope_status": "INTENTIONALLY_UNCHANGED",
+      "identity_policy": "PRESERVE_EXACTLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "aprasa-haliotis-local-spotlight-2026-09-27",
+      "context_notes": "",
+      "linguistic_notes": ""
+    },
+    "home.haliotis_spotlight.provider": {
+      "key": "home.haliotis_spotlight.provider",
+      "en": "Haliotis — Dive Center Mindelo",
+      "pt": "Haliotis — Dive Center Mindelo",
+      "scope_status": "INTENTIONALLY_UNCHANGED",
+      "identity_policy": "PRESERVE_EXACTLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "aprasa-haliotis-local-spotlight-2026-09-27",
+      "context_notes": "",
+      "linguistic_notes": ""
+    },
+    "home.haliotis_spotlight.price": {
+      "key": "home.haliotis_spotlight.price",
+      "en": "From €40 for selected snorkeling activities; other activities vary.",
+      "pt": "A partir de €40 para algumas atividades de snorkeling; os preços das restantes atividades variam.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "aprasa-haliotis-local-spotlight-2026-09-27",
+      "context_notes": "",
+      "linguistic_notes": ""
+    },
+    "home.haliotis_spotlight.description": {
+      "key": "home.haliotis_spotlight.description",
+      "en": "Haliotis operates a dive center in central Mindelo with diving, snorkeling, freediving and training options, with access to the marina for sea activities.",
+      "pt": "A Haliotis opera um centro de mergulho no centro do Mindelo, com opções de mergulho, snorkeling, mergulho livre e formação, com acesso à marina para atividades no mar.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "aprasa-haliotis-local-spotlight-2026-09-27",
+      "context_notes": "",
+      "linguistic_notes": ""
+    },
+    "home.haliotis_spotlight.good_to_know": {
+      "key": "home.haliotis_spotlight.good_to_know",
+      "en": "Activities are subject to booking, availability and activity conditions. Check current options, requirements and prices directly with Haliotis before booking.",
+      "pt": "As atividades estão sujeitas a reserva, disponibilidade e às condições da atividade. Confirma diretamente com a Haliotis as opções, requisitos e preços atuais antes de reservar.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "aprasa-haliotis-local-spotlight-2026-09-27",
+      "context_notes": "",
+      "linguistic_notes": ""
+    },
+    "home.haliotis_spotlight.checked": {
+      "key": "home.haliotis_spotlight.checked",
+      "en": "Checked 27 September 2026 against Haliotis’s current São Vicente center and pricing pages.",
+      "pt": "Revisto em 27 de setembro de 2026 com base nas páginas atuais do centro de São Vicente e dos preços da Haliotis.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "aprasa-haliotis-local-spotlight-2026-09-27",
+      "context_notes": "",
+      "linguistic_notes": ""
+    },
+    "home.haliotis_spotlight.action": {
+      "key": "home.haliotis_spotlight.action",
+      "en": "Visit Haliotis",
+      "pt": "Visitar Haliotis",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "aprasa-haliotis-local-spotlight-2026-09-27",
+      "context_notes": "",
+      "linguistic_notes": ""
     }
   }
 }
