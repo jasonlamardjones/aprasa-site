@@ -4,6 +4,7 @@
 // against generated PT HTML output (pass --html <dir> one or more times).
 
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { createHash } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadLocaleData, RETIRED_KEY_REMAP } from "./lib/locale.mjs";
@@ -85,11 +86,17 @@ for (const fileName of eventDeltaFiles) {
 // timbuktoo-edtech-pan-african-incubation open call (Project 03
 // EDTECH_LIFECYCLE_RESOLVED of 18 September 2026) — same eight-field shape as
 // r25, same NULL slots left keyless. ---
-if (keys.length !== 980 + eventDeltaRequired + eventDeltaUnchanged) fail(`expected ${980 + eventDeltaRequired + eventDeltaUnchanged} total keys including approved event deltas, got ${keys.length}`);
+// Haliotis adds exactly nine frozen keys (seven translated, two identity
+// literals). No Green Line key is overridden; its standalone copy survives.
+const haliotisRaw = readFileSync(path.join(ROOT, 'data/locales/pt-overlay-haliotis-local-spotlight.source.json'), 'utf8');
+if (createHash('sha256').update(haliotisRaw).digest('hex') !== '80aa93ab04b80218df1a4908af0c0ca9663184d579ab61bc2df796ba6ea5e167') {
+  fail('Haliotis package differs from the frozen Project 03 EN/PT payload');
+}
+if (keys.length !== 989 + eventDeltaRequired + eventDeltaUnchanged) fail(`expected ${989 + eventDeltaRequired + eventDeltaUnchanged} total keys including approved event deltas, got ${keys.length}`);
 const required = keys.filter((k) => k.scope_status === "REQUIRED_FOR_PT_LAUNCH");
 const unchanged = keys.filter((k) => k.scope_status === "INTENTIONALLY_UNCHANGED");
-if (required.length !== 952 + eventDeltaRequired) fail(`expected ${952 + eventDeltaRequired} REQUIRED_FOR_PT_LAUNCH keys, got ${required.length}`);
-if (unchanged.length !== 28 + eventDeltaUnchanged) fail(`expected ${28 + eventDeltaUnchanged} INTENTIONALLY_UNCHANGED keys, got ${unchanged.length}`);
+if (required.length !== 959 + eventDeltaRequired) fail(`expected ${959 + eventDeltaRequired} REQUIRED_FOR_PT_LAUNCH keys, got ${required.length}`);
+if (unchanged.length !== 30 + eventDeltaUnchanged) fail(`expected ${30 + eventDeltaUnchanged} INTENTIONALLY_UNCHANGED keys, got ${unchanged.length}`);
 if (data.provenance.delta_revision !== "P03-PT-SOURCE-2026-08-25-r3") {
   fail(`unexpected delta_revision: ${data.provenance.delta_revision}`);
 }

@@ -21,7 +21,8 @@
     "NOT_ELIGIBLE": "the record is not authorized for ORDINARY Home publication; it may still be visible only through an approved structured exception (e.g. the Learning Spotlight), and remains unaffected in lifecycle_class/publication_state"
   },
   "ordinary_publication_reasons": {
-    "PAID_LOCAL_SERVICE_TRAINING": "the record is a paid, locally delivered training service; Project 03 excludes this category from ordinary publication independent of lifecycle currentness"
+    "PAID_LOCAL_SERVICE_TRAINING": "the record is a paid, locally delivered training service; Project 03 excludes this category from ordinary publication independent of lifecycle currentness",
+    "PENDING_CURRENTNESS_VERIFICATION": "A precautionary exclusion from ordinary public discovery while current availability is awaiting Project 05 verification and subsequent Project 03 clearance. Approved 21 October 2026 for academia-crescer and kafe-djan-djan only. Restoration requires Project 05 verification and explicit Project 03 clearance; review timestamps alone never restore eligibility."
   },
   "lifecycle_classes": [
     "evergreen-learning-resource",
@@ -237,8 +238,8 @@
       "id": "academia-crescer",
       "lifecycle_class": "recurring-opportunity",
       "publication_state": "REVIEW-DUE",
-      "ordinary_publication_eligibility": "ELIGIBLE",
-      "ordinary_publication_reason": null,
+      "ordinary_publication_eligibility": "NOT_ELIGIBLE",
+      "ordinary_publication_reason": "PENDING_CURRENTNESS_VERIFICATION",
       "provider": "Academia de Estudo Crescer",
       "source": {
         "source_url": null,
@@ -338,8 +339,8 @@
       "id": "kafe-djan-djan",
       "lifecycle_class": "rolling-opportunity",
       "publication_state": "REVIEW-DUE",
-      "ordinary_publication_eligibility": "ELIGIBLE",
-      "ordinary_publication_reason": null,
+      "ordinary_publication_eligibility": "NOT_ELIGIBLE",
+      "ordinary_publication_reason": "PENDING_CURRENTNESS_VERIFICATION",
       "provider": "Kafê Djan Djan, Mindelo",
       "source": {
         "source_url": null,
