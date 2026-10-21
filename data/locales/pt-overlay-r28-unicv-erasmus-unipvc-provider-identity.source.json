@@ -1,0 +1,46 @@
+{
+  "package_id": "aprasa-unicv-erasmus-unipvc-provider-identity-r28",
+  "revision_class": "ADDITIVE_NEW_KEYS",
+  "source_revision": "P03-PT-SOURCE-2026-09-22-r28",
+  "previous_revision": "P03-PT-SOURCE-2026-09-22-r27",
+  "revision_type": "LOCALE_INDEPENDENT_PROVIDER_IDENTITY",
+  "semantic_authority": "Project 03 → Project 04 — URGENT ERASMUS+ UNIPVC PUBLICATION, 22 September 2026",
+  "linguistic_authority": "Project 03 supplied the provider identity in the approved implementation handoff; the same proper-name string is intentionally unchanged across EN/PT.",
+  "project_09_status": "approved",
+  "project_09_verdict": "APPROVED_FOR_PUBLIC_USE",
+  "project_09_review_date": null,
+  "project_09_package_id": null,
+  "project_09_revision_id": null,
+  "supplied_rows_approved": 1,
+  "review_required": 0,
+  "semantic_escalations_required": 0,
+  "missing_or_unaccounted_row_count": 0,
+  "duplicate_keys": [],
+  "placeholder_mismatches": [],
+  "a_prasa_to_a_praca_violations": [],
+  "blocking_issue": null,
+  "source_english_changed": false,
+  "localization_architecture_reopened": false,
+  "change_control_status": {
+    "new_keys_introduced": 1,
+    "existing_keys_overridden": 0,
+    "english_source_values_modified": 0,
+    "lifecycle_or_publication_state_modified": 0,
+    "protected_identities_modified": 0,
+    "additional_languages_authorized": 0
+  },
+  "rows": [
+    {
+      "key": "training.record.unicv-erasmus-viana-do-castelo-edital-027-2026.provider_identity",
+      "source_revision": "P03-PT-SOURCE-2026-09-22-r28",
+      "source_en": "Universidade de Cabo Verde / Erasmus+",
+      "pt": "Universidade de Cabo Verde / Erasmus+",
+      "scope_status": "INTENTIONALLY_UNCHANGED",
+      "identity_policy": "PRESERVE_IDENTITY_VERBATIM",
+      "record_id": "unicv-erasmus-viana-do-castelo-edital-027-2026",
+      "translation_status": "APPROVED",
+      "context_notes": "Locale-independent provider identity used by the static Home localizer for the approved Erasmus+ UNIPVC record.",
+      "linguistic_notes": "Proper-name provider identity supplied by Project 03; intentionally unchanged across locales."
+    }
+  ]
+}
