@@ -27,7 +27,9 @@ import { spawnSync } from 'node:child_process';
 import {
   SOURCE_REFERENCE_EVENT_IDS,
   SOURCE_REFERENCE_EVIDENCE_HANDLES,
+  assertPublicInputBoundary,
   validatePacket,
+  validatePublicInputShapes,
   validateSourceUnion,
 } from './lib/event-publication-contract.mjs';
 
@@ -298,7 +300,8 @@ unionRejects('source union: an empty evidence_ref is rejected', withNoAction(syn
 unionRejects('source union: a non-string evidence_ref is rejected', withNoAction(synthB(KUTUMBAIA_ID, { source_reference: { ...synthRef(), evidence_ref: 42 } })), /evidence_ref must be a non-empty/);
 unionRejects('source union: mixed mode (url AND reference) is rejected', withNoAction(synthB(KUTUMBAIA_ID, { source_url: 'https://example.org/x' })), /mutually exclusive/);
 unionRejects('source union: absent mode (neither) is rejected', withNoAction(synthB(KUTUMBAIA_ID, { source_reference: undefined })), /missing source_url/);
-unionRejects('source union: a null source_reference is treated as absent', withNoAction(synthB(KUTUMBAIA_ID, { source_reference: null })), /missing source_url/);
+unionRejects('source union: an explicit null source_reference is rejected, not treated as absent', withNoAction(synthB(KUTUMBAIA_ID, { source_reference: null })), /source_reference must be an object/);
+unionRejects('source union: an explicit null source_reference is rejected on an ordinary mode A record', { ...structuredClone(sinergia), source_reference: null }, /source_reference must be an object/);
 unionRejects('source union: mode A is not allowed for a scoped id', { ...structuredClone(sinergia), id: KUTUMBAIA_ID }, /requires a governed source_reference/);
 unionRejects('source union: mode B is not allowed for any other id', withNoAction(synthB('sinergia-da-materia')), /only permitted for the two/);
 unionRejects('source union: an unsupported id cannot borrow an approved handle', withNoAction(synthB('sinergia-da-materia', { source_reference: synthRef(KUTUMBAIA_ID) })), /only permitted for the two|no approved handle/);
@@ -480,6 +483,260 @@ const addSynthB = ({ data, manifest }) => {
     record(`generator guard: refuses a mode B record carrying ${label}`, gen.status !== 0 && /NO_CTA/.test(gen.out), gen.out.trim().split('\n').slice(-2).join(' / '));
     fs.rmSync(state.dir, { recursive: true, force: true });
   }
+}
+
+// ===========================================================================
+// Part 4 — Codex review remediation: public-input boundary, schema/runtime
+// agreement and standalone fail-closed enforcement.
+//
+// The repository carries no JSON Schema library and gains none here. The
+// evaluator below is test-local, implements exactly the keywords the packet
+// schema uses and THROWS on any other keyword, so the schema cannot quietly grow
+// past it. The acceptance matrix runs the real schema file and the real runtime
+// validators on the same packets and requires the same verdict from both.
+// ===========================================================================
+const SCHEMA_KEYWORDS = new Set(['$schema', '$id', 'title', 'type', 'const', 'enum', 'required', 'properties',
+  'additionalProperties', 'items', 'minItems', 'minLength', 'maxLength', 'pattern', 'oneOf', 'not', 'default']);
+const jsonEq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+function schemaTypeOf(v) {
+  if (v === null) return 'null';
+  if (Array.isArray(v)) return 'array';
+  return Number.isInteger(v) ? 'integer' : typeof v;
+}
+const schemaTypeOk = (v, t) => (t === 'number' ? ['number', 'integer'].includes(schemaTypeOf(v)) : schemaTypeOf(v) === t);
+function schemaErrors(value, schema, pointer = '#', errors = []) {
+  for (const keyword of Object.keys(schema)) {
+    if (!SCHEMA_KEYWORDS.has(keyword)) throw new Error(`test schema evaluator: unsupported keyword "${keyword}" at ${pointer}`);
+  }
+  if ('type' in schema && ![].concat(schema.type).some((t) => schemaTypeOk(value, t))) errors.push(`${pointer}: wrong type`);
+  if ('const' in schema && !jsonEq(value, schema.const)) errors.push(`${pointer}: const`);
+  if ('enum' in schema && !schema.enum.some((e) => jsonEq(e, value))) errors.push(`${pointer}: enum`);
+  if (typeof value === 'string') {
+    if ('minLength' in schema && value.length < schema.minLength) errors.push(`${pointer}: minLength`);
+    if ('maxLength' in schema && value.length > schema.maxLength) errors.push(`${pointer}: maxLength`);
+    if ('pattern' in schema && !new RegExp(schema.pattern).test(value)) errors.push(`${pointer}: pattern`);
+  }
+  if (Array.isArray(value)) {
+    if ('minItems' in schema && value.length < schema.minItems) errors.push(`${pointer}: minItems`);
+    if ('items' in schema) value.forEach((item, i) => schemaErrors(item, schema.items, `${pointer}[${i}]`, errors));
+  }
+  if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+    for (const key of schema.required ?? []) if (!Object.hasOwn(value, key)) errors.push(`${pointer}: missing ${key}`);
+    for (const [key, child] of Object.entries(value)) {
+      if (schema.properties && Object.hasOwn(schema.properties, key)) schemaErrors(child, schema.properties[key], `${pointer}.${key}`, errors);
+      else if (schema.additionalProperties === false) errors.push(`${pointer}: unexpected field ${key}`);
+    }
+  }
+  if ('oneOf' in schema) {
+    const matches = schema.oneOf.filter((sub) => schemaErrors(value, sub, pointer, []).length === 0).length;
+    if (matches !== 1) errors.push(`${pointer}: oneOf matched ${matches}`);
+  }
+  if ('not' in schema && schemaErrors(value, schema.not, pointer, []).length === 0) errors.push(`${pointer}: not`);
+  return errors;
+}
+
+const packetSchema = JSON.parse(fs.readFileSync(path.join(ROOT, 'automation', 'things-to-do', 'event-publication-packet.schema.json'), 'utf8'));
+const writeFixture = JSON.parse(fs.readFileSync(path.join(ROOT, 'automation', 'things-to-do', 'fixtures', 'ready-write.json'), 'utf8'));
+const readyFixture = JSON.parse(fs.readFileSync(path.join(ROOT, 'automation', 'things-to-do', 'fixtures', 'ready.json'), 'utf8'));
+const runtimeAccepts = (packet) => validatePublicInputShapes(packet).length === 0 && validateSourceUnion(packet.event).length === 0;
+const schemaAccepts = (packet) => schemaErrors(packet, packetSchema).length === 0;
+const cloneJson = (v) => JSON.parse(JSON.stringify(v));
+
+// Restricted shapes are assembled from parts so this file never contains one whole.
+const HEX32 = '0123456789abcdef'.repeat(2);
+const RESTRICTED = [
+  ['attachment id', `file_${HEX32}`],
+  ['SHA-256 value', 'ab'.repeat(32)],
+  ['internal evidence id', ['P25', 'EV', '2026', '0001'].join('-')],
+  ['Drive locator', `https://drive.${'google'}.com/file/d/restricted/view`],
+  ['Docs locator', `https://docs.${'google'}.com/document/d/restricted/edit`],
+];
+
+const asModeB = (packet, id = KUTUMBAIA_ID, ref = synthRef(id)) => {
+  const p = cloneJson(packet);
+  Object.assign(p.event, { id, detail_page: `things-to-do/${id}/`, source_url: null, source_reference: ref, card_action: null });
+  p.event.detail.action_label = null;
+  return p;
+};
+const withEvent = (patch) => (p) => { Object.assign(p.event, patch); return p; };
+
+const MATRIX = [
+  // [name, packet, expected verdict from BOTH schema and runtime]
+  ['control: incumbent-shaped mode A packet (ready fixture)', readyFixture, true],
+  ['control: incumbent-shaped mode A packet with manifest + package (write fixture)', writeFixture, true],
+  ['mode B Kutumbaia with its own handle', asModeB(writeFixture, KUTUMBAIA_ID), true],
+  ['mode B MANXI with its own handle', asModeB(writeFixture, MANXI_ID), true],
+  ['mode A: scoped id with a plain URL is rejected', withEvent({ id: KUTUMBAIA_ID, detail_page: `things-to-do/${KUTUMBAIA_ID}/` })(cloneJson(writeFixture)), false],
+  ['mode A: scoped id with URL AND reference is rejected (mixed)', withEvent({ id: MANXI_ID, detail_page: `things-to-do/${MANXI_ID}/`, source_reference: synthRef(MANXI_ID) })(cloneJson(writeFixture)), false],
+  ['mode A: explicit source_reference null is rejected (unscoped id)', withEvent({ source_reference: null })(cloneJson(writeFixture)), false],
+  ['mode B: explicit source_reference null is rejected', withEvent({ source_reference: null })(asModeB(writeFixture)), false],
+  ['mode B: source_url omitted is rejected', ((p) => { delete p.event.source_url; return p; })(asModeB(writeFixture)), false],
+  ['mode B: wrong-event handle is rejected', asModeB(writeFixture, KUTUMBAIA_ID, synthRef(MANXI_ID)), false],
+  ['mode B: unlisted handle is rejected', asModeB(writeFixture, KUTUMBAIA_ID, { ...synthRef(), evidence_ref: 'kutumbaia-edicao-04-2026' }), false],
+  ['mode B: unsupported id is rejected', asModeB(writeFixture, 'automation-fixture-guarded-write', synthRef()), false],
+  ['mode B: extra reference field is rejected', asModeB(writeFixture, KUTUMBAIA_ID, { ...synthRef(), attestation_date: '2026-10-21' }), false],
+  ['mode B: missing evidence_ref is rejected', asModeB(writeFixture, KUTUMBAIA_ID, { version: 1, kind: 'restricted-evidence' }), false],
+  ['mode B: wrong version is rejected', asModeB(writeFixture, KUTUMBAIA_ID, { ...synthRef(), version: 2 }), false],
+  ['mode B: wrong kind is rejected', asModeB(writeFixture, KUTUMBAIA_ID, { ...synthRef(), kind: 'public-url' }), false],
+  ['mode B: card_action present is rejected (NO_CTA)', withEvent({ card_action: { label: 'Open', url: 'https://example.org/' } })(asModeB(writeFixture)), false],
+  ['mode B: action_label present is rejected (NO_CTA)', ((p) => { p.event.detail.action_label = 'Open'; return p; })(asModeB(writeFixture)), false],
+  ['mode A: non-HTTP source_url is rejected', withEvent({ source_url: 'ftp://example.org/x' })(cloneJson(writeFixture)), false],
+  ['mode A: empty source_url is rejected', withEvent({ source_url: '' })(cloneJson(writeFixture)), false],
+  ['mode A: both source fields absent is rejected', ((p) => { delete p.event.source_url; return p; })(cloneJson(writeFixture)), false],
+  ['fact with both value and value_html is rejected', ((p) => { p.event.detail.facts[0].value_html = '<b>x</b>'; return p; })(cloneJson(writeFixture)), false],
+  ['fact with neither value nor value_html is rejected', ((p) => { delete p.event.detail.facts[0].value; return p; })(cloneJson(writeFixture)), false],
+  ['legitimate optional fields are accepted (street, end_month, end_precision, currentness_note, value_html)', ((p) => {
+    Object.assign(p.event, { end_month: '2026-11', end_precision: 'month', currentness_note: 'Checked.', start_date: '2026-09-20' });
+    p.event.location.street = 'Rua de Lisboa';
+    p.event.detail.facts.push({ label: 'Link', value_html: '<a href="https://example.org/x">example.org</a>' });
+    return p;
+  })(cloneJson(writeFixture)), true],
+  ['event.media null is accepted (fallback media)', withEvent({ media: null, media_policy: 'fallback_allowed' })(cloneJson(writeFixture)), true],
+];
+// Extra fields at every depth, with every restricted shape, as value AND as key.
+const INJECTION_SITES = [
+  ['event top level', (p, k, v) => { p.event[k] = v; }],
+  ['event.location', (p, k, v) => { p.event.location[k] = v; }],
+  ['event.display', (p, k, v) => { p.event.display[k] = v; }],
+  ['event.media', (p, k, v) => { p.event.media[k] = v; }],
+  ['event.card_action', (p, k, v) => { p.event.card_action[k] = v; }],
+  ['event.detail', (p, k, v) => { p.event.detail[k] = v; }],
+  ['event.detail.facts[0]', (p, k, v) => { p.event.detail.facts[0][k] = v; }],
+  ['event.seo', (p, k, v) => { p.event.seo[k] = v; }],
+  ['event.source_reference', (p, k, v) => {
+    // A fully valid mode B record apart from the injected reference field.
+    Object.assign(p.event, { id: KUTUMBAIA_ID, detail_page: `things-to-do/${KUTUMBAIA_ID}/`, source_url: null, source_reference: { ...synthRef(), [k]: v }, card_action: null });
+    p.event.detail.action_label = null;
+  }],
+  ['media.approved_manifest', (p, k, v) => { p.media.approved_manifest[k] = v; }],
+  ['localization.approved_package', (p, k, v) => { p.localization.approved_package[k] = v; }],
+  ['localization.approved_package.rows[0]', (p, k, v) => { p.localization.approved_package.rows[0][k] = v; }],
+];
+for (const [label, value] of RESTRICTED) {
+  for (const [site, inject] of INJECTION_SITES) {
+    const asValue = cloneJson(writeFixture); inject(asValue, 'restricted_note', value);
+    const asKey = cloneJson(writeFixture); inject(asKey, value, 'x');
+    MATRIX.push([`injection: ${label} as an extra field VALUE at ${site}`, asValue, false]);
+    MATRIX.push([`injection: ${label} as an extra field KEY at ${site}`, asKey, false]);
+  }
+}
+for (const [name, packet, expected] of MATRIX) {
+  const schemaVerdict = schemaAccepts(packet);
+  const runtimeVerdict = runtimeAccepts(packet);
+  record(`matrix: ${name}`, schemaVerdict === expected && runtimeVerdict === expected, `schema=${schemaVerdict} runtime=${runtimeVerdict} expected=${expected}`);
+}
+
+// Every dated-event incumbent record is admissible to both validators unchanged.
+{
+  const datedIncumbents = baseData.records.filter((r) => r.kind === 'dated-event');
+  const eventSchema = packetSchema.properties.event;
+  const bad = datedIncumbents.filter((r) => schemaErrors(r, eventSchema).length > 0 || validatePublicInputShapes({ event: r }).length > 0 || validateSourceUnion(r).length > 0).map((r) => r.id);
+  record(`incumbent: all ${datedIncumbents.length} dated-event records pass the event schema and runtime boundary unchanged`, bad.length === 0, bad.join(', '));
+  const manifestRows = JSON.parse(fs.readFileSync(path.join(ROOT, 'internal', 'provider-media-manifest.json'), 'utf8')).records
+    .filter((r) => r.section === 'things-to-do' && !('retained_detail_page' in r));
+  const manifestSchema = packetSchema.properties.media.properties.approved_manifest;
+  const badRows = manifestRows.filter((r) => schemaErrors(r, manifestSchema).length > 0 || validatePublicInputShapes({ media: { approved_manifest: r } }).length > 0).map((r) => r.title);
+  record(`incumbent: all ${manifestRows.length} manifest rows (incl. hash-bearing provenance) pass the manifest schema and runtime boundary`, badRows.length === 0, badRows.join(', '));
+  record('incumbent: the retained Spotlight binding is NOT admissible through a packet manifest',
+    schemaErrors({ ...manifestRows[0], retained_detail_page: 'things-to-do/x/index.html' }, manifestSchema).length > 0
+      && validatePublicInputShapes({ media: { approved_manifest: { ...manifestRows[0], retained_detail_page: 'x' } } }).length > 0);
+}
+
+// Value leaks inside allowed fields are runtime-screened (a JSON schema cannot express
+// "no string anywhere contains X" without an open-ended pattern on every field).
+for (const [label, value] of RESTRICTED) {
+  for (const [site, mutate] of [
+    ['event.detail.body', (p, v) => { p.event.detail.body = `Ordinary text ${v} more text`; }],
+    ['event.title', (p, v) => { p.event.title = `Title ${v}`; }],
+    ['event.card_action.url', (p, v) => { p.event.card_action.url = v; }],
+    ['approved_manifest.media_alt', (p, v) => { p.media.approved_manifest.media_alt = `Alt ${v}`; }],
+    ['approved_package row pt', (p, v) => { p.localization.approved_package.rows[0].pt = `PT ${v}`; }],
+  ]) {
+    const p = cloneJson(writeFixture); mutate(p, value);
+    const problems = validatePublicInputShapes(p);
+    const echoed = problems.some((m) => m.includes(value));
+    // media_provenance alone may carry a public asset hash; every other field screens it.
+    record(`value leak: ${label} inside ${site} is rejected without being echoed`, problems.length > 0 && !echoed, problems.join(' | ') || 'ACCEPTED');
+  }
+}
+{
+  const p = cloneJson(writeFixture);
+  p.media.approved_manifest.media_provenance = `Public asset, SHA-256 ${'ab'.repeat(32)}.`;
+  record('no false positive: a public asset hash in manifest provenance is accepted', validatePublicInputShapes(p).length === 0);
+  const q = cloneJson(writeFixture);
+  q.event.detail.body = 'Join us at the Google Arts festival; tickets at https://example.org/tickets/12345678 or call +238 988 60 80.';
+  q.event.source_url = 'https://www.agendacultural.cv/eventos/example';
+  record('no false positive: ordinary copy and ordinary public URLs are accepted', validatePublicInputShapes(q).length === 0 && validateSourceUnion(q.event).length === 0);
+}
+
+// The shared contract and the writer's copy boundary reject the same packets.
+{
+  const injected = cloneJson(writeFixture); injected.event.restricted_note = RESTRICTED[0][1];
+  const verdict = validatePacket(injected, { checkRepository: false });
+  record('contract: validatePacket reports INVALID_INPUT for an unknown public field', verdict.state === 'INVALID_INPUT' && verdict.issues.some((i) => /not an allowed public field/.test(i.reason)));
+  record('contract: the issue text never echoes the restricted value', !JSON.stringify(verdict.issues).includes(RESTRICTED[0][1]));
+  const keyed = cloneJson(writeFixture); keyed.event[RESTRICTED[0][1]] = 'x';
+  record('contract: a restricted-shaped KEY is redacted in the issue text', !JSON.stringify(validatePacket(keyed, { checkRepository: false }).issues).includes(RESTRICTED[0][1]));
+  let threw = null;
+  try { assertPublicInputBoundary(injected); } catch (error) { threw = error; }
+  record('writer boundary: assertPublicInputBoundary throws on an unchecked extra field', Boolean(threw) && /PUBLIC_INPUT_BOUNDARY/.test(threw.message) && !threw.message.includes(RESTRICTED[0][1]));
+  let clean = null;
+  try { assertPublicInputBoundary(writeFixture); } catch (error) { clean = error; }
+  record('writer boundary: the incumbent write fixture passes the boundary', clean === null, clean?.message);
+  const writerSource = fs.readFileSync(path.join(ROOT, 'scripts', 'lib', 'event-publication-write.mjs'), 'utf8');
+  const copySite = writerSource.slice(writerSource.indexOf('function applyApprovedInputs'));
+  record('writer boundary: applyApprovedInputs asserts the boundary before its first copy',
+    copySite.indexOf('assertPublicInputBoundary(packet)') > 0 && copySite.indexOf('assertPublicInputBoundary(packet)') < copySite.indexOf('events.records.push(packet.event)'));
+}
+
+// Standalone entry points: neither the generator nor the media validator may rely
+// on a preceding validation run.
+const standaloneGeneratorRejects = (name, patchRecord, pattern, manifestRow = true) => {
+  const state = sandboxWith(({ data, manifest }) => {
+    data.records.push(patchRecord);
+    if (manifestRow) manifest.records.push({ ...structuredClone(cartinhaManifestRow(manifest)), title: 'SYNTH Title', source_url: null });
+  });
+  for (const file of ['index.html', 'pt/index.html']) {
+    const homeFile = path.join(state.dir, file);
+    let html = fs.readFileSync(homeFile, 'utf8');
+    const last = [...html.matchAll(/<!-- END GENERATED EVENT: [a-z0-9]+(?:-[a-z0-9]+)* -->/g)].pop();
+    const at = last.index + last[0].length;
+    html = `${html.slice(0, at)}\n        <!-- BEGIN GENERATED EVENT: ${patchRecord.id} -->\n        <!-- END GENERATED EVENT: ${patchRecord.id} -->${html.slice(at)}`;
+    fs.writeFileSync(homeFile, html);
+  }
+  const detailDir = path.join(state.dir, 'things-to-do', patchRecord.id);
+  const gen = runIn(state.dir, 'generate-things-to-do.mjs', ['--write', '--as-of=2026-10-12']);
+  record(`standalone generator: ${name}`, gen.status !== 0 && pattern.test(gen.out) && !fs.existsSync(detailDir), gen.out.trim().split('\n').slice(-2).join(' / '));
+  fs.rmSync(state.dir, { recursive: true, force: true });
+};
+standaloneGeneratorRejects('a wrong-event handle fails even with null actions', withNoAction(synthB(KUTUMBAIA_ID, { source_reference: synthRef(MANXI_ID) })), /must equal the approved evidence handle/);
+standaloneGeneratorRejects('an unsupported id with a reference fails', withNoAction(synthB('automation-fixture-guarded-write')), /only permitted for the two/);
+standaloneGeneratorRejects('an invalid reference shape fails', withNoAction(synthB(KUTUMBAIA_ID, { source_reference: { ...synthRef(), note: 'x' } })), /unsupported field/);
+standaloneGeneratorRejects('a prohibited action fails', withNoAction(synthB(KUTUMBAIA_ID, { card_action: { label: 'Open', url: 'https://example.org/' } })), /NO_CTA/);
+standaloneGeneratorRejects('a scoped id with only a plain URL fails', { ...withNoAction(synthB(KUTUMBAIA_ID)), source_url: 'https://example.org/x', source_reference: undefined }, /requires a governed source_reference/);
+standaloneGeneratorRejects('an explicit null source_reference fails', withNoAction(synthB(KUTUMBAIA_ID, { source_reference: null })), /source_reference must be an object/);
+
+const standaloneMediaRejects = (name, canonical, manifestPatch, pattern) => {
+  const state = sandboxWith(({ data, manifest }) => {
+    data.records.push(canonical);
+    manifest.records.push({ ...structuredClone(cartinhaManifestRow(manifest)), title: 'SYNTH Title', source_url: null, ...manifestPatch });
+  });
+  const r = runIn(state.dir, 'validate-card-media.mjs');
+  record(`standalone media validator: ${name}`, r.status !== 0 && pattern.test(r.out), r.out.trim().split('\n').slice(-3).join(' / '));
+  fs.rmSync(state.dir, { recursive: true, force: true });
+};
+standaloneMediaRejects('a wrong-event handle is not accepted as a canonical reference', withNoAction(synthB(KUTUMBAIA_ID, { source_reference: synthRef(MANXI_ID) })), {}, /must equal the approved evidence handle/);
+standaloneMediaRejects('...and the null manifest row then has no valid reference to mirror', withNoAction(synthB(KUTUMBAIA_ID, { source_reference: synthRef(MANXI_ID) })), {}, /source_url null is only valid/);
+standaloneMediaRejects('an unsupported id with a reference is rejected', withNoAction(synthB('automation-fixture-guarded-write')), {}, /only permitted for the two/);
+standaloneMediaRejects('an invalid reference shape is rejected', withNoAction(synthB(KUTUMBAIA_ID, { source_reference: { ...synthRef(), note: 'x' } })), {}, /unsupported field/);
+standaloneMediaRejects('a prohibited action is rejected', withNoAction(synthB(KUTUMBAIA_ID, { card_action: { label: 'Open', url: 'https://example.org/' } })), {}, /NO_CTA/);
+standaloneMediaRejects('a scoped id with only a plain URL is rejected', { ...withNoAction(synthB(KUTUMBAIA_ID)), source_url: 'https://example.org/x', source_reference: undefined }, { source_url: 'https://example.org/x' }, /requires a governed source_reference/);
+standaloneMediaRejects('a manifest row with a URL beside a valid reference is rejected', withNoAction(synthB(KUTUMBAIA_ID)), { source_url: 'https://example.org/x' }, /source_url must be null for a record backed by a source_reference/);
+{
+  const state = sandboxWith(addSynthB);
+  const r = runIn(state.dir, 'validate-card-media.mjs');
+  record('standalone media validator: a valid mode B record raises no source-union error', !/source_url|source_reference|evidence handle/.test(r.out), r.out.trim().split('\n').slice(-3).join(' / '));
+  fs.rmSync(state.dir, { recursive: true, force: true });
 }
 
 // Public-repo rule: no evidence-locator shape anywhere in the canonical data or

@@ -103,7 +103,7 @@ export function evidenceLeakShape(value) {
 export function validateSourceUnion(record) {
   const problems = [];
   const hasUrl = typeof record?.source_url === 'string' && record.source_url !== '';
-  const hasRef = record?.source_reference !== undefined && record.source_reference !== null;
+  const hasRef = record?.source_reference !== undefined;
   const scoped = Object.hasOwn(SOURCE_REFERENCE_EVIDENCE_HANDLES, record?.id);
 
   if (!hasRef) {
@@ -141,6 +141,164 @@ export function validateSourceUnion(record) {
   if (record.card_action != null) problems.push('a source_reference record must not carry a card_action (NO_CTA)');
   if (record.detail?.action_label != null) problems.push('a source_reference record must set detail.action_label to null (NO_CTA)');
   return problems;
+}
+
+// --- Public-input boundary ---------------------------------------------------
+//
+// The writer copies packet.event, packet.media.approved_manifest and the
+// approved locale package into PUBLIC repository JSON. An open object there is a
+// privacy escape: any extra field (an attachment id, a hash, a restricted
+// record id, a Drive/Docs locator) would ride along. These explicit shapes list
+// every field an incumbent record legitimately carries; anything else is
+// REJECTED, never silently kept or dropped. The JSON schema in
+// automation/things-to-do/event-publication-packet.schema.json states the same
+// shapes, and scripts/test-things-to-do-event-schema.mjs executes it against
+// this validator so the two cannot drift.
+const leaf = (...types) => ({ types });
+const obj = (fields, { nullable = false } = {}) => ({ fields, nullable });
+const arr = (item) => ({ item });
+const STR = leaf('string');
+const STR_NULL = leaf('string', 'null');
+const NUM = leaf('number');
+const NUM_OR_NULL = leaf('number', 'null');
+const BOOL_NULL = leaf('boolean', 'null');
+
+export const PUBLIC_EVENT_SHAPE = obj({
+  id: STR, kind: STR, title: STR, provider: STR, summary: STR, category: STR,
+  location: obj({ name: STR, locality: STR, street: STR }),
+  source_url: STR_NULL,
+  source_reference: obj({ version: NUM, kind: STR, evidence_ref: STR }),
+  source_type: STR, start_date: STR_NULL, start_datetime: STR_NULL, end_date: STR_NULL, end_datetime: STR_NULL,
+  end_month: STR_NULL, end_precision: STR, checked_at: STR, publication_state: STR, media_policy: STR,
+  media_manifest_title: STR, detail_page: STR, free_admission: BOOL_NULL, currentness_note: STR,
+  display: obj({ status: STR, meta: STR, checked: STR }),
+  media: obj({ asset: STR, alt: STR, width: NUM, height: NUM }, { nullable: true }),
+  card_action: obj({ label: STR, url: STR }, { nullable: true }),
+  detail: obj({
+    facts: arr(obj({ label: STR, value: STR, value_html: STR })),
+    body: STR, good_to_know: STR_NULL, checked: STR, action_label: STR_NULL
+  }),
+  seo: obj({ description: STR, title: STR, schema_type: STR })
+});
+export const PUBLIC_MANIFEST_SHAPE = obj({
+  section: STR, title: STR, provider: STR, source_url: STR_NULL, media_type: STR, media_state: STR,
+  media_source: STR_NULL, media_asset: STR_NULL, fallback_category: STR, fallback_reason: STR_NULL,
+  media_provenance: STR, media_asset_source_url: STR_NULL, media_checked_date: STR_NULL, media_alt: STR_NULL,
+  media_width: NUM_OR_NULL, media_height: NUM_OR_NULL
+});
+const APPROVED_PACKAGE_KEYS = ['package_id', 'source_revision', 'project_09_status', 'rows'];
+const LOCALE_ROW_KEYS = ['key', 'source_revision', 'source_en', 'pt', 'scope_status', 'identity_policy', 'context_notes', 'record_id', 'linguistic_notes', 'translation_status'];
+// Narrow screen for restricted-evidence shapes in any value bound for a public
+// file. It is deliberately not a general scanner: ordinary copy and ordinary
+// public URLs do not match any of these. A bare SHA-256 is screened everywhere
+// EXCEPT the media_provenance text of a manifest row, where incumbent rows
+// legitimately record the hash of a public media asset.
+const PUBLIC_VALUE_LEAKS = [
+  [/file_[0-9a-f]{32}/i, 'an attachment id'],
+  [/(?:^|[^a-z])(?:drive|docs)\.google\./i, 'a Drive/Docs locator'],
+  [/P25-EV-\d+/i, 'a restricted evidence record id']
+];
+const PUBLIC_VALUE_HASH_LEAK = [/(?<![0-9a-f])[0-9a-f]{64}(?![0-9a-f])/i, 'a SHA-256 value'];
+
+function publicValueLeak(value, { hash = true } = {}) {
+  if (typeof value !== 'string') return null;
+  for (const [pattern, label] of hash ? [...PUBLIC_VALUE_LEAKS, PUBLIC_VALUE_HASH_LEAK] : PUBLIC_VALUE_LEAKS) {
+    if (pattern.test(value)) return label;
+  }
+  return null;
+}
+
+// A rejected key name is never echoed if it is itself a restricted shape.
+const safeKey = (key) => (publicValueLeak(key) ? '<redacted>' : key);
+
+function checkShape(value, spec, pointer, problems) {
+  if (spec.types) {
+    const actual = value === null ? 'null' : Array.isArray(value) ? 'array' : typeof value;
+    if (!spec.types.includes(actual)) problems.push(`${pointer} must be ${spec.types.join(' or ')}`);
+    return;
+  }
+  if (spec.item) {
+    if (!Array.isArray(value)) { problems.push(`${pointer} must be an array`); return; }
+    value.forEach((item, index) => checkShape(item, spec.item, `${pointer}[${index}]`, problems));
+    return;
+  }
+  if (value === null && spec.nullable) return;
+  if (!isObject(value)) { problems.push(`${pointer} must be ${spec.nullable ? 'an object or null' : 'an object'}`); return; }
+  for (const [key, child] of Object.entries(value)) {
+    if (!Object.hasOwn(spec.fields, key)) problems.push(`${pointer}.${safeKey(key)} is not an allowed public field`);
+    else checkShape(child, spec.fields[key], `${pointer}.${key}`, problems);
+  }
+}
+
+function walkStrings(value, pointer, problems, options) {
+  if (typeof value === 'string') {
+    const leak = publicValueLeak(value, options);
+    if (leak) problems.push(`${pointer} must not contain ${leak}`);
+  } else if (Array.isArray(value)) {
+    value.forEach((item, index) => walkStrings(item, `${pointer}[${index}]`, problems, options));
+  } else if (isObject(value)) {
+    for (const [key, child] of Object.entries(value)) walkStrings(child, `${pointer}.${safeKey(key)}`, problems, options);
+  }
+}
+
+/**
+ * Validates every packet structure that is copied into public repository files:
+ * the event, the approved media-manifest record and the approved locale package.
+ * Returns problem strings (empty when admissible).
+ */
+export function validatePublicInputShapes(packet) {
+  const problems = [];
+  const event = packet?.event;
+  if (isObject(event)) {
+    checkShape(event, PUBLIC_EVENT_SHAPE, 'event', problems);
+    for (const [index, fact] of (Array.isArray(event.detail?.facts) ? event.detail.facts : []).entries()) {
+      if (!isObject(fact)) continue;
+      if (typeof fact.label !== 'string') problems.push(`event.detail.facts[${index}].label is required`);
+      if ((fact.value === undefined) === (fact.value_html === undefined)) {
+        problems.push(`event.detail.facts[${index}] must carry exactly one of value or value_html`);
+      }
+    }
+    walkStrings(event, 'event', problems);
+  }
+  const manifest = packet?.media?.approved_manifest;
+  if (manifest !== undefined) {
+    checkShape(manifest, PUBLIC_MANIFEST_SHAPE, 'media.approved_manifest', problems);
+    // Only media_provenance may carry a bare hash (the hash of a public asset).
+    if (isObject(manifest)) {
+      const { media_provenance: provenance, ...rest } = manifest;
+      walkStrings(rest, 'media.approved_manifest', problems);
+      walkStrings(provenance, 'media.approved_manifest.media_provenance', problems, { hash: false });
+    } else {
+      walkStrings(manifest, 'media.approved_manifest', problems);
+    }
+  }
+  const approved = packet?.localization?.approved_package;
+  if (approved !== undefined) {
+    if (!isObject(approved)) {
+      problems.push('localization.approved_package must be an object');
+    } else {
+      for (const key of Object.keys(approved)) {
+        if (!APPROVED_PACKAGE_KEYS.includes(key)) problems.push(`localization.approved_package.${safeKey(key)} is not an allowed public field`);
+      }
+      for (const [index, row] of (Array.isArray(approved.rows) ? approved.rows : []).entries()) {
+        if (!isObject(row)) continue;
+        for (const key of Object.keys(row)) {
+          if (!LOCALE_ROW_KEYS.includes(key)) problems.push(`localization.approved_package.rows[${index}].${safeKey(key)} is not an allowed public field`);
+        }
+        for (const key of LOCALE_ROW_KEYS) {
+          if (typeof row[key] !== 'string') problems.push(`localization.approved_package.rows[${index}].${key} must be a string`);
+        }
+      }
+      walkStrings(approved, 'localization.approved_package', problems);
+    }
+  }
+  return problems;
+}
+
+/** Throws when the packet holds anything the writer must not copy into public files. */
+export function assertPublicInputBoundary(packet) {
+  const problems = validatePublicInputShapes(packet);
+  if (problems.length) throw new Error(`PUBLIC_INPUT_BOUNDARY: ${problems.join('; ')}`);
 }
 
 function slugifyFactLabel(label = '') {
@@ -393,6 +551,9 @@ export function validatePacket(packet, { root = ROOT, checkRepository = true } =
     if (!isObject(packet[section])) {
       issues.push(issue('INVALID_INPUT', 'Project 04', `${section} must be an object`, section, 'RECEIVED'));
     }
+  }
+  for (const problem of validatePublicInputShapes(packet)) {
+    issues.push(issue('INVALID_INPUT', 'Project 04', problem, 'Remove unsupported or restricted fields from the public packet structures', 'RECEIVED'));
   }
   const unknownSections = Object.keys(packet).filter((key) => !['contract_version', ...requiredSections].includes(key));
   if (unknownSections.length) {

@@ -13,6 +13,7 @@ import {
   validationOutcome,
   expectedChangedFiles,
   expectedDryRunChangedFiles,
+  assertPublicInputBoundary,
   validatePacket
 } from './event-publication-contract.mjs';
 import { defaultPullRequestClient } from './github-pr-client.mjs';
@@ -220,6 +221,10 @@ export function runTrustedDryRun(root, packet, packetPath, safety) {
 }
 
 function applyApprovedInputs(root, packet) {
+  // The event, the approved manifest record and the approved locale package are
+  // copied verbatim into public JSON below, so they are re-checked at the copy
+  // site: an unknown or restricted field aborts the write instead of riding along.
+  assertPublicInputBoundary(packet);
   const eventsPath = path.join(root, 'data', 'things-to-do-events.json');
   const events = JSON.parse(fs.readFileSync(eventsPath, 'utf8'));
   events.records.push(packet.event);

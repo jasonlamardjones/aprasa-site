@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { isExpired } from './lib/things-to-do-currentness.mjs';
+import { validateSourceUnion } from './lib/event-publication-contract.mjs';
 import { hubOutputPath, THINGS_TO_DO_HUB_PUBLIC } from './lib/things-to-do-collection.mjs';
 
 const root = process.cwd();
@@ -80,6 +81,16 @@ if (!isIsoDate(asOf)) {
 const canonicalEventByManifestTitle = new Map(
   eventRecords.map((record) => [record.media_manifest_title, record])
 );
+
+// This validator can run on its own, so it does not trust that the canonical
+// validator already vetted each record's source union. A canonical
+// source_reference is accepted below only if the shared union policy accepts it.
+const canonicalSourceUnionValid = new Map();
+for (const record of eventRecords) {
+  const problems = validateSourceUnion(record);
+  canonicalSourceUnionValid.set(record, problems.length === 0);
+  for (const problem of problems) errors.push(`${record.title ?? record.id ?? 'unknown'}: ${problem}`);
+}
 
 // A governed training record removed from the current surface is the direct
 // counterpart of an expired dated event: its marker region on Home is emptied
@@ -197,7 +208,7 @@ for (const record of manifest.records) {
   // Record-scoped source union: a manifest row mirrors its canonical record's
   // mode. Null is valid only beside a governed source_reference, and the row
   // itself never carries the reference (the manifest is public, too).
-  const canonicalUsesReference = canonicalEvent?.source_reference != null;
+  const canonicalUsesReference = canonicalEvent?.source_reference !== undefined && canonicalSourceUnionValid.get(canonicalEvent) === true;
   if (Object.hasOwn(record, 'source_reference')) errors.push(`${label}: media manifest rows must not carry source_reference`);
   if (record.source_url === null) {
     if (!canonicalUsesReference || canonicalEvent.source_url !== null) errors.push(`${label}: source_url null is only valid for a record backed by a governed source_reference`);
