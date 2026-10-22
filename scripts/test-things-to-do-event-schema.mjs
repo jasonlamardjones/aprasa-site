@@ -637,12 +637,12 @@ for (const [name, packet, expected] of MATRIX) {
   const manifestSchema = packetSchema.properties.media.properties.approved_manifest;
   // A hash-bearing incumbent provenance passes when that hash is the packet's approved asset hash.
   const provenanceHash = (r) => (r.media_provenance ?? '').match(/(?<![0-9a-f])[0-9a-f]{64}(?![0-9a-f])/i)?.[0]?.toLowerCase();
-  const asPacketMedia = (r) => ({ media: { asset_sha256: provenanceHash(r) ?? null, approved_manifest: r } });
+  const asPacketMedia = (r) => ({ media: { local_asset: 'assets/events/incumbent-public-asset.jpg', asset_sha256: provenanceHash(r) ?? null, approved_manifest: r } });
   const badRows = manifestRows.filter((r) => schemaErrors(r, manifestSchema).length > 0 || validatePublicInputShapes(asPacketMedia(r)).length > 0).map((r) => r.title);
   record(`incumbent: all ${manifestRows.length} manifest rows (incl. hash-bearing provenance) pass the manifest schema and runtime boundary`, badRows.length === 0, badRows.join(', '));
   const hashBearing = manifestRows.filter((r) => provenanceHash(r));
   record(`incumbent: ${hashBearing.length} hash-bearing provenance rows are rejected if the hash is NOT the approved asset hash`,
-    hashBearing.length > 0 && hashBearing.every((r) => validatePublicInputShapes({ media: { asset_sha256: 'cd'.repeat(32), approved_manifest: r } }).length > 0
+    hashBearing.length > 0 && hashBearing.every((r) => validatePublicInputShapes({ media: { local_asset: 'assets/events/incumbent-public-asset.jpg', asset_sha256: 'cd'.repeat(32), approved_manifest: r } }).length > 0
       && validatePublicInputShapes({ media: { approved_manifest: r } }).length > 0));
   record('incumbent: the retained Spotlight binding is NOT admissible through a packet manifest',
     schemaErrors({ ...manifestRows[0], retained_detail_page: 'things-to-do/x/index.html' }, manifestSchema).length > 0
@@ -682,6 +682,51 @@ for (const [label, value] of RESTRICTED) {
   record('provenance hash: the approved hash plus a second hash is rejected', provenanceProblems(`${assetHash} and ${'ab'.repeat(32)}`).some((m) => PROV_ERR.test(m)));
   record('provenance hash: a hash is rejected when the packet has no approved asset hash', provenanceProblems(`Provenance ${assetHash}`, (p) => { delete p.media.asset_sha256; }).some((m) => PROV_ERR.test(m)));
   record('provenance hash: a hash is rejected when asset_sha256 is malformed', provenanceProblems(`Provenance ${assetHash}`, (p) => { p.media.asset_sha256 = assetHash.slice(1); }).some((m) => PROV_ERR.test(m)));
+  // A fallback_allowed packet has no public asset, so there is nothing a hash could belong to.
+  const PROV_ERR_ANY = /may cite only the SHA-256 of the approved public asset/;
+  const fallbackPacket = (provenance, mutate = () => {}) => {
+    const p = cloneJson(writeFixture);
+    p.event.media_policy = 'fallback_allowed';
+    p.event.media = null;
+    p.media.local_asset = null;
+    p.media.asset_sha256 = 'ab'.repeat(32);
+    p.media.approved_manifest.media_asset = null;
+    p.media.approved_manifest.media_provenance = provenance;
+    mutate(p);
+    return p;
+  };
+  const preflightReasons = (p) => validatePacket(p, { checkRepository: false }).issues.map((i) => i.reason);
+  const boundaryThrows = (p) => { try { assertPublicInputBoundary(p); return null; } catch (e) { return e.message; } };
+  for (const [label, mutate] of [
+    ['local_asset null', () => {}],
+    ['local_asset empty string', (p) => { p.media.local_asset = ''; }],
+    ['local_asset absent', (p) => { delete p.media.local_asset; }],
+    ['asset_sha256 also null', (p) => { p.media.asset_sha256 = null; }],
+  ]) {
+    const p = fallbackPacket(`Fallback record. ${'ab'.repeat(32)}`, mutate);
+    const reasons = preflightReasons(p);
+    const thrown = boundaryThrows(p);
+    record(`provenance hash: fallback/no-asset (${label}) is rejected at preflight`, reasons.some((r) => PROV_ERR_ANY.test(r)));
+    record(`provenance hash: fallback/no-asset (${label}) is rejected at the writer boundary`, thrown !== null && PROV_ERR_ANY.test(thrown));
+    record(`provenance hash: fallback/no-asset (${label}) never echoes the hash`, !reasons.join(' ').includes('ab'.repeat(32)) && !String(thrown).includes('ab'.repeat(32)));
+  }
+  {
+    const clean = fallbackPacket('Approved A PRASA neutral category fallback; no media asset.');
+    record('provenance hash: a fallback record with hash-free provenance is still accepted at both gates',
+      !preflightReasons(clean).some((r) => PROV_ERR_ANY.test(r)) && boundaryThrows(clean) === null);
+    const real = cloneJson(writeFixture);
+    real.media.approved_manifest.media_provenance = `Public asset ${writeFixture.media.asset_sha256}`;
+    record('provenance hash: a real public asset citing its own hash passes both gates',
+      !preflightReasons(real).some((r) => PROV_ERR_ANY.test(r)) && boundaryThrows(real) === null);
+    const wrongAsset = cloneJson(real);
+    wrongAsset.media.approved_manifest.media_provenance = `Public asset ${'cd'.repeat(32)}`;
+    record('provenance hash: a real public asset citing a different hash is rejected at both gates',
+      preflightReasons(wrongAsset).some((r) => PROV_ERR_ANY.test(r)) && PROV_ERR_ANY.test(String(boundaryThrows(wrongAsset))));
+    // Bytes are compared with asset_sha256 by the real-write preflight and the writer, not here.
+    const contractSource = fs.readFileSync(path.join(ROOT, 'scripts', 'lib', 'event-publication-contract.mjs'), 'utf8');
+    record('provenance hash: real-write preflight still compares asset_sha256 with the asset bytes',
+      /actualHash !== media\.asset_sha256/.test(contractSource));
+  }
   record('provenance hash: a rejected hash is never echoed', !provenanceProblems(`Provenance ${'ab'.repeat(32)}`).join(' ').includes('ab'.repeat(32)));
   record('provenance hash: a restricted attachment id or locator in provenance is still rejected',
     provenanceProblems(`Provenance ${RESTRICTED[0][1]}`).length > 0 && provenanceProblems(`Provenance ${RESTRICTED[3][1]}`).length > 0);
@@ -727,6 +772,39 @@ for (const [label, value] of RESTRICTED) {
   for (const url of ['http://[', 'https:///x', 'https://%']) {
     const p = urlPacket('source_url', url);
     record(`url semantics: ${JSON.stringify(url)} passes only the schema scheme gate and is rejected by the runtime`, schemaAccepts(p) && !runtimeUrlOk(p));
+  }
+  // card_action as an object must name a destination: present, non-empty, valid HTTP(S).
+  {
+    const withAction = (ca) => { const p = cloneJson(writeFixture); p.event.card_action = ca; return p; };
+    const UR = /card_action\.url/;
+    const reasons = (p) => validatePacket(p, { checkRepository: false }).issues.map((i) => i.reason);
+    const throwsBoundary = (p) => { try { assertPublicInputBoundary(p); return null; } catch (e) { return e.message; } };
+    for (const [label, ca, both] of [
+      ['url omitted', { label: 'Event listing' }, true],
+      ['url empty', { label: 'Event listing', url: '' }, true],
+      ['url null', { label: 'Event listing', url: null }, true],
+      ['url numeric', { label: 'Event listing', url: 5 }, true],
+      ['url non-HTTP(S) scheme', { label: 'Event listing', url: 'javascript:alert(1)' }, true],
+      ['url ftp scheme', { label: 'Event listing', url: 'ftp://example.org/e' }, true],
+      ['url scheme-valid but malformed', { label: 'Event listing', url: 'https:///x' }, false],
+    ]) {
+      const p = withAction(ca);
+      record(`card_action: ${label} is rejected at preflight`, reasons(p).some((r) => UR.test(r)));
+      record(`card_action: ${label} is rejected at the writer boundary`, UR.test(String(throwsBoundary(p))));
+      record(`card_action: ${label} is rejected by the runtime union validator`, validateSourceUnion(p.event).some((m) => UR.test(m)));
+      record(`card_action: ${label} ${both ? 'is rejected by BOTH schema and runtime' : 'passes only the schema scheme gate; the runtime rejects it'}`,
+        both ? !schemaAccepts(p) && !runtimeAccepts(p) : schemaAccepts(p) && !runtimeAccepts(p));
+    }
+    const good = withAction({ label: 'Event listing', url: 'https://example.org/e' });
+    record('card_action: a valid HTTPS url is accepted by schema, runtime, preflight and the writer boundary',
+      schemaAccepts(good) && runtimeAccepts(good) && !reasons(good).some((r) => UR.test(r)) && throwsBoundary(good) === null);
+    const none = withAction(null);
+    record('card_action: null is still accepted (schema, runtime and writer boundary)', schemaAccepts(none) && runtimeAccepts(none) && throwsBoundary(none) === null);
+    for (const id of [KUTUMBAIA_ID, MANXI_ID]) {
+      const noCta = asModeB(writeFixture, id);
+      record(`card_action: the approved NO_CTA event ${id} remains valid with card_action null`,
+        noCta.event.card_action === null && schemaAccepts(noCta) && runtimeAccepts(noCta) && throwsBoundary(noCta) === null);
+    }
   }
   record('url semantics: the preflight and the writer boundary both reject a malformed card_action.url',
     validatePacket(urlPacket('card_action.url', 'javascript:alert(1)'), { checkRepository: false }).state === 'INVALID_INPUT'
@@ -783,6 +861,7 @@ standaloneGeneratorRejects('a scoped id with only a plain URL fails', { ...withN
 for (const [label, patch, pattern] of [
   ['a malformed source_url', (r) => { r.source_url = 'https:///x'; }, /source_url must be an HTTP\(S\) URL/],
   ['a script-scheme card_action.url', (r) => { r.card_action = { ...r.card_action, url: 'javascript:alert(1)' }; }, /card_action\.url must be a valid HTTP\(S\) URL/],
+  ['a card_action without a url', (r) => { delete r.card_action.url; }, /card_action\.url must be a valid HTTP\(S\) URL/],
 ]) {
   const state = sandboxWith(({ data }) => { patch(data.records.find((r) => r.id === 'cartinha-dholanda-mindelo-2026')); });
   const gen = runIn(state.dir, 'generate-things-to-do.mjs', ['--write', '--as-of=2026-10-12']);

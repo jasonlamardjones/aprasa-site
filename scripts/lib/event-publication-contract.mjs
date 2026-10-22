@@ -116,7 +116,9 @@ export function validateSourceUnion(record) {
   const hasRef = record?.source_reference !== undefined;
   const scoped = Object.hasOwn(SOURCE_REFERENCE_EVIDENCE_HANDLES, record?.id);
 
-  if (isObject(record?.card_action) && typeof record.card_action.url === 'string' && !validHttpUrl(record.card_action.url)) {
+  // Whenever card_action is an object it must name a destination: present,
+  // non-empty and a semantically valid HTTP(S) URL.
+  if (isObject(record?.card_action) && (typeof record.card_action.url !== 'string' || !validHttpUrl(record.card_action.url))) {
     problems.push('card_action.url must be a valid HTTP(S) URL');
   }
 
@@ -285,16 +287,20 @@ export function validatePublicInputShapes(packet) {
     }
     // media_provenance may cite the hash of the approved PUBLIC asset and no other
     // hash: an unrestricted 64-hex string could be a restricted evidence hash.
-    // The permitted value is packet.media.asset_sha256, which the writer verifies
-    // against the asset's actual bytes before anything is written.
+    // That hash is permitted only when a public asset really exists
+    // (media.local_asset) and the packet's media.asset_sha256 names it. A fallback
+    // record has no asset, so it may cite no hash at all. Real-write preflight
+    // (validatePacket with checkRepository) and the writer both compare
+    // asset_sha256 with the asset's actual bytes before anything is promoted.
     if (isObject(manifest)) {
       const { media_provenance: provenance, ...rest } = manifest;
       walkStrings(rest, 'media.approved_manifest', problems);
       walkStrings(provenance, 'media.approved_manifest.media_provenance', problems, { hash: false });
-      const approvedAssetHash = SHA256.test(packet?.media?.asset_sha256 ?? '') ? packet.media.asset_sha256 : null;
+      const hasPublicAsset = typeof packet?.media?.local_asset === 'string' && packet.media.local_asset.length > 0;
+      const approvedAssetHash = hasPublicAsset && SHA256.test(packet?.media?.asset_sha256 ?? '') ? packet.media.asset_sha256 : null;
       const cited = typeof provenance === 'string' ? provenance.match(PUBLIC_VALUE_HASH_LEAK_GLOBAL) ?? [] : [];
       if (cited.some((hash) => hash.toLowerCase() !== approvedAssetHash)) {
-        problems.push('media.approved_manifest.media_provenance may cite only the SHA-256 of the approved public asset (media.asset_sha256)');
+        problems.push('media.approved_manifest.media_provenance may cite only the SHA-256 of the approved public asset (media.local_asset with its media.asset_sha256)');
       }
     } else {
       walkStrings(manifest, 'media.approved_manifest', problems);

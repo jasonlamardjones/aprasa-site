@@ -74,9 +74,10 @@
         "card_action": {
           "type": ["object", "null"],
           "additionalProperties": false,
+          "required": ["url"],
           "properties": {
             "label": { "type": "string" },
-            "url": { "type": "string", "pattern": "^[hH][tT][tT][pP][sS]?://" }
+            "url": { "type": "string", "minLength": 1, "pattern": "^[hH][tT][tT][pP][sS]?://" }
           }
         },
         "detail": {
