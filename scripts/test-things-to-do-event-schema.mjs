@@ -28,10 +28,12 @@ import {
   SOURCE_REFERENCE_EVENT_IDS,
   SOURCE_REFERENCE_EVIDENCE_HANDLES,
   assertPublicInputBoundary,
+  redactDiagnostic,
   validatePacket,
   validatePublicInputShapes,
   validateSourceUnion,
 } from './lib/event-publication-contract.mjs';
+import { prepareRealWriteCandidate } from './lib/event-publication-write.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -895,6 +897,113 @@ standaloneMediaRejects('a manifest row with a URL beside a valid reference is re
   const r = runIn(state.dir, 'validate-card-media.mjs');
   record('standalone media validator: a valid mode B record raises no source-union error', !/source_url|source_reference|evidence handle/.test(r.out), r.out.trim().split('\n').slice(-3).join(' / '));
   fs.rmSync(state.dir, { recursive: true, force: true });
+}
+
+// ===========================================================================
+// Part 5 — diagnostics never reproduce restricted-shaped input.
+//
+// A rejected packet must not echo its own restricted-shaped values into any
+// emitted field (reason, required_input, resume_from, owner, code), nor into the
+// thrown messages built from them. Values are synthetic and assembled from parts.
+// ===========================================================================
+{
+  const D = {
+    attachment: `file_${'0123456789abcdef'.repeat(2)}`,
+    hash: 'ab'.repeat(32),
+    evidenceId: ['P25', 'EV', '2026', '0001'].join('-'),
+    drive: `https://drive.${'google'}.com/file/d/restricted/view`,
+    docs: `https://docs.${'google'}.com/document/d/restricted/edit`,
+  };
+  const ID = writeFixture.event.id;
+  const localeRow = (key) => ({ ...cloneJson(writeFixture.localization.approved_package.rows[0]), key });
+  const mkPacket = (mutate) => { const p = cloneJson(writeFixture); mutate(p); return p; };
+
+  // [name, packet, regex a SAFE, useful message must still match somewhere in the output]
+  const DIAG = [
+    ['untrusted locale row key', mkPacket((p) => { p.localization.approved_package.rows[0].key = `event.${ID}.${D.attachment}`; }), /does not match canonical EN presentation|PT value mismatch|does not exactly cover/],
+    ['extra locale row (mismatch report and required_input)', mkPacket((p) => { p.localization.approved_package.rows.push(localeRow(`event.${ID}.${D.evidenceId}`)); }), /does not exactly cover the event presentation contract/],
+    ['extra locale row keyed by a bare hash', mkPacket((p) => { p.localization.approved_package.rows.push(localeRow(D.hash)); }), /does not exactly cover the event presentation contract/],
+    ['extra locale row keyed by a Drive locator', mkPacket((p) => { p.localization.approved_package.rows.push(localeRow(D.drive)); }), /does not exactly cover the event presentation contract/],
+    ['duplicate restricted locale row key', mkPacket((p) => { const k = `event.${ID}.${D.attachment}`; p.localization.approved_package.rows.push(localeRow(k), localeRow(k)); }), /duplicates/],
+    ['unknown nested source_reference field name', mkPacket((p) => { Object.assign(p.event, { source_url: null, source_reference: { version: 1, kind: 'restricted-evidence', evidence_ref: ID, [D.attachment]: 'x' } }); }), /unsupported field/],
+    ['unknown top-level packet key', mkPacket((p) => { p[D.hash] = 1; }), /Unknown top-level field/],
+    ['unknown nested event key (hash)', mkPacket((p) => { p.event.location[D.hash] = 'x'; }), /not an allowed public field/],
+    ['unknown nested event key (evidence id)', mkPacket((p) => { p.event.detail[D.evidenceId] = 'x'; }), /not an allowed public field/],
+    ['unknown manifest key (Drive locator)', mkPacket((p) => { p.media.approved_manifest[D.drive] = 'x'; }), /not an allowed public field/],
+    ['unknown manifest key (Docs locator)', mkPacket((p) => { p.media.approved_manifest[D.docs] = 'x'; }), /not an allowed public field/],
+    ['unknown approved_package key', mkPacket((p) => { p.localization.approved_package[D.attachment] = 'x'; }), /not an allowed public field/],
+    ['unknown locale-row key', mkPacket((p) => { p.localization.approved_package.rows[0][D.evidenceId] = 'x'; }), /not an allowed public field/],
+    ['restricted-shaped event.id (rejected path, required_input)', mkPacket((p) => { p.event.id = D.attachment; p.event.detail_page = `things-to-do/${D.attachment}/`; }), /derived from event\.id|lowercase slug/],
+    ['restricted-shaped media.local_asset (rejected path)', mkPacket((p) => { p.media.local_asset = `assets/events/${D.hash}.jpg`; p.event.media.asset = p.media.local_asset; }), /Local media asset does not exist|does not exist/, { repositoryOnly: true }],
+    ['restricted value inside free text', mkPacket((p) => { p.event.detail.body = `Body ${D.attachment} then ${D.drive}`; }), /must not contain/],
+  ];
+  const everyField = (issue) => ['code', 'owner', 'reason', 'required_input', 'resume_from'].every((f) => Object.hasOwn(issue, f));
+  const collectOutputs = (packet, checkRepository) => {
+    const outputs = [];
+    const verdict = validatePacket(structuredClone(packet), { root: ROOT, checkRepository });
+    outputs.push(JSON.stringify(verdict));
+    outputs.push(JSON.stringify(validateSourceUnion(structuredClone(packet.event))));
+    outputs.push(JSON.stringify(validatePublicInputShapes(structuredClone(packet))));
+    try { assertPublicInputBoundary(structuredClone(packet)); } catch (error) { outputs.push(`THROWN ${error.message}`); }
+    return { text: outputs.join('\n'), verdict };
+  };
+  for (const [name, packet, safeMessage, options] of DIAG) {
+    for (const checkRepository of [false, true]) {
+      const { text, verdict } = collectOutputs(packet, checkRepository);
+      const echoed = Object.entries(D).filter(([, value]) => text.includes(value)).map(([label]) => label);
+      record(`diagnostics (${checkRepository ? 'repository' : 'packet'} mode): ${name} is not echoed in any issue field or thrown message`, echoed.length === 0, `echoed: ${echoed.join(', ')}`);
+      if (!(options?.repositoryOnly && !checkRepository)) record(`diagnostics (${checkRepository ? 'repository' : 'packet'} mode): ${name} keeps a useful safe message`, safeMessage.test(text));
+      record(`diagnostics (${checkRepository ? 'repository' : 'packet'} mode): ${name} is still rejected`, verdict.ok === false);
+      record(`diagnostics (${checkRepository ? 'repository' : 'packet'} mode): ${name} issues keep all five fields`, verdict.issues.every(everyField));
+    }
+  }
+
+  // Real-write preparation: the preflight failure message is built from the issues.
+  for (const [name, packet] of DIAG) {
+    let message = '';
+    try { prepareRealWriteCandidate({ root: ROOT, packet: cloneJson(packet), packetPath: path.join(ROOT, 'automation', 'things-to-do', 'fixtures', 'ready-write.json'), testHooks: {} }); } catch (error) { message = error.message; }
+    const echoed = Object.entries(D).filter(([, value]) => message.includes(value)).map(([label]) => label);
+    record(`diagnostics (real-write preparation): ${name} is refused without echoing restricted values`, message.length > 0 && echoed.length === 0, message ? `echoed: ${echoed.join(', ')}` : 'NOT REFUSED');
+  }
+
+  // The sanitizer itself: replaces only restricted-shaped tokens, leaves everything else.
+  record('redactDiagnostic: restricted tokens are replaced as whole tokens', redactDiagnostic(`bad ${D.attachment}, worse ${D.hash}; ${D.drive} ${D.evidenceId}`) === 'bad <redacted>, worse <redacted>; <redacted> <redacted>');
+  record('redactDiagnostic: a pointer carrying a restricted key is redacted whole', !redactDiagnostic(`rows[3].${D.attachment}.title`).includes(D.attachment));
+  record('redactDiagnostic: ordinary text, safe keys and short hex strings are untouched',
+    redactDiagnostic('event.detail.body must be a string; id kutumbaia-edicao-03-2026; file_abc; 63hex ' + 'a'.repeat(63)) === 'event.detail.body must be a string; id kutumbaia-edicao-03-2026; file_abc; 63hex ' + 'a'.repeat(63));
+  record('redactDiagnostic: non-strings pass through unchanged', redactDiagnostic(null) === null && redactDiagnostic(5) === 5 && redactDiagnostic(undefined) === undefined);
+  record('redactDiagnostic: a 65-hex run is not mistaken for a SHA-256', redactDiagnostic('a'.repeat(65)) === 'a'.repeat(65));
+
+  // validateSourceUnion on its own, with and without a restricted nested field name.
+  const refWithName = withNoAction(synthB(KUTUMBAIA_ID, { source_reference: { ...synthRef(), [D.attachment]: 'x', [D.drive]: 'y' } }));
+  const unionOut = validateSourceUnion(refWithName).join(' | ');
+  record('validateSourceUnion: rejected nested field names are redacted but the rejection is kept',
+    /unsupported field/.test(unionOut) && !unionOut.includes(D.attachment) && !unionOut.includes(D.drive) && unionOut.includes('<redacted>'));
+  record('validateSourceUnion: an ordinary unknown field name is still named (safe, useful)',
+    validateSourceUnion(withNoAction(synthB(KUTUMBAIA_ID, { source_reference: { ...synthRef(), note: 'x' } }))).some((m) => /unsupported field\(s\): note/.test(m)));
+
+  // Valid packets and the public-write / URL invariants are unchanged.
+  for (const [label, fixtureName] of [['ready', 'ready.json'], ['ready-write', 'ready-write.json']]) {
+    const fixturePacket = JSON.parse(fs.readFileSync(path.join(ROOT, 'automation', 'things-to-do', 'fixtures', fixtureName), 'utf8'));
+    const verdict = validatePacket(fixturePacket, { root: ROOT, checkRepository: false });
+    record(`diagnostics: the valid ${label} fixture is still accepted with no issues`, verdict.ok === true && verdict.issues.length === 0, JSON.stringify(verdict.issues));
+  }
+  for (const id of [KUTUMBAIA_ID, MANXI_ID]) {
+    const modeB = asModeB(writeFixture, id);
+    record(`diagnostics: the approved mode B event ${id} raises no source or boundary issue`, runtimeAccepts(modeB));
+  }
+  record('diagnostics: a wrong-event handle is still rejected', validateSourceUnion(withNoAction(synthB(KUTUMBAIA_ID, { source_reference: synthRef(MANXI_ID) }))).some((m) => /must equal the approved evidence handle/.test(m)));
+  record('diagnostics: a fallback record citing a hash is still rejected', (() => {
+    const p = cloneJson(writeFixture);
+    p.event.media_policy = 'fallback_allowed'; p.event.media = null; p.media.local_asset = null; p.media.asset_sha256 = D.hash;
+    p.media.approved_manifest.media_asset = null; p.media.approved_manifest.media_provenance = `Fallback ${D.hash}`;
+    return validatePublicInputShapes(p).some((m) => /may cite only the SHA-256 of the approved public asset/.test(m)) && !validatePublicInputShapes(p).join(' ').includes(D.hash);
+  })());
+  record('diagnostics: a card_action without a url is still rejected', (() => {
+    const p = cloneJson(writeFixture); p.event.card_action = { label: 'Event listing' };
+    return validateSourceUnion(p.event).some((m) => /card_action\.url must be a valid HTTP\(S\) URL/.test(m));
+  })());
+  record('diagnostics: a malformed source_url is still rejected', validateSourceUnion({ ...cloneJson(writeFixture.event), source_url: 'https:///x' }).some((m) => /source_url must be an HTTP\(S\) URL/.test(m)));
 }
 
 // Public-repo rule: no evidence-locator shape anywhere in the canonical data or

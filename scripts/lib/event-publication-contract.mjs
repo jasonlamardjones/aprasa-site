@@ -19,8 +19,25 @@ const COMMIT_SHA = /^[a-f0-9]{40}$/;
 const SHA256 = /^[a-f0-9]{64}$/;
 const EVENT_MEDIA_ASSET = /^assets\/events\/[a-z0-9]+(?:-[a-z0-9]+)*\.(?:avif|jpe?g|png|webp)$/;
 
+// Diagnostics are echoed into logs, proofs and error text. A rejected packet's
+// input must never be reproduced there, so any whitespace/comma/semicolon-delimited
+// token that has a restricted shape (attachment id, Drive/Docs locator, restricted
+// evidence record id, SHA-256) is replaced as a whole. It uses the same patterns
+// the public-input boundary already defines; it is not a general secret scanner.
+export function redactDiagnostic(text) {
+  if (typeof text !== 'string') return text;
+  return text.replace(/[^\s,;]+/g, (token) => (publicValueLeak(token) ? '<redacted>' : token));
+}
+
+// Every emitted issue field is sanitized at the single place issues are built.
 function issue(code, owner, reason, requiredInput, resumeFrom) {
-  return { code, owner, reason, required_input: requiredInput, resume_from: resumeFrom };
+  return {
+    code: redactDiagnostic(code),
+    owner: redactDiagnostic(owner),
+    reason: redactDiagnostic(reason),
+    required_input: redactDiagnostic(requiredInput),
+    resume_from: redactDiagnostic(resumeFrom)
+  };
 }
 
 function isObject(value) {
@@ -111,6 +128,10 @@ export function evidenceLeakShape(value) {
  * (empty when valid), without a record label so each caller can add its own.
  */
 export function validateSourceUnion(record) {
+  return validateSourceUnionRaw(record).map(redactDiagnostic);
+}
+
+function validateSourceUnionRaw(record) {
   const problems = [];
   const hasUrl = typeof record?.source_url === 'string' && record.source_url !== '';
   const hasRef = record?.source_reference !== undefined;
@@ -139,7 +160,7 @@ export function validateSourceUnion(record) {
     return problems;
   }
   const unknownKeys = Object.keys(ref).filter((key) => !SOURCE_REFERENCE_KEYS.includes(key));
-  if (unknownKeys.length) problems.push(`source_reference has unsupported field(s): ${unknownKeys.join(', ')}`);
+  if (unknownKeys.length) problems.push(`source_reference has unsupported field(s): ${unknownKeys.map(safeKey).join(', ')}`);
   if (ref.version !== 1) problems.push('source_reference.version must equal 1');
   if (ref.kind !== 'restricted-evidence') problems.push('source_reference.kind must be "restricted-evidence"');
 
@@ -264,6 +285,10 @@ function walkStrings(value, pointer, problems, options) {
  * Returns problem strings (empty when admissible).
  */
 export function validatePublicInputShapes(packet) {
+  return validatePublicInputShapesRaw(packet).map(redactDiagnostic);
+}
+
+function validatePublicInputShapesRaw(packet) {
   const problems = [];
   const event = packet?.event;
   if (isObject(event)) {
@@ -592,7 +617,7 @@ export function validatePacket(packet, { root = ROOT, checkRepository = true } =
   }
   const unknownSections = Object.keys(packet).filter((key) => !['contract_version', ...requiredSections].includes(key));
   if (unknownSections.length) {
-    issues.push(issue('INVALID_INPUT', 'Project 04', `Unknown top-level field(s): ${unknownSections.join(', ')}`, 'Remove unsupported fields', 'RECEIVED'));
+    issues.push(issue('INVALID_INPUT', 'Project 04', `Unknown top-level field(s): ${unknownSections.map(safeKey).join(', ')}`, 'Remove unsupported fields', 'RECEIVED'));
   }
 
   if (packet?.contract_version !== 1) {
@@ -719,7 +744,7 @@ export function validatePacket(packet, { root = ROOT, checkRepository = true } =
     const ptValues = localization.pt_values ?? {};
     const missingKeys = requiredPtKeys(event).filter((key) => typeof ptValues[key] !== 'string' || ptValues[key].length === 0);
     if (missingKeys.length) {
-      issues.push(issue('BLOCKED_LOCALIZATION', 'Project 09', `Approved Portuguese packet is missing ${missingKeys.length} required key(s)`, missingKeys.join(', '), 'GOVERNANCE_CHECKED'));
+      issues.push(issue('BLOCKED_LOCALIZATION', 'Project 09', `Approved Portuguese packet is missing ${missingKeys.length} required key(s)`, missingKeys.map(safeKey).join(', '), 'GOVERNANCE_CHECKED'));
     }
   }
 
@@ -747,26 +772,26 @@ export function validatePacket(packet, { root = ROOT, checkRepository = true } =
           continue;
         }
         if (seenRows.has(row.key)) {
-          issues.push(issue('INVALID_INPUT', 'Project 04', `Approved locale package duplicates ${row.key}`, 'Unique additive locale keys', 'RECEIVED'));
+          issues.push(issue('INVALID_INPUT', 'Project 04', `Approved locale package duplicates ${safeKey(row.key)}`, 'Unique additive locale keys', 'RECEIVED'));
         }
         seenRows.add(row.key);
         if (!expectedRows.has(row.key) || row.source_en !== expectedRows.get(row.key)) {
-          issues.push(issue('INVALID_INPUT', 'Project 04', `Approved locale row does not match canonical EN presentation: ${row.key}`, 'Matching approved event and locale package', 'RECEIVED'));
+          issues.push(issue('INVALID_INPUT', 'Project 04', `Approved locale row does not match canonical EN presentation: ${safeKey(row.key)}`, 'Matching approved event and locale package', 'RECEIVED'));
         }
         if (row.pt !== localization.pt_values?.[row.key] || row.pt.length === 0) {
-          issues.push(issue('BLOCKED_LOCALIZATION', 'Project 09', `Approved PT value mismatch for ${row.key}`, 'Matching approved PT value and locale row', 'GOVERNANCE_CHECKED'));
+          issues.push(issue('BLOCKED_LOCALIZATION', 'Project 09', `Approved PT value mismatch for ${safeKey(row.key)}`, 'Matching approved PT value and locale row', 'GOVERNANCE_CHECKED'));
         }
         if (row.source_revision !== approvedPackage.source_revision || row.record_id !== event.id || row.translation_status !== 'APPROVED') {
-          issues.push(issue('BLOCKED_LOCALIZATION', 'Project 09', `Locale governance metadata is not approved for ${row.key}`, 'Approved source revision, record id, and translation status', 'GOVERNANCE_CHECKED'));
+          issues.push(issue('BLOCKED_LOCALIZATION', 'Project 09', `Locale governance metadata is not approved for ${safeKey(row.key)}`, 'Approved source revision, record id, and translation status', 'GOVERNANCE_CHECKED'));
         }
         if (!['REQUIRED_FOR_PT_LAUNCH', 'INTENTIONALLY_UNCHANGED'].includes(row.scope_status)) {
-          issues.push(issue('INVALID_INPUT', 'Project 04', `Invalid locale scope for ${row.key}`, 'Governed scope_status', 'RECEIVED'));
+          issues.push(issue('INVALID_INPUT', 'Project 04', `Invalid locale scope for ${safeKey(row.key)}`, 'Governed scope_status', 'RECEIVED'));
         }
       }
       const missingRows = [...expectedRows.keys()].filter((key) => !seenRows.has(key));
       const extraRows = [...seenRows].filter((key) => !expectedRows.has(key));
       if (missingRows.length || extraRows.length) {
-        issues.push(issue('BLOCKED_LOCALIZATION', 'Project 09', 'Approved locale package does not exactly cover the event presentation contract', [...missingRows, ...extraRows].join(', '), 'GOVERNANCE_CHECKED'));
+        issues.push(issue('BLOCKED_LOCALIZATION', 'Project 09', 'Approved locale package does not exactly cover the event presentation contract', [...missingRows, ...extraRows].map(safeKey).join(', '), 'GOVERNANCE_CHECKED'));
       }
     }
   }
@@ -844,10 +869,10 @@ export function validatePacket(packet, { root = ROOT, checkRepository = true } =
       }
     }
     if (!destinationContained || (!localExists && !suppliedExists)) {
-      issues.push(issue('BLOCKED_MEDIA', 'Project 04', `Local media asset does not exist: ${media.local_asset}`, 'Valid existing local asset', 'READY_FOR_IMPLEMENTATION'));
+      issues.push(issue('BLOCKED_MEDIA', 'Project 04', `Local media asset does not exist: ${safeKey(media.local_asset)}`, 'Valid existing local asset', 'READY_FOR_IMPLEMENTATION'));
     }
     if (suppliedPath && localExists) {
-      issues.push(issue('BLOCKED_MEDIA', 'Project 04', `Supplied media target already exists: ${media.local_asset}`, 'A new collision-free canonical asset destination', 'READY_FOR_IMPLEMENTATION'));
+      issues.push(issue('BLOCKED_MEDIA', 'Project 04', `Supplied media target already exists: ${safeKey(media.local_asset)}`, 'A new collision-free canonical asset destination', 'READY_FOR_IMPLEMENTATION'));
     }
     const verifiedPath = localExists ? assetPath : (suppliedExists ? fs.realpathSync(suppliedPath) : null);
     if (realWrite && verifiedPath && SHA256.test(media.asset_sha256 ?? '')) {
