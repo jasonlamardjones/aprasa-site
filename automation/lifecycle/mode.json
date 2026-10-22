@@ -1,0 +1,4 @@
+{
+  "mode": "dry-run",
+  "note": "Event lifecycle expiry controller. Only dry-run is implemented; no credential exists and nothing is published. Enabling unattended publication requires a separate founder-approved change (Project 04 gates G5-G7)."
+}
