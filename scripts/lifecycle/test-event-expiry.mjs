@@ -9,7 +9,9 @@ import {
   assertClock,
   assertLifecycleValidatorResults,
   assertLifecycleWriteSet,
+  assertFreshOutputPath,
   assertSafeOutputDir,
+  assertTempBaseOutsideRepo,
   buildAuditRecord,
   capeVerdeToday,
   isValidIsoDay,
@@ -171,6 +173,32 @@ for (const bad of ['{"mode":"enabled"}', '{"mode":"publish"}', '{}', '{"mode":1}
     try { fs.symlinkSync(path.join(repo, 'sub'), link, process.platform === 'win32' ? 'junction' : 'dir'); } catch { linked = false; }
     if (linked) assert.throws(() => assertSafeOutputDir(path.join(link, 'out'), repo), /LIFECYCLE_UNSAFE_OUTPUT_LOCATION/);
     else console.log('NOTE: symlink case skipped (cannot create links here)');
+
+    // The temporary base is checked BEFORE anything is allocated under it. Inside or equal to
+    // the repository is refused; a base that merely contains the repository is fine (its
+    // children are siblings of the repository, not inside it).
+    assert.doesNotThrow(() => assertTempBaseOutsideRepo(sandbox, repo), 'a base containing the repo is acceptable');
+    assert.doesNotThrow(() => assertTempBaseOutsideRepo(path.join(sandbox, 'elsewhere'), repo));
+    for (const bad of [repo, path.join(repo, 'sub'), path.join(repo, 'not', 'yet', 'there')]) {
+      assert.throws(() => assertTempBaseOutsideRepo(bad, repo), /LIFECYCLE_UNSAFE_OUTPUT_LOCATION/, bad);
+    }
+    assert.throws(() => assertTempBaseOutsideRepo('', repo), /LIFECYCLE_UNSAFE_OUTPUT_LOCATION/);
+    if (linked) assert.throws(() => assertTempBaseOutsideRepo(link, repo), /LIFECYCLE_UNSAFE_OUTPUT_LOCATION/, 'a link into the repo');
+
+    // An explicit output path must not exist at all: directory, file, link or dangling link.
+    assert.doesNotThrow(() => assertFreshOutputPath(path.join(sandbox, 'fresh-out')));
+    const existingDir = path.join(sandbox, 'existing-dir');
+    fs.mkdirSync(existingDir);
+    const existingFile = path.join(sandbox, 'existing-file');
+    fs.writeFileSync(existingFile, 'x');
+    for (const bad of [existingDir, existingFile, sandbox]) {
+      assert.throws(() => assertFreshOutputPath(bad), /LIFECYCLE_OUTPUT_EXISTS/, bad);
+    }
+    if (linked) assert.throws(() => assertFreshOutputPath(link), /LIFECYCLE_OUTPUT_EXISTS/, 'an existing link');
+    const dangling = path.join(sandbox, 'dangling');
+    let danglingMade = true;
+    try { fs.symlinkSync(path.join(sandbox, 'no-such-target'), dangling, process.platform === 'win32' ? 'junction' : 'dir'); } catch { danglingMade = false; }
+    if (danglingMade) assert.throws(() => assertFreshOutputPath(dangling), /LIFECYCLE_OUTPUT_EXISTS/, 'a dangling link');
   } finally {
     fs.rmSync(sandbox, { recursive: true, force: true });
   }
@@ -332,6 +360,7 @@ try {
   assert.equal(refused.status, 1);
   assert.match(refused.stderr, /LIFECYCLE_UNEXPECTED_FILE_CHANGE: .*pt\/about\/index\.html/);
   assert.equal(refused.audit, null, 'a refused run leaves no would-publish record');
+  assert.equal(fs.existsSync(refused.out), false, 'a refused run removes the output it created');
 
   // 7. Fail closed on editorial/data drift: an unapproved record change that alters canonical copy.
   const editorial = copyRepo('editorial');
@@ -382,6 +411,112 @@ try {
   }
   assert.deepEqual(diff(outBefore, inventory(outRepo)), [], 'a refused --out left the repository untouched');
   assert.equal(fs.existsSync(path.join(outRepo, 'out')), false);
+
+  // 8c. P1-1: a temporary base inside the repository is refused BEFORE any directory is
+  // allocated under it — nothing is created in the repository, by the default output or by
+  // the staging copy, for a NOOP run, a DUE run, or a run with an explicit safe --out.
+  const dirsOf = (dir) => {
+    const found = [];
+    (function visit(current) {
+      for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+        if (entry.name === '.git') continue;
+        const full = path.join(current, entry.name);
+        found.push(path.relative(dir, full).split(path.sep).join('/') + (entry.isDirectory() ? '/' : ''));
+        if (entry.isDirectory()) visit(full);
+      }
+    })(dir);
+    return found.sort();
+  };
+  const inRepoTmpRepo = copyRepo('tmp-in-repo');
+  fs.mkdirSync(path.join(inRepoTmpRepo, 'inrepo-tmp'));
+  const entriesBefore = dirsOf(inRepoTmpRepo);
+  const safeOut = path.join(tmp, 'tmp-in-repo-explicit-out');
+  const tmpEnv = { ...process.env, TMP: path.join(inRepoTmpRepo, 'inrepo-tmp'), TEMP: path.join(inRepoTmpRepo, 'inrepo-tmp'), TMPDIR: path.join(inRepoTmpRepo, 'inrepo-tmp') };
+  for (const [label, args] of [
+    ['default output, NOOP', ['--now=2026-10-21T12:00:00Z']],
+    ['default output, DUE', ['--now=2026-11-16T01:00:00Z']],
+    ['explicit safe output, DUE', ['--now=2026-11-16T01:00:00Z', `--out=${safeOut}`]],
+  ]) {
+    const res = spawnSync(process.execPath, [runner, `--root=${inRepoTmpRepo}`, ...args], { encoding: 'utf8', env: tmpEnv });
+    assert.equal(res.status, 1, label);
+    assert.match(res.stderr, /LIFECYCLE_UNSAFE_OUTPUT_LOCATION: temporary base/, label);
+    assert.doesNotMatch(res.stdout, /LIFECYCLE_OUTPUT/, label);
+    assert.deepEqual(dirsOf(inRepoTmpRepo), entriesBefore, `${label}: nothing may be allocated inside the repository`);
+    assert.equal(fs.existsSync(safeOut), false, `${label}: no explicit output was created`);
+  }
+
+  // 8d. P1-1 (cleanup): a run refused AFTER it allocated output removes that output. Uses a
+  // dedicated temporary base so any leftover aprasa-lifecycle-* directory is visible.
+  const sandboxTmp = fs.mkdtempSync(path.join(tmp, 'sandbox-tmp-'));
+  const sandboxEnv = { ...process.env, TMP: sandboxTmp, TEMP: sandboxTmp, TMPDIR: sandboxTmp };
+  const driftAgain = copyRepo('drift-default-out');
+  fs.appendFileSync(path.join(driftAgain, 'pt', 'about', 'index.html'), '\n<!-- unauthorized edit -->\n');
+  const refusedDefault = spawnSync(process.execPath, [runner, `--root=${driftAgain}`, '--now=2026-11-16T01:00:00Z'], { encoding: 'utf8', env: sandboxEnv });
+  assert.equal(refusedDefault.status, 1);
+  assert.match(refusedDefault.stderr, /LIFECYCLE_UNEXPECTED_FILE_CHANGE/);
+  assert.deepEqual(fs.readdirSync(sandboxTmp), [], 'a refused default-output run leaves no output or staging directory behind');
+  // ...and a successful default-output run leaves exactly one directory: the output.
+  const okDefault = spawnSync(process.execPath, [runner, `--root=${pristine}`, '--now=2026-11-16T01:00:00Z'], { encoding: 'utf8', env: sandboxEnv });
+  assert.equal(okDefault.status, 0, okDefault.stderr);
+  const leftovers = fs.readdirSync(sandboxTmp);
+  assert.equal(leftovers.length, 1);
+  assert.match(leftovers[0], /^aprasa-lifecycle-out-/);
+
+  // 8e. P1-2: an explicit --out must not pre-exist. Nothing existing is reused, cleared or
+  // written through — not a directory, a directory holding a would-publish child, a file, or
+  // a link (including one pointing at a victim directory).
+  const victim = path.join(tmp, 'victim');
+  fs.mkdirSync(path.join(victim, 'keep'), { recursive: true });
+  fs.writeFileSync(path.join(victim, 'keep', 'sentinel.txt'), 'must survive');
+  const victimBefore = dirsOf(victim);
+  const existingOut = path.join(tmp, 'existing-out');
+  fs.mkdirSync(path.join(existingOut, 'would-publish'), { recursive: true });
+  fs.writeFileSync(path.join(existingOut, 'would-publish', 'sentinel.txt'), 'must survive');
+  fs.writeFileSync(path.join(existingOut, 'lifecycle-audit.json'), 'must survive');
+  const outCases = [['existing directory with a would-publish child', existingOut]];
+  const existingFileOut = path.join(tmp, 'existing-file-out');
+  fs.writeFileSync(existingFileOut, 'must survive');
+  outCases.push(['existing file', existingFileOut]);
+  const linkOut = path.join(tmp, 'link-out');
+  const childLinkOut = path.join(tmp, 'child-link-out');
+  try {
+    fs.symlinkSync(victim, linkOut, process.platform === 'win32' ? 'junction' : 'dir');
+    fs.mkdirSync(childLinkOut);
+    fs.symlinkSync(victim, path.join(childLinkOut, 'would-publish'), process.platform === 'win32' ? 'junction' : 'dir');
+    outCases.push(['link to a victim directory', linkOut], ['directory whose would-publish child is a link to a victim', childLinkOut]);
+  } catch {
+    console.log('NOTE: link cases for an explicit --out skipped (cannot create links here)');
+  }
+  for (const [label, target] of outCases) {
+    for (const when of ['2026-10-21T12:00:00Z', '2026-11-16T01:00:00Z']) {
+      const res = spawnSync(process.execPath, [runner, `--root=${pristine}`, `--out=${target}`, `--now=${when}`], { encoding: 'utf8' });
+      assert.equal(res.status, 1, `${label} @ ${when}`);
+      assert.match(res.stderr, /LIFECYCLE_OUTPUT_EXISTS/, `${label} @ ${when}`);
+      assert.doesNotMatch(res.stdout, /LIFECYCLE_OUTPUT/);
+    }
+  }
+  assert.equal(fs.readFileSync(path.join(existingOut, 'would-publish', 'sentinel.txt'), 'utf8'), 'must survive', 'existing would-publish content was deleted');
+  assert.equal(fs.readFileSync(path.join(existingOut, 'lifecycle-audit.json'), 'utf8'), 'must survive', 'existing audit file was overwritten');
+  assert.equal(fs.readFileSync(existingFileOut, 'utf8'), 'must survive');
+  assert.deepEqual(dirsOf(victim), victimBefore, 'nothing was written through a link into the victim directory');
+  assert.equal(fs.readFileSync(path.join(victim, 'keep', 'sentinel.txt'), 'utf8'), 'must survive');
+  // A missing parent is refused rather than created, so no directory chain is built implicitly.
+  const noParent = path.join(tmp, 'no-such-parent', 'out');
+  const missingParent = spawnSync(process.execPath, [runner, `--root=${pristine}`, `--out=${noParent}`, '--now=2026-11-16T01:00:00Z'], { encoding: 'utf8' });
+  assert.equal(missingParent.status, 1);
+  assert.match(missingParent.stderr, /LIFECYCLE_OUTPUT_PARENT_MISSING/);
+  assert.equal(fs.existsSync(path.dirname(noParent)), false);
+  // A fresh explicit --out is created exclusively and works.
+  const freshOut = path.join(tmp, 'fresh-explicit-out');
+  const freshRun = spawnSync(process.execPath, [runner, `--root=${pristine}`, `--out=${freshOut}`, '--now=2026-11-16T01:00:00Z'], { encoding: 'utf8' });
+  assert.equal(freshRun.status, 0, freshRun.stderr);
+  assert.ok(fs.existsSync(path.join(freshOut, 'lifecycle-audit.json')));
+  assert.ok(fs.existsSync(path.join(freshOut, 'would-publish', 'index.html')));
+  // Re-running into the same path is refused: nothing is ever overwritten.
+  const reuse = spawnSync(process.execPath, [runner, `--root=${pristine}`, `--out=${freshOut}`, '--now=2026-11-16T01:00:00Z'], { encoding: 'utf8' });
+  assert.equal(reuse.status, 1);
+  assert.match(reuse.stderr, /LIFECYCLE_OUTPUT_EXISTS/);
+  assert.ok(fs.existsSync(path.join(freshOut, 'lifecycle-audit.json')), 'the earlier output was preserved');
 
   // 9. A clock earlier than the tracked ledger is refused, never applied.
   const regression = runner_(pristine, '2026-10-01T12:00:00Z', 'out-regress');

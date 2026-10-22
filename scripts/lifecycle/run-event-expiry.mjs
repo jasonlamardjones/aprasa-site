@@ -4,8 +4,11 @@
 // Usage: node scripts/lifecycle/run-event-expiry.mjs [--root=DIR] [--out=DIR] [--now=ISO]
 //
 // Output goes to a fresh temporary directory outside --root unless --out is
-// given; an --out inside (or containing) --root is refused before anything is
-// written. The chosen location is printed as LIFECYCLE_OUTPUT.
+// given. An explicit --out must NOT already exist (it is created exclusively,
+// so no existing file, directory or symlink is ever reused or written through)
+// and must not be inside or contain --root. The temporary base is validated
+// before any directory is allocated, and a run that fails removes the output
+// it created. The location of a successful run is printed as LIFECYCLE_OUTPUT.
 //
 // Recomputes, from canonical data and the Atlantic/Cape_Verde clock, whether
 // any approved published event has crossed its expiry boundary. If so it
@@ -32,7 +35,9 @@ import {
   assertIdempotentChanges,
   assertLifecycleWriteSet,
   assertLifecycleValidatorResults,
+  assertFreshOutputPath,
   assertSafeOutputDir,
+  assertTempBaseOutsideRepo,
   buildAuditRecord,
   capeVerdeToday,
   lifecycleError,
@@ -126,10 +131,15 @@ function headSha(root) {
 
 function main() {
   const root = path.resolve(arg('root', path.resolve(scriptDir, '..', '..')));
-  // Validated before anything is read or written. With no --out, a fresh
-  // temporary directory is created later, once a run has something to record.
+  // Every location check happens before anything is allocated. The temporary
+  // base is checked unconditionally: the staging copy and the default output
+  // both live under it.
+  assertTempBaseOutsideRepo(os.tmpdir(), root);
   const explicitOut = arg('out');
-  if (explicitOut !== null) assertSafeOutputDir(explicitOut, root);
+  if (explicitOut !== null) {
+    assertSafeOutputDir(explicitOut, root);
+    assertFreshOutputPath(explicitOut);
+  }
   const nowArg = arg('now');
   const now = nowArg ? new Date(nowArg) : new Date();
 
@@ -141,19 +151,16 @@ function main() {
   const plan = planLifecycleTransition({ records, trackedAsOf, today });
   const baseSha = headSha(root);
 
-  const outDir = explicitOut !== null
-    ? path.resolve(explicitOut)
-    : fs.mkdtempSync(path.join(os.tmpdir(), 'aprasa-lifecycle-out-'));
-  // Re-checked for the default too: a TMPDIR inside the repository is unsafe.
-  if (explicitOut === null) assertSafeOutputDir(outDir, root);
-  fs.mkdirSync(outDir, { recursive: true });
-  console.log(`LIFECYCLE_OUTPUT: ${outDir}`);
-  const writeAudit = (audit) => fs.writeFileSync(path.join(outDir, 'lifecycle-audit.json'), `${JSON.stringify(audit, null, 2)}\n`);
+  const outDir = createOutputDir(explicitOut);
+  // Re-checked now that it exists and can be resolved: a parent swapped for a
+  // link between the check and the creation must not leave output in the repo.
+  assertSafeOutputDir(outDir, root);
+  const writeAudit = (audit) => fs.writeFileSync(path.join(outDir, 'lifecycle-audit.json'), `${JSON.stringify(audit, null, 2)}\n`, { flag: 'wx' });
 
   if (plan.status === 'NOOP') {
     writeAudit(buildAuditRecord({ mode, plan, records, now, baseSha }));
     console.log(`LIFECYCLE_NOOP: no approved event crossed its boundary between ${trackedAsOf} and ${today}. Nothing written.`);
-    return;
+    return outDir;
   }
 
   const stage = fs.mkdtempSync(path.join(os.tmpdir(), 'aprasa-lifecycle-stage-'));
@@ -187,22 +194,50 @@ function main() {
 
     const after = inventory(stage);
     const fileHashes = Object.fromEntries(changed.map((file) => [file, { before: before.get(file) ?? null, after: after.get(file) }]));
+    // The output directory is exclusively ours and empty, so this is created,
+    // never cleared, and nothing is overwritten.
     const filesDir = path.join(outDir, 'would-publish');
-    fs.rmSync(filesDir, { recursive: true, force: true });
+    fs.mkdirSync(filesDir);
     for (const file of changed) {
       fs.mkdirSync(path.dirname(path.join(filesDir, file)), { recursive: true });
-      fs.copyFileSync(path.join(stage, file), path.join(filesDir, file));
+      fs.copyFileSync(path.join(stage, file), path.join(filesDir, file), fs.constants.COPYFILE_EXCL);
     }
     writeAudit(buildAuditRecord({ mode, plan, records, now, baseSha, changedFiles: changed, fileHashes, validators, advisories }));
     console.log(`LIFECYCLE_DRY_RUN_OK: ${plan.dueIds.join(', ')} would expire (${trackedAsOf} -> ${today}); ${changed.length} file(s); nothing published.`);
+    return outDir;
   } finally {
     fs.rmSync(stage, { recursive: true, force: true });
   }
 }
 
+// Set only once this process has itself created the output directory, so a
+// failed run removes exactly what it allocated and never a pre-existing path.
+let createdOut = null;
+
+function createOutputDir(explicitOut) {
+  let created;
+  if (explicitOut !== null) {
+    created = path.resolve(explicitOut);
+    try {
+      // Non-recursive: the parent must exist, and mkdir fails if the path does.
+      fs.mkdirSync(created);
+    } catch (error) {
+      if (error.code === 'EEXIST') throw lifecycleError('LIFECYCLE_OUTPUT_EXISTS', created);
+      if (error.code === 'ENOENT') throw lifecycleError('LIFECYCLE_OUTPUT_PARENT_MISSING', created);
+      throw error;
+    }
+  } else {
+    created = fs.mkdtempSync(path.join(os.tmpdir(), 'aprasa-lifecycle-out-'));
+  }
+  createdOut = created;
+  return created;
+}
+
 try {
-  main();
+  const reported = main();
+  console.log(`LIFECYCLE_OUTPUT: ${reported}`);
 } catch (error) {
+  if (createdOut) fs.rmSync(createdOut, { recursive: true, force: true });
   console.error(error.message);
   process.exit(1);
 }

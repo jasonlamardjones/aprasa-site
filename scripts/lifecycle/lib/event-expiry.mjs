@@ -89,6 +89,36 @@ export function assertSafeOutputDir(outDir, root) {
   return realOut;
 }
 
+/**
+ * The directory under which temporary output and the staging copy are
+ * allocated must not be the repository or inside it. Checked BEFORE any
+ * mkdtemp, so a TMPDIR pointing into the repository cannot get a directory
+ * created there ahead of the containment check. A base that merely CONTAINS the
+ * repository is fine: its children are siblings of the repository, not inside it.
+ */
+export function assertTempBaseOutsideRepo(base, root) {
+  if (typeof base !== 'string' || !base) throw lifecycleError('LIFECYCLE_UNSAFE_OUTPUT_LOCATION', 'empty temporary base');
+  if (sameOrInside(resolveThroughExisting(base), resolveThroughExisting(root))) {
+    throw lifecycleError('LIFECYCLE_UNSAFE_OUTPUT_LOCATION', `temporary base ${base} is inside the input repository ${root}`);
+  }
+}
+
+/**
+ * An explicit output path must not exist AT ALL — not as a directory, a file, a
+ * symlink or a dangling link. lstat does not follow links, so a link standing
+ * where the output should be is seen as existing. The caller then creates it
+ * with a non-recursive mkdir, which fails if anything appears in between.
+ */
+export function assertFreshOutputPath(outDir) {
+  try {
+    fs.lstatSync(outDir);
+  } catch (error) {
+    if (error.code === 'ENOENT') return;
+    throw error;
+  }
+  throw lifecycleError('LIFECYCLE_OUTPUT_EXISTS', `${outDir} already exists; an explicit --out must not`);
+}
+
 /** True only for a real calendar day in YYYY-MM-DD form. */
 export function isValidIsoDay(value) {
   if (typeof value !== 'string' || !ISO_DAY_PATTERN.test(value)) return false;
