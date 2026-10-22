@@ -9,7 +9,7 @@
     "contract_version": { "const": 1 },
     "event": {
       "type": "object",
-      "additionalProperties": true,
+      "additionalProperties": false,
       "required": ["id", "kind", "title", "provider", "summary", "category", "location", "source_url", "source_type", "checked_at", "publication_state", "media_policy", "media_manifest_title", "detail_page", "display", "detail", "seo"],
       "properties": {
         "id": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
@@ -18,18 +18,134 @@
         "provider": { "type": "string", "minLength": 1 },
         "summary": { "type": "string", "minLength": 1 },
         "category": { "type": "string", "minLength": 1 },
-        "location": { "type": "object" },
-        "source_url": { "type": "string", "minLength": 1 },
+        "location": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": { "type": "string" },
+            "locality": { "type": "string" },
+            "street": { "type": "string" }
+          }
+        },
+        "source_url": { "type": ["string", "null"], "minLength": 1 },
+        "source_reference": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["version", "kind", "evidence_ref"],
+          "properties": {
+            "version": { "const": 1 },
+            "kind": { "const": "restricted-evidence" },
+            "evidence_ref": { "enum": ["kutumbaia-edicao-03-2026", "manxi-liliane-reis-exhibition-2026"] }
+          }
+        },
         "source_type": { "type": "string", "minLength": 1 },
+        "start_date": { "type": ["string", "null"] },
+        "start_datetime": { "type": ["string", "null"] },
+        "end_date": { "type": ["string", "null"] },
+        "end_datetime": { "type": ["string", "null"] },
+        "end_month": { "type": ["string", "null"] },
+        "end_precision": { "type": "string" },
         "checked_at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
         "publication_state": { "enum": ["draft", "published", "expired", "withdrawn"] },
         "media_policy": { "enum": ["required", "fallback_allowed"] },
         "media_manifest_title": { "type": "string", "minLength": 1 },
         "detail_page": { "type": "string", "pattern": "^things-to-do/[a-z0-9]+(?:-[a-z0-9]+)*/$" },
-        "display": { "type": "object" },
-        "detail": { "type": "object" },
-        "seo": { "type": "object" }
-      }
+        "free_admission": { "type": ["boolean", "null"] },
+        "currentness_note": { "type": "string" },
+        "display": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "status": { "type": "string" },
+            "meta": { "type": "string" },
+            "checked": { "type": "string" }
+          }
+        },
+        "media": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "asset": { "type": "string" },
+            "alt": { "type": "string" },
+            "width": { "type": "number" },
+            "height": { "type": "number" }
+          }
+        },
+        "card_action": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["url"],
+          "properties": {
+            "label": { "type": "string" },
+            "url": { "type": "string", "minLength": 1, "pattern": "^[hH][tT][tT][pP][sS]?://" }
+          }
+        },
+        "detail": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "facts": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["label"],
+                "properties": {
+                  "label": { "type": "string" },
+                  "value": { "type": "string" },
+                  "value_html": { "type": "string" }
+                },
+                "oneOf": [
+                  { "required": ["value"] },
+                  { "required": ["value_html"] }
+                ]
+              }
+            },
+            "body": { "type": "string" },
+            "good_to_know": { "type": ["string", "null"] },
+            "checked": { "type": "string" },
+            "action_label": { "type": ["string", "null"] }
+          }
+        },
+        "seo": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "description": { "type": "string" },
+            "title": { "type": "string" },
+            "schema_type": { "type": "string" }
+          }
+        }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "id": { "not": { "enum": ["kutumbaia-edicao-03-2026", "manxi-liliane-reis-exhibition-2026"] } },
+            "source_url": { "type": "string", "pattern": "^[hH][tT][tT][pP][sS]?://" }
+          },
+          "not": { "required": ["source_reference"] }
+        },
+        {
+          "properties": {
+            "id": { "const": "kutumbaia-edicao-03-2026" },
+            "source_url": { "type": "null" },
+            "source_reference": { "properties": { "evidence_ref": { "const": "kutumbaia-edicao-03-2026" } } },
+            "card_action": { "type": "null" },
+            "detail": { "properties": { "action_label": { "type": "null" } } }
+          },
+          "required": ["source_reference"]
+        },
+        {
+          "properties": {
+            "id": { "const": "manxi-liliane-reis-exhibition-2026" },
+            "source_url": { "type": "null" },
+            "source_reference": { "properties": { "evidence_ref": { "const": "manxi-liliane-reis-exhibition-2026" } } },
+            "card_action": { "type": "null" },
+            "detail": { "properties": { "action_label": { "type": "null" } } }
+          },
+          "required": ["source_reference"]
+        }
+      ]
     },
     "localization": {
       "type": "object",
@@ -47,7 +163,27 @@
             "package_id": { "type": "string", "minLength": 1 },
             "source_revision": { "type": "string", "minLength": 1 },
             "project_09_status": { "const": "approved" },
-            "rows": { "type": "array", "minItems": 1 }
+            "rows": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["key", "source_revision", "source_en", "pt", "scope_status", "identity_policy", "context_notes", "record_id", "linguistic_notes", "translation_status"],
+                "properties": {
+                  "key": { "type": "string" },
+                  "source_revision": { "type": "string" },
+                  "source_en": { "type": "string" },
+                  "pt": { "type": "string" },
+                  "scope_status": { "type": "string" },
+                  "identity_policy": { "type": "string" },
+                  "context_notes": { "type": "string" },
+                  "record_id": { "type": "string" },
+                  "linguistic_notes": { "type": "string" },
+                  "translation_status": { "type": "string" }
+                }
+              }
+            }
           }
         }
       }
@@ -66,7 +202,28 @@
         },
         "supplied_asset": { "type": ["string", "null"] },
         "asset_sha256": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
-        "approved_manifest": { "type": "object" }
+        "approved_manifest": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "section": { "type": "string" },
+            "title": { "type": "string" },
+            "provider": { "type": "string" },
+            "source_url": { "type": ["string", "null"], "pattern": "^[hH][tT][tT][pP][sS]?://" },
+            "media_type": { "type": "string" },
+            "media_state": { "type": "string" },
+            "media_source": { "type": ["string", "null"] },
+            "media_asset": { "type": ["string", "null"] },
+            "fallback_category": { "type": "string" },
+            "fallback_reason": { "type": ["string", "null"] },
+            "media_provenance": { "type": "string" },
+            "media_asset_source_url": { "type": ["string", "null"], "pattern": "^[hH][tT][tT][pP][sS]?://" },
+            "media_checked_date": { "type": ["string", "null"] },
+            "media_alt": { "type": ["string", "null"] },
+            "media_width": { "type": ["number", "null"] },
+            "media_height": { "type": ["number", "null"] }
+          }
+        }
       }
     },
     "governance": {

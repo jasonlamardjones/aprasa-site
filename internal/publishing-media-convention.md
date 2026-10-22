@@ -77,6 +77,12 @@ Run:
 
 The validator checks manifest coverage, allowed media states/types, required provenance fields, and the existence of locally declared authentic assets. Exit code `2` means structural validation passed but unresolved media work remains; such a branch is not media-complete for merge. Exit code `1` means structural validation failed.
 
+## Source evidence union (two approved event ids only)
+
+Every record names its public source with a verified HTTP(S) `source_url`. Project 03 approved one record-scoped exception for `kutumbaia-edicao-03-2026` and `manxi-liliane-reis-exhibition-2026`: `source_url: null` plus a closed `source_reference` of `{ version: 1, kind: "restricted-evidence", evidence_ref }`. The two modes are exclusive, a `source_reference` record is `NO_CTA` (`card_action: null`, `detail.action_label: null`), and its manifest row carries `source_url: null` and no reference.
+
+This repository is public. `evidence_ref` is the one public-safe handle of the event's governed Project 25 evidence record (original flyer and dated founder attestation). For each approved event the handle is the event's own id, fixed in the immutable `SOURCE_REFERENCE_EVIDENCE_HANDLES` allowlist in `scripts/lib/event-publication-contract.mjs`, and a record must carry exactly its own handle. URL fields that reach a public page (`source_url`, `card_action.url`, and the manifest's `source_url` and `media_asset_source_url`) must be semantically valid HTTP(S) URLs. The packet schema only gates the scheme; the shared `validHttpUrl` in the contract (platform URL parser plus explicit rejection of forms the parser silently repairs) is enforced at every entrypoint. A manifest `media_provenance` may cite no SHA-256 other than the approved public asset's (`media.asset_sha256`). The repository never holds a restricted record id, attachment id, hash, Drive or Docs locator, URL, or attestation content or date; those stay in the restricted Project 25 register.
+
 ## Weekly workflow
 
 Sunday: review expiring records, verify sources, prepare additions/updates/removals, classify policy questions, resolve media, prepare authentic media where available, and produce one bounded packet.

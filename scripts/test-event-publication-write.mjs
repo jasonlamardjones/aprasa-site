@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { mediaIntakeRoot, removeTempTree, validatePacket } from './lib/event-publication-contract.mjs';
+import { assertPublicInputBoundary, mediaIntakeRoot, removeTempTree, validatePacket } from './lib/event-publication-contract.mjs';
 import { TRANSPORT_API, resolveExecutable, selectTransport } from './lib/github-pr-client.mjs';
 import {
   assertDryRunProof,
@@ -354,6 +354,45 @@ record('malformed input', () => {
   packet.event.title = '';
   expectState(packet, 'INVALID_INPUT');
 }, 'original');
+
+// --- public-input boundary (Codex review remediation) -------------------------
+//
+// The writer copies packet.event, packet.media.approved_manifest and the approved
+// locale package into public repository JSON, so an unknown field in any of them
+// must stop the write rather than ride along. Restricted shapes are assembled
+// from parts so this file never holds one whole.
+const RESTRICTED_ATTACHMENT = `file_${'0123456789abcdef'.repeat(2)}`;
+const RESTRICTED_EVIDENCE_ID = ['P25', 'EV', '2026', '0001'].join('-');
+record('unknown restricted event field is rejected as INVALID_INPUT', () => {
+  const packet = clone(fixture);
+  packet.event.restricted_note = RESTRICTED_ATTACHMENT;
+  const result = expectState(packet, 'INVALID_INPUT');
+  if (JSON.stringify(result.issues).includes(RESTRICTED_ATTACHMENT)) throw new Error('issue text echoed the restricted value');
+}, 'original');
+
+record('unknown manifest and locale-row fields are rejected as INVALID_INPUT', () => {
+  const manifestPacket = clone(fixture);
+  manifestPacket.media.approved_manifest.internal_ref = RESTRICTED_EVIDENCE_ID;
+  expectState(manifestPacket, 'INVALID_INPUT');
+  const rowPacket = clone(fixture);
+  rowPacket.localization.approved_package.rows[0].internal_ref = RESTRICTED_EVIDENCE_ID;
+  expectState(rowPacket, 'INVALID_INPUT');
+}, 'original');
+
+record('the writer copy boundary throws on an unchecked extra field', () => {
+  const packet = clone(fixture);
+  packet.media.approved_manifest.internal_ref = RESTRICTED_ATTACHMENT;
+  expectThrow(() => assertPublicInputBoundary(packet), /PUBLIC_INPUT_BOUNDARY/);
+  assertPublicInputBoundary(clone(fixture));
+}, 'original');
+
+record('a real-write attempt with an unknown event field is refused before anything is written', () => withRepository((ctx) => {
+  const packet = clone(ctx.packet);
+  packet.event.restricted_note = RESTRICTED_ATTACHMENT;
+  const error = expectThrow(() => prepareRealWriteCandidate({ ...ctx, packet }), /not an allowed public field/);
+  if (error.message.includes(RESTRICTED_ATTACHMENT)) throw new Error('refusal echoed the restricted value');
+  assertClean(ctx.root, ctx.baseline);
+}), 'original');
 
 record('merge_allowed remains false', () => {
   const packet = clone(fixture);

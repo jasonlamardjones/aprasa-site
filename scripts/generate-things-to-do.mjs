@@ -9,11 +9,23 @@ import { isRecurringVenue, RECURRING_VENUE_SCHEMA_TYPE } from './lib/things-to-d
 import { THINGS_TO_DO_HUB_PUBLIC, collectionRecords, homePreviewIds, hubOutputPath, hubCanonical } from './lib/things-to-do-collection.mjs';
 import { LAUNCHER_SURFACE_KEYS, resolveRuntimeStrings, renderRuntimeStringsBlock } from './lib/runtime-strings.mjs';
 import { renderContactConfigBlock } from './lib/contact-channels.mjs';
+import { validateSourceUnion } from './lib/event-publication-contract.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(scriptDir, '..');
 const input = path.join(root, 'data', 'things-to-do-events.json');
 const records = JSON.parse(fs.readFileSync(input, 'utf8')).records;
+// Standalone generation does not run the validators (build-all does not either),
+// so the shared source-union policy is enforced here, before anything is
+// rendered or written: a record never reaches a public page just because its
+// card_action and action_label happen to be null.
+{
+  const sourceProblems = records.flatMap((record) => validateSourceUnion(record).map((problem) => `${record.id ?? 'unknown'}: ${problem}`));
+  if (sourceProblems.length) {
+    console.error(`Invalid source union; refusing to generate:\n${sourceProblems.join('\n')}`);
+    process.exit(1);
+  }
+}
 const thingsToDoRoot = path.join(root, 'things-to-do');
 const ptThingsToDoRoot = path.join(root, 'pt', 'things-to-do');
 const detailRoutePattern = /^things-to-do\/[a-z0-9]+(?:-[a-z0-9]+)*\/$/;
@@ -233,6 +245,12 @@ function detailMediaClass(record) {
 // locale "en" every field below is the JSON's own English value, so the
 // English generation path has no dependency on the locale overlay at all.
 function localizeRecord(record) {
+  // A record backed by a restricted source_reference is NO_CTA: restricted
+  // evidence is never a public destination. build-all does not run the
+  // validators, so the generator refuses the shape itself.
+  if (record.source_reference != null && (record.card_action != null || record.detail?.action_label != null)) {
+    throw new Error(`${record.id}: a source_reference record must not carry a public action (NO_CTA)`);
+  }
   const facts = (record.detail?.facts || []).map((fact) => {
     if (locale === 'en') {
       return fact.value_html
@@ -295,6 +313,9 @@ function renderFacts(facts = []) {
 }
 
 function publicActionUrl(record) {
+  if (record.source_reference != null) {
+    throw new Error(`${record.id}: a source_reference record has no public action URL`);
+  }
   // Project 03 has approved durable provider destinations for the two current
   // recurring-venue cards. Keep dated-event detail actions on source_url;
   // only the recurring-venue kind resolves its public action from card_action.
