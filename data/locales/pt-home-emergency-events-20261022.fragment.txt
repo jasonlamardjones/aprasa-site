@@ -1,0 +1,46 @@
+<!-- Governed temporary PT Home overlay. Source: the two approved bilingual emergency Home event cards. Never public evidence. -->
+<!-- BEGIN EMERGENCY EN-PT EVENT: kutumbaia-edicao-03-2026 -->
+        <article class="resource-card" data-emergency-event="kutumbaia-edicao-03-2026" data-emergency-expire-at="2026-10-22T21:00:00Z" data-checked="2026-10-21">
+          <p class="card-status">22 de outubro de 2026 · 18:00–20:00</p>
+          <h3>KUTUMBAIA — Edição 03: Oficina Artística Experimental</h3>
+          <p class="card-meta">Kafê Djan Djan · Mindelo, São Vicente</p>
+          <p class="provider">Txon Kuceu</p>
+          <p>Um encontro artístico participativo que incentiva a expressão criativa através de spoken word, música, poesia e artes visuais.</p>
+          <p class="checked">Revisto em 21 de outubro de 2026</p>
+          <div class="card-actions"><button class="details-button" type="button" data-details>Detalhes</button></div>
+          <template class="details-template">
+            <div class="dialog-record">
+              <p class="provider">Txon Kuceu</p>
+              <h2>KUTUMBAIA — Edição 03: Oficina Artística Experimental</h2>
+              <dl class="detail-list"><div><dt>Data</dt><dd>22 de outubro de 2026</dd></div><div><dt>Horário</dt><dd>18:00–20:00</dd></div><div><dt>Local</dt><dd>Kafê Djan Djan, Mindelo, São Vicente</dd></div><div><dt>Entrada</dt><dd>Entrada livre</dd></div><div><dt>Inscrição</dt><dd>Não é necessária inscrição prévia · Participação sem marcação</dd></div></dl>
+              <h3>Detalhes</h3>
+              <p>KUTUMBAIA — Edição 03 é um encontro artístico participativo no Kafê Djan Djan, no Mindelo, no dia 22 de outubro de 2026, das 18:00 às 20:00. O encontro incentiva a expressão criativa através de spoken word, música, poesia e artes visuais. É possível participar sem inscrição prévia.</p>
+              <h3>Convém saber</h3>
+              <p>A participação é gratuita. Os participantes são incentivados a apoiar o Kafê Djan Djan fazendo uma compra, mas o consumo no café não é obrigatório.</p>
+              <p class="checked">Revisto em 21 de outubro de 2026</p>
+            </div>
+          </template>
+        </article>
+        <!-- END EMERGENCY EN-PT EVENT: kutumbaia-edicao-03-2026 -->
+
+<!-- BEGIN EMERGENCY EN-PT EVENT: manxi-liliane-reis-exhibition-2026 -->
+        <article class="resource-card" data-emergency-event="manxi-liliane-reis-exhibition-2026" data-emergency-expire-at="2026-10-30T01:00:00Z" data-checked="2026-10-21">
+          <p class="card-status">14–29 de outubro de 2026</p>
+          <h3>MANXI — Exposição de LAR (Liliane Reis)</h3>
+          <p class="card-meta">Kafê Djan Djan · Mindelo, São Vicente</p>
+          <p class="provider">LAR (Liliane Reis)</p>
+          <p>Uma exposição multidisciplinar de Liliane Reis que explora temas de renovação e despertar.</p>
+          <p class="checked">Revisto em 21 de outubro de 2026</p>
+          <div class="card-actions"><button class="details-button" type="button" data-details>Detalhes</button></div>
+          <template class="details-template">
+            <div class="dialog-record">
+              <p class="provider">LAR (Liliane Reis)</p>
+              <h2>MANXI — Exposição de LAR (Liliane Reis)</h2>
+              <dl class="detail-list"><div><dt>Datas</dt><dd>14–29 de outubro de 2026</dd></div><div><dt>Local</dt><dd>Kafê Djan Djan, Mindelo, São Vicente</dd></div></dl>
+              <h3>Detalhes</h3>
+              <p>MANXI é uma exposição multidisciplinar de Liliane Reis que explora temas de renovação e despertar. A exposição está patente no Kafê Djan Djan, no Mindelo, de 14 a 29 de outubro de 2026.</p>
+              <p class="checked">Revisto em 21 de outubro de 2026</p>
+            </div>
+          </template>
+        </article>
+        <!-- END EMERGENCY EN-PT EVENT: manxi-liliane-reis-exhibition-2026 -->
