@@ -76,7 +76,7 @@
           "additionalProperties": false,
           "properties": {
             "label": { "type": "string" },
-            "url": { "type": "string" }
+            "url": { "type": "string", "pattern": "^[hH][tT][tT][pP][sS]?://" }
           }
         },
         "detail": {
@@ -120,7 +120,7 @@
         {
           "properties": {
             "id": { "not": { "enum": ["kutumbaia-edicao-03-2026", "manxi-liliane-reis-exhibition-2026"] } },
-            "source_url": { "type": "string", "pattern": "^[hH][tT][tT][pP][sS]?://\\S+$" }
+            "source_url": { "type": "string", "pattern": "^[hH][tT][tT][pP][sS]?://" }
           },
           "not": { "required": ["source_reference"] }
         },
@@ -208,7 +208,7 @@
             "section": { "type": "string" },
             "title": { "type": "string" },
             "provider": { "type": "string" },
-            "source_url": { "type": ["string", "null"] },
+            "source_url": { "type": ["string", "null"], "pattern": "^[hH][tT][tT][pP][sS]?://" },
             "media_type": { "type": "string" },
             "media_state": { "type": "string" },
             "media_source": { "type": ["string", "null"] },
@@ -216,7 +216,7 @@
             "fallback_category": { "type": "string" },
             "fallback_reason": { "type": ["string", "null"] },
             "media_provenance": { "type": "string" },
-            "media_asset_source_url": { "type": ["string", "null"] },
+            "media_asset_source_url": { "type": ["string", "null"], "pattern": "^[hH][tT][tT][pP][sS]?://" },
             "media_checked_date": { "type": ["string", "null"] },
             "media_alt": { "type": ["string", "null"] },
             "media_width": { "type": ["number", "null"] },

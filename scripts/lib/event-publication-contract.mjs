@@ -38,11 +38,21 @@ function validDateTime(value) {
   return DATETIME.test(value ?? '') && validDate(value.slice(0, 10)) && !Number.isNaN(Date.parse(value));
 }
 
+// Semantic HTTP(S) URL check, shared by every publication entrypoint (packet
+// preflight, writer boundary, canonical validator, generator, media validator).
+// It asks the platform URL parser, then rejects the forms the WHATWG parser
+// silently repairs, because a public record must already hold the exact string
+// it will serve: embedded whitespace/control characters and backslashes (stripped
+// or rewritten), a missing "//" after the scheme, an empty authority such as
+// "https:///x" (the host moves to "x"), and userinfo.
 function validHttpUrl(value) {
-  if (typeof value !== 'string') return false;
+  if (typeof value !== 'string' || !/^https?:\/\//i.test(value)) return false;
+  if (/[\s\u0000-\u001f\u007f\\]/.test(value)) return false;
+  if (value.slice(value.indexOf('//') + 2).startsWith('/')) return false;
   try {
     const url = new URL(value);
-    return url.protocol === 'http:' || url.protocol === 'https:';
+    return (url.protocol === 'http:' || url.protocol === 'https:')
+      && url.hostname !== '' && url.username === '' && url.password === '';
   } catch {
     return false;
   }
@@ -105,6 +115,10 @@ export function validateSourceUnion(record) {
   const hasUrl = typeof record?.source_url === 'string' && record.source_url !== '';
   const hasRef = record?.source_reference !== undefined;
   const scoped = Object.hasOwn(SOURCE_REFERENCE_EVIDENCE_HANDLES, record?.id);
+
+  if (isObject(record?.card_action) && typeof record.card_action.url === 'string' && !validHttpUrl(record.card_action.url)) {
+    problems.push('card_action.url must be a valid HTTP(S) URL');
+  }
 
   if (!hasRef) {
     if (!hasUrl) problems.push('missing source_url');
@@ -191,14 +205,15 @@ const LOCALE_ROW_KEYS = ['key', 'source_revision', 'source_en', 'pt', 'scope_sta
 // Narrow screen for restricted-evidence shapes in any value bound for a public
 // file. It is deliberately not a general scanner: ordinary copy and ordinary
 // public URLs do not match any of these. A bare SHA-256 is screened everywhere
-// EXCEPT the media_provenance text of a manifest row, where incumbent rows
-// legitimately record the hash of a public media asset.
+// except the media_provenance text of a manifest row, which may cite the hash of
+// the approved public asset (and only that hash; see validatePublicInputShapes).
 const PUBLIC_VALUE_LEAKS = [
   [/file_[0-9a-f]{32}/i, 'an attachment id'],
   [/(?:^|[^a-z])(?:drive|docs)\.google\./i, 'a Drive/Docs locator'],
   [/P25-EV-\d+/i, 'a restricted evidence record id']
 ];
 const PUBLIC_VALUE_HASH_LEAK = [/(?<![0-9a-f])[0-9a-f]{64}(?![0-9a-f])/i, 'a SHA-256 value'];
+const PUBLIC_VALUE_HASH_LEAK_GLOBAL = /(?<![0-9a-f])[0-9a-f]{64}(?![0-9a-f])/gi;
 
 function publicValueLeak(value, { hash = true } = {}) {
   if (typeof value !== 'string') return null;
@@ -263,11 +278,24 @@ export function validatePublicInputShapes(packet) {
   const manifest = packet?.media?.approved_manifest;
   if (manifest !== undefined) {
     checkShape(manifest, PUBLIC_MANIFEST_SHAPE, 'media.approved_manifest', problems);
-    // Only media_provenance may carry a bare hash (the hash of a public asset).
+    for (const field of ['source_url', 'media_asset_source_url']) {
+      if (isObject(manifest) && typeof manifest[field] === 'string' && !validHttpUrl(manifest[field])) {
+        problems.push(`media.approved_manifest.${field} must be null or a valid HTTP(S) URL`);
+      }
+    }
+    // media_provenance may cite the hash of the approved PUBLIC asset and no other
+    // hash: an unrestricted 64-hex string could be a restricted evidence hash.
+    // The permitted value is packet.media.asset_sha256, which the writer verifies
+    // against the asset's actual bytes before anything is written.
     if (isObject(manifest)) {
       const { media_provenance: provenance, ...rest } = manifest;
       walkStrings(rest, 'media.approved_manifest', problems);
       walkStrings(provenance, 'media.approved_manifest.media_provenance', problems, { hash: false });
+      const approvedAssetHash = SHA256.test(packet?.media?.asset_sha256 ?? '') ? packet.media.asset_sha256 : null;
+      const cited = typeof provenance === 'string' ? provenance.match(PUBLIC_VALUE_HASH_LEAK_GLOBAL) ?? [] : [];
+      if (cited.some((hash) => hash.toLowerCase() !== approvedAssetHash)) {
+        problems.push('media.approved_manifest.media_provenance may cite only the SHA-256 of the approved public asset (media.asset_sha256)');
+      }
     } else {
       walkStrings(manifest, 'media.approved_manifest', problems);
     }
@@ -298,6 +326,7 @@ export function validatePublicInputShapes(packet) {
 /** Throws when the packet holds anything the writer must not copy into public files. */
 export function assertPublicInputBoundary(packet) {
   const problems = validatePublicInputShapes(packet);
+  if (isObject(packet?.event)) problems.push(...validateSourceUnion(packet.event).map((problem) => `event: ${problem}`));
   if (problems.length) throw new Error(`PUBLIC_INPUT_BOUNDARY: ${problems.join('; ')}`);
 }
 

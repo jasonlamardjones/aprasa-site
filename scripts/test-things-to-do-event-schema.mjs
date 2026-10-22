@@ -635,8 +635,15 @@ for (const [name, packet, expected] of MATRIX) {
   const manifestRows = JSON.parse(fs.readFileSync(path.join(ROOT, 'internal', 'provider-media-manifest.json'), 'utf8')).records
     .filter((r) => r.section === 'things-to-do' && !('retained_detail_page' in r));
   const manifestSchema = packetSchema.properties.media.properties.approved_manifest;
-  const badRows = manifestRows.filter((r) => schemaErrors(r, manifestSchema).length > 0 || validatePublicInputShapes({ media: { approved_manifest: r } }).length > 0).map((r) => r.title);
+  // A hash-bearing incumbent provenance passes when that hash is the packet's approved asset hash.
+  const provenanceHash = (r) => (r.media_provenance ?? '').match(/(?<![0-9a-f])[0-9a-f]{64}(?![0-9a-f])/i)?.[0]?.toLowerCase();
+  const asPacketMedia = (r) => ({ media: { asset_sha256: provenanceHash(r) ?? null, approved_manifest: r } });
+  const badRows = manifestRows.filter((r) => schemaErrors(r, manifestSchema).length > 0 || validatePublicInputShapes(asPacketMedia(r)).length > 0).map((r) => r.title);
   record(`incumbent: all ${manifestRows.length} manifest rows (incl. hash-bearing provenance) pass the manifest schema and runtime boundary`, badRows.length === 0, badRows.join(', '));
+  const hashBearing = manifestRows.filter((r) => provenanceHash(r));
+  record(`incumbent: ${hashBearing.length} hash-bearing provenance rows are rejected if the hash is NOT the approved asset hash`,
+    hashBearing.length > 0 && hashBearing.every((r) => validatePublicInputShapes({ media: { asset_sha256: 'cd'.repeat(32), approved_manifest: r } }).length > 0
+      && validatePublicInputShapes({ media: { approved_manifest: r } }).length > 0));
   record('incumbent: the retained Spotlight binding is NOT admissible through a packet manifest',
     schemaErrors({ ...manifestRows[0], retained_detail_page: 'things-to-do/x/index.html' }, manifestSchema).length > 0
       && validatePublicInputShapes({ media: { approved_manifest: { ...manifestRows[0], retained_detail_page: 'x' } } }).length > 0);
@@ -660,13 +667,72 @@ for (const [label, value] of RESTRICTED) {
   }
 }
 {
-  const p = cloneJson(writeFixture);
-  p.media.approved_manifest.media_provenance = `Public asset, SHA-256 ${'ab'.repeat(32)}.`;
-  record('no false positive: a public asset hash in manifest provenance is accepted', validatePublicInputShapes(p).length === 0);
+  const assetHash = writeFixture.media.asset_sha256;
+  const provenanceProblems = (text, mutate = () => {}) => {
+    const p = cloneJson(writeFixture);
+    p.media.approved_manifest.media_provenance = text;
+    mutate(p);
+    return validatePublicInputShapes(p);
+  };
+  const PROV_ERR = /may cite only the SHA-256 of the approved public asset/;
+  record('provenance hash: the approved public asset hash is accepted', provenanceProblems(`Public asset, SHA-256 ${assetHash}.`).length === 0);
+  record('provenance hash: the approved hash is accepted in upper case too', provenanceProblems(`Public asset ${assetHash.toUpperCase()}`).length === 0);
+  record('provenance hash: text without any hash is accepted', provenanceProblems('Approved non-public Phase 1B fixture media.').length === 0);
+  record('provenance hash: an arbitrary hash is rejected', provenanceProblems(`Provenance ${'ab'.repeat(32)}`).some((m) => PROV_ERR.test(m)));
+  record('provenance hash: the approved hash plus a second hash is rejected', provenanceProblems(`${assetHash} and ${'ab'.repeat(32)}`).some((m) => PROV_ERR.test(m)));
+  record('provenance hash: a hash is rejected when the packet has no approved asset hash', provenanceProblems(`Provenance ${assetHash}`, (p) => { delete p.media.asset_sha256; }).some((m) => PROV_ERR.test(m)));
+  record('provenance hash: a hash is rejected when asset_sha256 is malformed', provenanceProblems(`Provenance ${assetHash}`, (p) => { p.media.asset_sha256 = assetHash.slice(1); }).some((m) => PROV_ERR.test(m)));
+  record('provenance hash: a rejected hash is never echoed', !provenanceProblems(`Provenance ${'ab'.repeat(32)}`).join(' ').includes('ab'.repeat(32)));
+  record('provenance hash: a restricted attachment id or locator in provenance is still rejected',
+    provenanceProblems(`Provenance ${RESTRICTED[0][1]}`).length > 0 && provenanceProblems(`Provenance ${RESTRICTED[3][1]}`).length > 0);
+  const viaContract = cloneJson(writeFixture);
+  viaContract.media.approved_manifest.media_provenance = `Provenance ${'ab'.repeat(32)}`;
+  record('provenance hash: the packet preflight and the writer boundary both reject an arbitrary hash',
+    validatePacket(viaContract, { checkRepository: false }).state === 'INVALID_INPUT'
+      && (() => { try { assertPublicInputBoundary(viaContract); return false; } catch (e) { return /PUBLIC_INPUT_BOUNDARY/.test(e.message); } })());
   const q = cloneJson(writeFixture);
   q.event.detail.body = 'Join us at the Google Arts festival; tickets at https://example.org/tickets/12345678 or call +238 988 60 80.';
   q.event.source_url = 'https://www.agendacultural.cv/eventos/example';
   record('no false positive: ordinary copy and ordinary public URLs are accepted', validatePublicInputShapes(q).length === 0 && validateSourceUnion(q.event).length === 0);
+}
+
+// Semantic URL validity. The schema gates only the scheme; the runtime asks the URL
+// parser (plus explicit rejection of forms it silently repairs) at every entrypoint.
+{
+  const MALFORMED = ['http://', 'https://exa mple.org', 'http://[', 'https:///x', 'http://:80', 'https://%',
+    'https://user:pw@example.org/x', 'https:\\\\example.org', 'http:example.org', 'https://exa\tmple.org', ' https://example.org/'];
+  const SCHEME_REJECTED = ['javascript:alert(1)', 'ftp://example.org/x', '//example.org/x', '/relative/path', 'example.org', ''];
+  const urlPacket = (field, url) => {
+    const p = cloneJson(writeFixture);
+    if (field === 'source_url') p.event.source_url = url;
+    if (field === 'card_action.url') p.event.card_action.url = url;
+    if (field === 'manifest.source_url') p.media.approved_manifest.source_url = url;
+    if (field === 'manifest.media_asset_source_url') p.media.approved_manifest.media_asset_source_url = url;
+    return p;
+  };
+  const runtimeUrlOk = (p) => validatePublicInputShapes(p).length === 0 && validateSourceUnion(p.event).length === 0;
+  for (const field of ['source_url', 'card_action.url', 'manifest.source_url', 'manifest.media_asset_source_url']) {
+    for (const url of MALFORMED) {
+      const p = urlPacket(field, url);
+      record(`url semantics: ${field} ${JSON.stringify(url)} is rejected by the runtime`, !runtimeUrlOk(p));
+    }
+    for (const url of SCHEME_REJECTED) {
+      const p = urlPacket(field, url);
+      record(`url semantics: ${field} ${JSON.stringify(url)} is rejected by BOTH schema and runtime`, !runtimeUrlOk(p) && !schemaAccepts(p));
+    }
+    const ok = urlPacket(field, 'https://www.example.org:8443/a/b?c=d#e');
+    record(`url semantics: ${field} accepts an ordinary HTTPS URL in both`, runtimeUrlOk(ok) && schemaAccepts(ok));
+  }
+  // The documented layering: a parseable-looking prefix passes the schema gate; the runtime decides.
+  for (const url of ['http://[', 'https:///x', 'https://%']) {
+    const p = urlPacket('source_url', url);
+    record(`url semantics: ${JSON.stringify(url)} passes only the schema scheme gate and is rejected by the runtime`, schemaAccepts(p) && !runtimeUrlOk(p));
+  }
+  record('url semantics: the preflight and the writer boundary both reject a malformed card_action.url',
+    validatePacket(urlPacket('card_action.url', 'javascript:alert(1)'), { checkRepository: false }).state === 'INVALID_INPUT'
+      && (() => { try { assertPublicInputBoundary(urlPacket('card_action.url', 'javascript:alert(1)')); return false; } catch (e) { return /PUBLIC_INPUT_BOUNDARY/.test(e.message); } })());
+  const incumbentUrls = baseData.records.flatMap((r) => [r.source_url, r.card_action?.url]).filter(Boolean);
+  record(`url semantics: all ${incumbentUrls.length} incumbent source and card-action URLs remain accepted`, incumbentUrls.every((u) => validateSourceUnion({ id: 'x', source_url: u }).length === 0));
 }
 
 // The shared contract and the writer's copy boundary reject the same packets.
@@ -714,6 +780,19 @@ standaloneGeneratorRejects('an unsupported id with a reference fails', withNoAct
 standaloneGeneratorRejects('an invalid reference shape fails', withNoAction(synthB(KUTUMBAIA_ID, { source_reference: { ...synthRef(), note: 'x' } })), /unsupported field/);
 standaloneGeneratorRejects('a prohibited action fails', withNoAction(synthB(KUTUMBAIA_ID, { card_action: { label: 'Open', url: 'https://example.org/' } })), /NO_CTA/);
 standaloneGeneratorRejects('a scoped id with only a plain URL fails', { ...withNoAction(synthB(KUTUMBAIA_ID)), source_url: 'https://example.org/x', source_reference: undefined }, /requires a governed source_reference/);
+for (const [label, patch, pattern] of [
+  ['a malformed source_url', (r) => { r.source_url = 'https:///x'; }, /source_url must be an HTTP\(S\) URL/],
+  ['a script-scheme card_action.url', (r) => { r.card_action = { ...r.card_action, url: 'javascript:alert(1)' }; }, /card_action\.url must be a valid HTTP\(S\) URL/],
+]) {
+  const state = sandboxWith(({ data }) => { patch(data.records.find((r) => r.id === 'cartinha-dholanda-mindelo-2026')); });
+  const gen = runIn(state.dir, 'generate-things-to-do.mjs', ['--write', '--as-of=2026-10-12']);
+  record(`standalone generator: ${label} on an existing record fails before writing`, gen.status !== 0 && pattern.test(gen.out), gen.out.trim().split('\n').slice(-2).join(' / '));
+  const media = runIn(state.dir, 'validate-card-media.mjs');
+  record(`standalone media validator: ${label} on an existing record is rejected`, media.status !== 0 && pattern.test(media.out), media.out.trim().split('\n').slice(-2).join(' / '));
+  const canonical = runIn(state.dir, 'validate-things-to-do-events.mjs');
+  record(`standalone canonical validator: ${label} on an existing record is rejected`, canonical.status !== 0 && pattern.test(canonical.out), canonical.out.trim().split('\n').slice(-2).join(' / '));
+  fs.rmSync(state.dir, { recursive: true, force: true });
+}
 standaloneGeneratorRejects('an explicit null source_reference fails', withNoAction(synthB(KUTUMBAIA_ID, { source_reference: null })), /source_reference must be an object/);
 
 const standaloneMediaRejects = (name, canonical, manifestPatch, pattern) => {
