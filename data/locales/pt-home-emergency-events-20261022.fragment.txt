@@ -12,11 +12,11 @@
             <div class="dialog-record">
               <p class="provider">Txon Kuceu</p>
               <h2>KUTUMBAIA — Edição 03: Oficina Artística Experimental</h2>
-              <dl class="detail-list"><div><dt>Data</dt><dd>22 de outubro de 2026</dd></div><div><dt>Horário</dt><dd>18:00–20:00</dd></div><div><dt>Local</dt><dd>Kafê Djan Djan, Mindelo, São Vicente</dd></div><div><dt>Entrada</dt><dd>Entrada livre</dd></div><div><dt>Inscrição</dt><dd>Não é necessária inscrição prévia · Participação sem marcação</dd></div></dl>
+              <dl class="detail-list"><div><dt>Data</dt><dd>22 de outubro de 2026</dd></div><div><dt>Horário</dt><dd>18:00–20:00</dd></div><div><dt>Local</dt><dd>Kafê Djan Djan, Mindelo, São Vicente</dd></div><div><dt>Consumo no café</dt><dd>Obrigatório (conforme o cartaz)</dd></div><div><dt>Inscrição</dt><dd>Não é necessária inscrição prévia · Participação sem marcação</dd></div></dl>
               <h3>Detalhes</h3>
               <p>KUTUMBAIA — Edição 03 é um encontro artístico participativo no Kafê Djan Djan, no Mindelo, no dia 22 de outubro de 2026, das 18:00 às 20:00. O encontro incentiva a expressão criativa através de spoken word, música, poesia e artes visuais. É possível participar sem inscrição prévia.</p>
               <h3>Convém saber</h3>
-              <p>A participação é gratuita. Os participantes são incentivados a apoiar o Kafê Djan Djan fazendo uma compra, mas o consumo no café não é obrigatório.</p>
+              <p>O cartaz do evento indica «Consumo obrigatório»: o consumo no café é obrigatório. Para outras condições, confirme diretamente com a organização.</p>
               <p class="checked">Revisto em 21 de outubro de 2026</p>
             </div>
           </template>
