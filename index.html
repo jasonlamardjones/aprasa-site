@@ -157,6 +157,51 @@
       <p class="section-submission-note">Organizing an event or activity in Mindelo or São Vicente? <a href="https://wa.me/message/GC3C5Q4MSF37I1" target="_blank" rel="noopener noreferrer">Send it to A PRASA for consideration</a>.</p>
 
       <div class="resource-grid things-grid">
+        <!-- BEGIN EMERGENCY EN-PT EVENT: kutumbaia-edicao-03-2026 -->
+        <article class="resource-card" data-emergency-event="kutumbaia-edicao-03-2026" data-emergency-expire-at="2026-10-22T21:00:00Z" data-checked="2026-10-21">
+          <p class="card-status">22 October 2026 · 18:00–20:00</p>
+          <h3>KUTUMBAIA — Edition 03: Experimental Art Workshop</h3>
+          <p class="card-meta">Kafê Djan Djan · Mindelo, São Vicente</p>
+          <p class="provider">Txon Kuceu</p>
+          <p>A participatory artistic gathering encouraging creative expression through spoken word, music, poetry and visual arts.</p>
+          <p class="checked">Checked 21 October 2026</p>
+          <div class="card-actions"><button class="details-button" type="button" data-details>Details</button></div>
+          <template class="details-template">
+            <div class="dialog-record">
+              <p class="provider">Txon Kuceu</p>
+              <h2>KUTUMBAIA — Edition 03: Experimental Art Workshop</h2>
+              <dl class="detail-list"><div><dt>Date</dt><dd>22 October 2026</dd></div><div><dt>Time</dt><dd>18:00–20:00</dd></div><div><dt>Venue</dt><dd>Kafê Djan Djan, Mindelo, São Vicente</dd></div><div><dt>Admission</dt><dd>Free</dd></div><div><dt>Registration</dt><dd>No advance registration required · Walk-ins welcome</dd></div></dl>
+              <h3>Details</h3>
+              <p>KUTUMBAIA — Edition 03 is a participatory artistic gathering at Kafê Djan Djan in Mindelo on 22 October 2026, from 18:00–20:00. The gathering encourages creative expression through spoken word, music, poetry and visual arts. Walk-ins are welcome and no advance registration is required.</p>
+              <h3>Good to know</h3>
+              <p>Participation is free. Guests are warmly encouraged to support Kafê Djan Djan by making a purchase, but café consumption is not required.</p>
+              <p class="checked">Checked 21 October 2026</p>
+            </div>
+          </template>
+        </article>
+        <!-- END EMERGENCY EN-PT EVENT: kutumbaia-edicao-03-2026 -->
+
+        <!-- BEGIN EMERGENCY EN-PT EVENT: manxi-liliane-reis-exhibition-2026 -->
+        <article class="resource-card" data-emergency-event="manxi-liliane-reis-exhibition-2026" data-emergency-expire-at="2026-10-30T01:00:00Z" data-checked="2026-10-21">
+          <p class="card-status">14–29 October 2026</p>
+          <h3>MANXI — Exhibition by LAR (Liliane Reis)</h3>
+          <p class="card-meta">Kafê Djan Djan · Mindelo, São Vicente</p>
+          <p class="provider">LAR (Liliane Reis)</p>
+          <p>A multidisciplinary exhibition by Liliane Reis exploring themes of renewal and awakening.</p>
+          <p class="checked">Checked 21 October 2026</p>
+          <div class="card-actions"><button class="details-button" type="button" data-details>Details</button></div>
+          <template class="details-template">
+            <div class="dialog-record">
+              <p class="provider">LAR (Liliane Reis)</p>
+              <h2>MANXI — Exhibition by LAR (Liliane Reis)</h2>
+              <dl class="detail-list"><div><dt>Dates</dt><dd>14–29 October 2026</dd></div><div><dt>Venue</dt><dd>Kafê Djan Djan, Mindelo, São Vicente</dd></div></dl>
+              <h3>Details</h3>
+              <p>MANXI is a multidisciplinary exhibition by Liliane Reis exploring themes of renewal and awakening. The exhibition is presented at Kafê Djan Djan in Mindelo from 14–29 October 2026.</p>
+              <p class="checked">Checked 21 October 2026</p>
+            </div>
+          </template>
+        </article>
+        <!-- END EMERGENCY EN-PT EVENT: manxi-liliane-reis-exhibition-2026 -->
         <!-- BEGIN GENERATED EVENT: part-ilhas-nuno-miranda --><!-- END GENERATED EVENT: part-ilhas-nuno-miranda -->
 
         <!-- BEGIN GENERATED EVENT: mon-pikenin --><!-- END GENERATED EVENT: mon-pikenin -->
@@ -871,5 +916,17 @@
     <a class="back-top" href="#main">Back to top</a>
   </div>
 </footer>
+
+  <!-- Emergency same-day event visibility guard: browser-local only; permanent canonical expiry release remains separate. -->
+  <script>
+  (() => {
+    const expire = () => document.querySelectorAll('[data-emergency-expire-at]').forEach((card) => {
+      const until = Date.parse(card.getAttribute('data-emergency-expire-at'));
+      if (Number.isFinite(until) && Date.now() >= until) card.remove();
+    });
+    expire();
+    document.addEventListener('visibilitychange', expire);
+  })();
+  </script>
 </body>
 </html>
