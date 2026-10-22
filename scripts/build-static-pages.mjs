@@ -339,6 +339,31 @@ function buildPage({ name, enPath, ptPath, canonicalEn, canonicalPt, enHrefFromR
   ptSource = applyRuntimeStrings(ptSource, 'pt', runtimeKeysFor(name));
   ptSource = applyContactConfig(ptSource);
 
+  // The two founder-approved, time-limited EN/PT Home notices are an emergency
+  // exception to the canonical event generator. They are static Home cards,
+  // not source_reference records; their public-safe PT text must not be inferred
+  // by the generic EN-to-PT localizer. Import the exact PT fragment before the
+  // no-silent-fallback check, while keeping normal generator slots untouched.
+  // This fragment is localizable content only; no restricted evidence is copied.
+  if (name === 'home') {
+    const fragment = fs.readFileSync(path.join(root, 'data/locales/pt-home-emergency-events-20261022.fragment.html'), 'utf8');
+    for (const id of ['kutumbaia-edicao-03-2026', 'manxi-liliane-reis-exhibition-2026']) {
+      const begin = `<!-- BEGIN EMERGENCY EN-PT EVENT: ${id} -->`;
+      const end = `<!-- END EMERGENCY EN-PT EVENT: ${id} -->`;
+      const enStart = ptSource.indexOf(begin);
+      const enStop = ptSource.indexOf(end, enStart);
+      const ptStart = fragment.indexOf(begin);
+      const ptStop = fragment.indexOf(end, ptStart);
+      if (enStart < 0 || enStop < 0 || ptStart < 0 || ptStop < 0
+        || ptSource.indexOf(begin, enStart + 1) !== -1
+        || fragment.indexOf(begin, ptStart + 1) !== -1) {
+        throw new Error(`Emergency PT Home locale fragment missing or duplicated for ${id}`);
+      }
+      const ptBlock = fragment.slice(ptStart, ptStop + end.length);
+      ptSource = ptSource.slice(0, enStart) + '<!--i18n:skip-->' + ptBlock + '<!--/i18n:skip-->' + ptSource.slice(enStop + end.length);
+    }
+  }
+
   const { html: rawLocalized, unmatchedEnglish } = localizeStaticHtml(ptSource, 'pt');
   const localized = rawLocalized.replaceAll('<!--i18n:skip-->', '').replaceAll('<!--/i18n:skip-->', '');
   const realGaps = unmatchedEnglish.filter((u) => !ALLOWED_UNTRANSLATED.has(u.text));
