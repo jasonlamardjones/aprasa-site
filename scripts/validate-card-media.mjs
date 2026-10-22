@@ -194,7 +194,18 @@ for (const record of manifest.records) {
   if (!appearsOnHome && !appearsOnHub && !appearsOnDetail && !appearsOnRetainedDetail && !isExpiredDatedEvent && !isRemovedTrainingRecord && !isSuppressedByEligibility) {
     errors.push(`${label}: card title not found in index.html${THINGS_TO_DO_HUB_PUBLIC ? `, ${hubOutputPath('en')}` : ''} or its own detail page`);
   }
-  if (!record.source_url) errors.push(`${label}: missing source_url`);
+  // Record-scoped source union: a manifest row mirrors its canonical record's
+  // mode. Null is valid only beside a governed source_reference, and the row
+  // itself never carries the reference (the manifest is public, too).
+  const canonicalUsesReference = canonicalEvent?.source_reference != null;
+  if (Object.hasOwn(record, 'source_reference')) errors.push(`${label}: media manifest rows must not carry source_reference`);
+  if (record.source_url === null) {
+    if (!canonicalUsesReference || canonicalEvent.source_url !== null) errors.push(`${label}: source_url null is only valid for a record backed by a governed source_reference`);
+  } else if (!record.source_url) {
+    errors.push(`${label}: missing source_url`);
+  } else if (canonicalUsesReference) {
+    errors.push(`${label}: source_url must be null for a record backed by a source_reference`);
+  }
   if (!allowedTypes.has(record.media_type)) errors.push(`${label}: invalid media_type ${record.media_type}`);
   if (!allowedStates.has(record.media_state)) errors.push(`${label}: invalid media_state ${record.media_state}`);
 

@@ -233,6 +233,12 @@ function detailMediaClass(record) {
 // locale "en" every field below is the JSON's own English value, so the
 // English generation path has no dependency on the locale overlay at all.
 function localizeRecord(record) {
+  // A record backed by a restricted source_reference is NO_CTA: restricted
+  // evidence is never a public destination. build-all does not run the
+  // validators, so the generator refuses the shape itself.
+  if (record.source_reference != null && (record.card_action != null || record.detail?.action_label != null)) {
+    throw new Error(`${record.id}: a source_reference record must not carry a public action (NO_CTA)`);
+  }
   const facts = (record.detail?.facts || []).map((fact) => {
     if (locale === 'en') {
       return fact.value_html
@@ -295,6 +301,9 @@ function renderFacts(facts = []) {
 }
 
 function publicActionUrl(record) {
+  if (record.source_reference != null) {
+    throw new Error(`${record.id}: a source_reference record has no public action URL`);
+  }
   // Project 03 has approved durable provider destinations for the two current
   // recurring-venue cards. Keep dated-event detail actions on source_url;
   // only the recurring-venue kind resolves its public action from card_action.

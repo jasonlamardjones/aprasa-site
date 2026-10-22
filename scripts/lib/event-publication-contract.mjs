@@ -48,6 +48,101 @@ function validHttpUrl(value) {
   }
 }
 
+// --- Record-scoped evidence source union (Project 03, Project 04 handoff) ----
+//
+// Every Things-to-Do record names its public source with a verified HTTP(S)
+// source_url (mode A). Project 03 approved exactly ONE exception, for exactly
+// TWO event ids: source_url null plus a typed source_reference that points at
+// restricted Project 25 evidence (mode B). The union is exclusive and
+// fail-closed: mixed, absent, mismatched, unsupported or out-of-scope shapes
+// are all rejected, and mode B never carries a public action.
+//
+// This repository is PUBLIC. A source_reference holds ONE opaque, governed
+// evidence handle (evidence_ref) that identifies the event's Project 25 evidence
+// record, which contains both the original flyer and the dated founder
+// attestation. It must never hold an attachment id, a Drive/Docs locator, a URL,
+// a hash, a restricted record id or attestation content, so the value is also
+// screened against those shapes. The attestation date stays in the restricted
+// Project 25 register, not here.
+//
+// The handle for each approved event is the event's own id (Project 25,
+// independently verified). The allowlist below is explicit and immutable, and a
+// record's evidence_ref must equal ITS OWN approved handle exactly.
+export const SOURCE_REFERENCE_EVIDENCE_HANDLES = Object.freeze({
+  'kutumbaia-edicao-03-2026': 'kutumbaia-edicao-03-2026',
+  'manxi-liliane-reis-exhibition-2026': 'manxi-liliane-reis-exhibition-2026'
+});
+export const SOURCE_REFERENCE_EVENT_IDS = Object.freeze(Object.keys(SOURCE_REFERENCE_EVIDENCE_HANDLES));
+const SOURCE_REFERENCE_KEYS = ['version', 'kind', 'evidence_ref'];
+const SOURCE_REFERENCE_LEAKS = [
+  [/https?:\/\//i, 'a URL'],
+  [/(?:^|[^a-z])(?:drive|docs)\.google\./i, 'a Drive/Docs locator'],
+  [/file_[0-9a-f]{32}/i, 'an attachment id'],
+  [/[0-9a-f]{64}/i, 'a SHA-256 value'],
+  [/@/, 'an email address'],
+  [/[\\/]/, 'a path'],
+  [/\s/, 'whitespace']
+];
+
+/**
+ * Screens one candidate public string for evidence-locator shapes.
+ * Returns the label of the first forbidden shape, or null.
+ */
+export function evidenceLeakShape(value) {
+  if (typeof value !== 'string') return null;
+  for (const [pattern, label] of SOURCE_REFERENCE_LEAKS) {
+    if (pattern.test(value)) return label;
+  }
+  return null;
+}
+
+/**
+ * Validates a record's source union. Returns human-readable problem strings
+ * (empty when valid), without a record label so each caller can add its own.
+ */
+export function validateSourceUnion(record) {
+  const problems = [];
+  const hasUrl = typeof record?.source_url === 'string' && record.source_url !== '';
+  const hasRef = record?.source_reference !== undefined && record.source_reference !== null;
+  const scoped = Object.hasOwn(SOURCE_REFERENCE_EVIDENCE_HANDLES, record?.id);
+
+  if (!hasRef) {
+    if (!hasUrl) problems.push('missing source_url');
+    else if (!validHttpUrl(record.source_url)) problems.push('source_url must be an HTTP(S) URL');
+    else if (scoped) problems.push('source_url is not permitted for this record; it requires a governed source_reference');
+    return problems;
+  }
+
+  if (hasUrl) problems.push('source_url and source_reference are mutually exclusive');
+  else if (record.source_url !== null) problems.push('source_reference requires source_url to be null');
+  if (!scoped) problems.push('source_reference is only permitted for the two Project 03 approved event ids');
+
+  const ref = record.source_reference;
+  if (!isObject(ref)) {
+    problems.push('source_reference must be an object');
+    return problems;
+  }
+  const unknownKeys = Object.keys(ref).filter((key) => !SOURCE_REFERENCE_KEYS.includes(key));
+  if (unknownKeys.length) problems.push(`source_reference has unsupported field(s): ${unknownKeys.join(', ')}`);
+  if (ref.version !== 1) problems.push('source_reference.version must equal 1');
+  if (ref.kind !== 'restricted-evidence') problems.push('source_reference.kind must be "restricted-evidence"');
+
+  const value = ref.evidence_ref;
+  if (typeof value !== 'string' || value.length === 0 || value.length > 128) {
+    problems.push('source_reference.evidence_ref must be a non-empty governed handle (128 characters or fewer)');
+  } else {
+    const leak = evidenceLeakShape(value);
+    if (leak) problems.push(`source_reference.evidence_ref must not contain ${leak}`);
+    else if (!scoped) problems.push('source_reference.evidence_ref has no approved handle for this record');
+    else if (value !== SOURCE_REFERENCE_EVIDENCE_HANDLES[record.id]) problems.push('source_reference.evidence_ref must equal the approved evidence handle of this record');
+  }
+
+  // Restricted evidence is never a public destination.
+  if (record.card_action != null) problems.push('a source_reference record must not carry a card_action (NO_CTA)');
+  if (record.detail?.action_label != null) problems.push('a source_reference record must set detail.action_label to null (NO_CTA)');
+  return problems;
+}
+
 function slugifyFactLabel(label = '') {
   return label
     .toLowerCase()
@@ -311,7 +406,7 @@ export function validatePacket(packet, { root = ROOT, checkRepository = true } =
   const event = packet?.event ?? {};
   const requiredEventFields = [
     'id', 'kind', 'title', 'provider', 'summary', 'category', 'location',
-    'source_url', 'source_type', 'checked_at', 'publication_state',
+    'source_type', 'checked_at', 'publication_state',
     'media_policy', 'media_manifest_title', 'detail_page', 'display', 'detail', 'seo'
   ];
   for (const field of requiredEventFields) {
@@ -358,8 +453,8 @@ export function validatePacket(packet, { root = ROOT, checkRepository = true } =
   if (event.start_datetime && event.end_datetime && Date.parse(event.end_datetime) < Date.parse(event.start_datetime)) {
     issues.push(issue('INVALID_INPUT', 'Project 04', 'event.end_datetime cannot precede event.start_datetime', 'event.end_datetime', 'RECEIVED'));
   }
-  if (event.source_url && !validHttpUrl(event.source_url)) {
-    issues.push(issue('INVALID_INPUT', 'Project 04', 'event.source_url must be an HTTP(S) URL', 'event.source_url', 'RECEIVED'));
+  for (const problem of validateSourceUnion(event)) {
+    issues.push(issue('INVALID_INPUT', 'Project 04', `event: ${problem}`, 'event.source_url / event.source_reference', 'RECEIVED'));
   }
   if (event.id && event.detail_page && event.detail_page !== `things-to-do/${event.id}/`) {
     issues.push(issue('INVALID_INPUT', 'Project 04', 'event.detail_page must be derived from event.id', `things-to-do/${event.id}/`, 'RECEIVED'));
@@ -524,6 +619,7 @@ export function validatePacket(packet, { root = ROOT, checkRepository = true } =
       && approvedManifest.title === event.media_manifest_title
       && approvedManifest.provider === event.provider
       && approvedManifest.source_url === event.source_url
+      && !Object.hasOwn(approvedManifest, 'source_reference')
       && approvedManifest.media_asset === (event.media?.asset ?? null)
       && approvedManifest.media_alt === (event.media?.alt ?? '')
       && (!event.media || (approvedManifest.media_width === event.media.width && approvedManifest.media_height === event.media.height));

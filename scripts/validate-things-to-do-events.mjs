@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import { END_PRECISIONS, MONTH_PRECISION, endPrecisionOf, isValidIsoMonth, startMonthOf } from './lib/things-to-do-currentness.mjs';
+import { validateSourceUnion } from './lib/event-publication-contract.mjs';
 import { RECORD_KINDS, OCCURRENCE_DATE_FIELDS, RECURRING_VENUE_SCHEMA_TYPE, isDatedEvent, isRecurringVenue } from './lib/things-to-do-kinds.mjs';
 
 const file = new URL('../data/things-to-do-events.json', import.meta.url);
@@ -33,7 +34,7 @@ for (const record of data.records ?? []) {
   }
   if (!record.title) errors.push(`${label}: missing title`);
   if (!record.provider) errors.push(`${label}: missing provider`);
-  if (!record.source_url) errors.push(`${label}: missing source_url`);
+  for (const problem of validateSourceUnion(record)) errors.push(`${label}: ${problem}`);
   if (!record.source_type) errors.push(`${label}: missing source_type`);
   if (!record.detail_page) errors.push(`${label}: missing detail_page`);
   else if (!detailRoutePattern.test(record.detail_page)) errors.push(`${label}: invalid detail_page; expected things-to-do/<slug>/`);
