@@ -346,7 +346,7 @@ function buildPage({ name, enPath, ptPath, canonicalEn, canonicalPt, enHrefFromR
   // no-silent-fallback check, while keeping normal generator slots untouched.
   // This fragment is localizable content only; no restricted evidence is copied.
   if (name === 'home') {
-    const fragment = fs.readFileSync(path.join(root, 'data/locales/pt-home-emergency-events-20261022.fragment.html'), 'utf8');
+    const fragment = fs.readFileSync(path.join(root, 'data/locales/pt-home-emergency-events-20261022.fragment.txt'), 'utf8');
     for (const id of ['kutumbaia-edicao-03-2026', 'manxi-liliane-reis-exhibition-2026']) {
       const begin = `<!-- BEGIN EMERGENCY EN-PT EVENT: ${id} -->`;
       const end = `<!-- END EMERGENCY EN-PT EVENT: ${id} -->`;
