@@ -23,7 +23,7 @@ name: Event lifecycle expiry (dry run)
 on:
   schedule:
     # Hourly, at an off-peak minute. 01:17 UTC is shortly after Cape Verde midnight.
-    - cron: '17 * * * *'
+    - cron: '17 7 * * *'
   workflow_dispatch:
 
 permissions:
