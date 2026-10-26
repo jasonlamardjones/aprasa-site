@@ -47,8 +47,14 @@ jobs:
           node --check scripts/remediation/report-phase2b-failure.mjs
           node --check scripts/remediation/test-things-to-do-currentness-remediation.mjs
           node --check scripts/remediation/test-things-to-do-currentness-preview-backfill.mjs
+          node --check scripts/lib/currentness-contract.mjs
+          node --check scripts/test-currentness-contract.mjs
       - name: Unit tests
         run: node scripts/remediation/test-things-to-do-currentness-remediation.mjs
+      # Independent, deterministic coverage of the approved cross-category
+      # date/instant contract. No production generator or publication writes.
+      - name: Universal currentness contract unit tests
+        run: node scripts/test-currentness-contract.mjs
       # Drives real canonical generation against a synthetic preview-boundary
       # expiry in a sandbox. Creates no GitHub issue and touches no tracked file.
       - name: Preview-backfill integration tests
