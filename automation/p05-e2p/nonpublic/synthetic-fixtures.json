@@ -1,0 +1,295 @@
+{
+  "contract_version": "P05-E2P v0.1-R1",
+  "export_id": "SYN-N2-BATCH-01",
+  "projection_version": "SYN-N2-1",
+  "records": [
+    {
+      "contract_version": "P05-E2P v0.1-R1",
+      "export_id": "SYN-N2-BATCH-01",
+      "projection_version": "SYN-N2-1",
+      "stable_resource_id": "SYN-LEARN-01",
+      "site_slug": "synthetic-learning",
+      "primary_provider_id": "SYN-PROV-LEARN",
+      "provider_relationships": [],
+      "record_family": "evergreen_learning_resource",
+      "evidence_refs": [
+        "SYN-EV-LEARN"
+      ],
+      "decision_id": "SYN-DEC-LEARN",
+      "approved_claims": [
+        "title_en",
+        "summary_en",
+        "provider_name",
+        "source_url",
+        "action_url",
+        "cost_status"
+      ],
+      "publication_readiness": "Public-Safe Approved",
+      "currentness_condition": "Current",
+      "last_verified": "2026-10-20",
+      "last_reviewed": "2026-10-20",
+      "next_review_trigger": "synthetic scheduled review",
+      "project03_disposition": "non_public_pilot_only",
+      "locale_status": "en_source_approved_pt_pending_project09",
+      "public_values": {
+        "title_en": "Synthetic business-learning platform",
+        "summary_en": "Synthetic catalog of practical learning resources.",
+        "provider_name": "Synthetic Learning Provider",
+        "source_url": "https://learning.example.invalid/catalog",
+        "checked_at": "2026-10-20",
+        "action_url": "https://learning.example.invalid/start",
+        "cost_status": "Free"
+      }
+    },
+    {
+      "contract_version": "P05-E2P v0.1-R1",
+      "export_id": "SYN-N2-BATCH-01",
+      "projection_version": "SYN-N2-1",
+      "stable_resource_id": "SYN-SKILLS-02",
+      "site_slug": "synthetic-skills",
+      "primary_provider_id": "SYN-PROV-SKILLS",
+      "provider_relationships": [],
+      "record_family": "evergreen_learning_resource",
+      "evidence_refs": [
+        "SYN-EV-SKILLS"
+      ],
+      "decision_id": "SYN-DEC-SKILLS",
+      "approved_claims": [
+        "title_en",
+        "summary_en",
+        "provider_name",
+        "source_url",
+        "action_url",
+        "credential_or_support"
+      ],
+      "publication_readiness": "Public-Safe Approved",
+      "currentness_condition": "Current",
+      "last_verified": "2026-10-20",
+      "last_reviewed": "2026-10-20",
+      "next_review_trigger": "synthetic scheduled review",
+      "project03_disposition": "non_public_pilot_only",
+      "locale_status": "en_source_approved_pt_pending_project09",
+      "public_values": {
+        "title_en": "Synthetic digital-skills platform",
+        "summary_en": "Synthetic skills modules; credentials have separate requirements.",
+        "provider_name": "Synthetic Skills Provider",
+        "source_url": "https://skills.example.invalid/about",
+        "checked_at": "2026-10-20",
+        "action_url": "https://skills.example.invalid/learn",
+        "credential_or_support": "Qualifications vary by individual module."
+      }
+    },
+    {
+      "contract_version": "P05-E2P v0.1-R1",
+      "export_id": "SYN-N2-BATCH-01",
+      "projection_version": "SYN-N2-1",
+      "stable_resource_id": "SYN-HUB-03",
+      "site_slug": "synthetic-hub",
+      "primary_provider_id": "SYN-PROV-HUB",
+      "provider_relationships": [],
+      "record_family": "institutional_provider_program_catalog",
+      "evidence_refs": [
+        "SYN-EV-HUB"
+      ],
+      "decision_id": "SYN-DEC-HUB",
+      "approved_claims": [
+        "title_en",
+        "summary_en",
+        "provider_name",
+        "source_url",
+        "action_url"
+      ],
+      "publication_readiness": "Public-Safe Approved",
+      "currentness_condition": "Current",
+      "last_verified": "2026-10-20",
+      "last_reviewed": "2026-10-20",
+      "next_review_trigger": "synthetic scheduled review",
+      "project03_disposition": "non_public_pilot_only",
+      "locale_status": "en_source_approved_pt_pending_project09",
+      "public_values": {
+        "title_en": "Synthetic course hub",
+        "summary_en": "Synthetic central hub; child-course availability is not established.",
+        "provider_name": "Synthetic Hub Provider",
+        "source_url": "https://hub.example.invalid/info",
+        "checked_at": "2026-10-20",
+        "action_url": "https://hub.example.invalid/catalog"
+      }
+    },
+    {
+      "contract_version": "P05-E2P v0.1-R1",
+      "export_id": "SYN-N2-BATCH-01",
+      "projection_version": "SYN-N2-1",
+      "stable_resource_id": "SYN-GATE-04",
+      "site_slug": "synthetic-gateway",
+      "primary_provider_id": "SYN-PROV-GATE",
+      "provider_relationships": [],
+      "record_family": "institutional_provider_program_catalog",
+      "evidence_refs": [
+        "SYN-EV-GATE"
+      ],
+      "decision_id": "SYN-DEC-GATE",
+      "approved_claims": [
+        "title_en",
+        "summary_en",
+        "provider_name",
+        "source_url",
+        "action_url",
+        "location_scope"
+      ],
+      "publication_readiness": "Public-Safe Approved",
+      "currentness_condition": "Current",
+      "last_verified": "2026-10-20",
+      "last_reviewed": "2026-10-20",
+      "next_review_trigger": "synthetic scheduled review",
+      "project03_disposition": "non_public_pilot_only",
+      "locale_status": "en_source_approved_pt_pending_project09",
+      "public_values": {
+        "title_en": "Synthetic local training gateway",
+        "summary_en": "Synthetic institutional gateway; specific cohort deadlines are unverified.",
+        "provider_name": "Synthetic Gateway Provider",
+        "source_url": "https://gateway.example.invalid/training",
+        "checked_at": "2026-10-20",
+        "action_url": "https://gateway.example.invalid/offerings",
+        "location_scope": "Synthetic locality"
+      }
+    },
+    {
+      "contract_version": "P05-E2P v0.1-R1",
+      "export_id": "SYN-N2-BATCH-01",
+      "projection_version": "SYN-N2-1",
+      "stable_resource_id": "SYN-BIZ-05",
+      "site_slug": "synthetic-business",
+      "primary_provider_id": "SYN-PROV-BIZ",
+      "provider_relationships": [],
+      "record_family": "practical_business_support_tool",
+      "evidence_refs": [
+        "SYN-EV-BIZ"
+      ],
+      "decision_id": "SYN-DEC-BIZ",
+      "approved_claims": [
+        "title_en",
+        "summary_en",
+        "provider_name",
+        "source_url",
+        "action_url"
+      ],
+      "publication_readiness": "Public-Safe Approved",
+      "currentness_condition": "Current",
+      "last_verified": "2026-10-20",
+      "last_reviewed": "2026-10-20",
+      "next_review_trigger": "synthetic scheduled review",
+      "project03_disposition": "non_public_pilot_only",
+      "locale_status": "en_source_approved_pt_pending_project09",
+      "public_values": {
+        "title_en": "Synthetic business-support navigation",
+        "summary_en": "Synthetic service directory; financing eligibility is not established.",
+        "provider_name": "Synthetic Business Provider",
+        "source_url": "https://business.example.invalid/services",
+        "checked_at": "2026-10-20",
+        "action_url": "https://business.example.invalid/service-desk"
+      }
+    },
+    {
+      "contract_version": "P05-E2P v0.1-R1",
+      "export_id": "SYN-N2-BATCH-01",
+      "projection_version": "SYN-N2-1",
+      "stable_resource_id": "SYN-HOLD-06",
+      "site_slug": "synthetic-restricted",
+      "primary_provider_id": "SYN-PROV-HELD",
+      "provider_relationships": [],
+      "record_family": "evergreen_learning_resource",
+      "evidence_refs": [
+        "SYN-EV-HELD"
+      ],
+      "decision_id": "SYN-DEC-HELD",
+      "approved_claims": [
+        "title_en",
+        "summary_en",
+        "provider_name",
+        "source_url"
+      ],
+      "publication_readiness": "Held",
+      "currentness_condition": "Current",
+      "last_verified": "2026-10-20",
+      "last_reviewed": "2026-10-20",
+      "next_review_trigger": "synthetic scheduled review",
+      "project03_disposition": "non_public_pilot_only",
+      "locale_status": "en_source_approved_pt_pending_project09",
+      "public_values": {
+        "title_en": "Synthetic access-restricted platform",
+        "summary_en": "Synthetic candidate with unresolved access restrictions.",
+        "provider_name": "Synthetic Restricted Provider",
+        "source_url": "https://restricted.example.invalid/info",
+        "checked_at": "2026-10-20"
+      }
+    },
+    {
+      "contract_version": "P05-E2P v0.1-R1",
+      "export_id": "SYN-N2-BATCH-01",
+      "projection_version": "SYN-N2-1",
+      "stable_resource_id": "SYN-UNKNOWN-07",
+      "site_slug": "synthetic-unconfirmed",
+      "primary_provider_id": "SYN-PROV-UNKNOWN",
+      "provider_relationships": [],
+      "record_family": "institutional_provider_program_catalog",
+      "evidence_refs": [
+        "SYN-EV-UNKNOWN"
+      ],
+      "decision_id": "SYN-DEC-UNKNOWN",
+      "approved_claims": [
+        "title_en",
+        "summary_en",
+        "provider_name",
+        "source_url"
+      ],
+      "publication_readiness": "Held",
+      "currentness_condition": "Currentness Unknown",
+      "last_verified": "2026-10-20",
+      "last_reviewed": "2026-10-20",
+      "next_review_trigger": "synthetic scheduled review",
+      "project03_disposition": "non_public_pilot_only",
+      "locale_status": "en_source_approved_pt_pending_project09",
+      "public_values": {
+        "title_en": "Synthetic unconfirmed provider",
+        "summary_en": "Synthetic identity requiring direct-source verification.",
+        "provider_name": "Synthetic Unconfirmed Provider",
+        "source_url": "https://unknown.example.invalid/info",
+        "checked_at": "2026-10-20"
+      }
+    },
+    {
+      "contract_version": "P05-E2P v0.1-R1",
+      "export_id": "SYN-N2-BATCH-01",
+      "projection_version": "SYN-N2-1",
+      "stable_resource_id": "SYN-EXPIRED-08",
+      "site_slug": "synthetic-expired",
+      "primary_provider_id": "SYN-PROV-EXPIRED",
+      "provider_relationships": [],
+      "record_family": "institutional_provider_program_catalog",
+      "evidence_refs": [
+        "SYN-EV-EXPIRED"
+      ],
+      "decision_id": "SYN-DEC-EXPIRED",
+      "approved_claims": [
+        "title_en",
+        "summary_en",
+        "provider_name",
+        "source_url"
+      ],
+      "publication_readiness": "Held",
+      "currentness_condition": "Closed / Expired",
+      "last_verified": "2026-10-20",
+      "last_reviewed": "2026-10-20",
+      "next_review_trigger": "synthetic scheduled review",
+      "project03_disposition": "non_public_pilot_only",
+      "locale_status": "en_source_approved_pt_pending_project09",
+      "public_values": {
+        "title_en": "Synthetic closed application",
+        "summary_en": "Synthetic opportunity with a closed application window.",
+        "provider_name": "Synthetic Closed Provider",
+        "source_url": "https://expired.example.invalid/history",
+        "checked_at": "2026-10-20"
+      }
+    }
+  ]
+}
