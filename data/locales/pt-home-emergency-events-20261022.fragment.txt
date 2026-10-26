@@ -1,28 +1,5 @@
 <!-- Governed temporary PT Home overlay. Source: the two approved bilingual emergency Home event cards. Never public evidence. -->
 <!-- BEGIN EMERGENCY EN-PT EVENT: kutumbaia-edicao-03-2026 -->
-        <article class="resource-card" data-emergency-event="kutumbaia-edicao-03-2026" data-emergency-expire-at="2026-10-22T21:00:00Z" data-checked="2026-10-21">
-          <div class="card-media"><img src="../assets/card-media/things-to-do/event-flyers/kutumbaia-edicao-03-2026.jpg" width="1131" height="1600" loading="lazy" decoding="async" style="object-fit:contain" alt="Cartaz original de Kutumbaia Edição 03, 22 de outubro de 2026 no Kafê Djan Djan; indica consumo obrigatório."></div>
-          <p class="card-status">22 de outubro de 2026 · 18:00–20:00</p>
-          <h3>KUTUMBAIA — Edição 03: Oficina Artística Experimental</h3>
-          <p class="card-meta">Kafê Djan Djan · Mindelo, São Vicente</p>
-          <p class="provider">Txon Kuceu</p>
-          <p>Um encontro artístico participativo que incentiva a expressão criativa através de spoken word, música, poesia e artes visuais.</p>
-          <p class="checked">Revisto em 21 de outubro de 2026</p>
-          <div class="card-actions"><button class="details-button" type="button" data-details>Detalhes</button></div>
-          <template class="details-template">
-            <div class="dialog-record">
-              <p class="provider">Txon Kuceu</p>
-              <img src="../assets/card-media/things-to-do/event-flyers/kutumbaia-edicao-03-2026.jpg" width="1131" height="1600" loading="lazy" decoding="async" style="display:block;max-width:100%;height:auto;object-fit:contain;margin:0 auto 1rem" alt="Cartaz original de Kutumbaia Edição 03, 22 de outubro de 2026 no Kafê Djan Djan; indica consumo obrigatório.">
-              <h2>KUTUMBAIA — Edição 03: Oficina Artística Experimental</h2>
-              <dl class="detail-list"><div><dt>Data</dt><dd>22 de outubro de 2026</dd></div><div><dt>Horário</dt><dd>18:00–20:00</dd></div><div><dt>Local</dt><dd>Kafê Djan Djan, Mindelo, São Vicente</dd></div><div><dt>Consumo no café</dt><dd>Obrigatório (conforme o cartaz)</dd></div><div><dt>Inscrição</dt><dd>Não é necessária inscrição prévia · Participação sem marcação</dd></div></dl>
-              <h3>Detalhes</h3>
-              <p>KUTUMBAIA — Edição 03 é um encontro artístico participativo no Kafê Djan Djan, no Mindelo, no dia 22 de outubro de 2026, das 18:00 às 20:00. O encontro incentiva a expressão criativa através de spoken word, música, poesia e artes visuais. É possível participar sem inscrição prévia.</p>
-              <h3>Convém saber</h3>
-              <p>O cartaz do evento indica «Consumo obrigatório»: o consumo no café é obrigatório. Para outras condições, confirme diretamente com a organização.</p>
-              <p class="checked">Revisto em 21 de outubro de 2026</p>
-            </div>
-          </template>
-        </article>
         <!-- END EMERGENCY EN-PT EVENT: kutumbaia-edicao-03-2026 -->
 
 <!-- BEGIN EMERGENCY EN-PT EVENT: manxi-liliane-reis-exhibition-2026 -->
