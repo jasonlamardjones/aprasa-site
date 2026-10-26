@@ -49,12 +49,17 @@ jobs:
           node --check scripts/remediation/test-things-to-do-currentness-preview-backfill.mjs
           node --check scripts/lib/currentness-contract.mjs
           node --check scripts/test-currentness-contract.mjs
+          node --check scripts/lib/things-to-do-currentness-adapter.mjs
+          node --check scripts/test-things-to-do-currentness-adapter.mjs
       - name: Unit tests
         run: node scripts/remediation/test-things-to-do-currentness-remediation.mjs
       # Independent, deterministic coverage of the approved cross-category
       # date/instant contract. No production generator or publication writes.
       - name: Universal currentness contract unit tests
         run: node scripts/test-currentness-contract.mjs
+      # Stage 2A is comparison-only: existing generators and published output unchanged.
+      - name: Things-to-Do currentness compatibility adapter tests
+        run: node scripts/test-things-to-do-currentness-adapter.mjs
       # Drives real canonical generation against a synthetic preview-boundary
       # expiry in a sandbox. Creates no GitHub issue and touches no tracked file.
       - name: Preview-backfill integration tests
