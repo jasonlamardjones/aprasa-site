@@ -83,7 +83,7 @@ export function evaluateCurrentness(input, asOf, {upcomingDays=60}={}) {
   const a=statusFromEnd(deadline,now,today);
   const e=statusFromEnd(end,now,today);
   // Verified activity chronology must not silently contradict itself.
-  if(start?.kind==='instant' && end?.kind==='instant' && start.at>end.at) {
+  if(start?.kind==='instant' && end?.kind==='instant' && start.at>=end.at) {
     throw new Error('CURRENTNESS_CONTRADICTORY_ACTIVITY_RANGE');
   }
   let applicationStatus='unknown';
