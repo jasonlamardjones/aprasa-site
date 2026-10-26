@@ -91,8 +91,15 @@ export function evaluateCurrentness(input, asOf, {upcomingDays=60}={}) {
   let activityStatus='unknown';
   if(e.ended) activityStatus='ended';
   else if(start?.kind==='instant') {
-    if(now>=start.at) activityStatus='underway';
-    else activityStatus=daysApart(today,calendarDay(new Date(start.at)))<=upcomingDays?'upcoming':'future';
+    if(now>=start.at) {
+      // A known start is not proof the activity is still underway.
+      // An exact end establishes the finite underway window; month-only ends
+      // become review-due at their review boundary without inventing expiry.
+      if(end?.kind==='instant') activityStatus='underway';
+      else if(e.reviewDue) activityStatus='review-due';
+      else if(input.ongoing===true && !end) activityStatus='ongoing';
+      else activityStatus='unknown';
+    } else activityStatus=daysApart(today,calendarDay(new Date(start.at)))<=upcomingDays?'upcoming':'future';
   } else if((start?.kind==='review-only' && today>=`${start.month}-01`) || e.reviewDue) activityStatus='review-due';
   else if(input.ongoing===true && !end) activityStatus='ongoing';
   return Object.freeze({applicationStatus, activityStatus, reviewDue:a.reviewDue||e.reviewDue||(start?.kind==='review-only'&&today>=`${start.month}-01`)||false,
