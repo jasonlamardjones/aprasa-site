@@ -40,7 +40,8 @@
       "data/locales/pt-overlay-r22-lang-switch-note.source.json",
       "data/locales/pt-overlay-r23-mindelo-fragata-selected-branches.source.json",
       "data/locales/pt-overlay-r25-trainings-home-expansion-timbuktoo.source.json",
-      "data/locales/pt-overlay-r26-trainings-home-expansion-edtech.source.json"
+      "data/locales/pt-overlay-r26-trainings-home-expansion-edtech.source.json",
+      "data/locales/pt-overlay-r27-ficase-scholarship-renewals-2026-2027.source.json"
     ],
     "base_revision": "P03-PT-SOURCE-2026-08-25-r2",
     "delta_revision": "P03-PT-SOURCE-2026-08-25-r3",
@@ -234,10 +235,10 @@
     "governed_override_authorization": "fixed code-side contract in scripts/build-locale-data.mjs (GOVERNED_OVERRIDE_CONTRACTS)"
   },
   "counts": {
-    "total_rows": 1098,
-    "required_for_pt_launch": 1068,
+    "total_rows": 1108,
+    "required_for_pt_launch": 1078,
     "intentionally_unchanged": 30,
-    "approved_rows_total": 1098,
+    "approved_rows_total": 1108,
     "r3_delta_rows": 21,
     "r4_delta_rows": 26,
     "r5_delta_rows": 2,
@@ -13465,6 +13466,126 @@
       "translation_status": "APPROVED",
       "source_revision": "aprasa-haliotis-local-spotlight-2026-09-27",
       "context_notes": "",
+      "linguistic_notes": ""
+    },
+    "training.record.ficase-scholarship-renewals-2026-2027.title": {
+      "key": "training.record.ficase-scholarship-renewals-2026-2027.title",
+      "en": "FICASE — 2026/27 Scholarship Renewals",
+      "pt": "FICASE — Renovação de Bolsas 2026/27",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "ficase-scholarship-renewals-2026-2027",
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-TTO-FICASE-RENEWALS-2026-10-26-r1",
+      "context_notes": "Governed presentation for the FICASE 2026/27 scholarship-renewal process.",
+      "linguistic_notes": ""
+    },
+    "training.record.ficase-scholarship-renewals-2026-2027.status": {
+      "key": "training.record.ficase-scholarship-renewals-2026-2027.status",
+      "en": "Renew online by 31 October 2026",
+      "pt": "Renove online até 31 de outubro de 2026",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "ficase-scholarship-renewals-2026-2027",
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-TTO-FICASE-RENEWALS-2026-10-26-r1",
+      "context_notes": "Renewal deadline presentation.",
+      "linguistic_notes": ""
+    },
+    "training.record.ficase-scholarship-renewals-2026-2027.meta": {
+      "key": "training.record.ficase-scholarship-renewals-2026-2027.meta",
+      "en": "Existing beneficiaries · Private higher-education institutions in Cabo Verde",
+      "pt": "Atuais bolseiros · Instituições privadas de ensino superior em Cabo Verde",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "ficase-scholarship-renewals-2026-2027",
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-TTO-FICASE-RENEWALS-2026-10-26-r1",
+      "context_notes": "Compact eligibility context.",
+      "linguistic_notes": ""
+    },
+    "training.record.ficase-scholarship-renewals-2026-2027.body": {
+      "key": "training.record.ficase-scholarship-renewals-2026-2027.body",
+      "en": "Existing FICASE scholarship beneficiaries studying at private higher-education institutions in Cabo Verde can renew their scholarship for the 2026/27 academic year through 31 October 2026.",
+      "pt": "Os atuais bolseiros da FICASE que estudam em instituições privadas de ensino superior em Cabo Verde podem renovar a sua bolsa para o ano académico 2026/27 até 31 de outubro de 2026.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "ficase-scholarship-renewals-2026-2027",
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-TTO-FICASE-RENEWALS-2026-10-26-r1",
+      "context_notes": "Card body and principal detail presentation.",
+      "linguistic_notes": ""
+    },
+    "training.record.ficase-scholarship-renewals-2026-2027.how_to_apply": {
+      "key": "training.record.ficase-scholarship-renewals-2026-2027.how_to_apply",
+      "en": "Renewal must be completed exclusively online. Students who already renewed in 2025/26 should use the same Tracker ID from their previous process to submit the new documents. Students making their first renewal after signing a scholarship contract in 2025/26 should use FICASE's designated “Renovação de Bolsa de Estudo - CV” online form.",
+      "pt": "A renovação deve ser efetuada exclusivamente online. Os estudantes que já renovaram a bolsa em 2025/26 devem utilizar o mesmo ID Rastreador do processo anterior para submeter os novos documentos. Os estudantes que fazem a sua primeira renovação após terem assinado um contrato de bolsa em 2025/26 devem utilizar o formulário online da FICASE destinado à «Renovação de Bolsa de Estudo - CV».",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "ficase-scholarship-renewals-2026-2027",
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-TTO-FICASE-RENEWALS-2026-10-26-r1",
+      "context_notes": "Preserves the mandatory distinction between returning renewals using an existing Tracker ID and first renewals using the designated form.",
+      "linguistic_notes": ""
+    },
+    "training.record.ficase-scholarship-renewals-2026-2027.requirements": {
+      "key": "training.record.ficase-scholarship-renewals-2026-2027.requirements",
+      "en": "This renewal process is for existing FICASE scholarship beneficiaries studying at private higher-education institutions in Cabo Verde.\n\nAll beneficiaries must submit:\n- a declaration or certificate of academic achievement for the 2025/26 academic year, with individual grades;\n- proof of enrolment for the 2026/27 academic year indicating the year of the programme they will attend.",
+      "pt": "Este processo de renovação destina-se a atuais bolseiros da FICASE que estudam em instituições privadas de ensino superior em Cabo Verde.\n\nTodos os bolseiros devem apresentar:\n- declaração ou certificado de aproveitamento do ano académico 2025/26, com as respetivas notas discriminadas;\n- declaração de matrícula no ano académico 2026/27, indicando o ano do curso que irão frequentar.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "ficase-scholarship-renewals-2026-2027",
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-TTO-FICASE-RENEWALS-2026-10-26-r1",
+      "context_notes": "Approved beneficiary eligibility and required-document presentation.",
+      "linguistic_notes": ""
+    },
+    "training.record.ficase-scholarship-renewals-2026-2027.good": {
+      "key": "training.record.ficase-scholarship-renewals-2026-2027.good",
+      "en": "This is a renewal process for existing beneficiaries, not a new scholarship application.",
+      "pt": "Trata-se de um processo de renovação para atuais bolseiros, não de uma nova candidatura a bolsa.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "ficase-scholarship-renewals-2026-2027",
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-TTO-FICASE-RENEWALS-2026-10-26-r1",
+      "context_notes": "Mandatory renewal-only qualification.",
+      "linguistic_notes": ""
+    },
+    "training.record.ficase-scholarship-renewals-2026-2027.action": {
+      "key": "training.record.ficase-scholarship-renewals-2026-2027.action",
+      "en": "Renew online by 31 October 2026",
+      "pt": "Renovar online até 31 de outubro de 2026",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "ficase-scholarship-renewals-2026-2027",
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-TTO-FICASE-RENEWALS-2026-10-26-r1",
+      "context_notes": "Renewal action label. Technical routing must preserve the Tracker-ID versus first-renewal-form distinction.",
+      "linguistic_notes": ""
+    },
+    "training.record.ficase-scholarship-renewals-2026-2027.checked": {
+      "key": "training.record.ficase-scholarship-renewals-2026-2027.checked",
+      "en": "Checked 26 October 2026",
+      "pt": "Revisto em 26 de outubro de 2026",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "ficase-scholarship-renewals-2026-2027",
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-TTO-FICASE-RENEWALS-2026-10-26-r1",
+      "context_notes": "Card currentness line.",
+      "linguistic_notes": ""
+    },
+    "training.record.ficase-scholarship-renewals-2026-2027.detail_checked": {
+      "key": "training.record.ficase-scholarship-renewals-2026-2027.detail_checked",
+      "en": "Checked 26 October 2026 against the current official FICASE scholarship-renewal notice.",
+      "pt": "Revisto em 26 de outubro de 2026 com base no aviso oficial atual da FICASE sobre a renovação de bolsas.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "ficase-scholarship-renewals-2026-2027",
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-TTO-FICASE-RENEWALS-2026-10-26-r1",
+      "context_notes": "Detail provenance line.",
       "linguistic_notes": ""
     }
   }

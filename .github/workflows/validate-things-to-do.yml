@@ -182,6 +182,7 @@ jobs:
       - name: Validate training opportunity structured data and generator drift
         run: |
           node scripts/validate-training-opportunities-data.mjs
+          node scripts/test-emergency-training-expiry.mjs
           node scripts/test-training-lifecycle-open-call.mjs
           node scripts/generate-training-opportunities.mjs --locale=en --as-of="$AS_OF"
           node scripts/generate-training-opportunities.mjs --locale=pt --as-of="$AS_OF" --home=pt/index.html

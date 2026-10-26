@@ -1730,6 +1730,71 @@
           }
         }
       }
+    },
+    {
+      "id": "ficase-scholarship-renewals-2026-2027",
+      "lifecycle_class": "fixed-window-opportunity",
+      "publication_state": "CURRENT",
+      "ordinary_publication_eligibility": "ELIGIBLE",
+      "ordinary_publication_reason": null,
+      "provider": "FICASE",
+      "source": {
+        "source_url": "https://ficase.cv/?noticia=_Ano_Acad%C3%A9mico_2026%2F2027_-_Renova%C3%A7%C3%A3o_de_Bolsas&page=noticia",
+        "provenance": "Project 05 canonical Resource CV-029 (PROV-FICASE, REL-CV029-01); PUBLICATION_PASS DEC-CV-029-20261026; evidence CUR-CV029-01 and CUR-CV029-02. Renewal-only; prior renewers reuse Tracker ID, first renewers use designated official form. Verified 2026-10-26."
+      },
+      "checked_at": "2026-10-26",
+      "end_date": "2026-10-31",
+      "media_manifest_title": null,
+      "card": {
+        "action_tags": null,
+        "status": {
+          "locale_key": "training.record.ficase-scholarship-renewals-2026-2027.status"
+        },
+        "title": {
+          "locale_key": "training.record.ficase-scholarship-renewals-2026-2027.title"
+        },
+        "meta": {
+          "locale_key": "training.record.ficase-scholarship-renewals-2026-2027.meta"
+        },
+        "body": {
+          "locale_key": "training.record.ficase-scholarship-renewals-2026-2027.body"
+        },
+        "checked": {
+          "locale_key": "training.record.ficase-scholarship-renewals-2026-2027.checked"
+        },
+        "action": {
+          "href": "https://ficase.cv/?noticia=_Ano_Acad%C3%A9mico_2026%2F2027_-_Renova%C3%A7%C3%A3o_de_Bolsas&page=noticia",
+          "label": {
+            "locale_key": "training.record.ficase-scholarship-renewals-2026-2027.action"
+          }
+        }
+      },
+      "detail": {
+        "action_tags": null,
+        "title": {
+          "locale_key": "training.record.ficase-scholarship-renewals-2026-2027.title"
+        },
+        "facts": null,
+        "details_body": {
+          "locale_key": "training.record.ficase-scholarship-renewals-2026-2027.how_to_apply"
+        },
+        "requirements": {
+          "locale_key": "training.record.ficase-scholarship-renewals-2026-2027.requirements"
+        },
+        "original_posting": null,
+        "good_to_know": {
+          "locale_key": "training.record.ficase-scholarship-renewals-2026-2027.good"
+        },
+        "checked": {
+          "locale_key": "training.record.ficase-scholarship-renewals-2026-2027.detail_checked"
+        },
+        "action": {
+          "href": "https://ficase.cv/?noticia=_Ano_Acad%C3%A9mico_2026%2F2027_-_Renova%C3%A7%C3%A3o_de_Bolsas&page=noticia",
+          "label": {
+            "locale_key": "training.record.ficase-scholarship-renewals-2026-2027.action"
+          }
+        }
+      }
     }
   ]
 }
