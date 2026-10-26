@@ -82,14 +82,18 @@ export function evaluateCurrentness(input, asOf, {upcomingDays=60}={}) {
   const end=boundary(input.activityEnd,'END');
   const a=statusFromEnd(deadline,now,today);
   const e=statusFromEnd(end,now,today);
+  // Verified activity chronology must not silently contradict itself.
+  if(start?.kind==='instant' && end?.kind==='instant' && start.at>end.at) {
+    throw new Error('CURRENTNESS_CONTRADICTORY_ACTIVITY_RANGE');
+  }
   let applicationStatus='unknown';
-  if(deadline) applicationStatus=a.ended?'closed':deadline.kind==='review-only'?'review-due':'not-closed';
+  if(deadline) applicationStatus=a.ended?'closed':deadline.kind==='review-only'?(a.reviewDue?'review-due':'unknown'):'not-closed';
   let activityStatus='unknown';
   if(e.ended) activityStatus='ended';
   else if(start?.kind==='instant') {
     if(now>=start.at) activityStatus='underway';
     else activityStatus=daysApart(today,calendarDay(new Date(start.at)))<=upcomingDays?'upcoming':'future';
-  } else if(start?.kind==='review-only'||end?.kind==='review-only') activityStatus='review-due';
+  } else if((start?.kind==='review-only' && today>=`${start.month}-01`) || e.reviewDue) activityStatus='review-due';
   else if(input.ongoing===true && !end) activityStatus='ongoing';
   return Object.freeze({applicationStatus, activityStatus, reviewDue:a.reviewDue||e.reviewDue||(start?.kind==='review-only'&&today>=`${start.month}-01`)||false,
     applicationExpiryInstant:a.expiryInstant, activityExpiryInstant:e.expiryInstant,
