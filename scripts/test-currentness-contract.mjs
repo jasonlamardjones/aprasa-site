@@ -60,6 +60,14 @@ assert.equal(at(startMonth,'2026-12-01T01:00:00Z').activityStatus,'review-due');
 assert.throws(()=>at({activityStart:day('2026-12-10'),activityEnd:day('2026-11-30')},'2026-11-15T12:00:00Z'),/CONTRADICTORY_ACTIVITY_RANGE/);
 assert.throws(()=>at({activityStart:day('2026-12-01'),activityEnd:day('2026-11-30')},'2026-11-15T12:00:00Z'),/CONTRADICTORY_ACTIVITY_RANGE/);
 assert.equal(at({activityStart:day('2026-11-30'),activityEnd:day('2026-11-30')},'2026-11-30T12:00:00Z').activityStatus,'underway');
+// Codex review: disjoint mixed-precision ranges and regional zones.
+assert.throws(()=>at({activityStart:day('2026-12-10'),activityEnd:{precision:'month',month:'2026-11'}},'2026-11-15T12:00:00Z'),/CONTRADICTORY_ACTIVITY_RANGE/);
+assert.throws(()=>at({activityStart:{precision:'month',month:'2026-12'},activityEnd:day('2026-11-30')},'2026-11-15T12:00:00Z'),/CONTRADICTORY_ACTIVITY_RANGE/);
+assert.throws(()=>at({activityStart:{precision:'month',month:'2026-12'},activityEnd:{precision:'month',month:'2026-11'}},'2026-11-15T12:00:00Z'),/CONTRADICTORY_ACTIVITY_RANGE/);
+assert.equal(at({activityStart:{precision:'month',month:'2026-11'},activityEnd:day('2026-11-30')},'2026-11-15T12:00:00Z').activityStatus,'unknown');
+assert.throws(()=>at({applicationDeadline:instant('2026-10-29T23:59:00+04:00','+04:00')},'2026-10-29T10:00:00Z'),/IANA_TIME_ZONE_REQUIRED/);
+assert.throws(()=>at({applicationDeadline:instant('2026-10-29T23:59:00+04:00','Etc/GMT-4')},'2026-10-29T10:00:00Z'),/IANA_TIME_ZONE_REQUIRED/);
+
 // Future discovery uses a Cabo Verde calendar-day window.
 assert.equal(at({activityStart:day('2026-12-29')},'2026-10-30T12:00:00Z').activityStatus,'upcoming');
 assert.equal(at({activityStart:day('2026-12-30')},'2026-10-30T12:00:00Z').activityStatus,'future');
