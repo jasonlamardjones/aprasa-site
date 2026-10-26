@@ -43,6 +43,7 @@ const startMonth={activityStart:{precision:'month',month:'2026-12'}};
 assert.equal(at(startMonth,'2026-11-20T12:00:00Z').activityStatus,'unknown');
 assert.equal(at(startMonth,'2026-12-01T01:00:00Z').activityStatus,'review-due');
 assert.throws(()=>at({activityStart:day('2026-12-10'),activityEnd:day('2026-11-30')},'2026-11-15T12:00:00Z'),/CONTRADICTORY_ACTIVITY_RANGE/);
+assert.throws(()=>at({activityStart:day('2026-12-01'),activityEnd:day('2026-11-30')},'2026-11-15T12:00:00Z'),/CONTRADICTORY_ACTIVITY_RANGE/);
 assert.equal(at({activityStart:day('2026-11-30'),activityEnd:day('2026-11-30')},'2026-11-30T12:00:00Z').activityStatus,'underway');
 // Future discovery uses a Cabo Verde calendar-day window.
 assert.equal(at({activityStart:day('2026-12-29')},'2026-10-30T12:00:00Z').activityStatus,'upcoming');
