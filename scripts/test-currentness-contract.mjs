@@ -29,6 +29,21 @@ assert.equal(at({},'2026-11-20T12:00:00Z').applicationStatus,'unknown');
 assert.equal(at({activityEnd:{precision:'month',month:'2026-11'}},'2026-11-20T12:00:00Z').activityStatus,'review-due');
 assert.equal(at({activityEnd:{precision:'month',month:'2026-11'}},'2026-11-20T12:00:00Z').activityExpiryInstant,null);
 assert.equal(at({ongoing:true},'2026-11-20T12:00:00Z').activityStatus,'ongoing');
+// Month precision must never become review-due before the governed month.
+const monthOnly={activityEnd:{precision:'month',month:'2026-11'}};
+assert.equal(at(monthOnly,'2026-10-31T23:59:59Z').activityStatus,'unknown');
+assert.equal(at(monthOnly,'2026-10-31T23:59:59Z').reviewDue,false);
+assert.equal(at(monthOnly,'2026-11-01T00:59:59Z').reviewDue,false);
+assert.equal(at(monthOnly,'2026-11-01T01:00:00Z').activityStatus,'review-due');
+assert.equal(at(monthOnly,'2026-11-01T01:00:00Z').reviewDue,true);
+const applicationMonth={applicationDeadline:{precision:'month',month:'2026-11'}};
+assert.equal(at(applicationMonth,'2026-10-26T12:00:00Z').applicationStatus,'unknown');
+assert.equal(at(applicationMonth,'2026-11-01T01:00:00Z').applicationStatus,'review-due');
+const startMonth={activityStart:{precision:'month',month:'2026-12'}};
+assert.equal(at(startMonth,'2026-11-20T12:00:00Z').activityStatus,'unknown');
+assert.equal(at(startMonth,'2026-12-01T01:00:00Z').activityStatus,'review-due');
+assert.throws(()=>at({activityStart:day('2026-12-10'),activityEnd:day('2026-11-30')},'2026-11-15T12:00:00Z'),/CONTRADICTORY_ACTIVITY_RANGE/);
+assert.equal(at({activityStart:day('2026-11-30'),activityEnd:day('2026-11-30')},'2026-11-30T12:00:00Z').activityStatus,'underway');
 // Future discovery uses a Cabo Verde calendar-day window.
 assert.equal(at({activityStart:day('2026-12-29')},'2026-10-30T12:00:00Z').activityStatus,'upcoming');
 assert.equal(at({activityStart:day('2026-12-30')},'2026-10-30T12:00:00Z').activityStatus,'future');
