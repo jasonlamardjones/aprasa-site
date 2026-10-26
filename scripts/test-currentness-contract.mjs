@@ -29,6 +29,21 @@ assert.equal(at({},'2026-11-20T12:00:00Z').applicationStatus,'unknown');
 assert.equal(at({activityEnd:{precision:'month',month:'2026-11'}},'2026-11-20T12:00:00Z').activityStatus,'review-due');
 assert.equal(at({activityEnd:{precision:'month',month:'2026-11'}},'2026-11-20T12:00:00Z').activityExpiryInstant,null);
 assert.equal(at({ongoing:true},'2026-11-20T12:00:00Z').activityStatus,'ongoing');
+
+// A start-only source establishes neither an end nor ongoing availability.
+const startOnly={activityStart:day('2026-01-01')};
+assert.equal(at(startOnly,'2025-12-15T12:00:00Z').activityStatus,'upcoming');
+assert.equal(at(startOnly,'2026-01-01T12:00:00Z').activityStatus,'unknown');
+assert.equal(at(startOnly,'2026-10-26T12:00:00Z').activityStatus,'unknown');
+assert.equal(at(startOnly,'2026-10-26T12:00:00Z').activityExpiryInstant,null);
+// Explicit ongoing status is separate from a dated event and is never inferred.
+assert.equal(at({...startOnly,ongoing:true},'2026-10-26T12:00:00Z').activityStatus,'ongoing');
+// Month-only end: start does not prove an ongoing activity, and review does
+// not imply expiration once the declared month arrives.
+const reviewAfterStart={activityStart:day('2026-10-01'),activityEnd:{precision:'month',month:'2026-11'}};
+assert.equal(at(reviewAfterStart,'2026-10-26T12:00:00Z').activityStatus,'unknown');
+assert.equal(at(reviewAfterStart,'2026-11-01T01:00:00Z').activityStatus,'review-due');
+assert.equal(at(reviewAfterStart,'2026-11-01T01:00:00Z').activityExpiryInstant,null);
 // Month precision must never become review-due before the governed month.
 const monthOnly={activityEnd:{precision:'month',month:'2026-11'}};
 assert.equal(at(monthOnly,'2026-10-31T23:59:59Z').activityStatus,'unknown');
