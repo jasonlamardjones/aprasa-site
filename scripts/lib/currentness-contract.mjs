@@ -47,6 +47,12 @@ function boundary(spec, purpose) {
   }
   if (spec.precision === 'instant') {
     if(typeof spec.time_zone!=='string'||!spec.time_zone.trim()) throw new Error('CURRENTNESS_TIME_ZONE_REQUIRED');
+    // Fixed-offset zone identifiers cannot independently verify seasonal
+    // offsets, even if Intl accepts them. The source must name a real region.
+    if (/^[+-]\\d{1,2}(?::?\\d{2})?$/.test(spec.time_zone) ||
+        /^(?:Etc\\/)?(?:GMT|UTC)[+-]\\d{1,2}(?::?\\d{2})?$/i.test(spec.time_zone)) {
+      throw new Error('CURRENTNESS_IANA_TIME_ZONE_REQUIRED');
+    }
     const at=requireInstant(spec.datetime);
     // The declared local wall time must match the verified instant in its source zone.
     const expected=spec.datetime.slice(0,19);
@@ -82,8 +88,17 @@ export function evaluateCurrentness(input, asOf, {upcomingDays=60}={}) {
   const end=boundary(input.activityEnd,'END');
   const a=statusFromEnd(deadline,now,today);
   const e=statusFromEnd(end,now,today);
-  // Verified activity chronology must not silently contradict itself.
-  if(start?.kind==='instant' && end?.kind==='instant' && start.at>=end.at) {
+  // Month precision describes a possible interval, not an invented end day.
+  // Reject only ranges that cannot overlap even under their broadest bounds.
+  const earliestStart = start?.kind==='instant' ? start.at
+    : start?.kind==='review-only' ? Date.parse(`${start.month}-01T01:00:00Z`) : null;
+  let latestEnd = end?.kind==='instant' ? end.at : null;
+  if(end?.kind==='review-only') {
+    const followingMonth = new Date(`${end.month}-01T01:00:00Z`);
+    followingMonth.setUTCMonth(followingMonth.getUTCMonth()+1);
+    latestEnd = followingMonth.valueOf();
+  }
+  if(earliestStart!==null && latestEnd!==null && earliestStart>=latestEnd) {
     throw new Error('CURRENTNESS_CONTRADICTORY_ACTIVITY_RANGE');
   }
   let applicationStatus='unknown';
