@@ -79,6 +79,31 @@ throws(() => compare(record({ end_datetime: 123 }), '2026-10-26'), /INVALID_END_
 throws(() => compare(record({ start_date: '2026-12-10', end_date: '2026-11-30' }), '2026-10-26'), /CONTRADICTORY_ACTIVITY_RANGE/);
 
 // Determinism, input immutability, and no inferred identity/publication output.
+// Independent review regressions: malformed source strings cannot claim parity.
+for (const field of ['start_datetime', 'end_datetime']) {
+  for (const value of ['not-a-date', '2026-02-30T18:00:00-01:00',
+    '2026-10-29T18:00:00', '2026-10-29T24:00:00Z',
+    '2026-10-29T18:60:00Z', '2026-10-29T18:00:60Z',
+    '2026-10-29T18:00:00+24:00']) {
+    throws(() => compare(record({ start_date: '2026-10-01', [field]: value }),
+      '2026-10-26'), new RegExp(`INVALID_${field.toUpperCase()}`));
+  }
+  for (const value of ['2026-02-28T18:00:00Z', '2028-02-29T18:00:00.123+05:30']) {
+    eq(compare(record({ [field]: value }), '2026-10-26').normalizedInput
+      [field === 'start_datetime' ? 'activityStart' : 'activityEnd'], null,
+    'valid timestamp remains excluded without verified source zone');
+  }
+}
+throws(() => compare(record({ start_datetime: '2026-12-10T18:00:00-01:00',
+  end_precision: 'month', end_month: '2026-11' }), '2026-10-26'),
+  /CONTRADICTORY_ACTIVITY_RANGE/);
+for (const start_datetime of ['2026-11-01T00:00:00+14:00', '2026-11-30T23:59:59-12:00']) {
+  const result = compare(record({ start_datetime, end_precision: 'month',
+    end_month: '2026-11' }), '2026-11-01');
+  eq(result.temporalState, 'review-due', 'source month is read as written');
+  eq(result.evaluation.activityExpiryInstant, null, 'no exact expiry inferred');
+}
+
 const untouched = Object.freeze({ ...dated, home_selected: true, directory_eligible: false });
 const before = JSON.stringify(untouched);
 eq(compare(untouched, '2026-10-30'), compare(untouched, '2026-10-30'), 'replay deterministic');
