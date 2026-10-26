@@ -49,8 +49,8 @@ function boundary(spec, purpose) {
     if(typeof spec.time_zone!=='string'||!spec.time_zone.trim()) throw new Error('CURRENTNESS_TIME_ZONE_REQUIRED');
     // Fixed-offset zone identifiers cannot independently verify seasonal
     // offsets, even if Intl accepts them. The source must name a real region.
-    if (/^[+-]\\d{1,2}(?::?\\d{2})?$/.test(spec.time_zone) ||
-        /^(?:Etc\\/)?(?:GMT|UTC)[+-]\\d{1,2}(?::?\\d{2})?$/i.test(spec.time_zone)) {
+    if (/^[+-][0-9]/.test(spec.time_zone) ||
+        /^(?:Etc[/])?(?:GMT|UTC)[+-][0-9]/i.test(spec.time_zone)) {
       throw new Error('CURRENTNESS_IANA_TIME_ZONE_REQUIRED');
     }
     const at=requireInstant(spec.datetime);
