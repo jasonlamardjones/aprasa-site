@@ -3276,6 +3276,55 @@ for (const row of ficaseR27.rows) {
 }
 if (ficaseR27Seen.size !== ficaseR27Fields.size) fail("r27 FICASE missing field");
 
+// r28: Things-to-Do detail contextual Home return (Project 03 semantic authority
+// P03-TTD-CONTEXTUAL-HOME-RETURN-2026-10-27-D01; Project 09 linguistic revision
+// P09-PT-TTD-CONTEXTUAL-HOME-RETURN-2026-10-27-r1). Exactly one new key, pinned
+// to the approved EN/PT strings. Strictly additive: it may never reopen an
+// existing key (notably things.shared.back_to_things). Registered before the
+// aggregate tally below so the counts and the frozen key map include it.
+const R28_KEY = "things.detail.home_section_return";
+const R28_REVISION = "P09-PT-TTD-CONTEXTUAL-HOME-RETURN-2026-10-27-r1";
+const delta28 = JSON.parse(readFileSync(path.join(LOCALE_DIR, "pt-overlay-r28-ttd-contextual-home-return.source.json"), "utf8"));
+for (const [field, expected] of Object.entries({
+  package_id: "aprasa-pt-ttd-contextual-home-return-r28",
+  revision_class: "ADDITIVE_NEW_KEYS",
+  source_revision: R28_REVISION,
+  previous_revision: "P09-PT-TTO-FICASE-RENEWALS-2026-10-26-r1",
+  semantic_authority_id: "P03-TTD-CONTEXTUAL-HOME-RETURN-2026-10-27-D01",
+  project_09_revision_id: R28_REVISION,
+  project_09_status: "approved",
+  project_09_verdict: "APPROVED_FOR_PUBLIC_USE",
+  target_language: "pt",
+})) {
+  if (delta28[field] !== expected) fail(`r28 ${field} mismatch: got ${JSON.stringify(delta28[field])}, expected ${JSON.stringify(expected)}`);
+}
+if (delta28.rows?.length !== 1 || delta28.supplied_rows_approved !== 1 || delta28.review_required !== 0 ||
+    delta28.missing_or_unaccounted_row_count !== 0 || delta28.source_english_changed !== false ||
+    delta28.semantic_change !== false || delta28.localization_architecture_reopened !== false ||
+    delta28.change_control_status?.new_keys_introduced !== 1 ||
+    delta28.change_control_status?.existing_keys_overridden !== 0 ||
+    delta28.change_control_status?.lifecycle_or_publication_state_modified !== 0) {
+  fail("r28 provenance, change-control or row count changed");
+}
+for (const row of delta28.rows) {
+  if (row.key !== R28_KEY) fail(`r28 key "${row.key}" is outside the single authorized key ${R28_KEY}`);
+  if (seen.has(row.key) || keys[row.key]) fail(`r28 key "${row.key}" collides with an existing key — r28 must be strictly additive`);
+  seen.add(row.key);
+  if (row.source_revision !== R28_REVISION) fail(`r28 ${row.key} source_revision mismatch`);
+  if (row.translation_status !== "APPROVED") fail(`r28 key "${row.key}" is not APPROVED (status: ${row.translation_status})`);
+  if (row.scope_status !== "REQUIRED_FOR_PT_LAUNCH") fail(`r28 key "${row.key}" scope_status must be REQUIRED_FOR_PT_LAUNCH`);
+  if (row.record_id != null) fail(`r28 key "${row.key}" must not be record-scoped`);
+  if (row.source_en !== "Go to Things to Do on the homepage") fail(`r28 key "${row.key}" source_en must be the exact approved EN copy`);
+  if (row.pt !== "Ir para O que fazer na página inicial") fail(`r28 key "${row.key}" pt must be the exact approved PT copy`);
+  keys[row.key] = {
+    key: row.key, en: row.source_en, pt: row.pt,
+    scope_status: row.scope_status, identity_policy: row.identity_policy,
+    record_id: row.record_id, translation_status: row.translation_status,
+    source_revision: row.source_revision,
+    context_notes: row.context_notes || "", linguistic_notes: row.linguistic_notes || "",
+  };
+}
+
 // Aggregate tallies, read off the finished key map that is about to be written.
 const assembled = (() => {
   const values = Object.values(keys);
@@ -3347,6 +3396,7 @@ const output = {
       "data/locales/pt-overlay-r25-trainings-home-expansion-timbuktoo.source.json",
       "data/locales/pt-overlay-r26-trainings-home-expansion-edtech.source.json",
       "data/locales/pt-overlay-r27-ficase-scholarship-renewals-2026-2027.source.json",
+      "data/locales/pt-overlay-r28-ttd-contextual-home-return.source.json",
     ],
     base_revision: pkg.source_revision,
     delta_revision: delta.source_revision,
@@ -3440,6 +3490,14 @@ const output = {
     delta26_project_09_package_id: delta26.project_09_package_id,
     delta26_project_09_revision_id: delta26.project_09_revision_id,
     delta26_lifecycle_disclosure_policy: delta26.lifecycle_disclosure_policy,
+    delta28_package_id: delta28.package_id,
+    delta28_revision: delta28.source_revision,
+    delta28_revision_class: delta28.revision_class,
+    delta28_row_count: delta28.rows.length,
+    delta28_semantic_authority_id: delta28.semantic_authority_id,
+    delta28_project_09_status: delta28.project_09_status,
+    delta28_project_09_verdict: delta28.project_09_verdict,
+    delta28_project_09_revision_id: delta28.project_09_revision_id,
     delta9_superseding_ruling: delta9.superseding_ruling,
     delta9_owning_project: delta9.owning_project,
     event_delta_packages: eventDeltaPackages,
@@ -3489,6 +3547,7 @@ const output = {
     r21_delta_rows: delta21.rows.length,
     r22_delta_rows: delta22.rows.length,
     r23_delta_rows: delta23.rows.length,
+    r28_delta_rows: delta28.rows.length,
     r10_renamed_rows: r10Renamed.length,
     governed_override_rows: governedOverrideCount,
   },

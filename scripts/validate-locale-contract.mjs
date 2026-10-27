@@ -92,10 +92,10 @@ const haliotisRaw = readFileSync(path.join(ROOT, 'data/locales/pt-overlay-haliot
 if (createHash('sha256').update(haliotisRaw).digest('hex') !== '80aa93ab04b80218df1a4908af0c0ca9663184d579ab61bc2df796ba6ea5e167') {
   fail('Haliotis package differs from the frozen Project 03 EN/PT payload');
 }
-if (keys.length !== 999 + eventDeltaRequired + eventDeltaUnchanged) fail(`expected ${999 + eventDeltaRequired + eventDeltaUnchanged} total keys including approved event deltas, got ${keys.length}`);
+if (keys.length !== 1000 + eventDeltaRequired + eventDeltaUnchanged) fail(`expected ${1000 + eventDeltaRequired + eventDeltaUnchanged} total keys including approved event deltas, got ${keys.length}`);
 const required = keys.filter((k) => k.scope_status === "REQUIRED_FOR_PT_LAUNCH");
 const unchanged = keys.filter((k) => k.scope_status === "INTENTIONALLY_UNCHANGED");
-if (required.length !== 969 + eventDeltaRequired) fail(`expected ${969 + eventDeltaRequired} REQUIRED_FOR_PT_LAUNCH keys, got ${required.length}`);
+if (required.length !== 970 + eventDeltaRequired) fail(`expected ${970 + eventDeltaRequired} REQUIRED_FOR_PT_LAUNCH keys, got ${required.length}`);
 if (unchanged.length !== 30 + eventDeltaUnchanged) fail(`expected ${30 + eventDeltaUnchanged} INTENTIONALLY_UNCHANGED keys, got ${unchanged.length}`);
 if (data.provenance.delta_revision !== "P03-PT-SOURCE-2026-08-25-r3") {
   fail(`unexpected delta_revision: ${data.provenance.delta_revision}`);
@@ -724,6 +724,37 @@ for (const key of ["things.hub.collection_label", "things.hub.return_label"]) {
 const r13CollectionLabel = data.keys["things.shared.back_to_things"];
 if (!r13CollectionLabel || r13CollectionLabel.en !== "← Things to Do" || r13CollectionLabel.pt !== "← O que fazer") {
   fail("things.shared.back_to_things no longer carries the approved collection wording the hub relies on");
+}
+
+// --- r28 delta spot check (Things-to-Do detail contextual Home return) ---
+// Project 03 semantic authority P03-TTD-CONTEXTUAL-HOME-RETURN-2026-10-27-D01,
+// Project 09 linguistic revision P09-PT-TTD-CONTEXTUAL-HOME-RETURN-2026-10-27-r1.
+// One independent key; it must never reuse or overwrite things.shared.back_to_things.
+{
+  const R28_KEY = "things.detail.home_section_return";
+  const R28_REVISION = "P09-PT-TTD-CONTEXTUAL-HOME-RETURN-2026-10-27-r1";
+  const prov = data.provenance;
+  if (prov.delta28_package_id !== "aprasa-pt-ttd-contextual-home-return-r28") fail(`unexpected delta28_package_id: ${prov.delta28_package_id}`);
+  if (prov.delta28_revision !== R28_REVISION) fail(`unexpected delta28_revision: ${prov.delta28_revision}`);
+  if (prov.delta28_revision_class !== "ADDITIVE_NEW_KEYS") fail(`unexpected delta28_revision_class: ${prov.delta28_revision_class}`);
+  if (prov.delta28_row_count !== 1 || data.counts.r28_delta_rows !== 1) fail("r28 must supply exactly one row");
+  if (prov.delta28_semantic_authority_id !== "P03-TTD-CONTEXTUAL-HOME-RETURN-2026-10-27-D01") fail("r28 Project 03 semantic authority id is missing or changed");
+  if (prov.delta28_project_09_revision_id !== R28_REVISION) fail("r28 Project 09 linguistic revision id is missing or changed");
+  if (prov.delta28_project_09_status !== "approved" || prov.delta28_project_09_verdict !== "APPROVED_FOR_PUBLIC_USE") fail("r28 is not approved for public use");
+  const row = data.keys[R28_KEY];
+  if (!row) {
+    fail(`r28 key missing from generated locale data: ${R28_KEY}`);
+  } else {
+    if (row.en !== "Go to Things to Do on the homepage") fail(`${R28_KEY} EN does not match the approved copy: got ${JSON.stringify(row.en)}`);
+    if (row.pt !== "Ir para O que fazer na página inicial") fail(`${R28_KEY} PT does not match the approved copy: got ${JSON.stringify(row.pt)}`);
+    if (row.scope_status !== "REQUIRED_FOR_PT_LAUNCH") fail(`${R28_KEY} must be REQUIRED_FOR_PT_LAUNCH`);
+    if (row.translation_status !== "APPROVED") fail(`${R28_KEY} must be APPROVED`);
+    if (row.record_id !== null) fail(`${R28_KEY} must not be record-scoped: got ${JSON.stringify(row.record_id)}`);
+    if (row.source_revision !== R28_REVISION) fail(`${R28_KEY} provenance is not the r28 revision`);
+  }
+  // Fail closed on a duplicated key in the raw package (JSON.parse would keep the last).
+  const rawPackage = readFileSync(path.join(ROOT, "data/locales/pt-overlay-r28-ttd-contextual-home-return.source.json"), "utf8");
+  if (rawPackage.split(`"key": "${R28_KEY}"`).length !== 2) fail(`r28 package must declare ${R28_KEY} exactly once`);
 }
 
 // --- r9 source correction (Sinergia da Matéria, Project 03, 01 September 2026) ---

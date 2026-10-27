@@ -167,6 +167,7 @@ const CHROME = {
   brandAria: t('home.brand_aria', locale),
   breadcrumbAria: t('things.shared.breadcrumb_aria', locale),
   backToThings: t('things.shared.back_to_things', locale),
+  homeSectionReturn: t('things.detail.home_section_return', locale),
   detailsHeading: t('things.shared.details_heading', locale),
   goodToKnowHeading: t('things.shared.good_to_know_heading', locale),
   pastEvent: t('ui.past_event', locale),
@@ -522,6 +523,18 @@ function renderDetailBreadcrumb(links) {
 `;
 }
 
+// Independent contextual return from a detail page to the Things to Do section
+// on its own locale's Home (EN `../../#things-to-do`, PT
+// `../../../pt/#things-to-do`). It is not a breadcrumb and does not depend on
+// THINGS_TO_DO_HUB_PUBLIC: the Home section exists whether the collection hub
+// is dormant or published, so it is always emitted, and it never stands in for
+// renderDetailBreadcrumb() above. The visible text is the accessible name, so
+// it deliberately carries no aria-label.
+function renderHomeSectionReturn(links) {
+  return `    <p class="home-return"><a href="${links.home}#things-to-do">${escapeHtml(CHROME.homeSectionReturn)}</a></p>
+`;
+}
+
 function renderDetailPage(record, loc) {
   const expired = isExpired(record);
   const canonicalEn = `https://aprasa.org/${record.detail_page}`;
@@ -592,7 +605,7 @@ ${renderSchema(record, loc, expired)}
 
 <main id="main">
   <div class="container record-page">
-${renderDetailBreadcrumb(links)}    <article class="dialog-record record-article" data-event-id="${escapeHtml(record.id)}">${media}${pastStatus}
+${renderDetailBreadcrumb(links)}${renderHomeSectionReturn(links)}    <article class="dialog-record record-article" data-event-id="${escapeHtml(record.id)}">${media}${pastStatus}
       <p class="provider">${escapeHtml(record.provider)}</p>
       <h1>${escapeHtml(loc.title)}</h1>
       <dl class="detail-list">${renderFacts(loc.facts)}</dl>
