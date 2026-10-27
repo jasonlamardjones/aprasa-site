@@ -3313,6 +3313,91 @@ for (const row of sinergiaR28.rows) {
 }
 if (sinergiaR28Seen.size !== sinergiaR28Fields.size) fail("r28 Sinergia missing field");
 
+// r29: Project 09 Sinergia presentation correction. A bounded SOURCE CORRECTION of
+// four EXISTING keys (same lane as r9), applied after everything else so the
+// byte-exact old-value check sees the effective value. It adds no key, and it never
+// touches the two r28 access-disclosure keys. The superseded EN/PT/revision is kept
+// on the row, and an earlier source_correction (r9) is retained as its prior link.
+const sinergiaR29 = JSON.parse(readFileSync(path.join(LOCALE_DIR, "pt-overlay-r29-sinergia-presentation-correction.source.json"), "utf8"));
+const sinergiaR29Revision = "P09-PT-SINERGIA-PRESENTATION-2026-10-27-r1";
+const sinergiaR29Keys = [
+  "event.sinergia-da-materia.detail.fact.dates.label",
+  "event.sinergia-da-materia.detail.fact.dates.value_display",
+  "event.sinergia-da-materia.display.status",
+  "event.sinergia-da-materia.seo.description",
+];
+const sinergiaR29Class = "OVERRIDE_EXISTING_KEYS_WITH_SOURCE_CORRECTION";
+if (sinergiaR29.package_id !== sinergiaR29Revision ||
+    sinergiaR29.source_revision !== sinergiaR29Revision ||
+    sinergiaR29.previous_revision !== sinergiaR28Revision ||
+    sinergiaR29.revision_class !== sinergiaR29Class ||
+    sinergiaR29.owning_project !== "Project 03" ||
+    sinergiaR29.record_id !== sinergiaR28Id ||
+    sinergiaR29.source_correction_authorized !== true ||
+    sinergiaR29.semantic_change !== true ||
+    sinergiaR29.superseded_source_status !== "SUPERSEDED" ||
+    sinergiaR29.review_required !== 0 || sinergiaR29.blocking_issue != null ||
+    sinergiaR29.supplied_rows_approved !== sinergiaR29Keys.length ||
+    sinergiaR29.rows?.length !== sinergiaR29Keys.length ||
+    sinergiaR29.change_control_status?.new_keys_introduced !== 0 ||
+    sinergiaR29.change_control_status?.additional_languages_authorized !== 0 ||
+    sinergiaR29.change_control_status?.unrelated_keys_touched !== 0) {
+  fail("r29 Sinergia provenance or row count changed");
+}
+const sinergiaR29Seen = new Set();
+for (const row of sinergiaR29.rows) {
+  const existing = keys[row.key];
+  if (!sinergiaR29Keys.includes(row.key) || sinergiaR29Seen.has(row.key) || row.target_key !== row.key) {
+    fail(`r29 Sinergia invalid, duplicate, or unauthorized target: ${JSON.stringify(row.key)}`);
+    continue;
+  }
+  sinergiaR29Seen.add(row.key);
+  if (!existing) { fail(`r29 key "${row.key}" does not exist — a correction may not introduce keys`); continue; }
+  if (existing.en !== row.old_en || existing.pt !== row.old_pt) {
+    fail(`r29 key "${row.key}" old EN/PT does not match the effective value`);
+  }
+  if (!row.new_en?.trim() || !row.new_pt?.trim() || (row.new_en === row.old_en && row.new_pt === row.old_pt)) {
+    fail(`r29 key "${row.key}" has a missing or no-op replacement`);
+  }
+  if (row.record_id !== sinergiaR28Id || row.revision_class !== sinergiaR29Class ||
+      row.source_revision !== sinergiaR29Revision || row.owning_project !== "Project 03" ||
+      row.semantic_change !== true || row.source_correction_authorized !== true ||
+      row.superseded_source_status !== "SUPERSEDED" || !row.replacement_status ||
+      row.translation_status !== "APPROVED" ||
+      row.scope_status !== existing.scope_status || row.identity_policy !== existing.identity_policy) {
+    fail(`r29 key "${row.key}" authorization chain or row metadata is incomplete`);
+  }
+  const enPh = (row.new_en.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+  const ptPh = (row.new_pt.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+  if (JSON.stringify(enPh) !== JSON.stringify(ptPh)) fail(`r29 key "${row.key}" placeholder mismatch`);
+  if (/A PRA[CÇ]A/.test(row.new_pt) || /A PRA[CÇ]A/.test(row.new_en)) fail(`r29 key "${row.key}" corrupts the A PRASA identity`);
+  for (const text of [row.new_en, row.new_pt]) {
+    if (/\b(\d{1,2})\s+(de\s+)?(November|novembro)\b/i.test(text) || /\b(November|novembro)\s+\d{1,2}\b/i.test(text)) {
+      fail(`r29 key "${row.key}" infers an exact November day: ${JSON.stringify(text)}`);
+    }
+  }
+  keys[row.key] = {
+    ...existing,
+    en: row.new_en,
+    pt: row.new_pt,
+    source_revision: row.source_revision,
+    context_notes: row.context_notes || existing.context_notes || "",
+    linguistic_notes: row.linguistic_notes || existing.linguistic_notes || "",
+    source_correction: {
+      revision_class: row.revision_class,
+      owning_project: row.owning_project,
+      superseded_source_status: row.superseded_source_status,
+      replacement_status: row.replacement_status,
+      semantic_change: true,
+      superseded_en: row.old_en,
+      superseded_pt: row.old_pt,
+      superseded_source_revision: existing.source_revision,
+      ...(existing.source_correction ? { prior_source_correction: existing.source_correction } : {}),
+    },
+  };
+}
+if (sinergiaR29Seen.size !== sinergiaR29Keys.length) fail("r29 Sinergia missing a target key");
+
 // Aggregate tallies, read off the finished key map that is about to be written.
 const assembled = (() => {
   const values = Object.values(keys);
@@ -3385,6 +3470,7 @@ const output = {
       "data/locales/pt-overlay-r26-trainings-home-expansion-edtech.source.json",
       "data/locales/pt-overlay-r27-ficase-scholarship-renewals-2026-2027.source.json",
       "data/locales/pt-overlay-r28-sinergia-access-disclosure.source.json",
+      "data/locales/pt-overlay-r29-sinergia-presentation-correction.source.json",
     ],
     base_revision: pkg.source_revision,
     delta_revision: delta.source_revision,

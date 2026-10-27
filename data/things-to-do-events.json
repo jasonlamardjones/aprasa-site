@@ -272,17 +272,17 @@
       "media_manifest_title": "Sinergia da Matéria: Entre o Bruto e o Traço",
       "detail_page": "things-to-do/sinergia-da-materia/",
       "free_admission": true,
-      "display": {"status": "On view until November 2026", "meta": "Exhibition by Davitson Almeida", "checked": "Checked 15 August 2026"},
+      "display": {"status": "Visitor access not currently confirmed", "meta": "Exhibition by Davitson Almeida", "checked": "Checked 15 August 2026"},
       "media": null,
       "card_action": {"label": "Visitor information", "url": "https://cnad.cv/info/"},
       "detail": {
-        "facts": [{"label": "Dates", "value": "On view until November 2026"}, {"label": "Where", "value": "Galeria Zero, CNAD, Praça Amílcar Cabral, Mindelo"}, {"label": "Admission", "value": "Free admission"}],
+        "facts": [{"label": "Previously advertised exhibition dates", "value": "Earlier information indicated the exhibition would remain on view until November 2026. Current visitor access is unconfirmed."}, {"label": "Where", "value": "Galeria Zero, CNAD, Praça Amílcar Cabral, Mindelo"}, {"label": "Admission", "value": "Free admission"}],
         "body": "Explore Davitson Almeida’s investigation of stone, metal, drawing and three-dimensional form at CNAD’s Galeria Zero.",
         "good_to_know": "Confirm current exhibition access and admission directly with CNAD before visiting.",
         "checked": "Checked 15 August 2026",
         "action_label": "Visitor information"
       },
-      "seo": {"description": "Sinergia da Matéria: Entre o Bruto e o Traço is an exhibition by Davitson Almeida at CNAD’s Galeria Zero in Mindelo, on view until November 2026.", "title": "Sinergia da Matéria: Entre o Bruto e o Traço — CNAD Exhibition in Mindelo | A PRASA", "schema_type": "ExhibitionEvent"}
+      "seo": {"description": "Sinergia da Matéria: Entre o Bruto e o Traço, an exhibition by Davitson Almeida at CNAD in Mindelo. Current visitor access is unconfirmed.", "title": "Sinergia da Matéria: Entre o Bruto e o Traço — CNAD Exhibition in Mindelo | A PRASA", "schema_type": "ExhibitionEvent"}
     },
     {
       "id": "4-campeonato-nacional-senior-de-boxe",
