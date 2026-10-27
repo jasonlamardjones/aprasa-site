@@ -18,7 +18,7 @@
 // well-meaning edit "tidies" the date branch — makes end_date optional for
 // fixed-window so the new class fits more symmetrically, or carves the new
 // class out of the non-fixed-window side. Either would silently weaken the
-// invariant that guards all eight fixed-window records, which is exactly the
+// invariant that guards all incumbent fixed-window records, which is exactly the
 // expiry machinery #10 had to correct by hand. So the fixed-window assertions
 // below are not redundant coverage of someone else's rule: they are the load-
 // bearing half of this class's own contract, and they are asserted in BOTH
@@ -45,6 +45,19 @@ const EDTECH_ID = 'timbuktoo-edtech-pan-african-incubation';
 // "accepted" below is about the class rule and not about expiry.
 const FIXED_WINDOW_ID = 'regea-oral-communications-call-2026';
 const AS_OF = '2026-09-15';
+// These eight IDs are pinned from the pre-FICASE main corpus, so an added
+// fixed-window opportunity cannot silently replace an incumbent record.
+const INCUMBENT_FIXED_WINDOW_IDS = [
+  'unicv-erasmus-viana-do-castelo-edital-027-2026',
+  'unicv-erasmus-bielefeld-edital-028-2026',
+  'unicv-erasmus-ca-foscari-edital-029-2026',
+  'unicv-undergraduate-admissions-third-phase-2026-2027',
+  'laczos-artisticos-2nd-edition-2026',
+  'unicv-china-ambassador-scholarship-2026',
+  'unicv-confucius-chinese-language-courses-2026-2027',
+  'regea-oral-communications-call-2026',
+];
+const FICASE_ID = 'ficase-scholarship-renewals-2026-2027';
 
 let passed = 0;
 const failures = [];
@@ -205,19 +218,26 @@ function region(dir, locale, id) {
 
 // --- CASE 5 — fixed-window WITH a valid end_date is still accepted --------
 // The other direction: adding the class did not make fixed-window stricter or
-// otherwise disturb the eight records that depend on it.
+// otherwise disturb the incumbent records that depend on it.
 {
   const dir = sandbox();
   const data = readData(dir);
   const fixedWindow = data.records.filter((r) => r.lifecycle_class === FIXED_WINDOW);
-  check('CASE 5: the incumbent fixed-window records are still present', fixedWindow.length === 8, String(fixedWindow.length));
+  const fixedIds = fixedWindow.map((r) => r.id);
+  check('CASE 5: all eight incumbent fixed-window record IDs are preserved',
+    INCUMBENT_FIXED_WINDOW_IDS.length === 8 && INCUMBENT_FIXED_WINDOW_IDS.every((id) => fixedIds.includes(id)),
+    JSON.stringify(fixedIds));
+  check('CASE 5: FICASE is the sole additional fixed-window record',
+    fixedWindow.length === 9 && fixedIds.filter((id) => id === FICASE_ID).length === 1
+      && fixedIds.every((id) => INCUMBENT_FIXED_WINDOW_IDS.includes(id) || id === FICASE_ID),
+    JSON.stringify(fixedIds));
   check('CASE 5: every one still carries a valid ISO end_date',
     fixedWindow.every((r) => /^\d{4}-\d{2}-\d{2}$/.test(r.end_date || '')),
     JSON.stringify(fixedWindow.map((r) => [r.id, r.end_date])));
   const result = validateData(dir);
-  check('CASE 5: the unmodified corpus (8 fixed-window + 1 open-call) is ACCEPTED', result.status === 0, result.out.trim().slice(0, 300));
-  check('CASE 5: validator still tallies 8 fixed-window records',
-    result.out.includes(`${FIXED_WINDOW}=8`), result.out.trim().slice(0, 200));
+  check('CASE 5: the unmodified corpus (9 fixed-window + 1 open-call) is ACCEPTED', result.status === 0, result.out.trim().slice(0, 300));
+  check('CASE 5: validator tallies 9 fixed-window records',
+    result.out.includes(`${FIXED_WINDOW}=9`), result.out.trim().slice(0, 200));
   fs.rmSync(dir, { recursive: true, force: true });
 }
 
