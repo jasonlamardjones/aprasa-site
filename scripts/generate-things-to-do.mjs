@@ -10,6 +10,7 @@ import { THINGS_TO_DO_HUB_PUBLIC, collectionRecords, homePreviewIds, hubOutputPa
 import { LAUNCHER_SURFACE_KEYS, resolveRuntimeStrings, renderRuntimeStringsBlock } from './lib/runtime-strings.mjs';
 import { renderContactConfigBlock } from './lib/contact-channels.mjs';
 import { validateSourceUnion } from './lib/event-publication-contract.mjs';
+import { parseFactValueHtml, escapeFactHtmlText } from './lib/fact-value-html.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(scriptDir, '..');
@@ -107,9 +108,9 @@ function mediaAltOf(record) {
 // if the PT text doesn't contain the same anchor visible-text in the same
 // order, so this never silently mangles a link.
 function localizeFactValueHtml(enHtml, ptDisplay, record, fact) {
-  const anchors = enHtml.match(/<a\b[^>]*>.*?<\/a>/gs) || [];
+  const anchors = parseFactValueHtml(enHtml);
   if (anchors.length === 0) return escapeHtml(ptDisplay);
-  const anchorTexts = anchors.map((a) => a.replace(/<[^>]+>/g, ''));
+  const anchorTexts = anchors.map((anchor) => anchor.text);
   let rest = ptDisplay;
   const segments = [];
   for (const text of anchorTexts) {
@@ -125,10 +126,27 @@ function localizeFactValueHtml(enHtml, ptDisplay, record, fact) {
   segments.push(rest);
   let result = '';
   anchors.forEach((anchor, i) => {
-    result += escapeHtml(segments[i]) + anchor;
+    result += escapeHtml(segments[i]) + renderApprovedFactHtml(anchor.html);
   });
   result += escapeHtml(segments[anchors.length]);
   return result;
+}
+
+// Reconstruct validated link attributes, but escape text in HTML text-node
+// context without double-encoding existing character references. The parser
+// rejects unapproved markup and URLs before any text reaches this function.
+// This preserves encoded-text semantics while keeping link structure bounded.
+function renderApprovedFactHtml(value) {
+  let result = '';
+  let cursor = 0;
+  for (const anchor of parseFactValueHtml(value)) {
+    result += escapeFactHtmlText(value.slice(cursor, anchor.start));
+    result += `<a href="${escapeHtml(anchor.href)}"`;
+    if (anchor.target) result += ' target="_blank" rel="noopener noreferrer"';
+    result += `>${escapeFactHtmlText(anchor.text)}</a>`;
+    cursor = anchor.end;
+  }
+  return result + escapeFactHtmlText(value.slice(cursor));
 }
 
 function localeRoutePrefix() {
@@ -254,7 +272,7 @@ function localizeRecord(record) {
   const facts = (record.detail?.facts || []).map((fact) => {
     if (locale === 'en') {
       return fact.value_html
-        ? { label: fact.label, value_html: fact.value_html }
+        ? { label: fact.label, value_html: renderApprovedFactHtml(fact.value_html) }
         : { label: fact.label, value: fact.value };
     }
     const base = factKeyBase(record.id, fact);
@@ -830,6 +848,23 @@ const selected = requestedId ? records.filter((record) => record.id === requeste
 if (requestedId && selected.length !== 1) {
   console.error(`Unknown event id: ${requestedId}`);
   process.exit(1);
+}
+
+// Validate the selected publication packet before any page is written.
+for (const record of selected) {
+  for (const fact of record.detail?.facts ?? []) {
+    if (fact.value_html === undefined) continue;
+    try {
+      parseFactValueHtml(fact.value_html);
+      if (locale === 'pt') {
+        const base = factKeyBase(record.id, fact);
+        localizeFactValueHtml(fact.value_html,
+          t(`event.${record.id}.detail.fact.${base}.value_display`, 'pt'), record, fact);
+      }
+    } catch (error) {
+      throw new Error(`${record.id}: invalid value_html for fact "${fact.label}": ${error.message}`);
+    }
+  }
 }
 
 // --home lets the Home-pass build script drive this generator against

@@ -43,6 +43,10 @@ jobs:
         with:
           node-version: '24'
 
+      # Regression coverage for bounded CodeQL #1/#2 security fixes.
+      - name: CodeQL bounded fact HTML and QA summary regression tests
+        run: node scripts/test-codeql-bounded.mjs
+
       - name: Validate Phase 1 publication packet fixtures
         shell: bash
         run: |
