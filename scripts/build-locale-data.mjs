@@ -3242,6 +3242,40 @@ for (const row of haliotisPackage.rows) {
   };
 }
 
+// r27: Project 09 final EN/PT FICASE renewal package, validated as strictly additive.
+const ficaseR27 = JSON.parse(readFileSync(path.join(LOCALE_DIR, "pt-overlay-r27-ficase-scholarship-renewals-2026-2027.source.json"), "utf8"));
+const ficaseR27Id = "ficase-scholarship-renewals-2026-2027";
+const ficaseR27Revision = "P09-PT-TTO-FICASE-RENEWALS-2026-10-26-r1";
+const ficaseR27Fields = new Set(["title","status","meta","body","how_to_apply","requirements","good","action","checked","detail_checked"]);
+const ficaseR27Seen = new Set();
+if (ficaseR27.source_revision !== ficaseR27Revision ||
+    ficaseR27.record_id !== ficaseR27Id ||
+    ficaseR27.project05_resource_id !== "CV-029" ||
+    ficaseR27.project_09_verdict !== "APPROVED_FOR_PUBLIC_USE" ||
+    ficaseR27.rows?.length !== ficaseR27Fields.size) fail("r27 FICASE provenance or row count changed");
+for (const row of ficaseR27.rows) {
+  const prefix = `training.record.${ficaseR27Id}.`;
+  const field = row.key.startsWith(prefix) ? row.key.slice(prefix.length) : "";
+  if (!ficaseR27Fields.has(field) || ficaseR27Seen.has(field) || seen.has(row.key) ||
+      row.record_id !== ficaseR27Id || row.source_revision !== ficaseR27Revision ||
+      row.scope_status !== "REQUIRED_FOR_PT_LAUNCH" ||
+      row.translation_status !== "APPROVED" ||
+      typeof row.source_en !== "string" || !row.source_en.trim() ||
+      typeof row.pt !== "string" || !row.pt.trim()) {
+    fail(`r27 FICASE invalid, unapproved, or duplicate key: ${JSON.stringify(row.key)}`);
+  }
+  ficaseR27Seen.add(field);
+  seen.add(row.key);
+  keys[row.key] = {
+    key: row.key, en: row.source_en, pt: row.pt,
+    scope_status: row.scope_status, identity_policy: row.identity_policy,
+    record_id: row.record_id, translation_status: row.translation_status,
+    source_revision: row.source_revision,
+    context_notes: row.context_notes || "", linguistic_notes: row.linguistic_notes || "",
+  };
+}
+if (ficaseR27Seen.size !== ficaseR27Fields.size) fail("r27 FICASE missing field");
+
 // Aggregate tallies, read off the finished key map that is about to be written.
 const assembled = (() => {
   const values = Object.values(keys);
@@ -3312,6 +3346,7 @@ const output = {
       "data/locales/pt-overlay-r23-mindelo-fragata-selected-branches.source.json",
       "data/locales/pt-overlay-r25-trainings-home-expansion-timbuktoo.source.json",
       "data/locales/pt-overlay-r26-trainings-home-expansion-edtech.source.json",
+      "data/locales/pt-overlay-r27-ficase-scholarship-renewals-2026-2027.source.json",
     ],
     base_revision: pkg.source_revision,
     delta_revision: delta.source_revision,
