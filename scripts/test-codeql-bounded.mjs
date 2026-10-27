@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { parseFactValueHtml } from './lib/fact-value-html.mjs';
+import { parseFactValueHtml, escapeFactHtmlText } from './lib/fact-value-html.mjs';
 import { markdownTableCell, renderStepSummary } from './qa/run-post-publication-qa.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -58,5 +58,53 @@ check('hostile dynamic fields stay in one Markdown issue row', () => {
   assert.equal(rows[0].split(/(?<!\\)\|/).length, 7);
   assert(!rows[0].includes('\n'));
   assert(rows[0].includes('\\| forged \\| row \\|'));
+});
+check('HTML character references retain text-node semantics without double encoding', () => {
+  assert.equal(escapeFactHtmlText('Info &amp; fees: R&amp;D'), 'Info &amp; fees: R&amp;D');
+  assert.equal(escapeFactHtmlText('R&D'), 'R&D');
+  assert.equal(escapeFactHtmlText('&copy; &#169; &#x1F389; &nbsp; &amp'), '&copy; &#169; &#x1F389; &nbsp; &amp');
+  assert.equal(escapeFactHtmlText('&lt;script&gt;'), '&lt;script&gt;');
+  assert.equal(escapeFactHtmlText('<img src=x onerror="evil()">'),
+    '&lt;img src=x onerror=&quot;evil()&quot;&gt;');
+});
+check('actual EN generator preserves encoded characters and rejects malformed facts before writing', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'aprasa-fact-entity-'));
+  try {
+    fs.cpSync(root, dir, {
+      recursive: true,
+      filter: src => !src.split(path.sep).some(part =>
+        ['.git', 'node_modules', '.netlify'].includes(part)),
+    });
+    const sourcePath = path.join(dir, 'data/things-to-do-events.json');
+    const fixture = JSON.parse(fs.readFileSync(sourcePath, 'utf8'));
+    const record = fixture.records.find(r => r.id === 'mon-pikenin');
+    const fact = record.detail.facts.find(f => f.value_html);
+    fact.value_html = 'Info &amp; fees: <a href="https://www.solm.land/calendar">R&amp;D</a> &copy; &lt;script&gt;';
+    fs.writeFileSync(sourcePath, JSON.stringify(fixture, null, 2) + '\n');
+    const args = ['scripts/generate-things-to-do.mjs', '--as-of=2026-10-12',
+      '--locale=en', '--id=mon-pikenin', '--write'];
+    const run = () => spawnSync(process.execPath, args,
+      { cwd: dir, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 });
+    const first = run();
+    assert.equal(first.status, 0, first.stderr);
+    const detailPath = path.join(dir, record.detail_page, 'index.html');
+    const html = fs.readFileSync(detailPath, 'utf8');
+    const expected = '<dd>Info &amp; fees: <a href="https://www.solm.land/calendar">R&amp;D</a> &copy; &lt;script&gt;</dd>';
+    assert(html.includes(expected), 'encoded facts must retain their rendered characters');
+    assert(!html.includes('Info &amp;amp; fees'), 'source character references must not double-encode');
+    assert(!html.includes('R&amp;amp;D'), 'anchor character references must not double-encode');
+    const repeat = run();
+    assert.equal(repeat.status, 0, repeat.stderr);
+    assert.equal(fs.readFileSync(detailPath, 'utf8'), html, 'idempotent encoded detail output');
+
+    fact.value_html = '<a href="javascript:alert(1)">Unsafe</a>';
+    fs.writeFileSync(sourcePath, JSON.stringify(fixture, null, 2) + '\n');
+    const rejected = run();
+    assert.notEqual(rejected.status, 0, 'unsafe fact must be rejected');
+    assert.equal(fs.readFileSync(detailPath, 'utf8'), html,
+      'rejected fact must not overwrite the previously generated detail');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });
 console.log(`${count}/${count} bounded checks passed.`);

@@ -1,3 +1,16 @@
+// HTML TEXT NODES ONLY: preserve source character references (&amp;, &#169;,
+// &lt;, etc.) as encoded text. HTML character references are decoded by the
+// browser into *text*, never re-tokenized as executable markup. The caller
+// first validates the surrounding fact with parseFactValueHtml(), which rejects
+// literal tags other than approved links; attribute values use escapeHtml().
+export function escapeFactHtmlText(value) {
+  return String(value)
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
 // The approved fact markup is plain text interleaved with simple links.
 // Keep the original bytes for valid input; this parser is a publication gate,
 // not an HTML normalizer.

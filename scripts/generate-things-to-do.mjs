@@ -10,7 +10,7 @@ import { THINGS_TO_DO_HUB_PUBLIC, collectionRecords, homePreviewIds, hubOutputPa
 import { LAUNCHER_SURFACE_KEYS, resolveRuntimeStrings, renderRuntimeStringsBlock } from './lib/runtime-strings.mjs';
 import { renderContactConfigBlock } from './lib/contact-channels.mjs';
 import { validateSourceUnion } from './lib/event-publication-contract.mjs';
-import { parseFactValueHtml } from './lib/fact-value-html.mjs';
+import { parseFactValueHtml, escapeFactHtmlText } from './lib/fact-value-html.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(scriptDir, '..');
@@ -132,19 +132,21 @@ function localizeFactValueHtml(enHtml, ptDisplay, record, fact) {
   return result;
 }
 
-// Render only validated link structure and escaped text. The incumbent fact
-// already uses this exact attribute order, so its output remains byte-identical.
+// Reconstruct validated link attributes, but escape text in HTML text-node
+// context without double-encoding existing character references. The parser
+// rejects unapproved markup and URLs before any text reaches this function.
+// This preserves encoded-text semantics while keeping link structure bounded.
 function renderApprovedFactHtml(value) {
   let result = '';
   let cursor = 0;
   for (const anchor of parseFactValueHtml(value)) {
-    result += escapeHtml(value.slice(cursor, anchor.start));
+    result += escapeFactHtmlText(value.slice(cursor, anchor.start));
     result += `<a href="${escapeHtml(anchor.href)}"`;
     if (anchor.target) result += ' target="_blank" rel="noopener noreferrer"';
-    result += `>${escapeHtml(anchor.text)}</a>`;
+    result += `>${escapeFactHtmlText(anchor.text)}</a>`;
     cursor = anchor.end;
   }
-  return result + escapeHtml(value.slice(cursor));
+  return result + escapeFactHtmlText(value.slice(cursor));
 }
 
 function localeRoutePrefix() {
