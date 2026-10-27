@@ -522,7 +522,11 @@ jobs:
           check_preview_matches_canonical 2026-11-01
           # A review-due record stays an ordinary public card on the collection
           # surface too — it is not expired, so it is never dropped from it.
-          check_hub_present sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-11-01
+          # The published review-due record at this boundary is 50 Anos.
+          # Sinergia da Matéria is WITHDRAWN: it is off Home and reported as a
+          # separate evidence-review diagnostic, never as an actionable failure.
+          check_hub_present 50-anos "50 Anos de Memória, Criação e Resistência" 2026-11-01
+          refute_past_event 50-anos-de-memoria-criacao-e-resistencia 2026-11-01
           refute_past_event sinergia-da-materia 2026-11-01
           refute_exact_november_day 2026-11-01
 
@@ -533,14 +537,33 @@ jobs:
           set +e
           review_output=$(node scripts/validate-things-to-do-currentness.mjs --as-of=2026-11-01 2>&1)
           set -e
-          if echo "$review_output" | grep -Eq '^[[:space:]]*-[[:space:]]+sinergia-da-materia:[[:space:]]'; then
-            echo 'Review-due record leaked into the Phase 2B deterministic drift grammar.'
+          for leaked in 50-anos-de-memoria-criacao-e-resistencia sinergia-da-materia; do
+            if echo "$review_output" | grep -Eq "^[[:space:]]*-[[:space:]]+${leaked}:[[:space:]]"; then
+              echo "Review-due record ${leaked} leaked into the Phase 2B deterministic drift grammar."
+              echo "$review_output"
+              exit 1
+            fi
+          done
+          if ! echo "$review_output" | grep -q 'REVIEW-DUE 50-anos-de-memoria-criacao-e-resistencia'; then
+            echo 'Published review-due record 50-anos was not reported for reverification at the November boundary.'
             echo "$review_output"
             exit 1
           fi
-          if ! echo "$review_output" | grep -q 'REVIEW-DUE sinergia-da-materia'; then
-            echo 'Review-due record was not reported for reverification at the November boundary.'
+          # Withdrawn Sinergia keeps its evidence-review diagnostic but must not
+          # be counted as an actionable REVIEW-DUE publication failure.
+          if echo "$review_output" | grep -q 'REVIEW-DUE sinergia-da-materia'; then
+            echo 'Withdrawn sinergia-da-materia was reported as an actionable REVIEW-DUE failure.'
             echo "$review_output"
+            exit 1
+          fi
+          if ! echo "$review_output" | grep -q 'EVIDENCE-REVIEW (withdrawn) sinergia-da-materia'; then
+            echo 'Withdrawn sinergia-da-materia lost its evidence-review diagnostic at the November boundary.'
+            echo "$review_output"
+            exit 1
+          fi
+          # Withdrawn Sinergia must not reappear on actionable Home (EN or PT).
+          if grep -q 'data-event-id="sinergia-da-materia"' index.html pt/index.html; then
+            echo 'Withdrawn sinergia-da-materia reappeared on Home as of 2026-11-01.'
             exit 1
           fi
 

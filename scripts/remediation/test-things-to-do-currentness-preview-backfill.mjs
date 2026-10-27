@@ -168,6 +168,10 @@ function sandbox() {
     record.end_date = keep[record.id] ?? startDay;
     record.end_precision = 'day';
     delete record.end_month;
+    // RETAINED plays the role of a published, current selected record. The
+    // committed Sinergia record is WITHDRAWN, so the sandbox fixture publishes
+    // it here; the committed withdrawn state is asserted separately below.
+    if (record.id === RETAINED) record.publication_state = 'published';
   }
   writeJson(dir, 'data/things-to-do-events.json', events);
 
@@ -211,6 +215,19 @@ function freshSandbox() {
 }
 
 try {
+  // --- Committed data: withdrawn Sinergia is not in the actionable preview ---
+  // Independent of the fixture below, which publishes RETAINED to exercise the
+  // transition. A withdrawn selected record must be absent from the preview on
+  // both sides of the boundary, whatever its dates say.
+  {
+    const committed = readJson(root, 'data/things-to-do-events.json').records;
+    assert.equal(committed.find((r) => r.id === RETAINED)?.publication_state, 'withdrawn',
+      'committed Sinergia da Matéria is withdrawn');
+    const committedTransition = resolvePreviewTransition({ records: committed, fromAsOf: BEFORE, toAsOf: AFTER });
+    assert.ok(!committedTransition.previewBefore.includes(RETAINED), 'withdrawn Sinergia must not be in the preview before the boundary');
+    assert.ok(!committedTransition.previewAfter.includes(RETAINED), 'withdrawn Sinergia must not be in the preview after the boundary');
+  }
+
   // --- Coherent BEFORE baseline -------------------------------------------
   const work = freshSandbox();
 
