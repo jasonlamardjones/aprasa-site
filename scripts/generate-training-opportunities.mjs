@@ -133,6 +133,36 @@ function paragraphs(slot, where) {
   return list.map((entry, i) => text(entry, list.length > 1 ? `${where}[${i}]` : where));
 }
 
+/**
+ * Render a governed requirements string. Governance approves one string whose
+ * lines may be an introductory paragraph(s) followed by "- " document items.
+ * Such a string renders as <p> intro paragraph(s) (blank-line separated) and a
+ * semantic <ul><li> list, each fragment verbatim from the approved string.
+ * A string with no "- " item line is not list-shaped and renders exactly as
+ * before (one <p> per governed paragraph), so incumbent records are unchanged.
+ */
+function requirementsBlocks(para, I) {
+  const lines = para.split('\n');
+  if (!lines.some((l) => l.startsWith('- '))) return [`${I}<p>${esc(para)}</p>`];
+  const out = [];
+  let prose = [];
+  let items = [];
+  const flushProse = () => { if (prose.length) out.push(`${I}<p>${esc(prose.join(' '))}</p>`); prose = []; };
+  const flushItems = () => {
+    if (!items.length) return;
+    out.push(`${I}<ul>`, ...items.map((it) => `${I}  <li>${esc(it)}</li>`), `${I}</ul>`);
+    items = [];
+  };
+  for (const line of lines) {
+    if (line.startsWith('- ')) { flushProse(); items.push(line.slice(2)); }
+    else if (line.trim() === '') { flushProse(); flushItems(); }
+    else { flushItems(); prose.push(line); }
+  }
+  flushProse();
+  flushItems();
+  return out;
+}
+
 const EXTERNAL_MARKER = '<span aria-hidden="true">↗</span>';
 const LINK_ATTRS = 'target="_blank" rel="noopener noreferrer"';
 
@@ -273,7 +303,7 @@ function renderDetail(record) {
   }
   if (d.requirements) {
     lines.push(`${I}<h3>${esc(t('ui.requirements', locale))}</h3>`);
-    for (const para of paragraphs(d.requirements, `${where} requirements`)) lines.push(`${I}<p>${esc(para)}</p>`);
+    for (const para of paragraphs(d.requirements, `${where} requirements`)) lines.push(...requirementsBlocks(para, I));
   }
   if (d.original_posting) {
     const op = d.original_posting;
