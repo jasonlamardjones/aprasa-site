@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 // Stage 2B-S: shadow-only EN/PT generator parity. All writes are confined
 // to a disposable copy; no production generator or public HTML is modified.
+// Stage 2B-L: the generator and collection selection now take their temporal
+// state from the parity-gated universal resolver; the cases after the shadow
+// boundaries cover that production integration and its fail-closed paths.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -8,7 +11,13 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { compareThingsToDoCurrentness } from './lib/things-to-do-currentness-adapter.mjs';
-import { HOME_PREVIEW_IDS, THINGS_TO_DO_HUB_PUBLIC } from './lib/things-to-do-collection.mjs';
+import {
+  HOME_PREVIEW_IDS, THINGS_TO_DO_HUB_PUBLIC, collectionRecords, homePreviewRecords,
+} from './lib/things-to-do-collection.mjs';
+import { currentnessState as incumbentState } from './lib/things-to-do-currentness.mjs';
+import {
+  currentnessState as universalState, isExpired, isPubliclyCurrent,
+} from './lib/things-to-do-universal-resolver.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const EVENTS = 'data/things-to-do-events.json';
@@ -43,18 +52,25 @@ function stripGenerated(html, count) {
   eq(seen, count, 'all generated event markers must remain balanced');
   return stripped;
 }
+function runGenerator(dir, day, locale) {
+  const args = ['scripts/generate-things-to-do.mjs', '--as-of=' + day,
+    '--locale=' + locale, '--write'];
+  if (locale === 'pt') args.splice(3, 0, '--home=pt/index.html');
+  return spawnSync(process.execPath, args, {
+    cwd: dir, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024,
+  });
+}
 function generate(dir, day) {
   for (const locale of ['en', 'pt']) {
-    const args = ['scripts/generate-things-to-do.mjs', '--as-of=' + day,
-      '--locale=' + locale, '--write'];
-    if (locale === 'pt') args.splice(3, 0, '--home=pt/index.html');
-    const run = spawnSync(process.execPath, args, {
-      cwd: dir, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024,
-    });
+    const run = runGenerator(dir, day, locale);
     assert.equal(run.status, 0, 'generator ' + locale + ' ' + day + ': ' +
       run.stdout + '\n' + run.stderr);
     assertions++;
   }
+}
+function throwsCode(fn, pattern, reason) {
+  assert.throws(fn, pattern, reason);
+  assertions++;
 }
 function snapshot(dir, records) {
   const files = ['index.html', 'pt/index.html'];
@@ -106,6 +122,8 @@ try {
       const parity = compareThingsToDoCurrentness(record, day);
       eq(['match', 'editorial-override'].includes(parity.comparison), true,
         'universal and incumbent parity for ' + record.id + ' ' + day);
+      eq(universalState(record, day), parity.incumbentState,
+        'production resolver state for ' + record.id + ' ' + day);
       const published = record.publication_state === 'published';
       const expectedCard = published && parity.temporalState !== 'expired' &&
         HOME_PREVIEW_IDS.includes(record.id);
@@ -177,8 +195,9 @@ try {
   verify('2026-10-30', fixture);
   fs.writeFileSync(path.join(sandbox, EVENTS), source);
   // Real canonical boundaries: month-review and Cartinha's Nov 15/16 expiry.
+  // 2027-01-15 is well past November: month-only ends must still never expire.
   for (const day of ['2026-10-12', '2026-10-31', '2026-11-01',
-    '2026-11-15', '2026-11-16']) {
+    '2026-11-15', '2026-11-16', '2027-01-15']) {
     const before = verify(day, records);
     if (day === '2026-11-16') {
       const after = verify(day, records);
@@ -186,8 +205,115 @@ try {
     }
   }
   eq(read(sandbox, EVENTS), source, 'canonical events restored unmodified');
-  console.log('Stage 2B-S EN/PT generator shadow parity passed (' +
-    assertions + ' assertions; synthetic and real boundaries).');
+
+  // --- Stage 2B-L: production resolver, in process -------------------------
+  const byId = Object.fromEntries(records.map(r => [r.id, r]));
+  const MONTH_IDS = ['sinergia-da-materia', '50-anos-de-memoria-criacao-e-resistencia'];
+  for (const id of MONTH_IDS) {
+    eq(byId[id].end_precision, 'month', id + ' is month precision');
+    eq(universalState(byId[id], '2026-10-31'), 'current', id + ' current before November');
+    eq(universalState(byId[id], '2026-11-01'), 'review-due', id + ' review-due on Nov 1');
+    eq(universalState(byId[id], '2027-06-01'), 'review-due', id + ' never auto-expires');
+    eq(isPubliclyCurrent(byId[id], '2027-06-01'), true, id + ' review-due stays public');
+  }
+  eq(byId[CARTINHA].end_date, '2026-11-15', 'Cartinha keeps its real closing day');
+  eq(universalState(byId[CARTINHA], '2026-11-15'), 'current', 'Cartinha current on Nov 15');
+  eq(universalState(byId[CARTINHA], '2026-11-16'), 'expired', 'Cartinha expired on Nov 16');
+
+  // Editorial expiry is independent of the dates and always wins.
+  const editorial = { ...byId[CARTINHA], publication_state: 'expired' };
+  eq(compareThingsToDoCurrentness(editorial, '2026-10-12').temporalState, 'current',
+    'editorial fixture is temporally current');
+  eq(universalState(editorial, '2026-10-12'), 'expired', 'editorial expiry overrides dates');
+  eq(collectionRecords([editorial], '2026-10-12').length, 0, 'editorial expiry leaves the collection');
+
+  // Temporal eligibility never grants publication: draft/withdrawn stay off Home.
+  for (const state of ['draft', 'withdrawn']) {
+    const fixture = records.map(r => r.id === CARTINHA ? { ...r, publication_state: state } : r);
+    const record = fixture.find(r => r.id === CARTINHA);
+    eq(isPubliclyCurrent(record, '2026-10-12'), true, state + ' record is temporally current');
+    eq(homePreviewRecords(fixture, '2026-10-12').some(r => r.id === CARTINHA), false,
+      state + ' record cannot enter Home through temporal eligibility');
+  }
+  eq(homePreviewRecords(records, '2026-10-12').map(r => r.id),
+    HOME_PREVIEW_IDS.filter(id => byId[id].publication_state === 'published' &&
+      incumbentState(byId[id], '2026-10-12') !== 'expired'),
+    'Home preview keeps the curated order');
+
+  // Offset-bearing timestamps never acquire exact-time expiry.
+  const offsetOnly = { id: 'synthetic-offset-only', publication_state: 'published',
+    start_date: '2026-10-01', end_datetime: '2026-10-02T23:00:00-01:00' };
+  eq(universalState(offsetOnly, '2026-11-01'), 'current', 'end_datetime alone never expires');
+  eq(compareThingsToDoCurrentness(offsetOnly, '2026-11-01').evaluation.activityExpiryInstant, null,
+    'end_datetime produces no expiry instant');
+
+  // Malformed or unsupported input fails closed, naming the record and date.
+  const invalid = /TTD_UNIVERSAL_RESOLVER_INVALID_INPUT: cartinha-dholanda-mindelo-2026 as of 2026-10-12: /;
+  throwsCode(() => universalState(byId[CARTINHA], '2026-02-30'),
+    /TTD_UNIVERSAL_RESOLVER_INVALID_INPUT: cartinha-dholanda-mindelo-2026 as of 2026-02-30: /,
+    'impossible asOf day is rejected');
+  throwsCode(() => isExpired({ ...byId[MONTH_IDS[0]], end_month: '2026-13' }, '2026-10-12'),
+    /TTD_UNIVERSAL_RESOLVER_INVALID_INPUT: sinergia-da-materia as of 2026-10-12: TTD_ADAPTER_INVALID_END_MONTH/,
+    'impossible end_month is rejected');
+  throwsCode(() => universalState({ ...byId[CARTINHA], end_precision: 'week' }, '2026-10-12'),
+    /TTD_ADAPTER_UNSUPPORTED_END_PRECISION/, 'unsupported precision is rejected');
+  throwsCode(() => universalState({ ...byId[CARTINHA], end_date: '2026-11-31' }, '2026-10-12'),
+    invalid, 'impossible end_date is rejected');
+  eq(incumbentState({ ...byId[MONTH_IDS[0]], end_month: '2026-13' }, '2026-10-12'), 'current',
+    'the incumbent alone would have published the malformed month as current');
+
+  // --- Stage 2B-L: production generator, in the disposable copy -------------
+  function fixtureRun(fixture, day) {
+    syntheticText = JSON.stringify({ ...canonical, records: fixture }, null, 2) + '\n';
+    fs.writeFileSync(path.join(sandbox, EVENTS), syntheticText);
+    return verify(day, fixture);
+  }
+  function refuses(day, pattern, reason) {
+    const before = snapshot(sandbox, records);
+    for (const locale of ['en', 'pt']) {
+      const run = runGenerator(sandbox, day, locale);
+      eq(run.status !== 0, true, reason + ' (' + locale + ') exits non-zero');
+      eq(pattern.test(run.stderr), true, reason + ' (' + locale + ') diagnostic: ' + run.stderr);
+      eq(/^Wrote /m.test(run.stdout), false, reason + ' (' + locale + ') wrote nothing');
+    }
+    eq(snapshot(sandbox, records), before, reason + ': no generated file changed');
+  }
+  generate(sandbox, '2026-10-12');
+  fixtureRun(records.map(r => r.id === CARTINHA ? { ...r, publication_state: 'expired' } : r),
+    '2026-10-12');
+  for (const state of ['draft', 'withdrawn']) {
+    fixtureRun(records.map(r => r.id === CARTINHA || r.id === 'taverna-live-music'
+      ? { ...r, publication_state: state } : r), '2026-10-12');
+  }
+  fs.writeFileSync(path.join(sandbox, EVENTS), source);
+  generate(sandbox, '2026-10-12');
+
+  refuses('2026-02-30', /TTD_UNIVERSAL_RESOLVER_INVALID_INPUT: [a-z0-9-]+ as of 2026-02-30: /,
+    'impossible --as-of day');
+  fs.writeFileSync(path.join(sandbox, EVENTS), JSON.stringify({ ...canonical,
+    records: records.map(r => r.id === MONTH_IDS[0] ? { ...r, end_month: '2026-13' } : r) },
+  null, 2) + '\n');
+  refuses('2026-10-12',
+    /TTD_UNIVERSAL_RESOLVER_INVALID_INPUT: sinergia-da-materia as of 2026-10-12: TTD_ADAPTER_INVALID_END_MONTH/,
+    'malformed end_month');
+  fs.writeFileSync(path.join(sandbox, EVENTS), source);
+
+  // A universal/incumbent disagreement is deterministic failure, never a
+  // fallback. The disagreement is induced only inside the disposable copy by
+  // disabling the incumbent's day-precision expiry.
+  const INCUMBENT = 'scripts/lib/things-to-do-currentness.mjs';
+  const incumbentSource = read(sandbox, INCUMBENT);
+  const dayExpiry = 'if (record?.end_date && record.end_date < asOf) return EXPIRED;';
+  eq(incumbentSource.split(dayExpiry).length, 2, 'incumbent day-expiry rule located once');
+  fs.writeFileSync(path.join(sandbox, INCUMBENT), incumbentSource.replace(dayExpiry, ''));
+  const firstStale = records.find(r => r.publication_state !== 'expired' &&
+    r.end_date && r.end_date < '2026-11-16');
+  refuses('2026-11-16', new RegExp('TTD_UNIVERSAL_PARITY_MISMATCH: ' + firstStale.id +
+    ' as of 2026-11-16: universal=expired incumbent=current'), 'induced parity mismatch');
+  fs.writeFileSync(path.join(sandbox, INCUMBENT), incumbentSource);
+  eq(read(sandbox, EVENTS), source, 'canonical events restored unmodified');
+  console.log('Stage 2B-S/2B-L EN/PT generator parity passed (' +
+    assertions + ' assertions; synthetic and real boundaries, production resolver).');
 } finally {
   fs.rmSync(sandbox, { recursive: true, force: true });
 }
