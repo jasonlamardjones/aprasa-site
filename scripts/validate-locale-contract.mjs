@@ -92,10 +92,12 @@ const haliotisRaw = readFileSync(path.join(ROOT, 'data/locales/pt-overlay-haliot
 if (createHash('sha256').update(haliotisRaw).digest('hex') !== '80aa93ab04b80218df1a4908af0c0ca9663184d579ab61bc2df796ba6ea5e167') {
   fail('Haliotis package differs from the frozen Project 03 EN/PT payload');
 }
-if (keys.length !== 999 + eventDeltaRequired + eventDeltaUnchanged) fail(`expected ${999 + eventDeltaRequired + eventDeltaUnchanged} total keys including approved event deltas, got ${keys.length}`);
+// r28 (Sinergia access disclosure) adds exactly two REQUIRED_FOR_PT_LAUNCH keys outside the per-event delta lane.
+const SINERGIA_R28_ROWS = 2;
+if (keys.length !== 999 + SINERGIA_R28_ROWS + eventDeltaRequired + eventDeltaUnchanged) fail(`expected ${999 + SINERGIA_R28_ROWS + eventDeltaRequired + eventDeltaUnchanged} total keys including approved event deltas, got ${keys.length}`);
 const required = keys.filter((k) => k.scope_status === "REQUIRED_FOR_PT_LAUNCH");
 const unchanged = keys.filter((k) => k.scope_status === "INTENTIONALLY_UNCHANGED");
-if (required.length !== 969 + eventDeltaRequired) fail(`expected ${969 + eventDeltaRequired} REQUIRED_FOR_PT_LAUNCH keys, got ${required.length}`);
+if (required.length !== 969 + SINERGIA_R28_ROWS + eventDeltaRequired) fail(`expected ${969 + SINERGIA_R28_ROWS + eventDeltaRequired} REQUIRED_FOR_PT_LAUNCH keys, got ${required.length}`);
 if (unchanged.length !== 30 + eventDeltaUnchanged) fail(`expected ${30 + eventDeltaUnchanged} INTENTIONALLY_UNCHANGED keys, got ${unchanged.length}`);
 if (data.provenance.delta_revision !== "P03-PT-SOURCE-2026-08-25-r3") {
   fail(`unexpected delta_revision: ${data.provenance.delta_revision}`);
@@ -801,6 +803,35 @@ for (const [key, expected] of Object.entries(r9Admission)) {
   if (row.pt !== expected.pt) fail(`${key} PT mismatch: got ${JSON.stringify(row.pt)}`);
   // Additive, never routed through the source-correction class.
   if (row.source_correction) fail(`${key} must not carry a source correction — free admission is an additive addition`);
+}
+
+// --- r28 Sinergia access disclosure (Project 09, 27 October 2026) ---
+// Exactly two strictly additive record-scoped keys with the approved wording.
+const r28Revision = "P09-PT-SINERGIA-ACCESS-DISCLOSURE-2026-10-27-r1";
+const r28Approved = {
+  [`${r9Id}.access_notice_heading`]: {
+    en: "Visitor access not currently confirmed",
+    pt: "Acesso de visitantes ainda não confirmado",
+  },
+  [`${r9Id}.access_notice_body`]: {
+    en: "Earlier exhibition information indicated that Sinergia da Matéria would remain on view until November 2026. However, newer CNAD programming has been announced for Galeria Zero, and we have not confirmed whether this exhibition remains accessible to visitors. Please check directly with CNAD before planning a visit.",
+    pt: "Informações anteriores sobre a exposição indicavam que Sinergia da Matéria permaneceria em exibição até novembro de 2026. No entanto, foi anunciada uma programação mais recente do CNAD para a Galeria Zero, e não confirmámos se esta exposição continua acessível a visitantes. Confirme diretamente com o CNAD antes de planear uma visita.",
+  },
+};
+for (const [key, expected] of Object.entries(r28Approved)) {
+  const row = data.keys[key];
+  if (!row) { fail(`r28 Sinergia key missing from locale data: ${key}`); continue; }
+  if (row.en !== expected.en) fail(`${key} EN does not match the approved Project 09 wording`);
+  if (row.pt !== expected.pt) fail(`${key} PT does not match the approved Project 09 wording`);
+  if (row.source_revision !== r28Revision) fail(`${key} source_revision mismatch: ${row.source_revision}`);
+  if (row.record_id !== "sinergia-da-materia" || row.scope_status !== "REQUIRED_FOR_PT_LAUNCH" ||
+      row.identity_policy !== "TRANSLATE_NORMALLY" || row.translation_status !== "APPROVED") {
+    fail(`${key} carries the wrong r28 row metadata`);
+  }
+  if (row.source_correction) fail(`${key} must not carry a source correction — r28 is strictly additive`);
+}
+if (Object.keys(data.keys).filter((k) => k.startsWith(`${r9Id}.access_notice`)).length !== 2) {
+  fail("r28 must add exactly two access_notice keys for sinergia-da-materia");
 }
 
 // --- r8 delta spot checks (same-day PART_ILHAS / Artemisa Ferreira event) ---

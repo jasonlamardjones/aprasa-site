@@ -1,0 +1,33 @@
+{
+  "package_id": "P09-PT-SINERGIA-ACCESS-DISCLOSURE-2026-10-27-r1",
+  "source_revision": "P09-PT-SINERGIA-ACCESS-DISCLOSURE-2026-10-27-r1",
+  "record_id": "sinergia-da-materia",
+  "revision_class": "ADDITIVE_EVENT_KEYS",
+  "project_09_verdict": "APPROVED_FOR_PUBLIC_USE",
+  "rows": [
+    {
+      "key": "event.sinergia-da-materia.access_notice_heading",
+      "source_revision": "P09-PT-SINERGIA-ACCESS-DISCLOSURE-2026-10-27-r1",
+      "source_en": "Visitor access not currently confirmed",
+      "pt": "Acesso de visitantes ainda não confirmado",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "sinergia-da-materia",
+      "translation_status": "APPROVED",
+      "context_notes": "Heading of the access disclosure shown on the withdrawn Sinergia da Matéria detail pages.",
+      "linguistic_notes": ""
+    },
+    {
+      "key": "event.sinergia-da-materia.access_notice_body",
+      "source_revision": "P09-PT-SINERGIA-ACCESS-DISCLOSURE-2026-10-27-r1",
+      "source_en": "Earlier exhibition information indicated that Sinergia da Matéria would remain on view until November 2026. However, newer CNAD programming has been announced for Galeria Zero, and we have not confirmed whether this exhibition remains accessible to visitors. Please check directly with CNAD before planning a visit.",
+      "pt": "Informações anteriores sobre a exposição indicavam que Sinergia da Matéria permaneceria em exibição até novembro de 2026. No entanto, foi anunciada uma programação mais recente do CNAD para a Galeria Zero, e não confirmámos se esta exposição continua acessível a visitantes. Confirme diretamente com o CNAD antes de planear uma visita.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "sinergia-da-materia",
+      "translation_status": "APPROVED",
+      "context_notes": "Body of the access disclosure; it states the earlier evidence without claiming the exhibition has closed.",
+      "linguistic_notes": ""
+    }
+  ]
+}

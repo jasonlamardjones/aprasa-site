@@ -270,6 +270,13 @@ function monthPrecisionIds(dir) {
     // selection cannot shrink silently through a broken eligibility rule.
     for (const id of droppedSelected) {
       const record = records.find((r) => r.id === id);
+      // A selected record may also leave Home because it is WITHDRAWN (a
+      // publication decision, not a currentness one), which is not an expiry.
+      if (record?.publication_state === 'withdrawn') {
+        check(`dropped selected record ${id} left Home because it is withdrawn`,
+          !enHome.includes(id) && !ptHome.includes(id), `publication_state=${record.publication_state}`);
+        continue;
+      }
       check(`dropped selected record ${id} has a day-precision end_date before ${asOf}`,
         Boolean(record?.end_date) && record.end_precision !== 'month' && record.end_date < asOf,
         `end_date=${record?.end_date} end_precision=${record?.end_precision}`);
@@ -322,6 +329,14 @@ function monthPrecisionIds(dir) {
   const asOf = ALL_SELECTED_CURRENT_AS_OF;
   const dir = sandbox();
   try {
+    // Fixture only: publish every approved record in the sandbox copy so the
+    // all-five-selected case stays exercised while a selected record is withdrawn
+    // in the committed data. The repository's own data is never written.
+    const fixtureData = JSON.parse(read(dir, EVENTS));
+    for (const record of fixtureData.records) {
+      if (APPROVED_HOME_PREVIEW.includes(record.id)) record.publication_state = 'published';
+    }
+    fs.writeFileSync(path.join(dir, EVENTS), JSON.stringify(fixtureData, null, 2) + '\n');
     generate(dir, asOf);
     const records = JSON.parse(read(dir, EVENTS)).records;
     check(`fixture: every approved record is published and current at ${asOf}`,

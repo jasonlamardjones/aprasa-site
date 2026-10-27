@@ -3276,6 +3276,43 @@ for (const row of ficaseR27.rows) {
 }
 if (ficaseR27Seen.size !== ficaseR27Fields.size) fail("r27 FICASE missing field");
 
+// r28: Project 09 Sinergia da Matéria access disclosure, validated as strictly additive.
+// It is a separate source revision from the earlier Sinergia admission package, so it
+// cannot live in that package's event file (one source_revision per event file).
+const sinergiaR28 = JSON.parse(readFileSync(path.join(LOCALE_DIR, "pt-overlay-r28-sinergia-access-disclosure.source.json"), "utf8"));
+const sinergiaR28Id = "sinergia-da-materia";
+const sinergiaR28Revision = "P09-PT-SINERGIA-ACCESS-DISCLOSURE-2026-10-27-r1";
+const sinergiaR28Fields = new Set(["access_notice_heading", "access_notice_body"]);
+const sinergiaR28Seen = new Set();
+if (sinergiaR28.source_revision !== sinergiaR28Revision ||
+    sinergiaR28.package_id !== sinergiaR28Revision ||
+    sinergiaR28.record_id !== sinergiaR28Id ||
+    sinergiaR28.project_09_verdict !== "APPROVED_FOR_PUBLIC_USE" ||
+    sinergiaR28.rows?.length !== sinergiaR28Fields.size) fail("r28 Sinergia provenance or row count changed");
+for (const row of sinergiaR28.rows) {
+  const prefix = `event.${sinergiaR28Id}.`;
+  const field = row.key.startsWith(prefix) ? row.key.slice(prefix.length) : "";
+  if (!sinergiaR28Fields.has(field) || sinergiaR28Seen.has(field) || seen.has(row.key) ||
+      row.record_id !== sinergiaR28Id || row.source_revision !== sinergiaR28Revision ||
+      row.scope_status !== "REQUIRED_FOR_PT_LAUNCH" ||
+      row.identity_policy !== "TRANSLATE_NORMALLY" ||
+      row.translation_status !== "APPROVED" ||
+      typeof row.source_en !== "string" || !row.source_en.trim() ||
+      typeof row.pt !== "string" || !row.pt.trim()) {
+    fail(`r28 Sinergia invalid, unapproved, or duplicate key: ${JSON.stringify(row.key)}`);
+  }
+  sinergiaR28Seen.add(field);
+  seen.add(row.key);
+  keys[row.key] = {
+    key: row.key, en: row.source_en, pt: row.pt,
+    scope_status: row.scope_status, identity_policy: row.identity_policy,
+    record_id: row.record_id, translation_status: row.translation_status,
+    source_revision: row.source_revision,
+    context_notes: row.context_notes || "", linguistic_notes: row.linguistic_notes || "",
+  };
+}
+if (sinergiaR28Seen.size !== sinergiaR28Fields.size) fail("r28 Sinergia missing field");
+
 // Aggregate tallies, read off the finished key map that is about to be written.
 const assembled = (() => {
   const values = Object.values(keys);
@@ -3347,6 +3384,7 @@ const output = {
       "data/locales/pt-overlay-r25-trainings-home-expansion-timbuktoo.source.json",
       "data/locales/pt-overlay-r26-trainings-home-expansion-edtech.source.json",
       "data/locales/pt-overlay-r27-ficase-scholarship-renewals-2026-2027.source.json",
+      "data/locales/pt-overlay-r28-sinergia-access-disclosure.source.json",
     ],
     base_revision: pkg.source_revision,
     delta_revision: delta.source_revision,
