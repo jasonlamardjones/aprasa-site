@@ -75,6 +75,28 @@ try {
   const baseline = { en: original['index.html'], pt: original['pt/index.html'] };
   eq(THINGS_TO_DO_HUB_PUBLIC, false, 'unpublished hubs must stay dormant');
 
+  // MANXI is a static emergency card that is retired by a separate patch, so
+  // its presence is read from the checked-out Homes instead of hard-coded. The
+  // two locales must agree; the generator must then preserve whichever state
+  // the checkout is in.
+  const manxiCard = '<article class="resource-card" data-emergency-event="' + MANXI + '"';
+  const manxiLive = {};
+  for (const locale of ['en', 'pt']) {
+    const manxiRegion = region(baseline[locale], 'EMERGENCY EN-PT EVENT', MANXI);
+    manxiLive[locale] = manxiRegion.includes(manxiCard);
+    if (manxiLive[locale]) {
+      eq(manxiRegion.includes('data-emergency-expire-at="2026-10-30T01:00:00Z"'), true,
+        locale + ' present MANXI card carries its Cabo Verde midnight expiry');
+    } else {
+      eq(manxiRegion, marker('BEGIN', 'EMERGENCY EN-PT EVENT', MANXI) + '\n        ' +
+        marker('END', 'EMERGENCY EN-PT EVENT', MANXI),
+        locale + ' retired MANXI region is an empty marker pair');
+      eq(baseline[locale].includes('data-emergency-event="' + MANXI + '"'), false,
+        locale + ' retired MANXI leaves no card elsewhere on Home');
+    }
+  }
+  eq(manxiLive.en, manxiLive.pt, 'MANXI EN/PT presence parity');
+
   let syntheticText = '';
   function verify(day, candidate) {
     generate(sandbox, day);
@@ -125,8 +147,19 @@ try {
       const locations = ordered.map(id => home.indexOf('data-event-id="' + id + '"'));
       eq(locations.every((x, i) => x >= 0 && (!i || x > locations[i - 1])),
         true, locale + ' curated Home ordering');
-      eq(home.includes('data-emergency-expire-at="2026-10-30T01:00:00Z"'), true,
-        locale + ' MANXI unchanged even on synthetic post-expiry date');
+      // Date-independent: the generator neither adds nor removes MANXI, and a
+      // present card keeps its expiry attribute (retirement is a patch, not a
+      // generator side effect).
+      const manxiRegion = region(home, 'EMERGENCY EN-PT EVENT', MANXI);
+      const hasManxiCard = manxiRegion.includes('data-emergency-event="' + MANXI + '"');
+      eq(hasManxiCard, manxiLive[locale],
+        locale + ' MANXI state unchanged by generation on ' + day);
+      eq(manxiRegion.includes('data-emergency-expire-at="2026-10-30T01:00:00Z"'), hasManxiCard,
+        locale + ' MANXI expiry attribute matches card presence on ' + day);
+      eq(!hasManxiCard && /<article\b/.test(manxiRegion), false,
+        locale + ' retired MANXI region contains no article on ' + day);
+      eq(home.split('data-emergency-event="' + MANXI + '"').length - 1, hasManxiCard ? 1 : 0,
+        locale + ' whole-page MANXI card count on ' + day);
     }
     eq(read(sandbox, FRAGMENT), original[FRAGMENT], 'PT emergency fragment untouched');
     eq(read(sandbox, TRAINING), original[TRAINING], 'FICASE canonical source untouched');
