@@ -51,6 +51,7 @@ jobs:
           node --check scripts/test-currentness-contract.mjs
           node --check scripts/lib/things-to-do-currentness-adapter.mjs
           node --check scripts/test-things-to-do-currentness-adapter.mjs
+          node --check scripts/test-universal-currentness-generator-parity.mjs
       - name: Unit tests
         run: node scripts/remediation/test-things-to-do-currentness-remediation.mjs
       # Independent, deterministic coverage of the approved cross-category
@@ -60,6 +61,10 @@ jobs:
       # Stage 2A is comparison-only: existing generators and published output unchanged.
       - name: Things-to-Do currentness compatibility adapter tests
         run: node scripts/test-things-to-do-currentness-adapter.mjs
+      # Stage 2B-S: actual EN/PT generator outputs in a disposable repo copy;
+      # no writes to the checked-out repository or public release surfaces.
+      - name: Universal currentness EN/PT generator shadow parity
+        run: node scripts/test-universal-currentness-generator-parity.mjs
       # Drives real canonical generation against a synthetic preview-boundary
       # expiry in a sandbox. Creates no GitHub issue and touches no tracked file.
       - name: Preview-backfill integration tests
