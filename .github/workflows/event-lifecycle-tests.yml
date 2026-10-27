@@ -1,0 +1,28 @@
+name: Event lifecycle tests
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Syntax checks
+        run: |
+          node --check scripts/lifecycle/lib/event-expiry.mjs
+          node --check scripts/lifecycle/run-event-expiry.mjs
+          node --check scripts/lifecycle/test-event-expiry.mjs
+      - name: Lifecycle unit and integration tests
+        run: node scripts/lifecycle/test-event-expiry.mjs

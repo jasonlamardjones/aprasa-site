@@ -1,0 +1,73 @@
+name: Event lifecycle expiry (dry run)
+
+# Project 04, Tranche A1 — DRY RUN ONLY.
+#
+# Recomputes from canonical data and the Atlantic/Cape_Verde clock whether any
+# approved published event has crossed its expiry boundary, rebuilds in a
+# staging copy, proves the result stays inside the bounded write set and passes
+# every incumbent validator, and uploads what WOULD be published.
+#
+# It has no write path of any kind: `contents: read` only, no credential, no
+# commit, push, pull request, issue or deployment. The controller itself
+# refuses any mode other than "dry-run" (automation/lifecycle/mode.json).
+# Enabling unattended publication needs a separate founder-approved change and
+# a credential that does not exist.
+#
+# Scheduling honesty: GitHub cron is best-effort. This repository's own
+# scheduled QA has been observed firing 4.5-9.8 hours after its cron time, and
+# some runs may be skipped. The job is state-based, not event-based: every run
+# reconciles ALL overdue transitions, so a late or skipped run delays
+# convergence and never loses a transition. Do not read the schedule as a
+# promise of execution at 00:00:00.
+
+on:
+  schedule:
+    # Hourly, at an off-peak minute. 01:17 UTC is shortly after Cape Verde midnight.
+    - cron: '17 7 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: event-lifecycle-expiry
+  cancel-in-progress: false
+
+jobs:
+  dry-run:
+    # Scheduled runs only exist on the default branch; this also keeps a manual
+    # dispatch from another ref from being mistaken for production state.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Run lifecycle controller (dry run)
+        run: node scripts/lifecycle/run-event-expiry.mjs --out="$RUNNER_TEMP/lifecycle-artifacts"
+
+      - name: Summarise
+        if: always()
+        shell: bash
+        run: |
+          f="$RUNNER_TEMP/lifecycle-artifacts/lifecycle-audit.json"
+          if [ -f "$f" ]; then
+            { echo '### Event lifecycle (dry run)'; echo '```json'; cat "$f"; echo; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload audit record and would-publish files
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: event-lifecycle-dry-run-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/lifecycle-artifacts/
+          if-no-files-found: ignore
+          retention-days: 30
