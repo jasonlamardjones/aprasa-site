@@ -1039,7 +1039,17 @@ async function waitForDeployment({ repo, expectedSha, token, commitTimestamp, wa
 // Step summary
 // --------------------------------------------------------------------------
 
-function renderStepSummary(report) {
+// Escape every dynamic table field, including redirect locations in observed data.
+// Replace line breaks before table rendering so an issue remains one row.
+export function markdownTableCell(value) {
+  return String(value ?? '')
+    .replaceAll('\\', '\\\\')
+    .replaceAll('|', '\\|')
+    .replace(/\r\n?|\n/g, ' ')
+    .replaceAll('`', '&#96;');
+}
+
+export function renderStepSummary(report) {
   const lines = [];
   lines.push(`## Post-publication QA — ${report.mode}`);
   lines.push('');
@@ -1047,7 +1057,7 @@ function renderStepSummary(report) {
   lines.push('');
   lines.push('| Domain | Status |');
   lines.push('| --- | --- |');
-  for (const domain of DOMAINS) lines.push(`| ${domain} | \`${report.domains[domain]}\` |`);
+  for (const domain of DOMAINS) lines.push(`| ${markdownTableCell(domain)} | ${markdownTableCell(report.domains[domain])} |`);
   lines.push('');
   lines.push(`Checks: ${report.counts.checks} (${report.counts.checks_failed} failed) · Issues: ${report.counts.issues} ` +
     `(CRITICAL ${report.counts.issues_by_severity.CRITICAL}, ERROR ${report.counts.issues_by_severity.ERROR}, ` +
@@ -1064,7 +1074,7 @@ function renderStepSummary(report) {
     lines.push('| --- | --- | --- | --- | --- |');
     for (const issue of notable) {
       const observed = typeof issue.observed === 'string' ? issue.observed : JSON.stringify(issue.observed);
-      lines.push(`| ${issue.severity} | \`${issue.code}\` | ${issue.route ?? '—'} | ${issue.resolver_class} | ${String(observed ?? '').replace(/\|/g, '\\|').replace(/\n/g, ' ').slice(0, 160)} |`);
+      lines.push(`| ${markdownTableCell(issue.severity)} | ${markdownTableCell(issue.code)} | ${markdownTableCell(issue.route ?? '—')} | ${markdownTableCell(issue.resolver_class)} | ${markdownTableCell(String(observed ?? '').slice(0, 160))} |`);
     }
     if (report.issues.filter((issue) => issue.severity !== 'INFO').length > notable.length) {
       lines.push('');
