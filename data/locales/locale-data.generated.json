@@ -43,8 +43,8 @@
       "data/locales/pt-overlay-r26-trainings-home-expansion-edtech.source.json",
       "data/locales/pt-overlay-r27-ficase-scholarship-renewals-2026-2027.source.json",
       "data/locales/pt-overlay-r28-ttd-contextual-home-return.source.json",
-      "data/locales/pt-overlay-r30-sinergia-access-disclosure.source.json",
-      "data/locales/pt-overlay-r29-sinergia-presentation-correction.source.json"
+      "data/locales/pt-overlay-r29-sinergia-access-disclosure.source.json",
+      "data/locales/pt-overlay-r30-sinergia-presentation-correction.source.json"
     ],
     "base_revision": "P03-PT-SOURCE-2026-08-25-r2",
     "delta_revision": "P03-PT-SOURCE-2026-08-25-r3",

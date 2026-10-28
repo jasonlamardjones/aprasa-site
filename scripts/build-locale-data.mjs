@@ -3325,34 +3325,34 @@ for (const row of delta28.rows) {
   };
 }
 
-// r30: Project 09 Sinergia da Matéria access disclosure, validated as strictly additive.
-// Labelled r30 because r28 was taken by the contextual Home-return package and r29 by
-// the Sinergia presentation correction below; the approved source_revision is unchanged.
+// r29: Project 09 Sinergia da Matéria access disclosure, validated as strictly additive.
+// Technical sequence per Project 09: r28 contextual Home return, r29 this disclosure,
+// r30 the presentation correction below. The approved source_revision is unchanged.
 // It is a separate source revision from the earlier Sinergia admission package, so it
 // cannot live in that package's event file (one source_revision per event file).
-const sinergiaR30 = JSON.parse(readFileSync(path.join(LOCALE_DIR, "pt-overlay-r30-sinergia-access-disclosure.source.json"), "utf8"));
-const sinergiaR30Id = "sinergia-da-materia";
-const sinergiaR30Revision = "P09-PT-SINERGIA-ACCESS-DISCLOSURE-2026-10-27-r1";
-const sinergiaR30Fields = new Set(["access_notice_heading", "access_notice_body"]);
-const sinergiaR30Seen = new Set();
-if (sinergiaR30.source_revision !== sinergiaR30Revision ||
-    sinergiaR30.package_id !== sinergiaR30Revision ||
-    sinergiaR30.record_id !== sinergiaR30Id ||
-    sinergiaR30.project_09_verdict !== "APPROVED_FOR_PUBLIC_USE" ||
-    sinergiaR30.rows?.length !== sinergiaR30Fields.size) fail("r30 Sinergia provenance or row count changed");
-for (const row of sinergiaR30.rows) {
-  const prefix = `event.${sinergiaR30Id}.`;
+const sinergiaR29 = JSON.parse(readFileSync(path.join(LOCALE_DIR, "pt-overlay-r29-sinergia-access-disclosure.source.json"), "utf8"));
+const sinergiaR29Id = "sinergia-da-materia";
+const sinergiaR29Revision = "P09-PT-SINERGIA-ACCESS-DISCLOSURE-2026-10-27-r1";
+const sinergiaR29Fields = new Set(["access_notice_heading", "access_notice_body"]);
+const sinergiaR29Seen = new Set();
+if (sinergiaR29.source_revision !== sinergiaR29Revision ||
+    sinergiaR29.package_id !== sinergiaR29Revision ||
+    sinergiaR29.record_id !== sinergiaR29Id ||
+    sinergiaR29.project_09_verdict !== "APPROVED_FOR_PUBLIC_USE" ||
+    sinergiaR29.rows?.length !== sinergiaR29Fields.size) fail("r29 Sinergia provenance or row count changed");
+for (const row of sinergiaR29.rows) {
+  const prefix = `event.${sinergiaR29Id}.`;
   const field = row.key.startsWith(prefix) ? row.key.slice(prefix.length) : "";
-  if (!sinergiaR30Fields.has(field) || sinergiaR30Seen.has(field) || seen.has(row.key) ||
-      row.record_id !== sinergiaR30Id || row.source_revision !== sinergiaR30Revision ||
+  if (!sinergiaR29Fields.has(field) || sinergiaR29Seen.has(field) || seen.has(row.key) ||
+      row.record_id !== sinergiaR29Id || row.source_revision !== sinergiaR29Revision ||
       row.scope_status !== "REQUIRED_FOR_PT_LAUNCH" ||
       row.identity_policy !== "TRANSLATE_NORMALLY" ||
       row.translation_status !== "APPROVED" ||
       typeof row.source_en !== "string" || !row.source_en.trim() ||
       typeof row.pt !== "string" || !row.pt.trim()) {
-    fail(`r30 Sinergia invalid, unapproved, or duplicate key: ${JSON.stringify(row.key)}`);
+    fail(`r29 Sinergia invalid, unapproved, or duplicate key: ${JSON.stringify(row.key)}`);
   }
-  sinergiaR30Seen.add(field);
+  sinergiaR29Seen.add(field);
   seen.add(row.key);
   keys[row.key] = {
     key: row.key, en: row.source_en, pt: row.pt,
@@ -3362,69 +3362,69 @@ for (const row of sinergiaR30.rows) {
     context_notes: row.context_notes || "", linguistic_notes: row.linguistic_notes || "",
   };
 }
-if (sinergiaR30Seen.size !== sinergiaR30Fields.size) fail("r30 Sinergia missing field");
+if (sinergiaR29Seen.size !== sinergiaR29Fields.size) fail("r29 Sinergia missing field");
 
-// r29: Project 09 Sinergia presentation correction. A bounded SOURCE CORRECTION of
+// r30: Project 09 Sinergia presentation correction. A bounded SOURCE CORRECTION of
 // four EXISTING keys (same lane as r9), applied after everything else so the
 // byte-exact old-value check sees the effective value. It adds no key, and it never
-// touches the two r30 access-disclosure keys. The superseded EN/PT/revision is kept
+// touches the two r29 access-disclosure keys. The superseded EN/PT/revision is kept
 // on the row, and an earlier source_correction (r9) is retained as its prior link.
-const sinergiaR29 = JSON.parse(readFileSync(path.join(LOCALE_DIR, "pt-overlay-r29-sinergia-presentation-correction.source.json"), "utf8"));
-const sinergiaR29Revision = "P09-PT-SINERGIA-PRESENTATION-2026-10-27-r1";
-const sinergiaR29Keys = [
+const sinergiaR30 = JSON.parse(readFileSync(path.join(LOCALE_DIR, "pt-overlay-r30-sinergia-presentation-correction.source.json"), "utf8"));
+const sinergiaR30Revision = "P09-PT-SINERGIA-PRESENTATION-2026-10-27-r1";
+const sinergiaR30Keys = [
   "event.sinergia-da-materia.detail.fact.dates.label",
   "event.sinergia-da-materia.detail.fact.dates.value_display",
   "event.sinergia-da-materia.display.status",
   "event.sinergia-da-materia.seo.description",
 ];
-const sinergiaR29Class = "OVERRIDE_EXISTING_KEYS_WITH_SOURCE_CORRECTION";
-if (sinergiaR29.package_id !== sinergiaR29Revision ||
-    sinergiaR29.source_revision !== sinergiaR29Revision ||
-    sinergiaR29.previous_revision !== sinergiaR30Revision ||
-    sinergiaR29.revision_class !== sinergiaR29Class ||
-    sinergiaR29.owning_project !== "Project 03" ||
-    sinergiaR29.record_id !== sinergiaR30Id ||
-    sinergiaR29.source_correction_authorized !== true ||
-    sinergiaR29.semantic_change !== true ||
-    sinergiaR29.superseded_source_status !== "SUPERSEDED" ||
-    sinergiaR29.review_required !== 0 || sinergiaR29.blocking_issue != null ||
-    sinergiaR29.supplied_rows_approved !== sinergiaR29Keys.length ||
-    sinergiaR29.rows?.length !== sinergiaR29Keys.length ||
-    sinergiaR29.change_control_status?.new_keys_introduced !== 0 ||
-    sinergiaR29.change_control_status?.additional_languages_authorized !== 0 ||
-    sinergiaR29.change_control_status?.unrelated_keys_touched !== 0) {
-  fail("r29 Sinergia provenance or row count changed");
+const sinergiaR30Class = "OVERRIDE_EXISTING_KEYS_WITH_SOURCE_CORRECTION";
+if (sinergiaR30.package_id !== sinergiaR30Revision ||
+    sinergiaR30.source_revision !== sinergiaR30Revision ||
+    sinergiaR30.previous_revision !== sinergiaR29Revision ||
+    sinergiaR30.revision_class !== sinergiaR30Class ||
+    sinergiaR30.owning_project !== "Project 03" ||
+    sinergiaR30.record_id !== sinergiaR29Id ||
+    sinergiaR30.source_correction_authorized !== true ||
+    sinergiaR30.semantic_change !== true ||
+    sinergiaR30.superseded_source_status !== "SUPERSEDED" ||
+    sinergiaR30.review_required !== 0 || sinergiaR30.blocking_issue != null ||
+    sinergiaR30.supplied_rows_approved !== sinergiaR30Keys.length ||
+    sinergiaR30.rows?.length !== sinergiaR30Keys.length ||
+    sinergiaR30.change_control_status?.new_keys_introduced !== 0 ||
+    sinergiaR30.change_control_status?.additional_languages_authorized !== 0 ||
+    sinergiaR30.change_control_status?.unrelated_keys_touched !== 0) {
+  fail("r30 Sinergia provenance or row count changed");
 }
-const sinergiaR29Seen = new Set();
-for (const row of sinergiaR29.rows) {
+const sinergiaR30Seen = new Set();
+for (const row of sinergiaR30.rows) {
   const existing = keys[row.key];
-  if (!sinergiaR29Keys.includes(row.key) || sinergiaR29Seen.has(row.key) || row.target_key !== row.key) {
-    fail(`r29 Sinergia invalid, duplicate, or unauthorized target: ${JSON.stringify(row.key)}`);
+  if (!sinergiaR30Keys.includes(row.key) || sinergiaR30Seen.has(row.key) || row.target_key !== row.key) {
+    fail(`r30 Sinergia invalid, duplicate, or unauthorized target: ${JSON.stringify(row.key)}`);
     continue;
   }
-  sinergiaR29Seen.add(row.key);
-  if (!existing) { fail(`r29 key "${row.key}" does not exist — a correction may not introduce keys`); continue; }
+  sinergiaR30Seen.add(row.key);
+  if (!existing) { fail(`r30 key "${row.key}" does not exist — a correction may not introduce keys`); continue; }
   if (existing.en !== row.old_en || existing.pt !== row.old_pt) {
-    fail(`r29 key "${row.key}" old EN/PT does not match the effective value`);
+    fail(`r30 key "${row.key}" old EN/PT does not match the effective value`);
   }
   if (!row.new_en?.trim() || !row.new_pt?.trim() || (row.new_en === row.old_en && row.new_pt === row.old_pt)) {
-    fail(`r29 key "${row.key}" has a missing or no-op replacement`);
+    fail(`r30 key "${row.key}" has a missing or no-op replacement`);
   }
-  if (row.record_id !== sinergiaR30Id || row.revision_class !== sinergiaR29Class ||
-      row.source_revision !== sinergiaR29Revision || row.owning_project !== "Project 03" ||
+  if (row.record_id !== sinergiaR29Id || row.revision_class !== sinergiaR30Class ||
+      row.source_revision !== sinergiaR30Revision || row.owning_project !== "Project 03" ||
       row.semantic_change !== true || row.source_correction_authorized !== true ||
       row.superseded_source_status !== "SUPERSEDED" || !row.replacement_status ||
       row.translation_status !== "APPROVED" ||
       row.scope_status !== existing.scope_status || row.identity_policy !== existing.identity_policy) {
-    fail(`r29 key "${row.key}" authorization chain or row metadata is incomplete`);
+    fail(`r30 key "${row.key}" authorization chain or row metadata is incomplete`);
   }
   const enPh = (row.new_en.match(/\{[a-zA-Z_]+\}/g) || []).sort();
   const ptPh = (row.new_pt.match(/\{[a-zA-Z_]+\}/g) || []).sort();
-  if (JSON.stringify(enPh) !== JSON.stringify(ptPh)) fail(`r29 key "${row.key}" placeholder mismatch`);
-  if (/A PRA[CÇ]A/.test(row.new_pt) || /A PRA[CÇ]A/.test(row.new_en)) fail(`r29 key "${row.key}" corrupts the A PRASA identity`);
+  if (JSON.stringify(enPh) !== JSON.stringify(ptPh)) fail(`r30 key "${row.key}" placeholder mismatch`);
+  if (/A PRA[CÇ]A/.test(row.new_pt) || /A PRA[CÇ]A/.test(row.new_en)) fail(`r30 key "${row.key}" corrupts the A PRASA identity`);
   for (const text of [row.new_en, row.new_pt]) {
     if (/\b(\d{1,2})\s+(de\s+)?(November|novembro)\b/i.test(text) || /\b(November|novembro)\s+\d{1,2}\b/i.test(text)) {
-      fail(`r29 key "${row.key}" infers an exact November day: ${JSON.stringify(text)}`);
+      fail(`r30 key "${row.key}" infers an exact November day: ${JSON.stringify(text)}`);
     }
   }
   keys[row.key] = {
@@ -3447,7 +3447,7 @@ for (const row of sinergiaR29.rows) {
     },
   };
 }
-if (sinergiaR29Seen.size !== sinergiaR29Keys.length) fail("r29 Sinergia missing a target key");
+if (sinergiaR30Seen.size !== sinergiaR30Keys.length) fail("r30 Sinergia missing a target key");
 
 // Aggregate tallies, read off the finished key map that is about to be written.
 const assembled = (() => {
@@ -3521,8 +3521,8 @@ const output = {
       "data/locales/pt-overlay-r26-trainings-home-expansion-edtech.source.json",
       "data/locales/pt-overlay-r27-ficase-scholarship-renewals-2026-2027.source.json",
       "data/locales/pt-overlay-r28-ttd-contextual-home-return.source.json",
-      "data/locales/pt-overlay-r30-sinergia-access-disclosure.source.json",
-      "data/locales/pt-overlay-r29-sinergia-presentation-correction.source.json",
+      "data/locales/pt-overlay-r29-sinergia-access-disclosure.source.json",
+      "data/locales/pt-overlay-r30-sinergia-presentation-correction.source.json",
     ],
     base_revision: pkg.source_revision,
     delta_revision: delta.source_revision,
