@@ -22,6 +22,7 @@ import {
   HOME_PREVIEW_LIMIT,
   HUB_ROUTE,
   collectionRecords,
+  isPubliclyPublishable,
   homePreviewRecords,
   unknownHomePreviewIds,
   hubCanonical,
@@ -231,7 +232,9 @@ for (const locale of THINGS_TO_DO_HUB_PUBLIC ? ['en', 'pt'] : []) {
   // REVIEW_DUE preservation: a review-due record stays a normal public card.
   // No badge, no past-event label, and no new REVIEW_DUE copy is introduced.
   for (const record of records) {
-    if (!isReviewDue(record, asOf)) continue;
+    // Only a PUBLISHED review-due record is a hub member; a withdrawn one is
+    // excluded from collection membership by design.
+    if (!isReviewDue(record, asOf) || !isPubliclyPublishable(record)) continue;
     if (!order.includes(record.id)) errors.push(`${relative}: review-due record ${record.id} was dropped from the hub (review-due is not expired)`);
   }
   if (html.includes(t('ui.past_event', locale))) {
