@@ -6,7 +6,7 @@
 // logic — duplicating this in two places was exactly the kind of gap that
 // let a generated-content regression slip past validation before.
 
-import { hasKey } from './locale.mjs';
+import { hasKey, loadLocaleData } from './locale.mjs';
 
 export function slugifyFactLabel(label) {
   return label
@@ -24,6 +24,14 @@ export function factKeyBase(recordId, fact) {
   for (const candidate of [stripped, full]) {
     if (hasKey(`event.${recordId}.detail.fact.${candidate}.label`)) return candidate;
   }
+  // A governed correction may replace a fact's label text while its key stays
+  // fixed (the key names the fact, not its wording). Resolve such a label by the
+  // governed EN value of exactly one of this record's fact-label keys.
+  const prefix = `event.${recordId}.detail.fact.`;
+  const matches = Object.entries(loadLocaleData().keys)
+    .filter(([key, row]) => key.startsWith(prefix) && key.endsWith('.label') && row.en === fact.label)
+    .map(([key]) => key.slice(prefix.length, -'.label'.length));
+  if (matches.length === 1) return matches[0];
   throw new Error(`${recordId}: no governed locale key found for fact label "${fact.label}"`);
 }
 

@@ -31,8 +31,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { t } from './lib/locale.mjs';
-import { THINGS_TO_DO_HUB_PUBLIC, hubOutputPath, hubCanonical, homePreviewRecords, isPubliclyPublishable } from './lib/things-to-do-collection.mjs';
-import { isPubliclyCurrent } from './lib/things-to-do-currentness.mjs';
+import { THINGS_TO_DO_HUB_PUBLIC, hubOutputPath, hubCanonical, homePreviewRecords, isPubliclyPublishable, collectionRecords } from './lib/things-to-do-collection.mjs';
+import { isPubliclyCurrent, currentnessState, REVIEW_DUE } from './lib/things-to-do-currentness.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -236,7 +236,8 @@ function cardFor(html, id) {
  */
 function monthPrecisionIds(dir) {
   const records = JSON.parse(read(dir, EVENTS)).records;
-  return records.filter((record) => record.end_precision === 'month').map((record) => record.id);
+  // Published month-precision records only: a withdrawn record is not a hub member.
+  return records.filter((record) => record.end_precision === 'month' && isPubliclyPublishable(record)).map((record) => record.id);
 }
 
 // ---------------------------------------------------------------------------
@@ -270,6 +271,13 @@ function monthPrecisionIds(dir) {
     // selection cannot shrink silently through a broken eligibility rule.
     for (const id of droppedSelected) {
       const record = records.find((r) => r.id === id);
+      // A selected record may also leave Home because it is WITHDRAWN (a
+      // publication decision, not a currentness one), which is not an expiry.
+      if (record?.publication_state === 'withdrawn') {
+        check(`dropped selected record ${id} left Home because it is withdrawn`,
+          !enHome.includes(id) && !ptHome.includes(id), `publication_state=${record.publication_state}`);
+        continue;
+      }
       check(`dropped selected record ${id} has a day-precision end_date before ${asOf}`,
         Boolean(record?.end_date) && record.end_precision !== 'month' && record.end_date < asOf,
         `end_date=${record?.end_date} end_precision=${record?.end_precision}`);
@@ -322,6 +330,14 @@ function monthPrecisionIds(dir) {
   const asOf = ALL_SELECTED_CURRENT_AS_OF;
   const dir = sandbox();
   try {
+    // Fixture only: publish every approved record in the sandbox copy so the
+    // all-five-selected case stays exercised while a selected record is withdrawn
+    // in the committed data. The repository's own data is never written.
+    const fixtureData = JSON.parse(read(dir, EVENTS));
+    for (const record of fixtureData.records) {
+      if (APPROVED_HOME_PREVIEW.includes(record.id)) record.publication_state = 'published';
+    }
+    fs.writeFileSync(path.join(dir, EVENTS), JSON.stringify(fixtureData, null, 2) + '\n');
     generate(dir, asOf);
     const records = JSON.parse(read(dir, EVENTS)).records;
     check(`fixture: every approved record is published and current at ${asOf}`,
@@ -408,7 +424,10 @@ function monthPrecisionIds(dir) {
     generate(dir, asOf);
     for (const [locale, file] of [['EN', EN_HUB], ['PT', PT_HUB]]) {
       const html = read(dir, file);
-      check(`${locale} hub keeps the review-due record`, cardIds(html).includes('sinergia-da-materia'), `got [${cardIds(html)}]`);
+      // The published review-due record at this boundary is 50 Anos; withdrawn
+      // Sinergia is excluded from collection membership.
+      check(`${locale} hub keeps the review-due record`, cardIds(html).includes('50-anos-de-memoria-criacao-e-resistencia'), `got [${cardIds(html)}]`);
+      check(`${locale} hub excludes withdrawn Sinergia`, !cardIds(html).includes('sinergia-da-materia'), `got [${cardIds(html)}]`);
       check(`${locale} hub does not label a review-due record a past event`,
         !html.includes('Past event') && !html.includes('Evento já realizado'));
       check(`${locale} hub introduces no REVIEW_DUE badge or copy`, !/REVIEW.?DUE/i.test(html));
@@ -787,16 +806,63 @@ for (const state of ['expired', 'withdrawn', 'draft']) {
     check(`${state}: the unselected eligible record is NOT promoted into the freed slot`,
       !enHome.includes('50-anos-de-memoria-criacao-e-resistencia'), `home=[${enHome}]`);
 
-    // Only "expired" removes a record from the COLLECTION. withdrawn/draft are
-    // publication decisions, not currentness ones, so the hub's own membership
-    // is deliberately left alone by this repair -- asserted so that a later
-    // broadening of collectionRecords() is a visible decision, not a silent one.
+    // Collection membership requires BOTH axes: expired leaves on currentness,
+    // withdrawn and draft leave on the publication whitelist (PR #143 review).
     const onHub = cardIds(read(dir, EN_HUB)).includes('taverna-live-music');
-    check(`${state}: collection membership follows currentness only, as before`,
-      onHub === (state !== 'expired'), `onHub=${onHub}`);
+    check(`${state}: a record in this state is excluded from collection membership`,
+      onHub === false, `onHub=${onHub}`);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
+}
+
+// ---------------------------------------------------------------------------
+// N2. collectionRecords() requires BOTH publication and currentness.
+//
+// Pure resolver cases on synthetic records, then the committed corpus: a
+// withdrawn record never enters the (dormant) collection or Home, a published
+// review-due record does, and unrelated published records are unaffected.
+// ---------------------------------------------------------------------------
+{
+  const AS_OF = '2026-10-27';
+  const base = { kind: 'dated-event', end_precision: 'day', start_date: '2026-10-01', end_date: '2026-12-31' };
+  const fixture = [
+    { ...base, id: 'f-published-current', publication_state: 'published' },
+    { ...base, id: 'f-withdrawn-current', publication_state: 'withdrawn' },
+    { ...base, id: 'f-draft-current', publication_state: 'draft' },
+    { ...base, id: 'f-expired-state', publication_state: 'expired' },
+    { ...base, id: 'f-published-past', publication_state: 'published', end_date: '2026-10-01' },
+  ];
+  const members = collectionRecords(fixture, AS_OF).map((record) => record.id);
+  check('collection: published and current is eligible', members.includes('f-published-current'), `members=[${members}]`);
+  check('collection: withdrawn and current is excluded', !members.includes('f-withdrawn-current'), `members=[${members}]`);
+  check('collection: draft and current is excluded', !members.includes('f-draft-current'), `members=[${members}]`);
+  check('collection: expired (state) is excluded', !members.includes('f-expired-state'), `members=[${members}]`);
+  check('collection: published but past its end date is excluded', !members.includes('f-published-past'), `members=[${members}]`);
+  check('collection: exactly the published, current record is a member',
+    JSON.stringify(members) === JSON.stringify(['f-published-current']), `members=[${members}]`);
+
+  const corpus = JSON.parse(fs.readFileSync(path.join(ROOT, EVENTS), 'utf8')).records;
+  const collection = collectionRecords(corpus, AS_OF).map((record) => record.id);
+  check('corpus: withdrawn Sinergia is excluded from collection membership',
+    corpus.find((r) => r.id === 'sinergia-da-materia')?.publication_state === 'withdrawn'
+      && !collection.includes('sinergia-da-materia'), `collection=[${collection}]`);
+  check('corpus: withdrawn Sinergia is excluded from the Home preview',
+    !homePreviewRecords(corpus, AS_OF).map((r) => r.id).includes('sinergia-da-materia'));
+  const unrelatedPublished = corpus.filter((r) => r.publication_state === 'published' && isPubliclyCurrent(r, AS_OF)).map((r) => r.id);
+  check('corpus: every unrelated published, current record stays a member',
+    unrelatedPublished.length > 0 && unrelatedPublished.every((id) => collection.includes(id))
+      && collection.every((id) => unrelatedPublished.includes(id)), `collection=[${collection}] published-current=[${unrelatedPublished}]`);
+  const fifty = corpus.find((r) => r.id === '50-anos-de-memoria-criacao-e-resistencia');
+  check('corpus: published 50 Anos stays a member and is REVIEW-DUE on 2026-11-01',
+    fifty?.publication_state === 'published' && collectionRecords(corpus, '2026-11-01').some((r) => r.id === fifty.id)
+      && currentnessState(fifty, '2026-11-01') === REVIEW_DUE);
+  // The detail pages of a withdrawn record are generated from the canonical
+  // record, not from collection membership, and must stay in place.
+  for (const route of ['things-to-do/sinergia-da-materia/index.html', 'pt/things-to-do/sinergia-da-materia/index.html']) {
+    check(`corpus: withdrawn Sinergia detail page is retained (${route})`, fs.existsSync(path.join(ROOT, route)));
+  }
+  check('the collection hub stays unpublished', THINGS_TO_DO_HUB_PUBLIC === false);
 }
 
 // The positive control for the same rule: published AND current IS visible.
@@ -832,6 +898,64 @@ for (const state of ['expired', 'withdrawn', 'draft']) {
     check('the hub validator rejects a selected id that matches no record',
       result.status !== 0 && /HOME_PREVIEW_IDS selects "no-such-record"/.test(result.out),
       `exit ${result.status}: ${String(result.out).trim().split('\n').slice(-2).join(' / ')}`);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// N+2. Every published detail page carries the independent contextual return
+// to the Things to Do section on its OWN locale's Home (Project 03
+// P03-TTD-CONTEXTUAL-HOME-RETURN-2026-10-27-D01; Project 09 revision
+// P09-PT-TTD-CONTEXTUAL-HOME-RETURN-2026-10-27-r1).
+//
+// The control is not the collection breadcrumb: it must be present while the
+// hub is dormant AND after it is reactivated, must never reuse
+// things.shared.back_to_things, and must name itself through its visible text
+// only (no aria-label). Asserted over the committed pages, then again over a
+// sandbox that reactivates the hub.
+// ---------------------------------------------------------------------------
+{
+  const HOME_RETURN = /<p class="home-return"><a href="([^"]*)">([^<]*)<\/a><\/p>/g;
+  const detailPages = (root) => ['', 'pt/'].flatMap((prefix) =>
+    fs.readdirSync(path.join(root, prefix, 'things-to-do'), { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => `${prefix}things-to-do/${entry.name}/index.html`));
+
+  function assertHomeReturn(root, label) {
+    const pages = detailPages(root);
+    check(`${label}: 30 detail pages are covered (15 EN + 15 PT)`, pages.length === 30, String(pages.length));
+    const bad = [];
+    for (const rel of pages) {
+      const locale = rel.startsWith('pt/') ? 'pt' : 'en';
+      const html = fs.readFileSync(path.join(root, rel), 'utf8');
+      const links = [...html.matchAll(HOME_RETURN)];
+      if (links.length !== 1) { bad.push(`${rel}: ${links.length} contextual return links`); continue; }
+      const [whole, href, text] = links[0];
+      const target = path.posix.resolve('/', path.posix.dirname(rel), href.split('#')[0]);
+      const expected = locale === 'pt' ? '/pt' : '';
+      if (text !== t('things.detail.home_section_return', locale)) bad.push(`${rel}: label ${JSON.stringify(text)}`);
+      if (href.split('#')[1] !== 'things-to-do' || target.replace(/\/$/, '') !== expected) bad.push(`${rel}: href ${href} resolves to ${target}`);
+      if (/aria-label/.test(whole)) bad.push(`${rel}: contextual return carries an aria-label`);
+      if (text === t('things.shared.back_to_things', locale)) bad.push(`${rel}: reuses the collection label`);
+    }
+    check(`${label}: each detail page has exactly one correct same-locale Home return`, bad.length === 0, bad.join('; '));
+  }
+
+  assertHomeReturn(ROOT, 'committed (hub dormant)');
+  check('the contextual-return strings are the approved EN/PT pair',
+    t('things.detail.home_section_return', 'en') === 'Go to Things to Do on the homepage' &&
+    t('things.detail.home_section_return', 'pt') === 'Ir para O que fazer na página inicial');
+  check('the collection label key is untouched',
+    t('things.shared.back_to_things', 'en') === '← Things to Do' && t('things.shared.back_to_things', 'pt') === '← O que fazer');
+
+  const asOf = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'things-to-do-currentness.json'), 'utf8')).as_of;
+  const dir = sandbox();
+  try {
+    generate(dir, asOf);
+    assertHomeReturn(dir, 'hypothetical active hub');
+    const missing = detailPages(dir).filter((rel) => !fs.readFileSync(path.join(dir, rel), 'utf8').includes('<nav class="breadcrumb"'));
+    check('the reactivated hub still restores the separate collection breadcrumb on every detail page', missing.length === 0, missing.join(', '));
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

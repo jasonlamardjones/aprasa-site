@@ -3242,6 +3242,213 @@ for (const row of haliotisPackage.rows) {
   };
 }
 
+// r27: Project 09 final EN/PT FICASE renewal package, validated as strictly additive.
+const ficaseR27 = JSON.parse(readFileSync(path.join(LOCALE_DIR, "pt-overlay-r27-ficase-scholarship-renewals-2026-2027.source.json"), "utf8"));
+const ficaseR27Id = "ficase-scholarship-renewals-2026-2027";
+const ficaseR27Revision = "P09-PT-TTO-FICASE-RENEWALS-2026-10-26-r1";
+const ficaseR27Fields = new Set(["title","status","meta","body","how_to_apply","requirements","good","action","checked","detail_checked"]);
+const ficaseR27Seen = new Set();
+if (ficaseR27.source_revision !== ficaseR27Revision ||
+    ficaseR27.record_id !== ficaseR27Id ||
+    ficaseR27.project05_resource_id !== "CV-029" ||
+    ficaseR27.project_09_verdict !== "APPROVED_FOR_PUBLIC_USE" ||
+    ficaseR27.rows?.length !== ficaseR27Fields.size) fail("r27 FICASE provenance or row count changed");
+for (const row of ficaseR27.rows) {
+  const prefix = `training.record.${ficaseR27Id}.`;
+  const field = row.key.startsWith(prefix) ? row.key.slice(prefix.length) : "";
+  if (!ficaseR27Fields.has(field) || ficaseR27Seen.has(field) || seen.has(row.key) ||
+      row.record_id !== ficaseR27Id || row.source_revision !== ficaseR27Revision ||
+      row.scope_status !== "REQUIRED_FOR_PT_LAUNCH" ||
+      row.translation_status !== "APPROVED" ||
+      typeof row.source_en !== "string" || !row.source_en.trim() ||
+      typeof row.pt !== "string" || !row.pt.trim()) {
+    fail(`r27 FICASE invalid, unapproved, or duplicate key: ${JSON.stringify(row.key)}`);
+  }
+  ficaseR27Seen.add(field);
+  seen.add(row.key);
+  keys[row.key] = {
+    key: row.key, en: row.source_en, pt: row.pt,
+    scope_status: row.scope_status, identity_policy: row.identity_policy,
+    record_id: row.record_id, translation_status: row.translation_status,
+    source_revision: row.source_revision,
+    context_notes: row.context_notes || "", linguistic_notes: row.linguistic_notes || "",
+  };
+}
+if (ficaseR27Seen.size !== ficaseR27Fields.size) fail("r27 FICASE missing field");
+
+// r28: Things-to-Do detail contextual Home return (Project 03 semantic authority
+// P03-TTD-CONTEXTUAL-HOME-RETURN-2026-10-27-D01; Project 09 linguistic revision
+// P09-PT-TTD-CONTEXTUAL-HOME-RETURN-2026-10-27-r1). Exactly one new key, pinned
+// to the approved EN/PT strings. Strictly additive: it may never reopen an
+// existing key (notably things.shared.back_to_things). Registered before the
+// aggregate tally below so the counts and the frozen key map include it.
+const R28_KEY = "things.detail.home_section_return";
+const R28_REVISION = "P09-PT-TTD-CONTEXTUAL-HOME-RETURN-2026-10-27-r1";
+const delta28 = JSON.parse(readFileSync(path.join(LOCALE_DIR, "pt-overlay-r28-ttd-contextual-home-return.source.json"), "utf8"));
+for (const [field, expected] of Object.entries({
+  package_id: "aprasa-pt-ttd-contextual-home-return-r28",
+  revision_class: "ADDITIVE_NEW_KEYS",
+  source_revision: R28_REVISION,
+  previous_revision: "P09-PT-TTO-FICASE-RENEWALS-2026-10-26-r1",
+  semantic_authority_id: "P03-TTD-CONTEXTUAL-HOME-RETURN-2026-10-27-D01",
+  project_09_revision_id: R28_REVISION,
+  project_09_status: "approved",
+  project_09_verdict: "APPROVED_FOR_PUBLIC_USE",
+  target_language: "pt",
+})) {
+  if (delta28[field] !== expected) fail(`r28 ${field} mismatch: got ${JSON.stringify(delta28[field])}, expected ${JSON.stringify(expected)}`);
+}
+if (delta28.rows?.length !== 1 || delta28.supplied_rows_approved !== 1 || delta28.review_required !== 0 ||
+    delta28.missing_or_unaccounted_row_count !== 0 || delta28.source_english_changed !== false ||
+    delta28.semantic_change !== false || delta28.localization_architecture_reopened !== false ||
+    delta28.change_control_status?.new_keys_introduced !== 1 ||
+    delta28.change_control_status?.existing_keys_overridden !== 0 ||
+    delta28.change_control_status?.lifecycle_or_publication_state_modified !== 0) {
+  fail("r28 provenance, change-control or row count changed");
+}
+for (const row of delta28.rows) {
+  if (row.key !== R28_KEY) fail(`r28 key "${row.key}" is outside the single authorized key ${R28_KEY}`);
+  if (seen.has(row.key) || keys[row.key]) fail(`r28 key "${row.key}" collides with an existing key — r28 must be strictly additive`);
+  seen.add(row.key);
+  if (row.source_revision !== R28_REVISION) fail(`r28 ${row.key} source_revision mismatch`);
+  if (row.translation_status !== "APPROVED") fail(`r28 key "${row.key}" is not APPROVED (status: ${row.translation_status})`);
+  if (row.scope_status !== "REQUIRED_FOR_PT_LAUNCH") fail(`r28 key "${row.key}" scope_status must be REQUIRED_FOR_PT_LAUNCH`);
+  if (row.record_id != null) fail(`r28 key "${row.key}" must not be record-scoped`);
+  if (row.source_en !== "Go to Things to Do on the homepage") fail(`r28 key "${row.key}" source_en must be the exact approved EN copy`);
+  if (row.pt !== "Ir para O que fazer na página inicial") fail(`r28 key "${row.key}" pt must be the exact approved PT copy`);
+  keys[row.key] = {
+    key: row.key, en: row.source_en, pt: row.pt,
+    scope_status: row.scope_status, identity_policy: row.identity_policy,
+    record_id: row.record_id, translation_status: row.translation_status,
+    source_revision: row.source_revision,
+    context_notes: row.context_notes || "", linguistic_notes: row.linguistic_notes || "",
+  };
+}
+
+// r29: Project 09 Sinergia da Matéria access disclosure, validated as strictly additive.
+// Technical sequence per Project 09: r28 contextual Home return, r29 this disclosure,
+// r30 the presentation correction below. The approved source_revision is unchanged.
+// It is a separate source revision from the earlier Sinergia admission package, so it
+// cannot live in that package's event file (one source_revision per event file).
+const sinergiaR29 = JSON.parse(readFileSync(path.join(LOCALE_DIR, "pt-overlay-r29-sinergia-access-disclosure.source.json"), "utf8"));
+const sinergiaR29Id = "sinergia-da-materia";
+const sinergiaR29Revision = "P09-PT-SINERGIA-ACCESS-DISCLOSURE-2026-10-27-r1";
+const sinergiaR29Fields = new Set(["access_notice_heading", "access_notice_body"]);
+const sinergiaR29Seen = new Set();
+if (sinergiaR29.source_revision !== sinergiaR29Revision ||
+    sinergiaR29.package_id !== sinergiaR29Revision ||
+    sinergiaR29.record_id !== sinergiaR29Id ||
+    sinergiaR29.project_09_verdict !== "APPROVED_FOR_PUBLIC_USE" ||
+    sinergiaR29.rows?.length !== sinergiaR29Fields.size) fail("r29 Sinergia provenance or row count changed");
+for (const row of sinergiaR29.rows) {
+  const prefix = `event.${sinergiaR29Id}.`;
+  const field = row.key.startsWith(prefix) ? row.key.slice(prefix.length) : "";
+  if (!sinergiaR29Fields.has(field) || sinergiaR29Seen.has(field) || seen.has(row.key) ||
+      row.record_id !== sinergiaR29Id || row.source_revision !== sinergiaR29Revision ||
+      row.scope_status !== "REQUIRED_FOR_PT_LAUNCH" ||
+      row.identity_policy !== "TRANSLATE_NORMALLY" ||
+      row.translation_status !== "APPROVED" ||
+      typeof row.source_en !== "string" || !row.source_en.trim() ||
+      typeof row.pt !== "string" || !row.pt.trim()) {
+    fail(`r29 Sinergia invalid, unapproved, or duplicate key: ${JSON.stringify(row.key)}`);
+  }
+  sinergiaR29Seen.add(field);
+  seen.add(row.key);
+  keys[row.key] = {
+    key: row.key, en: row.source_en, pt: row.pt,
+    scope_status: row.scope_status, identity_policy: row.identity_policy,
+    record_id: row.record_id, translation_status: row.translation_status,
+    source_revision: row.source_revision,
+    context_notes: row.context_notes || "", linguistic_notes: row.linguistic_notes || "",
+  };
+}
+if (sinergiaR29Seen.size !== sinergiaR29Fields.size) fail("r29 Sinergia missing field");
+
+// r30: Project 09 Sinergia presentation correction. A bounded SOURCE CORRECTION of
+// four EXISTING keys (same lane as r9), applied after everything else so the
+// byte-exact old-value check sees the effective value. It adds no key, and it never
+// touches the two r29 access-disclosure keys. The superseded EN/PT/revision is kept
+// on the row, and an earlier source_correction (r9) is retained as its prior link.
+const sinergiaR30 = JSON.parse(readFileSync(path.join(LOCALE_DIR, "pt-overlay-r30-sinergia-presentation-correction.source.json"), "utf8"));
+const sinergiaR30Revision = "P09-PT-SINERGIA-PRESENTATION-2026-10-27-r1";
+const sinergiaR30Keys = [
+  "event.sinergia-da-materia.detail.fact.dates.label",
+  "event.sinergia-da-materia.detail.fact.dates.value_display",
+  "event.sinergia-da-materia.display.status",
+  "event.sinergia-da-materia.seo.description",
+];
+const sinergiaR30Class = "OVERRIDE_EXISTING_KEYS_WITH_SOURCE_CORRECTION";
+if (sinergiaR30.package_id !== sinergiaR30Revision ||
+    sinergiaR30.source_revision !== sinergiaR30Revision ||
+    sinergiaR30.previous_revision !== sinergiaR29Revision ||
+    sinergiaR30.revision_class !== sinergiaR30Class ||
+    sinergiaR30.owning_project !== "Project 03" ||
+    sinergiaR30.record_id !== sinergiaR29Id ||
+    sinergiaR30.source_correction_authorized !== true ||
+    sinergiaR30.semantic_change !== true ||
+    sinergiaR30.superseded_source_status !== "SUPERSEDED" ||
+    sinergiaR30.review_required !== 0 || sinergiaR30.blocking_issue != null ||
+    sinergiaR30.supplied_rows_approved !== sinergiaR30Keys.length ||
+    sinergiaR30.rows?.length !== sinergiaR30Keys.length ||
+    sinergiaR30.change_control_status?.new_keys_introduced !== 0 ||
+    sinergiaR30.change_control_status?.additional_languages_authorized !== 0 ||
+    sinergiaR30.change_control_status?.unrelated_keys_touched !== 0) {
+  fail("r30 Sinergia provenance or row count changed");
+}
+const sinergiaR30Seen = new Set();
+for (const row of sinergiaR30.rows) {
+  const existing = keys[row.key];
+  if (!sinergiaR30Keys.includes(row.key) || sinergiaR30Seen.has(row.key) || row.target_key !== row.key) {
+    fail(`r30 Sinergia invalid, duplicate, or unauthorized target: ${JSON.stringify(row.key)}`);
+    continue;
+  }
+  sinergiaR30Seen.add(row.key);
+  if (!existing) { fail(`r30 key "${row.key}" does not exist — a correction may not introduce keys`); continue; }
+  if (existing.en !== row.old_en || existing.pt !== row.old_pt) {
+    fail(`r30 key "${row.key}" old EN/PT does not match the effective value`);
+  }
+  if (!row.new_en?.trim() || !row.new_pt?.trim() || (row.new_en === row.old_en && row.new_pt === row.old_pt)) {
+    fail(`r30 key "${row.key}" has a missing or no-op replacement`);
+  }
+  if (row.record_id !== sinergiaR29Id || row.revision_class !== sinergiaR30Class ||
+      row.source_revision !== sinergiaR30Revision || row.owning_project !== "Project 03" ||
+      row.semantic_change !== true || row.source_correction_authorized !== true ||
+      row.superseded_source_status !== "SUPERSEDED" || !row.replacement_status ||
+      row.translation_status !== "APPROVED" ||
+      row.scope_status !== existing.scope_status || row.identity_policy !== existing.identity_policy) {
+    fail(`r30 key "${row.key}" authorization chain or row metadata is incomplete`);
+  }
+  const enPh = (row.new_en.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+  const ptPh = (row.new_pt.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+  if (JSON.stringify(enPh) !== JSON.stringify(ptPh)) fail(`r30 key "${row.key}" placeholder mismatch`);
+  if (/A PRA[CÇ]A/.test(row.new_pt) || /A PRA[CÇ]A/.test(row.new_en)) fail(`r30 key "${row.key}" corrupts the A PRASA identity`);
+  for (const text of [row.new_en, row.new_pt]) {
+    if (/\b(\d{1,2})\s+(de\s+)?(November|novembro)\b/i.test(text) || /\b(November|novembro)\s+\d{1,2}\b/i.test(text)) {
+      fail(`r30 key "${row.key}" infers an exact November day: ${JSON.stringify(text)}`);
+    }
+  }
+  keys[row.key] = {
+    ...existing,
+    en: row.new_en,
+    pt: row.new_pt,
+    source_revision: row.source_revision,
+    context_notes: row.context_notes || existing.context_notes || "",
+    linguistic_notes: row.linguistic_notes || existing.linguistic_notes || "",
+    source_correction: {
+      revision_class: row.revision_class,
+      owning_project: row.owning_project,
+      superseded_source_status: row.superseded_source_status,
+      replacement_status: row.replacement_status,
+      semantic_change: true,
+      superseded_en: row.old_en,
+      superseded_pt: row.old_pt,
+      superseded_source_revision: existing.source_revision,
+      ...(existing.source_correction ? { prior_source_correction: existing.source_correction } : {}),
+    },
+  };
+}
+if (sinergiaR30Seen.size !== sinergiaR30Keys.length) fail("r30 Sinergia missing a target key");
+
 // Aggregate tallies, read off the finished key map that is about to be written.
 const assembled = (() => {
   const values = Object.values(keys);
@@ -3312,6 +3519,10 @@ const output = {
       "data/locales/pt-overlay-r23-mindelo-fragata-selected-branches.source.json",
       "data/locales/pt-overlay-r25-trainings-home-expansion-timbuktoo.source.json",
       "data/locales/pt-overlay-r26-trainings-home-expansion-edtech.source.json",
+      "data/locales/pt-overlay-r27-ficase-scholarship-renewals-2026-2027.source.json",
+      "data/locales/pt-overlay-r28-ttd-contextual-home-return.source.json",
+      "data/locales/pt-overlay-r29-sinergia-access-disclosure.source.json",
+      "data/locales/pt-overlay-r30-sinergia-presentation-correction.source.json",
     ],
     base_revision: pkg.source_revision,
     delta_revision: delta.source_revision,
@@ -3405,6 +3616,14 @@ const output = {
     delta26_project_09_package_id: delta26.project_09_package_id,
     delta26_project_09_revision_id: delta26.project_09_revision_id,
     delta26_lifecycle_disclosure_policy: delta26.lifecycle_disclosure_policy,
+    delta28_package_id: delta28.package_id,
+    delta28_revision: delta28.source_revision,
+    delta28_revision_class: delta28.revision_class,
+    delta28_row_count: delta28.rows.length,
+    delta28_semantic_authority_id: delta28.semantic_authority_id,
+    delta28_project_09_status: delta28.project_09_status,
+    delta28_project_09_verdict: delta28.project_09_verdict,
+    delta28_project_09_revision_id: delta28.project_09_revision_id,
     delta9_superseding_ruling: delta9.superseding_ruling,
     delta9_owning_project: delta9.owning_project,
     event_delta_packages: eventDeltaPackages,
@@ -3454,6 +3673,7 @@ const output = {
     r21_delta_rows: delta21.rows.length,
     r22_delta_rows: delta22.rows.length,
     r23_delta_rows: delta23.rows.length,
+    r28_delta_rows: delta28.rows.length,
     r10_renamed_rows: r10Renamed.length,
     governed_override_rows: governedOverrideCount,
   },

@@ -4,12 +4,16 @@ import { fileURLToPath } from 'node:url';
 import { t, hasKey } from './lib/locale.mjs';
 import { renderLangSwitchNote } from './lib/lang-switch-note.mjs';
 import { bodyParagraphs, factKeyBase } from './lib/things-to-do-keys.mjs';
-import { currentnessState, isExpired as recordIsExpired, EXPIRED, REVIEW_DUE } from './lib/things-to-do-currentness.mjs';
+import { EXPIRED, REVIEW_DUE } from './lib/things-to-do-currentness.mjs';
+// Temporal state comes from the parity-gated universal resolver; a
+// universal/incumbent disagreement or malformed date stops generation.
+import { currentnessState, isExpired as recordIsExpired } from './lib/things-to-do-universal-resolver.mjs';
 import { isRecurringVenue, RECURRING_VENUE_SCHEMA_TYPE } from './lib/things-to-do-kinds.mjs';
 import { THINGS_TO_DO_HUB_PUBLIC, collectionRecords, homePreviewIds, hubOutputPath, hubCanonical } from './lib/things-to-do-collection.mjs';
 import { LAUNCHER_SURFACE_KEYS, resolveRuntimeStrings, renderRuntimeStringsBlock } from './lib/runtime-strings.mjs';
 import { renderContactConfigBlock } from './lib/contact-channels.mjs';
 import { validateSourceUnion } from './lib/event-publication-contract.mjs';
+import { parseFactValueHtml, escapeFactHtmlText } from './lib/fact-value-html.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(scriptDir, '..');
@@ -107,9 +111,9 @@ function mediaAltOf(record) {
 // if the PT text doesn't contain the same anchor visible-text in the same
 // order, so this never silently mangles a link.
 function localizeFactValueHtml(enHtml, ptDisplay, record, fact) {
-  const anchors = enHtml.match(/<a\b[^>]*>.*?<\/a>/gs) || [];
+  const anchors = parseFactValueHtml(enHtml);
   if (anchors.length === 0) return escapeHtml(ptDisplay);
-  const anchorTexts = anchors.map((a) => a.replace(/<[^>]+>/g, ''));
+  const anchorTexts = anchors.map((anchor) => anchor.text);
   let rest = ptDisplay;
   const segments = [];
   for (const text of anchorTexts) {
@@ -125,10 +129,27 @@ function localizeFactValueHtml(enHtml, ptDisplay, record, fact) {
   segments.push(rest);
   let result = '';
   anchors.forEach((anchor, i) => {
-    result += escapeHtml(segments[i]) + anchor;
+    result += escapeHtml(segments[i]) + renderApprovedFactHtml(anchor.html);
   });
   result += escapeHtml(segments[anchors.length]);
   return result;
+}
+
+// Reconstruct validated link attributes, but escape text in HTML text-node
+// context without double-encoding existing character references. The parser
+// rejects unapproved markup and URLs before any text reaches this function.
+// This preserves encoded-text semantics while keeping link structure bounded.
+function renderApprovedFactHtml(value) {
+  let result = '';
+  let cursor = 0;
+  for (const anchor of parseFactValueHtml(value)) {
+    result += escapeFactHtmlText(value.slice(cursor, anchor.start));
+    result += `<a href="${escapeHtml(anchor.href)}"`;
+    if (anchor.target) result += ' target="_blank" rel="noopener noreferrer"';
+    result += `>${escapeFactHtmlText(anchor.text)}</a>`;
+    cursor = anchor.end;
+  }
+  return result + escapeFactHtmlText(value.slice(cursor));
 }
 
 function localeRoutePrefix() {
@@ -149,6 +170,7 @@ const CHROME = {
   brandAria: t('home.brand_aria', locale),
   breadcrumbAria: t('things.shared.breadcrumb_aria', locale),
   backToThings: t('things.shared.back_to_things', locale),
+  homeSectionReturn: t('things.detail.home_section_return', locale),
   detailsHeading: t('things.shared.details_heading', locale),
   goodToKnowHeading: t('things.shared.good_to_know_heading', locale),
   pastEvent: t('ui.past_event', locale),
@@ -254,7 +276,7 @@ function localizeRecord(record) {
   const facts = (record.detail?.facts || []).map((fact) => {
     if (locale === 'en') {
       return fact.value_html
-        ? { label: fact.label, value_html: fact.value_html }
+        ? { label: fact.label, value_html: renderApprovedFactHtml(fact.value_html) }
         : { label: fact.label, value: fact.value };
     }
     const base = factKeyBase(record.id, fact);
@@ -276,6 +298,13 @@ function localizeRecord(record) {
     cardActionLabel: record.card_action ? evt(record, 'card_action.label', record.card_action.label) : null,
     goodToKnow: record.detail?.good_to_know ? evt(record, 'detail.good_to_know', record.detail.good_to_know) : null,
     detailBody: evt(record, 'detail.body', record.detail?.body),
+    // Governed access disclosure for a WITHDRAWN record whose present
+    // availability is unconfirmed. The approved Project 09 row is the single
+    // source of both locales' text, so no canonical-record field is added.
+    accessNotice: record.publication_state === 'withdrawn' && hasKey(`event.${record.id}.access_notice_heading`) ? {
+      heading: t(`event.${record.id}.access_notice_heading`, locale),
+      body: t(`event.${record.id}.access_notice_body`, locale),
+    } : null,
     detailChecked: evt(record, 'detail.checked', record.detail?.checked),
     actionLabel: record.detail?.action_label ? evt(record, 'detail.action_label', record.detail.action_label) : null,
     seoDescription: evt(record, 'seo.description', record.seo.description),
@@ -366,7 +395,9 @@ function renderSchema(record, loc, expired) {
     description: loc.summary,
     // Schema.org EventStatusType has no "completed" value; omit eventStatus
     // for expired events rather than emit an invalid enumeration member.
-    ...(expired ? {} : { eventStatus: 'https://schema.org/EventScheduled' }),
+    // A record carrying an access disclosure has unconfirmed availability, so it
+    // must not assert a scheduled status either.
+    ...(expired || loc.accessNotice ? {} : { eventStatus: 'https://schema.org/EventScheduled' }),
     eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
     location: {
       '@type': 'Place',
@@ -504,6 +535,18 @@ function renderDetailBreadcrumb(links) {
 `;
 }
 
+// Independent contextual return from a detail page to the Things to Do section
+// on its own locale's Home (EN `../../#things-to-do`, PT
+// `../../../pt/#things-to-do`). It is not a breadcrumb and does not depend on
+// THINGS_TO_DO_HUB_PUBLIC: the Home section exists whether the collection hub
+// is dormant or published, so it is always emitted, and it never stands in for
+// renderDetailBreadcrumb() above. The visible text is the accessible name, so
+// it deliberately carries no aria-label.
+function renderHomeSectionReturn(links) {
+  return `    <p class="home-return"><a href="${links.home}#things-to-do">${escapeHtml(CHROME.homeSectionReturn)}</a></p>
+`;
+}
+
 function renderDetailPage(record, loc) {
   const expired = isExpired(record);
   const canonicalEn = `https://aprasa.org/${record.detail_page}`;
@@ -512,6 +555,7 @@ function renderDetailPage(record, loc) {
   const links = detailPageLinks(record);
   const media = record.media ? `\n      <div class="${detailMediaClass(record)}"><img src="${links.rootPrefix}${escapeHtml(record.media.asset)}" alt="${escapeHtml(loc.mediaAlt)}" loading="lazy" width="${record.media.width}" height="${record.media.height}"></div>` : '';
   const pastStatus = expired ? `\n      <p class="card-status">${escapeHtml(CHROME.pastEvent)}</p>` : '';
+  const accessNotice = loc.accessNotice ? `\n      <section class="access-notice" role="note">\n        <h2>${escapeHtml(loc.accessNotice.heading)}</h2>\n        ${renderBodyParagraphs(loc.accessNotice.body, '        ')}\n      </section>` : '';
   const goodToKnow = loc.goodToKnow ? `\n      <h2>${escapeHtml(CHROME.goodToKnowHeading)}</h2>\n      ${renderBodyParagraphs(loc.goodToKnow, '      ')}` : '';
   const action = loc.actionLabel ? `\n      <a class="dialog-link" href="${escapeHtml(publicActionUrl(record))}" target="_blank" rel="noopener noreferrer">${escapeHtml(loc.actionLabel)} <span aria-hidden="true">↗</span></a>` : '';
 
@@ -574,9 +618,9 @@ ${renderSchema(record, loc, expired)}
 
 <main id="main">
   <div class="container record-page">
-${renderDetailBreadcrumb(links)}    <article class="dialog-record record-article" data-event-id="${escapeHtml(record.id)}">${media}${pastStatus}
+${renderDetailBreadcrumb(links)}${renderHomeSectionReturn(links)}    <article class="dialog-record record-article" data-event-id="${escapeHtml(record.id)}">${media}${pastStatus}
       <p class="provider">${escapeHtml(record.provider)}</p>
-      <h1>${escapeHtml(loc.title)}</h1>
+      <h1>${escapeHtml(loc.title)}</h1>${accessNotice}
       <dl class="detail-list">${renderFacts(loc.facts)}</dl>
       <h2>${escapeHtml(CHROME.detailsHeading)}</h2>
       ${renderBodyParagraphs(loc.detailBody, '      ')}${goodToKnow}
@@ -830,6 +874,23 @@ const selected = requestedId ? records.filter((record) => record.id === requeste
 if (requestedId && selected.length !== 1) {
   console.error(`Unknown event id: ${requestedId}`);
   process.exit(1);
+}
+
+// Validate the selected publication packet before any page is written.
+for (const record of selected) {
+  for (const fact of record.detail?.facts ?? []) {
+    if (fact.value_html === undefined) continue;
+    try {
+      parseFactValueHtml(fact.value_html);
+      if (locale === 'pt') {
+        const base = factKeyBase(record.id, fact);
+        localizeFactValueHtml(fact.value_html,
+          t(`event.${record.id}.detail.fact.${base}.value_display`, 'pt'), record, fact);
+      }
+    } catch (error) {
+      throw new Error(`${record.id}: invalid value_html for fact "${fact.label}": ${error.message}`);
+    }
+  }
 }
 
 // --home lets the Home-pass build script drive this generator against

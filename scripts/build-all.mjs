@@ -99,6 +99,8 @@ run('scripts/build-locale-data.mjs', []);
 run('scripts/generate-things-to-do.mjs', [`--as-of=${asOf}`, '--locale=en', '--write']);
 run('scripts/build-static-pages.mjs', ['--write']);
 run('scripts/generate-things-to-do.mjs', [`--as-of=${asOf}`, '--locale=pt', '--home=pt/index.html', '--write']);
+run('scripts/generate-training-opportunities.mjs', [`--as-of=${emarAsOf}`, '--locale=en', '--write']);
+run('scripts/generate-training-opportunities.mjs', [`--as-of=${emarAsOf}`, '--locale=pt', '--home=pt/index.html', '--write']);
 run('scripts/build-mindelo-pt.mjs', ['--write']);
 run('scripts/build-sitemap.mjs', ['--write']);
 run('scripts/validate-training-opportunities-currentness.mjs', [`--as-of=${emarAsOf}`, '--home=index.html', '--home=pt/index.html']);

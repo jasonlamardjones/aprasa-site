@@ -73,6 +73,35 @@ for (const homePath of homePaths) {
   }
 }
 
+// Fail closed on deadline-sensitive fixed-window opportunities after their
+// governed Cape Verde calendar date. Neither source state nor static HTML
+// may present expired opportunities as active without an approved extension.
+const governedRecords = JSON.parse(fs.readFileSync(path.join(root, 'data/training-opportunities.json'), 'utf8')).records;
+for (const item of governedRecords) {
+  if (item.lifecycle_class !== 'fixed-window-opportunity' ||
+      typeof item.end_date !== 'string' || !(item.end_date < asOf)) continue;
+  if (item.publication_state === 'CURRENT' || item.publication_state === 'REVIEW-DUE') {
+    errors.push(`${item.id}: ${item.publication_state} after deadline ${item.end_date} (as-of ${asOf})`);
+  }
+  for (const homePath of homePaths) {
+    const p = path.join(root, homePath);
+    if (!fs.existsSync(p)) continue; // The existing missing-Home check reports this.
+    const html = fs.readFileSync(p, 'utf8');
+    const begin = `<!-- BEGIN GENERATED TRAINING: ${item.id} -->`;
+    const end = `<!-- END GENERATED TRAINING: ${item.id} -->`;
+    const first = html.indexOf(begin);
+    const last = html.indexOf(end, first + begin.length);
+    if (first < 0 || last < 0 || html.indexOf(begin, first + begin.length) >= 0) {
+      errors.push(`${homePath}: missing or duplicated markers for expired ${item.id}`);
+      continue;
+    }
+    const region = html.slice(first + begin.length, last);
+    if (region.includes('<article') || region.includes('resource-link') || region.includes('dialog-link')) {
+      errors.push(`${homePath}: expired ${item.id} still has an active application/renewal card`);
+    }
+  }
+}
+
 if (errors.length) {
   console.error('Training opportunity currentness errors:');
   for (const error of errors) console.error(`- ${error}`);

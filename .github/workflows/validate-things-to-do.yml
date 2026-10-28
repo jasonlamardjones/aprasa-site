@@ -43,6 +43,10 @@ jobs:
         with:
           node-version: '24'
 
+      # Regression coverage for bounded CodeQL #1/#2 security fixes.
+      - name: CodeQL bounded fact HTML and QA summary regression tests
+        run: node scripts/test-codeql-bounded.mjs
+
       - name: Validate Phase 1 publication packet fixtures
         shell: bash
         run: |
@@ -142,6 +146,12 @@ jobs:
           node scripts/validate-runtime-locale-strings.mjs
           node scripts/test-whatsapp-launcher-panel.mjs
 
+      # Governed locale contract (approved EN/PT strings, source revisions,
+      # correction audit chain, key counts). Runs on the Ubuntu runner and fails
+      # the job on any validator error.
+      - name: Validate locale contract
+        run: node scripts/validate-locale-contract.mjs
+
       - name: Validate committed current surfaces
         run: |
           node scripts/validate-things-to-do-currentness.mjs --as-of="$AS_OF"
@@ -182,6 +192,7 @@ jobs:
       - name: Validate training opportunity structured data and generator drift
         run: |
           node scripts/validate-training-opportunities-data.mjs
+          node scripts/test-emergency-training-expiry.mjs
           node scripts/test-training-lifecycle-open-call.mjs
           node scripts/generate-training-opportunities.mjs --locale=en --as-of="$AS_OF"
           node scripts/generate-training-opportunities.mjs --locale=pt --as-of="$AS_OF" --home=pt/index.html
@@ -426,7 +437,7 @@ jobs:
           # Eligible but outside the governed Home selection: hub only, never lost.
           check_hub_present oficina "Exposição dos trabalhos finais do projeto Oficina Contemporânea Lata" 2026-08-24
           check_hub_present artemisa "PART_ILHAS — ciclo de conversas com Artemisa Ferreira" 2026-08-24
-          check_hub_present sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-08-24
+          check_hub_absent sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-08-24
           check_hub_present mon-pikenin "Mon Pikenin" 2026-08-24
           # An explicit editorial expiry wins at every --as-of: the generator
           # reads publication_state from the CURRENT canonical corpus and does
@@ -481,7 +492,7 @@ jobs:
           check_preview_cap 2026-09-01
           refute_hub_surfaces 2026-09-01
           check_preview_matches_canonical 2026-09-01
-          check_hub_present sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-09-01
+          check_hub_absent sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-09-01
           refute_past_event sinergia-da-materia 2026-09-01
           refute_exact_november_day 2026-09-01
           if grep -rq 'https://schema.org/EventCompleted' things-to-do/*/index.html; then
@@ -517,7 +528,11 @@ jobs:
           check_preview_matches_canonical 2026-11-01
           # A review-due record stays an ordinary public card on the collection
           # surface too — it is not expired, so it is never dropped from it.
-          check_hub_present sinergia "Sinergia da Matéria: Entre o Bruto e o Traço" 2026-11-01
+          # The published review-due record at this boundary is 50 Anos.
+          # Sinergia da Matéria is WITHDRAWN: it is off Home and reported as a
+          # separate evidence-review diagnostic, never as an actionable failure.
+          check_hub_present 50-anos "50 Anos de Memória, Criação e Resistência" 2026-11-01
+          refute_past_event 50-anos-de-memoria-criacao-e-resistencia 2026-11-01
           refute_past_event sinergia-da-materia 2026-11-01
           refute_exact_november_day 2026-11-01
 
@@ -528,14 +543,33 @@ jobs:
           set +e
           review_output=$(node scripts/validate-things-to-do-currentness.mjs --as-of=2026-11-01 2>&1)
           set -e
-          if echo "$review_output" | grep -Eq '^[[:space:]]*-[[:space:]]+sinergia-da-materia:[[:space:]]'; then
-            echo 'Review-due record leaked into the Phase 2B deterministic drift grammar.'
+          for leaked in 50-anos-de-memoria-criacao-e-resistencia sinergia-da-materia; do
+            if echo "$review_output" | grep -Eq "^[[:space:]]*-[[:space:]]+${leaked}:[[:space:]]"; then
+              echo "Review-due record ${leaked} leaked into the Phase 2B deterministic drift grammar."
+              echo "$review_output"
+              exit 1
+            fi
+          done
+          if ! echo "$review_output" | grep -q 'REVIEW-DUE 50-anos-de-memoria-criacao-e-resistencia'; then
+            echo 'Published review-due record 50-anos was not reported for reverification at the November boundary.'
             echo "$review_output"
             exit 1
           fi
-          if ! echo "$review_output" | grep -q 'REVIEW-DUE sinergia-da-materia'; then
-            echo 'Review-due record was not reported for reverification at the November boundary.'
+          # Withdrawn Sinergia keeps its evidence-review diagnostic but must not
+          # be counted as an actionable REVIEW-DUE publication failure.
+          if echo "$review_output" | grep -q 'REVIEW-DUE sinergia-da-materia'; then
+            echo 'Withdrawn sinergia-da-materia was reported as an actionable REVIEW-DUE failure.'
             echo "$review_output"
+            exit 1
+          fi
+          if ! echo "$review_output" | grep -q 'EVIDENCE-REVIEW (withdrawn) sinergia-da-materia'; then
+            echo 'Withdrawn sinergia-da-materia lost its evidence-review diagnostic at the November boundary.'
+            echo "$review_output"
+            exit 1
+          fi
+          # Withdrawn Sinergia must not reappear on actionable Home (EN or PT).
+          if grep -q 'data-event-id="sinergia-da-materia"' index.html pt/index.html; then
+            echo 'Withdrawn sinergia-da-materia reappeared on Home as of 2026-11-01.'
             exit 1
           fi
 

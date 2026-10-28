@@ -183,8 +183,12 @@ export function localizeStaticHtml(html, locale) {
   const n = html.length;
 
   while (i < n) {
-    if (html.startsWith('<!-- BEGIN GENERATED EVENT:', i)) {
-      const endMarkerStart = html.indexOf('<!-- END GENERATED EVENT:', i);
+    // Things-to-Do and Training regions each have their own EN/PT generator.
+    // Preserve them through static translation; the owners populate PT last.
+    const owner = html.startsWith('<!-- BEGIN GENERATED EVENT:', i) ? 'EVENT'
+      : html.startsWith('<!-- BEGIN GENERATED TRAINING:', i) ? 'TRAINING' : null;
+    if (owner) {
+      const endMarkerStart = html.indexOf(`<!-- END GENERATED ${owner}:`, i);
       const endMarkerClose = endMarkerStart === -1 ? -1 : html.indexOf('-->', endMarkerStart);
       const stop = endMarkerClose === -1 ? n : endMarkerClose + 3;
       out += html.slice(i, stop);
