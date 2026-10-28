@@ -146,6 +146,12 @@ jobs:
           node scripts/validate-runtime-locale-strings.mjs
           node scripts/test-whatsapp-launcher-panel.mjs
 
+      # Governed locale contract (approved EN/PT strings, source revisions,
+      # correction audit chain, key counts). Runs on the Ubuntu runner and fails
+      # the job on any validator error.
+      - name: Validate locale contract
+        run: node scripts/validate-locale-contract.mjs
+
       - name: Validate committed current surfaces
         run: |
           node scripts/validate-things-to-do-currentness.mjs --as-of="$AS_OF"
