@@ -139,7 +139,10 @@ export const HUB_ROUTE = 'things-to-do/';
  * record and detail pages are unaffected (only membership is decided here).
  */
 export function collectionRecords(records, asOf) {
-  return (records ?? []).filter((record) => isPubliclyPublishable(record) && isPubliclyCurrent(record, asOf));
+  // Currentness is evaluated FIRST and for every record: the parity-gated resolver
+  // rejects malformed dates by throwing, and a withdrawn or draft record must
+  // not be able to hide a malformed date from generation by short-circuiting.
+  return (records ?? []).filter((record) => isPubliclyCurrent(record, asOf) && isPubliclyPublishable(record));
 }
 
 /**
