@@ -48,6 +48,10 @@ const EXIT_REVIEW_DUE = 3;
 
 const errors = [];
 const reviewDue = [];
+// A WITHDRAWN record is off every actionable surface, so its outstanding
+// evidence review is a diagnostic about the source, not a publication failure.
+// It is still reported every run and never discharged by the withdrawal.
+const withdrawnEvidenceReview = [];
 
 for (const record of records) {
   if (record.kind !== 'dated-event') continue;
@@ -58,7 +62,8 @@ for (const record of records) {
     // Reported unconditionally, not only when the record is on Home: the
     // obligation is to reverify the source, and quietly dropping the card
     // from Home must not be able to discharge it.
-    reviewDue.push({ record, boundary: reviewDueFrom(record) });
+    (record.publication_state === 'withdrawn' ? withdrawnEvidenceReview : reviewDue)
+      .push({ record, boundary: reviewDueFrom(record) });
     continue;
   }
 
@@ -95,6 +100,18 @@ if (reviewDue.length) {
     console.error(
       `  REVIEW-DUE ${record.id} — month-precision end ${record.end_month} reached its ${boundary} boundary as of ${asOf};`
       + ' the exact closing day is not established. Reverify against the authoritative source.'
+    );
+  }
+}
+
+// Same unparseable-as-drift shape as REVIEW-DUE above, and deliberately a
+// different label so it can be told apart: this does not change the exit code.
+if (withdrawnEvidenceReview.length) {
+  console.error('Things to Do withdrawn-record evidence review outstanding (not an actionable publication failure):');
+  for (const { record, boundary } of withdrawnEvidenceReview) {
+    console.error(
+      `  EVIDENCE-REVIEW (withdrawn) ${record.id} — month-precision end ${record.end_month} reached its ${boundary} boundary as of ${asOf};`
+      + ' the exact closing day is not established. Reverify against the authoritative source before any republication.'
     );
   }
 }

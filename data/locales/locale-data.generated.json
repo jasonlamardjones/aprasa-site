@@ -42,7 +42,9 @@
       "data/locales/pt-overlay-r25-trainings-home-expansion-timbuktoo.source.json",
       "data/locales/pt-overlay-r26-trainings-home-expansion-edtech.source.json",
       "data/locales/pt-overlay-r27-ficase-scholarship-renewals-2026-2027.source.json",
-      "data/locales/pt-overlay-r28-ttd-contextual-home-return.source.json"
+      "data/locales/pt-overlay-r28-ttd-contextual-home-return.source.json",
+      "data/locales/pt-overlay-r29-sinergia-access-disclosure.source.json",
+      "data/locales/pt-overlay-r30-sinergia-presentation-correction.source.json"
     ],
     "base_revision": "P03-PT-SOURCE-2026-08-25-r2",
     "delta_revision": "P03-PT-SOURCE-2026-08-25-r3",
@@ -244,10 +246,10 @@
     "governed_override_authorization": "fixed code-side contract in scripts/build-locale-data.mjs (GOVERNED_OVERRIDE_CONTRACTS)"
   },
   "counts": {
-    "total_rows": 1109,
-    "required_for_pt_launch": 1079,
+    "total_rows": 1111,
+    "required_for_pt_launch": 1081,
     "intentionally_unchanged": 30,
-    "approved_rows_total": 1109,
+    "approved_rows_total": 1111,
     "r3_delta_rows": 21,
     "r4_delta_rows": 26,
     "r5_delta_rows": 2,
@@ -8419,25 +8421,35 @@
     },
     "event.sinergia-da-materia.display.status": {
       "key": "event.sinergia-da-materia.display.status",
-      "en": "On view until November 2026",
-      "pt": "Em exibição até novembro de 2026",
+      "en": "Visitor access not currently confirmed",
+      "pt": "Acesso de visitantes ainda não confirmado",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_AND_LOCALIZE_DATE_DISPLAY",
       "record_id": "sinergia-da-materia",
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-09-01-r9",
-      "context_notes": "Project 03 ruled on 01 September 2026 that the governed 31 July - 31 August 2026 date meaning is superseded by authoritative CNAD evidence: the exhibition opened 31 July 2026 and is on view until November 2026. The exact November closing day is NOT established and must not be inferred, so the replacement states month-level end meaning only.",
+      "source_revision": "P09-PT-SINERGIA-PRESENTATION-2026-10-27-r1",
+      "context_notes": "Sinergia da Matéria presentation correction: the earlier month-level availability is kept only as qualified historical information, and current visitor access is stated as unconfirmed. No closing day is stated or inferred.",
       "linguistic_notes": "PT mirrors the EN month-level meaning without introducing a day. “Em exibição até novembro de 2026” is open-ended in the same way “on view until November 2026” is.",
       "source_correction": {
         "revision_class": "OVERRIDE_EXISTING_KEYS_WITH_SOURCE_CORRECTION",
         "owning_project": "Project 03",
-        "superseding_ruling": "P03-SINERGIA-CURRENTNESS-2026-09-01",
         "superseded_source_status": "SUPERSEDED",
         "replacement_status": "SEMANTICALLY_APPROVED / LINGUISTICALLY_REVIEWED",
         "semantic_change": true,
-        "superseded_en": "31 July – 31 August 2026",
-        "superseded_pt": "31 de julho – 31 de agosto de 2026",
-        "superseded_source_revision": "P03-PT-SOURCE-2026-08-25-r1"
+        "superseded_en": "On view until November 2026",
+        "superseded_pt": "Em exibição até novembro de 2026",
+        "superseded_source_revision": "P03-PT-SOURCE-2026-09-01-r9",
+        "prior_source_correction": {
+          "revision_class": "OVERRIDE_EXISTING_KEYS_WITH_SOURCE_CORRECTION",
+          "owning_project": "Project 03",
+          "superseding_ruling": "P03-SINERGIA-CURRENTNESS-2026-09-01",
+          "superseded_source_status": "SUPERSEDED",
+          "replacement_status": "SEMANTICALLY_APPROVED / LINGUISTICALLY_REVIEWED",
+          "semantic_change": true,
+          "superseded_en": "31 July – 31 August 2026",
+          "superseded_pt": "31 de julho – 31 de agosto de 2026",
+          "superseded_source_revision": "P03-PT-SOURCE-2026-08-25-r1"
+        }
       }
     },
     "event.sinergia-da-materia.display.meta": {
@@ -8478,37 +8490,57 @@
     },
     "event.sinergia-da-materia.detail.fact.dates.label": {
       "key": "event.sinergia-da-materia.detail.fact.dates.label",
-      "en": "Dates",
-      "pt": "Datas",
+      "en": "Previously advertised exhibition dates",
+      "pt": "Datas da exposição anteriormente anunciadas",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": "sinergia-da-materia",
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-08-25-r1",
-      "context_notes": "Things-to-Do event presentation/detail/SEO source. Canonical factual fields remain shared.",
-      "linguistic_notes": ""
+      "source_revision": "P09-PT-SINERGIA-PRESENTATION-2026-10-27-r1",
+      "context_notes": "Sinergia da Matéria presentation correction: the earlier month-level availability is kept only as qualified historical information, and current visitor access is stated as unconfirmed. No closing day is stated or inferred.",
+      "linguistic_notes": "",
+      "source_correction": {
+        "revision_class": "OVERRIDE_EXISTING_KEYS_WITH_SOURCE_CORRECTION",
+        "owning_project": "Project 03",
+        "superseded_source_status": "SUPERSEDED",
+        "replacement_status": "SEMANTICALLY_APPROVED / LINGUISTICALLY_REVIEWED",
+        "semantic_change": true,
+        "superseded_en": "Dates",
+        "superseded_pt": "Datas",
+        "superseded_source_revision": "P03-PT-SOURCE-2026-08-25-r1"
+      }
     },
     "event.sinergia-da-materia.detail.fact.dates.value_display": {
       "key": "event.sinergia-da-materia.detail.fact.dates.value_display",
-      "en": "On view until November 2026",
-      "pt": "Em exibição até novembro de 2026",
+      "en": "Earlier information indicated the exhibition would remain on view until November 2026. Current visitor access is unconfirmed.",
+      "pt": "Informações anteriores indicavam que a exposição permaneceria em exibição até novembro de 2026. O acesso atual de visitantes não está confirmado.",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_AND_LOCALIZE_DATE_DISPLAY",
       "record_id": "sinergia-da-materia",
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-09-01-r9",
-      "context_notes": "Project 03 ruled on 01 September 2026 that the governed 31 July - 31 August 2026 date meaning is superseded by authoritative CNAD evidence: the exhibition opened 31 July 2026 and is on view until November 2026. The exact November closing day is NOT established and must not be inferred, so the replacement states month-level end meaning only.",
+      "source_revision": "P09-PT-SINERGIA-PRESENTATION-2026-10-27-r1",
+      "context_notes": "Sinergia da Matéria presentation correction: the earlier month-level availability is kept only as qualified historical information, and current visitor access is stated as unconfirmed. No closing day is stated or inferred.",
       "linguistic_notes": "PT mirrors the EN month-level meaning without introducing a day. “Em exibição até novembro de 2026” is open-ended in the same way “on view until November 2026” is.",
       "source_correction": {
         "revision_class": "OVERRIDE_EXISTING_KEYS_WITH_SOURCE_CORRECTION",
         "owning_project": "Project 03",
-        "superseding_ruling": "P03-SINERGIA-CURRENTNESS-2026-09-01",
         "superseded_source_status": "SUPERSEDED",
         "replacement_status": "SEMANTICALLY_APPROVED / LINGUISTICALLY_REVIEWED",
         "semantic_change": true,
-        "superseded_en": "31 July – 31 August 2026",
-        "superseded_pt": "31 de julho – 31 de agosto de 2026",
-        "superseded_source_revision": "P03-PT-SOURCE-2026-08-25-r1"
+        "superseded_en": "On view until November 2026",
+        "superseded_pt": "Em exibição até novembro de 2026",
+        "superseded_source_revision": "P03-PT-SOURCE-2026-09-01-r9",
+        "prior_source_correction": {
+          "revision_class": "OVERRIDE_EXISTING_KEYS_WITH_SOURCE_CORRECTION",
+          "owning_project": "Project 03",
+          "superseding_ruling": "P03-SINERGIA-CURRENTNESS-2026-09-01",
+          "superseded_source_status": "SUPERSEDED",
+          "replacement_status": "SEMANTICALLY_APPROVED / LINGUISTICALLY_REVIEWED",
+          "semantic_change": true,
+          "superseded_en": "31 July – 31 August 2026",
+          "superseded_pt": "31 de julho – 31 de agosto de 2026",
+          "superseded_source_revision": "P03-PT-SOURCE-2026-08-25-r1"
+        }
       }
     },
     "event.sinergia-da-materia.detail.fact.where.label": {
@@ -8585,25 +8617,35 @@
     },
     "event.sinergia-da-materia.seo.description": {
       "key": "event.sinergia-da-materia.seo.description",
-      "en": "Sinergia da Matéria: Entre o Bruto e o Traço is an exhibition by Davitson Almeida at CNAD’s Galeria Zero in Mindelo, on view until November 2026.",
-      "pt": "Sinergia da Matéria: Entre o Bruto e o Traço é uma exposição de Davitson Almeida na Galeria Zero do CNAD, em Mindelo, em exibição até novembro de 2026.",
+      "en": "Sinergia da Matéria: Entre o Bruto e o Traço, an exhibition by Davitson Almeida at CNAD in Mindelo. Current visitor access is unconfirmed.",
+      "pt": "Sinergia da Matéria: Entre o Bruto e o Traço, uma exposição de Davitson Almeida no CNAD, em Mindelo. O acesso atual de visitantes não está confirmado.",
       "scope_status": "REQUIRED_FOR_PT_LAUNCH",
       "identity_policy": "TRANSLATE_NORMALLY",
       "record_id": "sinergia-da-materia",
       "translation_status": "APPROVED",
-      "source_revision": "P03-PT-SOURCE-2026-09-01-r9",
-      "context_notes": "Project 03 ruled on 01 September 2026 that the governed 31 July - 31 August 2026 date meaning is superseded by authoritative CNAD evidence: the exhibition opened 31 July 2026 and is on view until November 2026. The exact November closing day is NOT established and must not be inferred, so the replacement states month-level end meaning only.",
+      "source_revision": "P09-PT-SINERGIA-PRESENTATION-2026-10-27-r1",
+      "context_notes": "Sinergia da Matéria presentation correction: the earlier month-level availability is kept only as qualified historical information, and current visitor access is stated as unconfirmed. No closing day is stated or inferred.",
       "linguistic_notes": "PT mirrors the EN month-level meaning without introducing a day. “Em exibição até novembro de 2026” is open-ended in the same way “on view until November 2026” is.",
       "source_correction": {
         "revision_class": "OVERRIDE_EXISTING_KEYS_WITH_SOURCE_CORRECTION",
         "owning_project": "Project 03",
-        "superseding_ruling": "P03-SINERGIA-CURRENTNESS-2026-09-01",
         "superseded_source_status": "SUPERSEDED",
         "replacement_status": "SEMANTICALLY_APPROVED / LINGUISTICALLY_REVIEWED",
         "semantic_change": true,
-        "superseded_en": "Sinergia da Matéria: Entre o Bruto e o Traço is an exhibition by Davitson Almeida at CNAD’s Galeria Zero in Mindelo, 31 July–31 August 2026.",
-        "superseded_pt": "Sinergia da Matéria: Entre o Bruto e o Traço é uma exposição de Davitson Almeida na Galeria Zero do CNAD, em Mindelo, de 31 de julho a 31 de agosto de 2026.",
-        "superseded_source_revision": "P03-PT-SOURCE-2026-08-25-r1"
+        "superseded_en": "Sinergia da Matéria: Entre o Bruto e o Traço is an exhibition by Davitson Almeida at CNAD’s Galeria Zero in Mindelo, on view until November 2026.",
+        "superseded_pt": "Sinergia da Matéria: Entre o Bruto e o Traço é uma exposição de Davitson Almeida na Galeria Zero do CNAD, em Mindelo, em exibição até novembro de 2026.",
+        "superseded_source_revision": "P03-PT-SOURCE-2026-09-01-r9",
+        "prior_source_correction": {
+          "revision_class": "OVERRIDE_EXISTING_KEYS_WITH_SOURCE_CORRECTION",
+          "owning_project": "Project 03",
+          "superseding_ruling": "P03-SINERGIA-CURRENTNESS-2026-09-01",
+          "superseded_source_status": "SUPERSEDED",
+          "replacement_status": "SEMANTICALLY_APPROVED / LINGUISTICALLY_REVIEWED",
+          "semantic_change": true,
+          "superseded_en": "Sinergia da Matéria: Entre o Bruto e o Traço is an exhibition by Davitson Almeida at CNAD’s Galeria Zero in Mindelo, 31 July–31 August 2026.",
+          "superseded_pt": "Sinergia da Matéria: Entre o Bruto e o Traço é uma exposição de Davitson Almeida na Galeria Zero do CNAD, em Mindelo, de 31 de julho a 31 de agosto de 2026.",
+          "superseded_source_revision": "P03-PT-SOURCE-2026-08-25-r1"
+        }
       }
     },
     "event.sinergia-da-materia.seo.title": {
@@ -13609,6 +13651,30 @@
       "source_revision": "P09-PT-TTD-CONTEXTUAL-HOME-RETURN-2026-10-27-r1",
       "context_notes": "Visible text and accessible name of the independent contextual-return link on every Things-to-Do detail page. EN targets /#things-to-do, PT targets /pt/#things-to-do. Independent of the unpublished collection hub and its dormant breadcrumb (things.shared.back_to_things), which this key must never replace. No aria-label: the visible text is the accessible name.",
       "linguistic_notes": "Final Project 09 wording, carried verbatim. \"O que fazer\" is the established governed Portuguese name of the Things to Do section. Carries no protected brand string and no placeholder."
+    },
+    "event.sinergia-da-materia.access_notice_heading": {
+      "key": "event.sinergia-da-materia.access_notice_heading",
+      "en": "Visitor access not currently confirmed",
+      "pt": "Acesso de visitantes ainda não confirmado",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "sinergia-da-materia",
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-SINERGIA-ACCESS-DISCLOSURE-2026-10-27-r1",
+      "context_notes": "Heading of the access disclosure shown on the withdrawn Sinergia da Matéria detail pages.",
+      "linguistic_notes": ""
+    },
+    "event.sinergia-da-materia.access_notice_body": {
+      "key": "event.sinergia-da-materia.access_notice_body",
+      "en": "Earlier exhibition information indicated that Sinergia da Matéria would remain on view until November 2026. However, newer CNAD programming has been announced for Galeria Zero, and we have not confirmed whether this exhibition remains accessible to visitors. Please check directly with CNAD before planning a visit.",
+      "pt": "Informações anteriores sobre a exposição indicavam que Sinergia da Matéria permaneceria em exibição até novembro de 2026. No entanto, foi anunciada uma programação mais recente do CNAD para a Galeria Zero, e não confirmámos se esta exposição continua acessível a visitantes. Confirme diretamente com o CNAD antes de planear uma visita.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "sinergia-da-materia",
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-SINERGIA-ACCESS-DISCLOSURE-2026-10-27-r1",
+      "context_notes": "Body of the access disclosure; it states the earlier evidence without claiming the exhibition has closed.",
+      "linguistic_notes": ""
     }
   }
 }

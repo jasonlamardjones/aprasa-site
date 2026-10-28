@@ -92,10 +92,13 @@ const haliotisRaw = readFileSync(path.join(ROOT, 'data/locales/pt-overlay-haliot
 if (createHash('sha256').update(haliotisRaw).digest('hex') !== '80aa93ab04b80218df1a4908af0c0ca9663184d579ab61bc2df796ba6ea5e167') {
   fail('Haliotis package differs from the frozen Project 03 EN/PT payload');
 }
-if (keys.length !== 1000 + eventDeltaRequired + eventDeltaUnchanged) fail(`expected ${1000 + eventDeltaRequired + eventDeltaUnchanged} total keys including approved event deltas, got ${keys.length}`);
+// r29 (Sinergia access disclosure) adds exactly two REQUIRED_FOR_PT_LAUNCH keys outside the per-event delta lane,
+// on top of the 1000/970 baseline that already includes the r28 contextual Home-return key.
+const SINERGIA_R29_ROWS = 2;
+if (keys.length !== 1000 + SINERGIA_R29_ROWS + eventDeltaRequired + eventDeltaUnchanged) fail(`expected ${1000 + SINERGIA_R29_ROWS + eventDeltaRequired + eventDeltaUnchanged} total keys including approved event deltas, got ${keys.length}`);
 const required = keys.filter((k) => k.scope_status === "REQUIRED_FOR_PT_LAUNCH");
 const unchanged = keys.filter((k) => k.scope_status === "INTENTIONALLY_UNCHANGED");
-if (required.length !== 970 + eventDeltaRequired) fail(`expected ${970 + eventDeltaRequired} REQUIRED_FOR_PT_LAUNCH keys, got ${required.length}`);
+if (required.length !== 970 + SINERGIA_R29_ROWS + eventDeltaRequired) fail(`expected ${970 + SINERGIA_R29_ROWS + eventDeltaRequired} REQUIRED_FOR_PT_LAUNCH keys, got ${required.length}`);
 if (unchanged.length !== 30 + eventDeltaUnchanged) fail(`expected ${30 + eventDeltaUnchanged} INTENTIONALLY_UNCHANGED keys, got ${unchanged.length}`);
 if (data.provenance.delta_revision !== "P03-PT-SOURCE-2026-08-25-r3") {
   fail(`unexpected delta_revision: ${data.provenance.delta_revision}`);
@@ -758,24 +761,37 @@ if (!r13CollectionLabel || r13CollectionLabel.en !== "← Things to Do" || r13Co
 }
 
 // --- r9 source correction (Sinergia da Matéria, Project 03, 01 September 2026) ---
-// Pins the governed month-level public meaning in both locales, proves the
-// superseded July-August meaning is gone from every corrected key, and proves
-// no exact November closing day was introduced anywhere in the overlay.
+// r9 first corrected three keys to the month-level public meaning; the r30
+// presentation correction (Project 09, 27 October 2026) has since replaced
+// their effective text and, with it, the dates label. This block pins the CURRENT
+// effective text, proves the r9 correction survives as the prior auditable link,
+// proves the superseded July-August meaning is gone, and proves no exact
+// November closing day was introduced anywhere in the overlay.
 const r9Id = "event.sinergia-da-materia";
-const r9Expected = {
+const r30Revision = "P09-PT-SINERGIA-PRESENTATION-2026-10-27-r1";
+const r30Expected = {
+  [`${r9Id}.detail.fact.dates.label`]: {
+    en: "Previously advertised exhibition dates",
+    pt: "Datas da exposição anteriormente anunciadas",
+    prior: null,
+  },
   [`${r9Id}.display.status`]: {
-    en: "On view until November 2026",
-    pt: "Em exibição até novembro de 2026",
+    en: "Visitor access not currently confirmed",
+    pt: "Acesso de visitantes ainda não confirmado",
+    prior: "On view until November 2026",
   },
   [`${r9Id}.detail.fact.dates.value_display`]: {
-    en: "On view until November 2026",
-    pt: "Em exibição até novembro de 2026",
+    en: "Earlier information indicated the exhibition would remain on view until November 2026. Current visitor access is unconfirmed.",
+    pt: "Informações anteriores indicavam que a exposição permaneceria em exibição até novembro de 2026. O acesso atual de visitantes não está confirmado.",
+    prior: "On view until November 2026",
   },
   [`${r9Id}.seo.description`]: {
-    en: "Sinergia da Matéria: Entre o Bruto e o Traço is an exhibition by Davitson Almeida at CNAD’s Galeria Zero in Mindelo, on view until November 2026.",
-    pt: "Sinergia da Matéria: Entre o Bruto e o Traço é uma exposição de Davitson Almeida na Galeria Zero do CNAD, em Mindelo, em exibição até novembro de 2026.",
+    en: "Sinergia da Matéria: Entre o Bruto e o Traço, an exhibition by Davitson Almeida at CNAD in Mindelo. Current visitor access is unconfirmed.",
+    pt: "Sinergia da Matéria: Entre o Bruto e o Traço, uma exposição de Davitson Almeida no CNAD, em Mindelo. O acesso atual de visitantes não está confirmado.",
+    prior: "Sinergia da Matéria: Entre o Bruto e o Traço is an exhibition by Davitson Almeida at CNAD’s Galeria Zero in Mindelo, on view until November 2026.",
   },
 };
+const r9Expected = r30Expected;
 for (const [key, expected] of Object.entries(r9Expected)) {
   const row = data.keys[key];
   if (!row) {
@@ -784,8 +800,8 @@ for (const [key, expected] of Object.entries(r9Expected)) {
   }
   if (row.en !== expected.en) fail(`${key} EN is not the approved correction: got ${JSON.stringify(row.en)}`);
   if (row.pt !== expected.pt) fail(`${key} PT is not the approved correction: got ${JSON.stringify(row.pt)}`);
-  if (row.source_revision !== "P03-PT-SOURCE-2026-09-01-r9") {
-    fail(`${key} does not carry the r9 source revision: got ${row.source_revision}`);
+  if (row.source_revision !== r30Revision) {
+    fail(`${key} does not carry the r30 source revision: got ${row.source_revision}`);
   }
   // Superseded provenance must survive the swap so the prior approved meaning
   // stays auditable.
@@ -794,11 +810,25 @@ for (const [key, expected] of Object.entries(r9Expected)) {
     fail(`${key} lost its source-correction provenance`);
     continue;
   }
+  if (correction.revision_class !== "OVERRIDE_EXISTING_KEYS_WITH_SOURCE_CORRECTION") fail(`${key} correction revision_class mismatch`);
   if (correction.superseded_source_status !== "SUPERSEDED") fail(`${key} superseded_source_status is not SUPERSEDED`);
   if (correction.owning_project !== "Project 03") fail(`${key} correction owning_project mismatch`);
-  if (correction.superseding_ruling !== "P03-SINERGIA-CURRENTNESS-2026-09-01") fail(`${key} correction ruling reference mismatch`);
+  if (correction.replacement_status !== "SEMANTICALLY_APPROVED / LINGUISTICALLY_REVIEWED") fail(`${key} correction replacement_status mismatch`);
   if (correction.semantic_change !== true) fail(`${key} correction does not declare semantic_change`);
   if (!correction.superseded_en || !correction.superseded_pt) fail(`${key} correction did not preserve the superseded EN/PT values`);
+  if (expected.prior === null) {
+    // The dates label was never corrected before: its superseded value is the original label.
+    if (correction.superseded_en !== "Dates" || correction.superseded_pt !== "Datas") fail(`${key} did not preserve the original label`);
+  } else {
+    if (correction.superseded_en !== expected.prior) fail(`${key} superseded EN is not the r9 value`);
+    const prior = correction.prior_source_correction;
+    if (!prior) fail(`${key} lost its prior r9 source-correction link`);
+    else {
+      if (correction.superseded_source_revision !== "P03-PT-SOURCE-2026-09-01-r9") fail(`${key} superseded revision is not r9`);
+      if (prior.superseding_ruling !== "P03-SINERGIA-CURRENTNESS-2026-09-01") fail(`${key} prior correction ruling reference mismatch`);
+      if (!prior.superseded_en || !prior.superseded_pt || prior.superseded_source_revision !== "P03-PT-SOURCE-2026-08-25-r1") fail(`${key} prior original (July-August era) value/revision was not preserved`);
+    }
+  }
   for (const [side, text] of [["EN", row.en], ["PT", row.pt]]) {
     if (/31 August 2026|31 de agosto de 2026/.test(text)) {
       fail(`${key} ${side} still carries the superseded 31 August 2026 meaning`);
@@ -832,6 +862,35 @@ for (const [key, expected] of Object.entries(r9Admission)) {
   if (row.pt !== expected.pt) fail(`${key} PT mismatch: got ${JSON.stringify(row.pt)}`);
   // Additive, never routed through the source-correction class.
   if (row.source_correction) fail(`${key} must not carry a source correction — free admission is an additive addition`);
+}
+
+// --- r29 Sinergia access disclosure (Project 09, 27 October 2026; relabelled from r28, source_revision unchanged) ---
+// Exactly two strictly additive record-scoped keys with the approved wording.
+const r29Revision = "P09-PT-SINERGIA-ACCESS-DISCLOSURE-2026-10-27-r1";
+const r29Approved = {
+  [`${r9Id}.access_notice_heading`]: {
+    en: "Visitor access not currently confirmed",
+    pt: "Acesso de visitantes ainda não confirmado",
+  },
+  [`${r9Id}.access_notice_body`]: {
+    en: "Earlier exhibition information indicated that Sinergia da Matéria would remain on view until November 2026. However, newer CNAD programming has been announced for Galeria Zero, and we have not confirmed whether this exhibition remains accessible to visitors. Please check directly with CNAD before planning a visit.",
+    pt: "Informações anteriores sobre a exposição indicavam que Sinergia da Matéria permaneceria em exibição até novembro de 2026. No entanto, foi anunciada uma programação mais recente do CNAD para a Galeria Zero, e não confirmámos se esta exposição continua acessível a visitantes. Confirme diretamente com o CNAD antes de planear uma visita.",
+  },
+};
+for (const [key, expected] of Object.entries(r29Approved)) {
+  const row = data.keys[key];
+  if (!row) { fail(`r29 Sinergia key missing from locale data: ${key}`); continue; }
+  if (row.en !== expected.en) fail(`${key} EN does not match the approved Project 09 wording`);
+  if (row.pt !== expected.pt) fail(`${key} PT does not match the approved Project 09 wording`);
+  if (row.source_revision !== r29Revision) fail(`${key} source_revision mismatch: ${row.source_revision}`);
+  if (row.record_id !== "sinergia-da-materia" || row.scope_status !== "REQUIRED_FOR_PT_LAUNCH" ||
+      row.identity_policy !== "TRANSLATE_NORMALLY" || row.translation_status !== "APPROVED") {
+    fail(`${key} carries the wrong r29 row metadata`);
+  }
+  if (row.source_correction) fail(`${key} must not carry a source correction — r29 is strictly additive`);
+}
+if (Object.keys(data.keys).filter((k) => k.startsWith(`${r9Id}.access_notice`)).length !== 2) {
+  fail("r29 must add exactly two access_notice keys for sinergia-da-materia");
 }
 
 // --- r8 delta spot checks (same-day PART_ILHAS / Artemisa Ferreira event) ---

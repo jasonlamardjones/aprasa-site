@@ -134,21 +134,31 @@ export const HOME_PREVIEW_LIMIT = HOME_PREVIEW_IDS.length;
 /** Route of the collection hub, relative to a locale root. */
 export const HUB_ROUTE = 'things-to-do/';
 
-/** Canonical dated-event records eligible for the collection, in canonical order. */
+/**
+ * Canonical dated-event records eligible for the collection, in canonical order.
+ *
+ * Eligibility requires BOTH axes: the record is publicly published (the
+ * isPubliclyPublishable() whitelist) AND publicly current. A withdrawn or draft
+ * record is never a member, however current its dates read; its canonical
+ * record and detail pages are unaffected (only membership is decided here).
+ */
 export function collectionRecords(records, asOf) {
-  return (records ?? []).filter((record) => isPubliclyCurrent(record, asOf));
+  // Currentness is evaluated FIRST and for every record: the parity-gated resolver
+  // rejects malformed dates by throwing, and a withdrawn or draft record must
+  // not be able to hide a malformed date from generation by short-circuiting.
+  return (records ?? []).filter((record) => isPubliclyCurrent(record, asOf) && isPubliclyPublishable(record));
 }
 
 /**
  * True only for a record whose publication state permits public display.
  *
- * currentness and publication state are DIFFERENT AXES, and collectionRecords()
- * resolves only the first. isPubliclyCurrent() treats publication_state
- * "expired" as expired and says nothing about the other two canonical states,
- * so a "withdrawn" or "draft" record reads as perfectly current -- which is
- * correct for what that resolver means, and wrong as a publication decision.
- * Independent review (Codex, PR #106) found that gap: naming such a record in
- * HOME_PREVIEW_IDS would keep it on Home after it was withdrawn.
+ * currentness and publication state are DIFFERENT AXES, and isPubliclyCurrent()
+ * resolves only the first. It treats publication_state "expired" as expired and
+ * says nothing about the other two canonical states, so a "withdrawn" or
+ * "draft" record reads as perfectly current -- which is correct for what that
+ * resolver means, and wrong as a publication decision. Independent review
+ * (Codex, PR #106) found that gap for Home; a later review (PR #143) found it
+ * for collection membership, so collectionRecords() applies this whitelist too.
  *
  * This is a WHITELIST, not a list of excluded states, so it fails closed: a
  * publication_state added later is not publishable until someone decides it is,
@@ -167,12 +177,10 @@ export function isPubliclyPublishable(record) {
  *   1. the id is in HOME_PREVIEW_IDS;
  *   2. the record is publicly publishable AND publicly current.
  *
- * The currentness half is collectionRecords() itself -- the same eligibility
- * every other Things-to-Do surface consumes -- so this adds no currentness rule
- * of its own and cannot bypass one. The publication half is the whitelist above.
- *
- * Scope is deliberately Home: collectionRecords() is untouched, so the hub's
- * (dormant) membership semantics are unchanged by this repair.
+ * Both halves are collectionRecords() itself -- the same eligibility every
+ * other Things-to-Do surface consumes -- so this adds no rule of its own and
+ * cannot bypass one. The publishable filter below is kept as an explicit,
+ * redundant statement of the publication half.
  */
 export function homePreviewRecords(records, asOf) {
   const eligible = new Map(

@@ -298,6 +298,13 @@ function localizeRecord(record) {
     cardActionLabel: record.card_action ? evt(record, 'card_action.label', record.card_action.label) : null,
     goodToKnow: record.detail?.good_to_know ? evt(record, 'detail.good_to_know', record.detail.good_to_know) : null,
     detailBody: evt(record, 'detail.body', record.detail?.body),
+    // Governed access disclosure for a WITHDRAWN record whose present
+    // availability is unconfirmed. The approved Project 09 row is the single
+    // source of both locales' text, so no canonical-record field is added.
+    accessNotice: record.publication_state === 'withdrawn' && hasKey(`event.${record.id}.access_notice_heading`) ? {
+      heading: t(`event.${record.id}.access_notice_heading`, locale),
+      body: t(`event.${record.id}.access_notice_body`, locale),
+    } : null,
     detailChecked: evt(record, 'detail.checked', record.detail?.checked),
     actionLabel: record.detail?.action_label ? evt(record, 'detail.action_label', record.detail.action_label) : null,
     seoDescription: evt(record, 'seo.description', record.seo.description),
@@ -388,7 +395,9 @@ function renderSchema(record, loc, expired) {
     description: loc.summary,
     // Schema.org EventStatusType has no "completed" value; omit eventStatus
     // for expired events rather than emit an invalid enumeration member.
-    ...(expired ? {} : { eventStatus: 'https://schema.org/EventScheduled' }),
+    // A record carrying an access disclosure has unconfirmed availability, so it
+    // must not assert a scheduled status either.
+    ...(expired || loc.accessNotice ? {} : { eventStatus: 'https://schema.org/EventScheduled' }),
     eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
     location: {
       '@type': 'Place',
@@ -546,6 +555,7 @@ function renderDetailPage(record, loc) {
   const links = detailPageLinks(record);
   const media = record.media ? `\n      <div class="${detailMediaClass(record)}"><img src="${links.rootPrefix}${escapeHtml(record.media.asset)}" alt="${escapeHtml(loc.mediaAlt)}" loading="lazy" width="${record.media.width}" height="${record.media.height}"></div>` : '';
   const pastStatus = expired ? `\n      <p class="card-status">${escapeHtml(CHROME.pastEvent)}</p>` : '';
+  const accessNotice = loc.accessNotice ? `\n      <section class="access-notice" role="note">\n        <h2>${escapeHtml(loc.accessNotice.heading)}</h2>\n        ${renderBodyParagraphs(loc.accessNotice.body, '        ')}\n      </section>` : '';
   const goodToKnow = loc.goodToKnow ? `\n      <h2>${escapeHtml(CHROME.goodToKnowHeading)}</h2>\n      ${renderBodyParagraphs(loc.goodToKnow, '      ')}` : '';
   const action = loc.actionLabel ? `\n      <a class="dialog-link" href="${escapeHtml(publicActionUrl(record))}" target="_blank" rel="noopener noreferrer">${escapeHtml(loc.actionLabel)} <span aria-hidden="true">↗</span></a>` : '';
 
@@ -610,7 +620,7 @@ ${renderSchema(record, loc, expired)}
   <div class="container record-page">
 ${renderDetailBreadcrumb(links)}${renderHomeSectionReturn(links)}    <article class="dialog-record record-article" data-event-id="${escapeHtml(record.id)}">${media}${pastStatus}
       <p class="provider">${escapeHtml(record.provider)}</p>
-      <h1>${escapeHtml(loc.title)}</h1>
+      <h1>${escapeHtml(loc.title)}</h1>${accessNotice}
       <dl class="detail-list">${renderFacts(loc.facts)}</dl>
       <h2>${escapeHtml(CHROME.detailsHeading)}</h2>
       ${renderBodyParagraphs(loc.detailBody, '      ')}${goodToKnow}
