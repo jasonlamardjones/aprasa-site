@@ -4,7 +4,10 @@ import { fileURLToPath } from 'node:url';
 import { t, hasKey } from './lib/locale.mjs';
 import { renderLangSwitchNote } from './lib/lang-switch-note.mjs';
 import { bodyParagraphs, factKeyBase } from './lib/things-to-do-keys.mjs';
-import { currentnessState, isExpired as recordIsExpired, EXPIRED, REVIEW_DUE } from './lib/things-to-do-currentness.mjs';
+import { EXPIRED, REVIEW_DUE } from './lib/things-to-do-currentness.mjs';
+// Temporal state comes from the parity-gated universal resolver; a
+// universal/incumbent disagreement or malformed date stops generation.
+import { currentnessState, isExpired as recordIsExpired } from './lib/things-to-do-universal-resolver.mjs';
 import { isRecurringVenue, RECURRING_VENUE_SCHEMA_TYPE } from './lib/things-to-do-kinds.mjs';
 import { THINGS_TO_DO_HUB_PUBLIC, collectionRecords, homePreviewIds, hubOutputPath, hubCanonical } from './lib/things-to-do-collection.mjs';
 import { LAUNCHER_SURFACE_KEYS, resolveRuntimeStrings, renderRuntimeStringsBlock } from './lib/runtime-strings.mjs';

@@ -8,10 +8,14 @@
 // one definition, never from two copies that can diverge.
 //
 // It adds NO currentness rule of its own. Eligibility is exactly
-// isPubliclyCurrent() from the incumbent currentness resolver — CURRENT and
-// REVIEW_DUE are both eligible, only EXPIRED is not — so the hub and Home
-// consume the same canonical currentness state the incumbent Things-to-Do
-// presentation already consumes.
+// isPubliclyCurrent() from the parity-gated universal resolver
+// (./things-to-do-universal-resolver.mjs) — CURRENT and REVIEW_DUE are both
+// eligible, only EXPIRED is not — so the hub and Home consume the same
+// canonical currentness state the generated Things-to-Do presentation consumes.
+// That resolver fails hard if the universal and incumbent states ever
+// disagree, so temporal eligibility cannot drift silently. It grants nothing
+// beyond temporal eligibility: publication state and the curated Home
+// selection below remain separate, independent gates.
 //
 // --- Ordering -------------------------------------------------------------
 //
@@ -38,7 +42,7 @@
 // input in the module, it is an explicit approved list and nothing more, and
 // it must never grow into a scoring or popularity rule.
 
-import { isPubliclyCurrent } from './things-to-do-currentness.mjs';
+import { isPubliclyCurrent } from './things-to-do-universal-resolver.mjs';
 
 // --- Hub publication state -------------------------------------------------
 //
