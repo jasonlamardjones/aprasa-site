@@ -92,12 +92,13 @@ const haliotisRaw = readFileSync(path.join(ROOT, 'data/locales/pt-overlay-haliot
 if (createHash('sha256').update(haliotisRaw).digest('hex') !== '80aa93ab04b80218df1a4908af0c0ca9663184d579ab61bc2df796ba6ea5e167') {
   fail('Haliotis package differs from the frozen Project 03 EN/PT payload');
 }
-// r28 (Sinergia access disclosure) adds exactly two REQUIRED_FOR_PT_LAUNCH keys outside the per-event delta lane.
-const SINERGIA_R28_ROWS = 2;
-if (keys.length !== 999 + SINERGIA_R28_ROWS + eventDeltaRequired + eventDeltaUnchanged) fail(`expected ${999 + SINERGIA_R28_ROWS + eventDeltaRequired + eventDeltaUnchanged} total keys including approved event deltas, got ${keys.length}`);
+// r30 (Sinergia access disclosure) adds exactly two REQUIRED_FOR_PT_LAUNCH keys outside the per-event delta lane,
+// on top of the 1000/970 baseline that already includes the r28 contextual Home-return key.
+const SINERGIA_R30_ROWS = 2;
+if (keys.length !== 1000 + SINERGIA_R30_ROWS + eventDeltaRequired + eventDeltaUnchanged) fail(`expected ${1000 + SINERGIA_R30_ROWS + eventDeltaRequired + eventDeltaUnchanged} total keys including approved event deltas, got ${keys.length}`);
 const required = keys.filter((k) => k.scope_status === "REQUIRED_FOR_PT_LAUNCH");
 const unchanged = keys.filter((k) => k.scope_status === "INTENTIONALLY_UNCHANGED");
-if (required.length !== 969 + SINERGIA_R28_ROWS + eventDeltaRequired) fail(`expected ${969 + SINERGIA_R28_ROWS + eventDeltaRequired} REQUIRED_FOR_PT_LAUNCH keys, got ${required.length}`);
+if (required.length !== 970 + SINERGIA_R30_ROWS + eventDeltaRequired) fail(`expected ${970 + SINERGIA_R30_ROWS + eventDeltaRequired} REQUIRED_FOR_PT_LAUNCH keys, got ${required.length}`);
 if (unchanged.length !== 30 + eventDeltaUnchanged) fail(`expected ${30 + eventDeltaUnchanged} INTENTIONALLY_UNCHANGED keys, got ${unchanged.length}`);
 if (data.provenance.delta_revision !== "P03-PT-SOURCE-2026-08-25-r3") {
   fail(`unexpected delta_revision: ${data.provenance.delta_revision}`);
@@ -728,6 +729,37 @@ if (!r13CollectionLabel || r13CollectionLabel.en !== "← Things to Do" || r13Co
   fail("things.shared.back_to_things no longer carries the approved collection wording the hub relies on");
 }
 
+// --- r28 delta spot check (Things-to-Do detail contextual Home return) ---
+// Project 03 semantic authority P03-TTD-CONTEXTUAL-HOME-RETURN-2026-10-27-D01,
+// Project 09 linguistic revision P09-PT-TTD-CONTEXTUAL-HOME-RETURN-2026-10-27-r1.
+// One independent key; it must never reuse or overwrite things.shared.back_to_things.
+{
+  const R28_KEY = "things.detail.home_section_return";
+  const R28_REVISION = "P09-PT-TTD-CONTEXTUAL-HOME-RETURN-2026-10-27-r1";
+  const prov = data.provenance;
+  if (prov.delta28_package_id !== "aprasa-pt-ttd-contextual-home-return-r28") fail(`unexpected delta28_package_id: ${prov.delta28_package_id}`);
+  if (prov.delta28_revision !== R28_REVISION) fail(`unexpected delta28_revision: ${prov.delta28_revision}`);
+  if (prov.delta28_revision_class !== "ADDITIVE_NEW_KEYS") fail(`unexpected delta28_revision_class: ${prov.delta28_revision_class}`);
+  if (prov.delta28_row_count !== 1 || data.counts.r28_delta_rows !== 1) fail("r28 must supply exactly one row");
+  if (prov.delta28_semantic_authority_id !== "P03-TTD-CONTEXTUAL-HOME-RETURN-2026-10-27-D01") fail("r28 Project 03 semantic authority id is missing or changed");
+  if (prov.delta28_project_09_revision_id !== R28_REVISION) fail("r28 Project 09 linguistic revision id is missing or changed");
+  if (prov.delta28_project_09_status !== "approved" || prov.delta28_project_09_verdict !== "APPROVED_FOR_PUBLIC_USE") fail("r28 is not approved for public use");
+  const row = data.keys[R28_KEY];
+  if (!row) {
+    fail(`r28 key missing from generated locale data: ${R28_KEY}`);
+  } else {
+    if (row.en !== "Go to Things to Do on the homepage") fail(`${R28_KEY} EN does not match the approved copy: got ${JSON.stringify(row.en)}`);
+    if (row.pt !== "Ir para O que fazer na página inicial") fail(`${R28_KEY} PT does not match the approved copy: got ${JSON.stringify(row.pt)}`);
+    if (row.scope_status !== "REQUIRED_FOR_PT_LAUNCH") fail(`${R28_KEY} must be REQUIRED_FOR_PT_LAUNCH`);
+    if (row.translation_status !== "APPROVED") fail(`${R28_KEY} must be APPROVED`);
+    if (row.record_id !== null) fail(`${R28_KEY} must not be record-scoped: got ${JSON.stringify(row.record_id)}`);
+    if (row.source_revision !== R28_REVISION) fail(`${R28_KEY} provenance is not the r28 revision`);
+  }
+  // Fail closed on a duplicated key in the raw package (JSON.parse would keep the last).
+  const rawPackage = readFileSync(path.join(ROOT, "data/locales/pt-overlay-r28-ttd-contextual-home-return.source.json"), "utf8");
+  if (rawPackage.split(`"key": "${R28_KEY}"`).length !== 2) fail(`r28 package must declare ${R28_KEY} exactly once`);
+}
+
 // --- r9 source correction (Sinergia da Matéria, Project 03, 01 September 2026) ---
 // r9 first corrected three keys to the month-level public meaning; the r29
 // presentation correction (Project 09, 27 October 2026) has since replaced
@@ -832,10 +864,10 @@ for (const [key, expected] of Object.entries(r9Admission)) {
   if (row.source_correction) fail(`${key} must not carry a source correction — free admission is an additive addition`);
 }
 
-// --- r28 Sinergia access disclosure (Project 09, 27 October 2026) ---
+// --- r30 Sinergia access disclosure (Project 09, 27 October 2026; relabelled from r28, source_revision unchanged) ---
 // Exactly two strictly additive record-scoped keys with the approved wording.
-const r28Revision = "P09-PT-SINERGIA-ACCESS-DISCLOSURE-2026-10-27-r1";
-const r28Approved = {
+const r30Revision = "P09-PT-SINERGIA-ACCESS-DISCLOSURE-2026-10-27-r1";
+const r30Approved = {
   [`${r9Id}.access_notice_heading`]: {
     en: "Visitor access not currently confirmed",
     pt: "Acesso de visitantes ainda não confirmado",
@@ -845,20 +877,20 @@ const r28Approved = {
     pt: "Informações anteriores sobre a exposição indicavam que Sinergia da Matéria permaneceria em exibição até novembro de 2026. No entanto, foi anunciada uma programação mais recente do CNAD para a Galeria Zero, e não confirmámos se esta exposição continua acessível a visitantes. Confirme diretamente com o CNAD antes de planear uma visita.",
   },
 };
-for (const [key, expected] of Object.entries(r28Approved)) {
+for (const [key, expected] of Object.entries(r30Approved)) {
   const row = data.keys[key];
-  if (!row) { fail(`r28 Sinergia key missing from locale data: ${key}`); continue; }
+  if (!row) { fail(`r30 Sinergia key missing from locale data: ${key}`); continue; }
   if (row.en !== expected.en) fail(`${key} EN does not match the approved Project 09 wording`);
   if (row.pt !== expected.pt) fail(`${key} PT does not match the approved Project 09 wording`);
-  if (row.source_revision !== r28Revision) fail(`${key} source_revision mismatch: ${row.source_revision}`);
+  if (row.source_revision !== r30Revision) fail(`${key} source_revision mismatch: ${row.source_revision}`);
   if (row.record_id !== "sinergia-da-materia" || row.scope_status !== "REQUIRED_FOR_PT_LAUNCH" ||
       row.identity_policy !== "TRANSLATE_NORMALLY" || row.translation_status !== "APPROVED") {
-    fail(`${key} carries the wrong r28 row metadata`);
+    fail(`${key} carries the wrong r30 row metadata`);
   }
-  if (row.source_correction) fail(`${key} must not carry a source correction — r28 is strictly additive`);
+  if (row.source_correction) fail(`${key} must not carry a source correction — r30 is strictly additive`);
 }
 if (Object.keys(data.keys).filter((k) => k.startsWith(`${r9Id}.access_notice`)).length !== 2) {
-  fail("r28 must add exactly two access_notice keys for sinergia-da-materia");
+  fail("r30 must add exactly two access_notice keys for sinergia-da-materia");
 }
 
 // --- r8 delta spot checks (same-day PART_ILHAS / Artemisa Ferreira event) ---

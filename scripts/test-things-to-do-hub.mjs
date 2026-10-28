@@ -903,6 +903,64 @@ for (const state of ['expired', 'withdrawn', 'draft']) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// N+2. Every published detail page carries the independent contextual return
+// to the Things to Do section on its OWN locale's Home (Project 03
+// P03-TTD-CONTEXTUAL-HOME-RETURN-2026-10-27-D01; Project 09 revision
+// P09-PT-TTD-CONTEXTUAL-HOME-RETURN-2026-10-27-r1).
+//
+// The control is not the collection breadcrumb: it must be present while the
+// hub is dormant AND after it is reactivated, must never reuse
+// things.shared.back_to_things, and must name itself through its visible text
+// only (no aria-label). Asserted over the committed pages, then again over a
+// sandbox that reactivates the hub.
+// ---------------------------------------------------------------------------
+{
+  const HOME_RETURN = /<p class="home-return"><a href="([^"]*)">([^<]*)<\/a><\/p>/g;
+  const detailPages = (root) => ['', 'pt/'].flatMap((prefix) =>
+    fs.readdirSync(path.join(root, prefix, 'things-to-do'), { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => `${prefix}things-to-do/${entry.name}/index.html`));
+
+  function assertHomeReturn(root, label) {
+    const pages = detailPages(root);
+    check(`${label}: 30 detail pages are covered (15 EN + 15 PT)`, pages.length === 30, String(pages.length));
+    const bad = [];
+    for (const rel of pages) {
+      const locale = rel.startsWith('pt/') ? 'pt' : 'en';
+      const html = fs.readFileSync(path.join(root, rel), 'utf8');
+      const links = [...html.matchAll(HOME_RETURN)];
+      if (links.length !== 1) { bad.push(`${rel}: ${links.length} contextual return links`); continue; }
+      const [whole, href, text] = links[0];
+      const target = path.posix.resolve('/', path.posix.dirname(rel), href.split('#')[0]);
+      const expected = locale === 'pt' ? '/pt' : '';
+      if (text !== t('things.detail.home_section_return', locale)) bad.push(`${rel}: label ${JSON.stringify(text)}`);
+      if (href.split('#')[1] !== 'things-to-do' || target.replace(/\/$/, '') !== expected) bad.push(`${rel}: href ${href} resolves to ${target}`);
+      if (/aria-label/.test(whole)) bad.push(`${rel}: contextual return carries an aria-label`);
+      if (text === t('things.shared.back_to_things', locale)) bad.push(`${rel}: reuses the collection label`);
+    }
+    check(`${label}: each detail page has exactly one correct same-locale Home return`, bad.length === 0, bad.join('; '));
+  }
+
+  assertHomeReturn(ROOT, 'committed (hub dormant)');
+  check('the contextual-return strings are the approved EN/PT pair',
+    t('things.detail.home_section_return', 'en') === 'Go to Things to Do on the homepage' &&
+    t('things.detail.home_section_return', 'pt') === 'Ir para O que fazer na página inicial');
+  check('the collection label key is untouched',
+    t('things.shared.back_to_things', 'en') === '← Things to Do' && t('things.shared.back_to_things', 'pt') === '← O que fazer');
+
+  const asOf = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'things-to-do-currentness.json'), 'utf8')).as_of;
+  const dir = sandbox();
+  try {
+    generate(dir, asOf);
+    assertHomeReturn(dir, 'hypothetical active hub');
+    const missing = detailPages(dir).filter((rel) => !fs.readFileSync(path.join(dir, rel), 'utf8').includes('<nav class="breadcrumb"'));
+    check('the reactivated hub still restores the separate collection breadcrumb on every detail page', missing.length === 0, missing.join(', '));
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
 console.log(`\n${passed} passed, ${failures.length} failed.`);
 if (failures.length) {
   for (const failure of failures) console.error(`- ${failure}`);
