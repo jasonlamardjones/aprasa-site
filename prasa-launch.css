@@ -494,6 +494,8 @@ html[lang="pt"] img.lang-only-pt { display: block; }
 .record-page { padding: 2.25rem 0 2.8rem; }
 .breadcrumb { margin: 0 0 1.1rem; font-size: .86rem; }
 .breadcrumb a { min-height: 44px; display: inline-flex; align-items: center; }
+.home-return { margin: 0 0 1.1rem; font-size: .86rem; }
+.home-return a { min-height: 44px; display: inline-flex; align-items: center; }
 .record-article { max-width: 42rem; }
 .record-article .record-media { margin: 0 0 1.2rem; border-radius: var(--radius); overflow: hidden; }
 .record-article .record-media img { width: 100%; height: auto; display: block; }

@@ -41,7 +41,8 @@
       "data/locales/pt-overlay-r23-mindelo-fragata-selected-branches.source.json",
       "data/locales/pt-overlay-r25-trainings-home-expansion-timbuktoo.source.json",
       "data/locales/pt-overlay-r26-trainings-home-expansion-edtech.source.json",
-      "data/locales/pt-overlay-r27-ficase-scholarship-renewals-2026-2027.source.json"
+      "data/locales/pt-overlay-r27-ficase-scholarship-renewals-2026-2027.source.json",
+      "data/locales/pt-overlay-r28-ttd-contextual-home-return.source.json"
     ],
     "base_revision": "P03-PT-SOURCE-2026-08-25-r2",
     "delta_revision": "P03-PT-SOURCE-2026-08-25-r3",
@@ -140,6 +141,14 @@
     "delta26_project_09_package_id": null,
     "delta26_project_09_revision_id": null,
     "delta26_lifecycle_disclosure_policy": "INTERNAL_TOKEN_NEVER_PUBLIC",
+    "delta28_package_id": "aprasa-pt-ttd-contextual-home-return-r28",
+    "delta28_revision": "P09-PT-TTD-CONTEXTUAL-HOME-RETURN-2026-10-27-r1",
+    "delta28_revision_class": "ADDITIVE_NEW_KEYS",
+    "delta28_row_count": 1,
+    "delta28_semantic_authority_id": "P03-TTD-CONTEXTUAL-HOME-RETURN-2026-10-27-D01",
+    "delta28_project_09_status": "approved",
+    "delta28_project_09_verdict": "APPROVED_FOR_PUBLIC_USE",
+    "delta28_project_09_revision_id": "P09-PT-TTD-CONTEXTUAL-HOME-RETURN-2026-10-27-r1",
     "delta9_superseding_ruling": "P03-SINERGIA-CURRENTNESS-2026-09-01",
     "delta9_owning_project": "Project 03",
     "event_delta_packages": [
@@ -235,10 +244,10 @@
     "governed_override_authorization": "fixed code-side contract in scripts/build-locale-data.mjs (GOVERNED_OVERRIDE_CONTRACTS)"
   },
   "counts": {
-    "total_rows": 1108,
-    "required_for_pt_launch": 1078,
+    "total_rows": 1109,
+    "required_for_pt_launch": 1079,
     "intentionally_unchanged": 30,
-    "approved_rows_total": 1108,
+    "approved_rows_total": 1109,
     "r3_delta_rows": 21,
     "r4_delta_rows": 26,
     "r5_delta_rows": 2,
@@ -255,6 +264,7 @@
     "r21_delta_rows": 1,
     "r22_delta_rows": 1,
     "r23_delta_rows": 6,
+    "r28_delta_rows": 1,
     "r10_renamed_rows": 76,
     "governed_override_rows": 8
   },
@@ -13587,6 +13597,18 @@
       "source_revision": "P09-PT-TTO-FICASE-RENEWALS-2026-10-26-r1",
       "context_notes": "Detail provenance line.",
       "linguistic_notes": ""
+    },
+    "things.detail.home_section_return": {
+      "key": "things.detail.home_section_return",
+      "en": "Go to Things to Do on the homepage",
+      "pt": "Ir para O que fazer na página inicial",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": null,
+      "translation_status": "APPROVED",
+      "source_revision": "P09-PT-TTD-CONTEXTUAL-HOME-RETURN-2026-10-27-r1",
+      "context_notes": "Visible text and accessible name of the independent contextual-return link on every Things-to-Do detail page. EN targets /#things-to-do, PT targets /pt/#things-to-do. Independent of the unpublished collection hub and its dormant breadcrumb (things.shared.back_to_things), which this key must never replace. No aria-label: the visible text is the accessible name.",
+      "linguistic_notes": "Final Project 09 wording, carried verbatim. \"O que fazer\" is the established governed Portuguese name of the Things to Do section. Carries no protected brand string and no placeholder."
     }
   }
 }
