@@ -240,6 +240,24 @@ function monthPrecisionIds(dir) {
   return records.filter((record) => record.end_precision === 'month' && isPubliclyPublishable(record)).map((record) => record.id);
 }
 
+const FIFTY_ANOS_ID = '50-anos-de-memoria-criacao-e-resistencia';
+
+/**
+ * 50 Anos is WITHDRAWN in the committed corpus (Project 03 ruling of 19 November 2026), so it is
+ * no longer a hub member and can no longer exercise the published REVIEW_DUE rule on its own.
+ * Inside a throwaway sandbox ONLY, publish it again so the generic hub rule -- a published
+ * month-precision record stays an ordinary public card once its month boundary passes -- keeps
+ * real coverage against real governed data. The committed withdrawn state is asserted separately
+ * in block 4b and never touched.
+ */
+function publishFiftyAnosFixture(dir) {
+  const file = path.join(dir, EVENTS);
+  const doc = JSON.parse(fs.readFileSync(file, 'utf8'));
+  const record = doc.records.find((item) => item.id === FIFTY_ANOS_ID);
+  record.publication_state = 'published';
+  fs.writeFileSync(file, `${JSON.stringify(doc, null, 2)}\n`);
+}
+
 // ---------------------------------------------------------------------------
 // 1. Preview / collection split, both locales, at the committed as_of.
 // ---------------------------------------------------------------------------
@@ -295,12 +313,15 @@ function monthPrecisionIds(dir) {
     // while remaining a full member of the collection. This is the assertion
     // that would fail if the curated selection ever decayed back into
     // "the first N eligible records".
-    check('the unselected eligible record is absent from Home but present on the hub (EN)',
-      !enHome.includes('50-anos-de-memoria-criacao-e-resistencia')
-      && enHub.includes('50-anos-de-memoria-criacao-e-resistencia'),
+    // 50 Anos was this control until Project 03 withdrew it from current discovery on 19 November
+    // 2026. It is now absent from Home AND from the hub in both locales: withdrawal removes it from
+    // every actionable surface. (The eligible-but-unselected rule itself stays covered by the
+    // Phase 2B preview-backfill test, whose sandbox keeps an eligible unselected record.)
+    check('withdrawn 50 Anos is absent from Home and from the hub (EN)',
+      !enHome.includes(FIFTY_ANOS_ID) && !enHub.includes(FIFTY_ANOS_ID),
       `home=[${enHome}] hub=[${enHub}]`);
-    check('the unselected eligible record is absent from Home (PT)',
-      !ptHome.includes('50-anos-de-memoria-criacao-e-resistencia'), `home=[${ptHome}]`);
+    check('withdrawn 50 Anos is absent from Home and from the hub (PT)',
+      !ptHome.includes(FIFTY_ANOS_ID) && !ptHub.includes(FIFTY_ANOS_ID), `home=[${ptHome}] hub=[${ptHub}]`);
     // Home is a SUBSEQUENCE of hub order, not a prefix of it: every Home record
     // is a collection member, and the two surfaces never contradict each other
     // on relative order, but the curated selection may skip records.
@@ -421,12 +442,15 @@ function monthPrecisionIds(dir) {
   const asOf = '2026-11-01';
   const dir = sandbox();
   try {
+    // No published review-due record remains in the committed corpus, so the sandbox republishes
+    // 50 Anos (fixture only) to keep the PUBLISHED REVIEW_DUE hub rule genuinely exercised.
+    publishFiftyAnosFixture(dir);
     generate(dir, asOf);
     for (const [locale, file] of [['EN', EN_HUB], ['PT', PT_HUB]]) {
       const html = read(dir, file);
-      // The published review-due record at this boundary is 50 Anos; withdrawn
+      // The published review-due record at this boundary is the 50 Anos fixture; withdrawn
       // Sinergia is excluded from collection membership.
-      check(`${locale} hub keeps the review-due record`, cardIds(html).includes('50-anos-de-memoria-criacao-e-resistencia'), `got [${cardIds(html)}]`);
+      check(`${locale} hub keeps the published review-due record (50 Anos fixture)`, cardIds(html).includes(FIFTY_ANOS_ID), `got [${cardIds(html)}]`);
       check(`${locale} hub excludes withdrawn Sinergia`, !cardIds(html).includes('sinergia-da-materia'), `got [${cardIds(html)}]`);
       check(`${locale} hub does not label a review-due record a past event`,
         !html.includes('Past event') && !html.includes('Evento já realizado'));
@@ -447,6 +471,78 @@ function monthPrecisionIds(dir) {
       run(dir, 'validate-things-to-do-hub.mjs', [`--as-of=${asOf}`]).status === 0);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 4b. WITHDRAWN 50 Anos at and after the November month boundary, on the COMMITTED corpus.
+//     Project 03 ruling 19 November 2026: WITHDRAW_FROM_CURRENT_DISCOVERY /
+//     EXACT_END_DATE_NOT_APPROVED. Withdrawal leaves every actionable surface but keeps the
+//     historical routes and the outstanding evidence review, and never invents a closing day.
+// ---------------------------------------------------------------------------
+{
+  const asOf = '2026-11-01';
+  const dir = sandbox();
+  try {
+    generate(dir, asOf);
+    for (const [locale, file, home] of [['EN', EN_HUB, 'index.html'], ['PT', PT_HUB, 'pt/index.html']]) {
+      const ids = cardIds(read(dir, file));
+      check(`${locale} hub excludes withdrawn 50 Anos and withdrawn Sinergia at the November boundary`,
+        !ids.includes(FIFTY_ANOS_ID) && !ids.includes('sinergia-da-materia'), `got [${ids}]`);
+      check(`${locale} Home carries no withdrawn 50 Anos card at the November boundary`,
+        !cardIds(read(dir, home)).includes(FIFTY_ANOS_ID));
+    }
+    check('hub validator passes with no published review-due record',
+      run(dir, 'validate-things-to-do-hub.mjs', [`--as-of=${asOf}`]).status === 0);
+    // Withdrawn month-precision records are NOT publication-blocking, but the evidence review is
+    // never discharged by the withdrawal: it is reported every run as a non-actionable advisory.
+    const review = run(dir, 'validate-things-to-do-currentness.mjs', [`--as-of=${asOf}`]);
+    check('withdrawn 50 Anos is not a publication-blocking REVIEW-DUE failure (exit 0)', review.status === 0, `status=${review.status} ${review.out}`);
+    check('withdrawn 50 Anos is not reported as an actionable REVIEW-DUE record',
+      !review.out.includes(`REVIEW-DUE ${FIFTY_ANOS_ID}`), review.out);
+    check('withdrawn 50 Anos keeps its outstanding evidence-review advisory',
+      review.out.includes(`EVIDENCE-REVIEW (withdrawn) ${FIFTY_ANOS_ID}`), review.out);
+    check('withdrawn 50 Anos does not leak into the Phase 2B deterministic drift grammar',
+      !new RegExp(`^\\s*-\\s+${FIFTY_ANOS_ID}:\\s`, 'm').test(review.out), review.out);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 4c. The withdrawn 50 Anos record and its two historical routes, as committed.
+// ---------------------------------------------------------------------------
+{
+  const corpus = JSON.parse(fs.readFileSync(path.join(ROOT, EVENTS), 'utf8')).records;
+  const fifty = corpus.find((r) => r.id === FIFTY_ANOS_ID);
+  check('50 Anos is withdrawn and keeps month precision, 2026-11 and no exact end date',
+    fifty?.publication_state === 'withdrawn' && fifty.end_precision === 'month'
+      && fifty.end_month === '2026-11' && fifty.end_date === null,
+    JSON.stringify({ s: fifty?.publication_state, p: fifty?.end_precision, m: fifty?.end_month, d: fifty?.end_date }));
+  check('50 Anos keeps its opening date and venue identity',
+    fifty?.start_date === '2026-07-23' && fifty.provider === 'CNAD' && fifty.location?.name === 'Galeria Bela Duarte, CNAD');
+  check('50 Anos keeps the evidence-review state: month boundary reached on 2026-11-01',
+    currentnessState(fifty, '2026-11-01') === REVIEW_DUE);
+  check('withdrawn 50 Anos is not a collection member or Home preview record, before or after the boundary',
+    ['2026-10-12', '2026-11-01', '2026-11-19'].every((day) =>
+      !collectionRecords(corpus, day).some((r) => r.id === FIFTY_ANOS_ID)
+      && !homePreviewRecords(corpus, day).some((r) => r.id === FIFTY_ANOS_ID)));
+  const exactNovemberDay = /(\b[0-9]{1,2}\b[ ]+(de[ ]+)?(November|novembro))|((November|novembro)[ ]+\b[0-9]{1,2}\b)/i;
+  for (const [locale, route] of [['en', 'things-to-do/50-anos-de-memoria-criacao-e-resistencia/index.html'],
+                                 ['pt', 'pt/things-to-do/50-anos-de-memoria-criacao-e-resistencia/index.html']]) {
+    check(`withdrawn 50 Anos historical route is retained (${locale})`, fs.existsSync(path.join(ROOT, route)));
+    const html = fs.readFileSync(path.join(ROOT, route), 'utf8');
+    check(`withdrawn 50 Anos page carries the access disclosure heading and body (${locale})`,
+      html.includes('class="access-notice"')
+        && html.includes(t(`event.${FIFTY_ANOS_ID}.access_notice_heading`, locale))
+        && html.includes(t(`event.${FIFTY_ANOS_ID}.access_notice_body`, locale)));
+    check(`withdrawn 50 Anos page asserts no EventScheduled status (${locale})`, !html.includes('EventScheduled'));
+    check(`withdrawn 50 Anos page serializes no endDate and no data-event-end (${locale})`,
+      !html.includes('"endDate"') && !html.includes('data-event-end'));
+    check(`withdrawn 50 Anos page states no exact November day and never the unapproved 2026-11-14 (${locale})`,
+      !exactNovemberDay.test(html) && !html.includes('2026-11-14'));
+    check(`withdrawn 50 Anos page no longer claims the exhibition is on view (${locale})`,
+      !/on view into November 2026\.<\/p>|e está em exibição até novembro de 2026/.test(html));
   }
 }
 
@@ -854,9 +950,12 @@ for (const state of ['expired', 'withdrawn', 'draft']) {
     unrelatedPublished.length > 0 && unrelatedPublished.every((id) => collection.includes(id))
       && collection.every((id) => unrelatedPublished.includes(id)), `collection=[${collection}] published-current=[${unrelatedPublished}]`);
   const fifty = corpus.find((r) => r.id === '50-anos-de-memoria-criacao-e-resistencia');
-  check('corpus: published 50 Anos stays a member and is REVIEW-DUE on 2026-11-01',
-    fifty?.publication_state === 'published' && collectionRecords(corpus, '2026-11-01').some((r) => r.id === fifty.id)
+  check('corpus: withdrawn 50 Anos is excluded from collection membership but keeps its REVIEW-DUE evidence state on 2026-11-01',
+    fifty?.publication_state === 'withdrawn' && !collectionRecords(corpus, '2026-11-01').some((r) => r.id === fifty.id)
       && currentnessState(fifty, '2026-11-01') === REVIEW_DUE);
+  for (const route of ['things-to-do/50-anos-de-memoria-criacao-e-resistencia/index.html', 'pt/things-to-do/50-anos-de-memoria-criacao-e-resistencia/index.html']) {
+    check(`corpus: withdrawn 50 Anos detail page is retained (${route})`, fs.existsSync(path.join(ROOT, route)));
+  }
   // The detail pages of a withdrawn record are generated from the canonical
   // record, not from collection membership, and must stay in place.
   for (const route of ['things-to-do/sinergia-da-materia/index.html', 'pt/things-to-do/sinergia-da-materia/index.html']) {
