@@ -90,3 +90,32 @@ deploy authority, and persisting it never moves the candidate branch or main.
 
 See `automation/control-plane/README.md` ("Producers: which real workflow
 outcomes emit a result") for the full contract.
+
+## Event lifecycle expiry (dry run)
+
+`scripts/lifecycle/run-event-expiry.mjs` (workflow `event-lifecycle-expiry.yml`)
+is the Project 04 Tranche A1 controller for time-based expiry of already
+approved, published, finite events. It is **dry-run only**: it holds no
+credential, writes nothing to the repository, and refuses any mode other than
+`dry-run` in `automation/lifecycle/mode.json`. It records what it *would*
+publish as a workflow artifact.
+
+- **Authorization is recomputed** from `data/things-to-do-events.json` and the
+  Atlantic/Cape_Verde clock — never from a QA artifact. Canonical event data is
+  not edited; only the `as_of` ledger advances, and only when an event actually
+  crosses its boundary, so a run with nothing due is a byte-identical no-op.
+- **Boundary (provisional, pending Project 03):** a day-precision event is
+  current through its `end_date` and expires at 00:00:00 Cape Verde the next day
+  (01:00 UTC). `end_datetime` is not consulted. Month-precision, open-ended and
+  recurring records never expire here; month precision stays a human
+  `REVIEW_DUE` prompt, surfaced as an audit advisory.
+- **Bounded:** the staged rebuild may change only the ledger, the due event's EN
+  and PT detail pages, and Home generated-event regions of affected events. Any
+  other file (including `sitemap.xml`), any out-of-region Home change, a failed
+  incumbent validator, a non-idempotent second build, a clock earlier than the
+  ledger, or a malformed date fails closed. Detail routes are retained in both
+  locales.
+- **Late runs:** GitHub cron is best-effort (this repository's scheduled QA has
+  fired 4.5–9.8 h late). Each run reconciles every overdue transition.
+
+Publishing and unattended enablement are separate, founder-gated work.
