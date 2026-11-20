@@ -109,9 +109,21 @@ function renderVector(root, asOf) {
  * governed behavior -- a record with no established closing day must be
  * reverified by a human first -- so a date carrying it cannot be used to test
  * the diff-scope contract, which is a different guard entirely.
+ *
+ * Only a record that is NOT withdrawn is publication-blocking. The canonical validator
+ * (scripts/validate-things-to-do-currentness.mjs) reports a WITHDRAWN review-due record as a
+ * non-blocking EVIDENCE-REVIEW advisory -- a withdrawn record is off every actionable surface,
+ * so its outstanding source reverification is a diagnostic, not a publication failure. This
+ * helper has to make the same distinction or it refuses dates the validator accepts, which is
+ * how a withdrawn month-precision record kept failing this contract after Project 03's
+ * 19 November 2026 withdrawal of 50 Anos. A PUBLISHED review-due record remains blocking.
  */
+function publicationBlockingReviewDue(items, asOf) {
+  return items.some((item) => item.publication_state !== 'withdrawn' && isReviewDue(item, asOf));
+}
+
 function hasReviewDue(root, asOf) {
-  return records(root).some((item) => isReviewDue(item, asOf));
+  return publicationBlockingReviewDue(records(root), asOf);
 }
 
 function shiftDay(day, offset) {
@@ -515,6 +527,93 @@ record('publication preparation still refuses every real-write authorization', (
   escalated.control.merge_allowed = true;
   const result = validatePacket(escalated, { root: ROOT, checkRepository: false });
   if (result.ok) throw new Error('merge_allowed=true was accepted');
+});
+
+// --- Withdrawn versus published REVIEW_DUE: the helper must match the canonical validator ---
+//
+// Synthetic month-precision records, judged by BOTH the helper and the SHIPPED validator run in a
+// throwaway working directory, so neither can drift from the other unnoticed.
+
+const CURRENTNESS_VALIDATOR = path.join(ROOT, 'scripts', 'validate-things-to-do-currentness.mjs');
+const MONTH_FIXTURE_AS_OF = '2026-11-19';
+
+function monthPrecisionFixture(id, publicationState) {
+  return {
+    id,
+    kind: 'dated-event',
+    title: `Synthetic ${id}`,
+    publication_state: publicationState,
+    start_date: '2026-07-23',
+    end_date: null,
+    end_precision: 'month',
+    end_month: '2026-11'
+  };
+}
+
+function validatorOn(items, asOf = MONTH_FIXTURE_AS_OF) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'aprasa-review-due-'));
+  try {
+    fs.mkdirSync(path.join(dir, 'data'));
+    writeJson(path.join(dir, 'data', 'things-to-do-events.json'), { version: 1, records: items });
+    fs.writeFileSync(path.join(dir, 'index.html'), '<!doctype html><title>fixture</title>\n');
+    const result = run(dir, [CURRENTNESS_VALIDATOR, `--as-of=${asOf}`], { allowFailure: true });
+    return { status: result.status, out: `${result.stdout}${result.stderr}` };
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+record('a PUBLISHED review-due record stays publication-blocking in helper and validator', () => {
+  const items = [monthPrecisionFixture('fixture-published', 'published')];
+  if (!isReviewDue(items[0], MONTH_FIXTURE_AS_OF)) throw new Error('fixture is not review-due, so it proves nothing');
+  if (!publicationBlockingReviewDue(items, MONTH_FIXTURE_AS_OF)) throw new Error('helper stopped treating a published review-due record as blocking');
+  const verdict = validatorOn(items);
+  if (verdict.status !== 3) throw new Error(`validator must exit 3 for a published review-due record, got ${verdict.status}: ${verdict.out}`);
+  if (!verdict.out.includes('REVIEW-DUE fixture-published')) throw new Error(`validator lost its REVIEW-DUE line: ${verdict.out}`);
+});
+
+record('a WITHDRAWN review-due record is not publication-blocking in helper and validator', () => {
+  const items = [monthPrecisionFixture('fixture-withdrawn', 'withdrawn')];
+  if (!isReviewDue(items[0], MONTH_FIXTURE_AS_OF)) throw new Error('fixture is not review-due, so it proves nothing');
+  if (publicationBlockingReviewDue(items, MONTH_FIXTURE_AS_OF)) throw new Error('helper still treats a withdrawn review-due record as blocking');
+  const verdict = validatorOn(items);
+  if (verdict.status !== 0) throw new Error(`validator must accept a withdrawn review-due record, got ${verdict.status}: ${verdict.out}`);
+  if (/^\s*REVIEW-DUE /m.test(verdict.out)) throw new Error(`withdrawn record was reported as actionable REVIEW-DUE: ${verdict.out}`);
+});
+
+record('the withdrawn evidence-review advisory is retained, not discharged by withdrawal', () => {
+  const verdict = validatorOn([monthPrecisionFixture('fixture-withdrawn', 'withdrawn')]);
+  if (!verdict.out.includes('EVIDENCE-REVIEW (withdrawn) fixture-withdrawn')) {
+    throw new Error(`the withdrawn evidence-review advisory disappeared: ${verdict.out}`);
+  }
+});
+
+record('a withdrawn record never masks a published review-due record alongside it', () => {
+  const items = [monthPrecisionFixture('fixture-withdrawn', 'withdrawn'), monthPrecisionFixture('fixture-published', 'published')];
+  if (!publicationBlockingReviewDue(items, MONTH_FIXTURE_AS_OF)) throw new Error('helper let a withdrawn record mask a published one');
+  const verdict = validatorOn(items);
+  if (verdict.status !== 3 || !verdict.out.includes('REVIEW-DUE fixture-published')) {
+    throw new Error(`validator must still block on the published record, got ${verdict.status}: ${verdict.out}`);
+  }
+});
+
+record('the helper agrees with the canonical validator across the committed corpus and dates', () => {
+  const items = records(ROOT);
+  for (const day of [committedAsOf(), '2026-10-31', '2026-11-01', '2026-11-19', '2026-12-01']) {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'aprasa-review-due-corpus-'));
+    try {
+      fs.mkdirSync(path.join(dir, 'data'));
+      writeJson(path.join(dir, 'data', 'things-to-do-events.json'), readJson(path.join(ROOT, 'data', 'things-to-do-events.json')));
+      fs.copyFileSync(path.join(ROOT, 'index.html'), path.join(dir, 'index.html'));
+      const result = run(dir, [CURRENTNESS_VALIDATOR, `--as-of=${day}`], { allowFailure: true });
+      const validatorSaysBlocking = /^\s*REVIEW-DUE /m.test(`${result.stdout}${result.stderr}`);
+      if (publicationBlockingReviewDue(items, day) !== validatorSaysBlocking) {
+        throw new Error(`helper=${publicationBlockingReviewDue(items, day)} but validator reports blocking=${validatorSaysBlocking} as of ${day}`);
+      }
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  }
 });
 
 for (const result of results) {

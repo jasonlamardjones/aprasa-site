@@ -1,0 +1,37 @@
+{
+  "package_id": "aprasa-pt-50-anos-access-disclosure-2026-11-19",
+  "source_revision": "P09-PT-50-ANOS-ACCESS-DISCLOSURE-2026-11-19-r1",
+  "record_id": "50-anos-de-memoria-criacao-e-resistencia",
+  "revision_class": "ADDITIVE_EVENT_KEYS",
+  "project_09_status": "approved",
+  "owning_project": "Project 03",
+  "semantic_authority": "Project 03 editorial ruling 2026-11-19: WITHDRAW_FROM_CURRENT_DISCOVERY / EXACT_END_DATE_NOT_APPROVED",
+  "review_required": 0,
+  "blocking_issue": null,
+  "rows": [
+    {
+      "key": "event.50-anos-de-memoria-criacao-e-resistencia.access_notice_heading",
+      "source_revision": "P09-PT-50-ANOS-ACCESS-DISCLOSURE-2026-11-19-r1",
+      "source_en": "Visitor access not currently confirmed",
+      "pt": "Acesso de visitantes ainda não confirmado",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "50-anos-de-memoria-criacao-e-resistencia",
+      "translation_status": "APPROVED",
+      "context_notes": "Heading of the access disclosure shown on the withdrawn 50 Anos de Memória, Criação e Resistência detail pages.",
+      "linguistic_notes": ""
+    },
+    {
+      "key": "event.50-anos-de-memoria-criacao-e-resistencia.access_notice_body",
+      "source_revision": "P09-PT-50-ANOS-ACCESS-DISCLOSURE-2026-11-19-r1",
+      "source_en": "Earlier information indicated that 50 Anos de Memória, Criação e Resistência would remain on view into November 2026. We have not confirmed whether visitors can currently access this exhibition. Please check directly with CNAD before planning a visit.",
+      "pt": "Informações anteriores indicavam que 50 Anos de Memória, Criação e Resistência permaneceria em exibição até novembro de 2026. Não confirmámos se esta exposição continua atualmente acessível a visitantes. Confirme diretamente com o CNAD antes de planear uma visita.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "50-anos-de-memoria-criacao-e-resistencia",
+      "translation_status": "APPROVED",
+      "context_notes": "Body of the access disclosure; it states the earlier month-level evidence without claiming the exhibition has closed and without any exact closing day.",
+      "linguistic_notes": ""
+    }
+  ]
+}

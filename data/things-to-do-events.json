@@ -428,13 +428,13 @@
       "end_precision": "month",
       "end_month": "2026-11",
       "checked_at": "2026-09-01",
-      "publication_state": "published",
+      "publication_state": "withdrawn",
       "media_policy": "fallback_allowed",
       "media_manifest_title": "50 Anos de Memória, Criação e Resistência",
       "detail_page": "things-to-do/50-anos-de-memoria-criacao-e-resistencia/",
       "free_admission": null,
       "display": {
-        "status": "Opened 23 July 2026 · On view into November 2026",
+        "status": "Visitor access not currently confirmed",
         "meta": "Galeria Bela Duarte, CNAD",
         "checked": "Checked 1 September 2026"
       },
@@ -446,15 +446,15 @@
       "detail": {
         "facts": [
           {
-            "label": "Dates",
-            "value": "Opened 23 July 2026 · On view into November 2026"
+            "label": "Previously advertised exhibition dates",
+            "value": "The exhibition opened on 23 July 2026. Earlier information indicated that it would remain on view into November 2026. Current visitor access is unconfirmed."
           },
           {
             "label": "Where",
             "value": "Galeria Bela Duarte, CNAD, Mindelo"
           }
         ],
-        "body": "50 Anos de Memória, Criação e Resistência is an exhibition at CNAD’s Galeria Bela Duarte in Mindelo, presented in connection with the 50th anniversary of Cooperativa Resistência.\n\nThe exhibition opened on 23 July 2026 and is on view into November 2026.",
+        "body": "50 Anos de Memória, Criação e Resistência is an exhibition at CNAD’s Galeria Bela Duarte in Mindelo, presented in connection with the 50th anniversary of Cooperativa Resistência.\n\nThe exhibition opened on 23 July 2026. Earlier information indicated that it would remain on view into November 2026, but current visitor access has not been confirmed.",
         "good_to_know": "Confirm current access and opening hours with CNAD before visiting.",
         "checked": "Checked 1 September 2026",
         "action_label": "Visitor information"

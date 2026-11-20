@@ -27,6 +27,168 @@ const eventDeltaFiles = readdirSync(path.join(ROOT, "data", "locales"))
 let eventDeltaRequired = 0;
 let eventDeltaUnchanged = 0;
 
+// A generated key may legitimately differ from the approved row of an earlier event package in
+// exactly ONE case: the four governed source corrections of Project 09 package
+// P09-PT-50-ANOS-WITHDRAWAL-PRESENTATION-2026-11-19-r1 for 50-anos-de-memoria-criacao-e-resistencia
+// (Project 03 ruling of 19 November 2026). The authorization is fixed HERE, in this validator, and
+// never read from the generated artifact: generated source_correction metadata is the thing under
+// test, so it can corroborate an exemption but can never grant one. Every other event-overlay key
+// stays under strict original-source matching.
+const GOVERNED_SUPERSESSION = Object.freeze({
+  recordId: "50-anos-de-memoria-criacao-e-resistencia",
+  priorRevision: "P09-PT-50-ANOS-DE-MEMORIA-CRIACAO-E-RESISTENCIA-2026-09-01-r1",
+  successorRevision: "P09-PT-50-ANOS-WITHDRAWAL-PRESENTATION-2026-11-19-r1",
+  semanticAuthority: "Project 03 editorial ruling 2026-11-19: WITHDRAW_FROM_CURRENT_DISCOVERY / EXACT_END_DATE_NOT_APPROVED",
+  owningProject: "Project 03",
+  revisionClass: "OVERRIDE_EXISTING_KEYS_WITH_SOURCE_CORRECTION",
+  supersededStatus: "SUPERSEDED",
+  // The approved SUPERSEDED values, i.e. exactly the four rows of the original event overlay that
+  // the correction replaces. No other key is a member.
+  keys: Object.freeze({
+    "event.50-anos-de-memoria-criacao-e-resistencia.display.status": Object.freeze({
+      en: "Opened 23 July 2026 · On view into November 2026",
+      pt: "Inaugurada em 23 de julho de 2026 · Em exibição até novembro de 2026",
+    }),
+    "event.50-anos-de-memoria-criacao-e-resistencia.detail.fact.dates.label": Object.freeze({
+      en: "Dates",
+      pt: "Datas",
+    }),
+    "event.50-anos-de-memoria-criacao-e-resistencia.detail.fact.dates.value_display": Object.freeze({
+      en: "Opened 23 July 2026 · On view into November 2026",
+      pt: "Inaugurada em 23 de julho de 2026 · Em exibição até novembro de 2026",
+    }),
+    "event.50-anos-de-memoria-criacao-e-resistencia.detail.body": Object.freeze({
+      en: "50 Anos de Memória, Criação e Resistência is an exhibition at CNAD’s Galeria Bela Duarte in Mindelo, presented in connection with the 50th anniversary of Cooperativa Resistência.\n\nThe exhibition opened on 23 July 2026 and is on view into November 2026.",
+      pt: "50 Anos de Memória, Criação e Resistência é uma exposição na Galeria Bela Duarte do CNAD, em Mindelo, apresentada no âmbito do 50.º aniversário da Cooperativa Resistência.\n\nA exposição foi inaugurada em 23 de julho de 2026 e está em exibição até novembro de 2026.",
+    }),
+  }),
+});
+
+function isGovernedSupersession(generated, row) {
+  const g = GOVERNED_SUPERSESSION;
+  if (!row || typeof row.key !== "string" || !Object.hasOwn(g.keys, row.key)) return false;
+  const approved = g.keys[row.key];
+  const c = generated?.source_correction;
+  return Boolean(c) &&
+    // identity: the exact allowed key on the exact event record, in the overlay row and the artifact
+    generated.key === row.key &&
+    row.record_id === g.recordId &&
+    generated.record_id === g.recordId &&
+    // the overlay row is exactly the approved superseded source row
+    row.source_revision === g.priorRevision &&
+    row.source_en === approved.en &&
+    row.pt === approved.pt &&
+    // the artifact carries exactly the approved successor revision
+    generated.source_revision === g.successorRevision &&
+    // the recorded correction: class, status, authority and the preserved superseded values
+    c.revision_class === g.revisionClass &&
+    c.superseded_source_status === g.supersededStatus &&
+    c.owning_project === g.owningProject &&
+    c.semantic_authority === g.semanticAuthority &&
+    c.superseded_en === approved.en &&
+    c.superseded_pt === approved.pt &&
+    c.superseded_source_revision === g.priorRevision &&
+    c.prior_source_correction === undefined;
+}
+
+// The single acceptance rule for an event-overlay row against the generated artifact: an exact
+// match of the approved source row, or one of the governed supersessions above. `checkRevision`
+// is false only for the additive-package sweep, which has never compared source revisions.
+function eventRowMatchesGenerated(generated, row, { checkRevision }) {
+  const exact = generated.en === row.source_en && generated.pt === row.pt &&
+    (!checkRevision || generated.source_revision === row.source_revision);
+  return exact || isGovernedSupersession(generated, row);
+}
+
+// --- Self-check of the supersession gate -------------------------------------------------------
+// Every run drives the REAL gate (isGovernedSupersession / eventRowMatchesGenerated) with the REAL
+// overlay rows and generated keys, then with one deliberate defect at a time. A gate that grants
+// too much, or too little, fails this validator instead of silently weakening it.
+{
+  const overlayName = "pt-overlay-event-50-anos-de-memoria-criacao-e-resistencia.source.json";
+  const overlayRows = JSON.parse(readFileSync(path.join(ROOT, "data", "locales", overlayName), "utf8")).rows ?? [];
+  const clone = (value) => structuredClone(value);
+  const expectGate = (label, actual, expected) => {
+    if (actual !== expected) fail(`supersession gate self-check failed — ${label}: expected ${expected}, got ${actual}`);
+  };
+  const defects = [
+    ["incorrect record identity (artifact)", (g) => { g.record_id = "sinergia-da-materia"; }],
+    ["incorrect record identity (overlay row)", (g, r) => { r.record_id = "sinergia-da-materia"; }],
+    ["incorrect successor revision", (g) => { g.source_revision = `${GOVERNED_SUPERSESSION.successorRevision}-x`; }],
+    ["successor revision equal to the prior revision", (g) => { g.source_revision = GOVERNED_SUPERSESSION.priorRevision; }],
+    ["missing semantic authority", (g) => { delete g.source_correction.semantic_authority; }],
+    ["incorrect semantic authority", (g) => { g.source_correction.semantic_authority = "Project 03 editorial ruling 2026-11-18: SOMETHING_ELSE"; }],
+    ["incorrect previous revision (correction)", (g) => { g.source_correction.superseded_source_revision = "P09-PT-50-ANOS-DE-MEMORIA-CRIACAO-E-RESISTENCIA-2026-09-01-r2"; }],
+    ["incorrect previous revision (overlay row)", (g, r) => { r.source_revision = "P09-PT-50-ANOS-DE-MEMORIA-CRIACAO-E-RESISTENCIA-2026-09-01-r2"; }],
+    ["incorrect revision class", (g) => { g.source_correction.revision_class = "ADDITIVE_EVENT_KEYS"; }],
+    ["incorrect superseded status", (g) => { g.source_correction.superseded_source_status = "CURRENT"; }],
+    ["incorrect owning project", (g) => { g.source_correction.owning_project = "Project 09"; }],
+    ["altered superseded EN", (g) => { g.source_correction.superseded_en += " "; }],
+    ["altered superseded PT", (g) => { g.source_correction.superseded_pt += " "; }],
+    ["unexpected prior correction chain", (g) => { g.source_correction.prior_source_correction = { revision_class: "x" }; }],
+  ];
+  for (const key of Object.keys(GOVERNED_SUPERSESSION.keys)) {
+    const row = overlayRows.find((item) => item.key === key);
+    const generated = data.keys[key];
+    if (!row || !generated) { fail(`supersession gate self-check: ${key} is missing from the overlay or the artifact`); continue; }
+    // 1. each authorized supersession passes, through the gate and through the shared acceptance rule
+    expectGate(`authorized supersession ${key}`, isGovernedSupersession(generated, row), true);
+    expectGate(`authorized supersession accepted ${key}`, eventRowMatchesGenerated(generated, row, { checkRevision: true }), true);
+    expectGate(`authorized supersession accepted (additive sweep) ${key}`, eventRowMatchesGenerated(generated, row, { checkRevision: false }), true);
+    // 3-7 and the remaining metadata defects, one at a time, each must be refused
+    for (const [label, mutate] of defects) {
+      const g = clone(generated);
+      const r = clone(row);
+      mutate(g, r);
+      expectGate(`${label} on ${key}`, isGovernedSupersession(g, r), false);
+      expectGate(`${label} on ${key} (shared acceptance rule)`, eventRowMatchesGenerated(g, r, { checkRevision: true }), false);
+    }
+    // a supersession is not a wildcard on value: the artifact's NEW value never has to match the row
+    // for the gate to say yes, but dropping the correction altogether must fall back to strict matching
+    const stripped = clone(generated);
+    delete stripped.source_correction;
+    expectGate(`missing source_correction on ${key}`, eventRowMatchesGenerated(stripped, row, { checkRevision: true }), false);
+  }
+  // 2. a fabricated supersession on an UNRELATED event key fails, even when every correction field is
+  //    copied from the authorized pattern and the artifact value really differs from the overlay row
+  const fabricatedHosts = [
+    ...overlayRows.filter((item) => !Object.hasOwn(GOVERNED_SUPERSESSION.keys, item.key)),
+  ];
+  if (fabricatedHosts.length === 0) fail("supersession gate self-check: no unrelated overlay key to fabricate against");
+  for (const row of fabricatedHosts) {
+    const generated = data.keys[row.key];
+    if (!generated) continue;
+    const fabricated = clone(generated);
+    fabricated.en = `${row.source_en} (fabricated)`;
+    fabricated.source_revision = GOVERNED_SUPERSESSION.successorRevision;
+    fabricated.source_correction = {
+      revision_class: GOVERNED_SUPERSESSION.revisionClass,
+      owning_project: GOVERNED_SUPERSESSION.owningProject,
+      semantic_authority: GOVERNED_SUPERSESSION.semanticAuthority,
+      superseded_source_status: GOVERNED_SUPERSESSION.supersededStatus,
+      replacement_status: "SEMANTICALLY_APPROVED / LINGUISTICALLY_REVIEWED",
+      semantic_change: true,
+      superseded_en: row.source_en,
+      superseded_pt: row.pt,
+      superseded_source_revision: GOVERNED_SUPERSESSION.priorRevision,
+    };
+    const fabricatedRow = clone(row);
+    fabricatedRow.source_revision = GOVERNED_SUPERSESSION.priorRevision;
+    expectGate(`fabricated supersession on unrelated key ${row.key}`, isGovernedSupersession(fabricated, fabricatedRow), false);
+    expectGate(`fabricated supersession on unrelated key ${row.key} (shared acceptance rule)`,
+      eventRowMatchesGenerated(fabricated, fabricatedRow, { checkRevision: true }), false);
+    // 8. ordinary exact-match behaviour is unchanged for every unrelated key
+    expectGate(`ordinary exact match ${row.key}`, eventRowMatchesGenerated(generated, row, { checkRevision: true }), true);
+    expectGate(`ordinary exact match is not a supersession ${row.key}`, isGovernedSupersession(generated, row), false);
+    const drifted = clone(generated);
+    drifted.pt = `${generated.pt} (drift)`;
+    expectGate(`ordinary mismatch still refused ${row.key}`, eventRowMatchesGenerated(drifted, row, { checkRevision: true }), false);
+  }
+  // an allowed key on a DIFFERENT record id is not a member of the allowlist
+  const sinergiaTwin = { ...clone(overlayRows.find((item) => item.key.endsWith(".detail.body"))), key: "event.sinergia-da-materia.detail.body", record_id: "sinergia-da-materia" };
+  expectGate("allowed key shape on another record", isGovernedSupersession(clone(data.keys[sinergiaTwin.key] ?? {}), sinergiaTwin), false);
+}
+
 for (const fileName of eventDeltaFiles) {
   const source = JSON.parse(readFileSync(path.join(ROOT, "data", "locales", fileName), "utf8"));
   if (source.project_09_status !== "approved" || source.review_required !== 0 || source.blocking_issue != null) {
@@ -43,7 +205,7 @@ for (const fileName of eventDeltaFiles) {
     if (row.translation_status !== "APPROVED" || !row.pt) fail(`${fileName}: ${row.key} is not fully approved`);
     const generated = data.keys[row.key];
     if (!generated) fail(`${fileName}: ${row.key} missing from generated locale data`);
-    else if (generated.en !== row.source_en || generated.pt !== row.pt || generated.source_revision !== row.source_revision) {
+    else if (!eventRowMatchesGenerated(generated, row, { checkRevision: true })) {
       fail(`${fileName}: ${row.key} generated value/provenance differs from approved source`);
     }
   }
@@ -94,7 +256,8 @@ if (createHash('sha256').update(haliotisRaw).digest('hex') !== '80aa93ab04b80218
 }
 // r29 (Sinergia access disclosure) adds exactly two REQUIRED_FOR_PT_LAUNCH keys outside the per-event delta lane,
 // on top of the 1000/970 baseline that already includes the r28 contextual Home-return key.
-const SINERGIA_R29_ROWS = 2;
+// r31 (50 Anos access disclosure) likewise adds exactly two REQUIRED_FOR_PT_LAUNCH keys outside the per-event lane.
+const SINERGIA_R29_ROWS = 2 + 2;
 if (keys.length !== 1000 + SINERGIA_R29_ROWS + eventDeltaRequired + eventDeltaUnchanged) fail(`expected ${1000 + SINERGIA_R29_ROWS + eventDeltaRequired + eventDeltaUnchanged} total keys including approved event deltas, got ${keys.length}`);
 const required = keys.filter((k) => k.scope_status === "REQUIRED_FOR_PT_LAUNCH");
 const unchanged = keys.filter((k) => k.scope_status === "INTENTIONALLY_UNCHANGED");
@@ -893,6 +1056,96 @@ if (Object.keys(data.keys).filter((k) => k.startsWith(`${r9Id}.access_notice`)).
   fail("r29 must add exactly two access_notice keys for sinergia-da-materia");
 }
 
+// --- r31 / r32: 50 Anos withdrawal (Project 03 ruling 19 November 2026; Project 09 packages) ---
+// r31 is strictly additive (two access_notice keys). r32 is a bounded SOURCE CORRECTION of four
+// existing keys that preserves the superseded EN/PT and the prior source revision per key.
+const fiftyId = "event.50-anos-de-memoria-criacao-e-resistencia";
+const fiftyR31Revision = "P09-PT-50-ANOS-ACCESS-DISCLOSURE-2026-11-19-r1";
+const fiftyR32Revision = "P09-PT-50-ANOS-WITHDRAWAL-PRESENTATION-2026-11-19-r1";
+const fiftyPrevRevision = "P09-PT-50-ANOS-DE-MEMORIA-CRIACAO-E-RESISTENCIA-2026-09-01-r1";
+const fiftyAuthority = "Project 03 editorial ruling 2026-11-19: WITHDRAW_FROM_CURRENT_DISCOVERY / EXACT_END_DATE_NOT_APPROVED";
+const fiftyR31Approved = {
+  [`${fiftyId}.access_notice_heading`]: {
+    en: "Visitor access not currently confirmed",
+    pt: "Acesso de visitantes ainda não confirmado",
+  },
+  [`${fiftyId}.access_notice_body`]: {
+    en: "Earlier information indicated that 50 Anos de Memória, Criação e Resistência would remain on view into November 2026. We have not confirmed whether visitors can currently access this exhibition. Please check directly with CNAD before planning a visit.",
+    pt: "Informações anteriores indicavam que 50 Anos de Memória, Criação e Resistência permaneceria em exibição até novembro de 2026. Não confirmámos se esta exposição continua atualmente acessível a visitantes. Confirme diretamente com o CNAD antes de planear uma visita.",
+  },
+};
+for (const [key, expected] of Object.entries(fiftyR31Approved)) {
+  const row = data.keys[key];
+  if (!row) { fail(`r31 50 Anos key missing from locale data: ${key}`); continue; }
+  if (row.en !== expected.en) fail(`${key} EN does not match the approved r31 value`);
+  if (row.pt !== expected.pt) fail(`${key} PT does not match the approved r31 value`);
+  if (row.source_revision !== fiftyR31Revision) fail(`${key} source_revision mismatch: ${row.source_revision}`);
+  if (row.record_id !== "50-anos-de-memoria-criacao-e-resistencia" || row.scope_status !== "REQUIRED_FOR_PT_LAUNCH" ||
+      row.identity_policy !== "TRANSLATE_NORMALLY" || row.translation_status !== "APPROVED") {
+    fail(`${key} carries the wrong r31 row metadata`);
+  }
+  if (row.source_correction) fail(`${key} must not carry a source correction — r31 is strictly additive`);
+}
+if (Object.keys(data.keys).filter((k) => k.startsWith(`${fiftyId}.access_notice`)).length !== 2) {
+  fail("r31 must add exactly two access_notice keys for 50-anos-de-memoria-criacao-e-resistencia");
+}
+const fiftyR32Approved = {
+  [`${fiftyId}.display.status`]: {
+    old_en: "Opened 23 July 2026 · On view into November 2026",
+    old_pt: "Inaugurada em 23 de julho de 2026 · Em exibição até novembro de 2026",
+    en: "Visitor access not currently confirmed",
+    pt: "Acesso de visitantes ainda não confirmado",
+  },
+  [`${fiftyId}.detail.fact.dates.label`]: {
+    old_en: "Dates",
+    old_pt: "Datas",
+    en: "Previously advertised exhibition dates",
+    pt: "Datas da exposição anteriormente anunciadas",
+  },
+  [`${fiftyId}.detail.fact.dates.value_display`]: {
+    old_en: "Opened 23 July 2026 · On view into November 2026",
+    old_pt: "Inaugurada em 23 de julho de 2026 · Em exibição até novembro de 2026",
+    en: "The exhibition opened on 23 July 2026. Earlier information indicated that it would remain on view into November 2026. Current visitor access is unconfirmed.",
+    pt: "A exposição foi inaugurada em 23 de julho de 2026. Informações anteriores indicavam que permaneceria em exibição até novembro de 2026. O acesso atual de visitantes não está confirmado.",
+  },
+  [`${fiftyId}.detail.body`]: {
+    old_en: "50 Anos de Memória, Criação e Resistência is an exhibition at CNAD’s Galeria Bela Duarte in Mindelo, presented in connection with the 50th anniversary of Cooperativa Resistência.\n\nThe exhibition opened on 23 July 2026 and is on view into November 2026.",
+    old_pt: "50 Anos de Memória, Criação e Resistência é uma exposição na Galeria Bela Duarte do CNAD, em Mindelo, apresentada no âmbito do 50.º aniversário da Cooperativa Resistência.\n\nA exposição foi inaugurada em 23 de julho de 2026 e está em exibição até novembro de 2026.",
+    en: "50 Anos de Memória, Criação e Resistência is an exhibition at CNAD’s Galeria Bela Duarte in Mindelo, presented in connection with the 50th anniversary of Cooperativa Resistência.\n\nThe exhibition opened on 23 July 2026. Earlier information indicated that it would remain on view into November 2026, but current visitor access has not been confirmed.",
+    pt: "50 Anos de Memória, Criação e Resistência é uma exposição na Galeria Bela Duarte do CNAD, em Mindelo, apresentada no âmbito do 50.º aniversário da Cooperativa Resistência.\n\nA exposição foi inaugurada em 23 de julho de 2026. Informações anteriores indicavam que permaneceria em exibição até novembro de 2026, mas o acesso atual de visitantes não foi confirmado.",
+  },
+};
+for (const [key, expected] of Object.entries(fiftyR32Approved)) {
+  const row = data.keys[key];
+  if (!row) { fail(`r32 50 Anos key missing from locale data: ${key}`); continue; }
+  if (row.en !== expected.en) fail(`${key} EN does not match the approved r32 value`);
+  if (row.pt !== expected.pt) fail(`${key} PT does not match the approved r32 value`);
+  if (row.source_revision !== fiftyR32Revision) fail(`${key} does not carry the r32 source revision: got ${row.source_revision}`);
+  const correction = row.source_correction;
+  if (!correction) { fail(`${key} lost its source-correction provenance`); continue; }
+  if (correction.revision_class !== "OVERRIDE_EXISTING_KEYS_WITH_SOURCE_CORRECTION") fail(`${key} correction revision_class mismatch`);
+  if (correction.superseded_source_status !== "SUPERSEDED") fail(`${key} superseded_source_status is not SUPERSEDED`);
+  if (correction.owning_project !== "Project 03" || correction.semantic_authority !== fiftyAuthority) fail(`${key} correction lost its Project 03 semantic authority`);
+  if (correction.superseded_en !== expected.old_en) fail(`${key} did not preserve the superseded EN`);
+  if (correction.superseded_pt !== expected.old_pt) fail(`${key} did not preserve the superseded PT`);
+  if (correction.superseded_source_revision !== fiftyPrevRevision) fail(`${key} did not preserve the prior source revision`);
+  if (correction.prior_source_correction) fail(`${key} unexpectedly carries a prior correction chain`);
+  for (const side of ["en", "pt"]) {
+    const text = row[side];
+    if (/\b(\d{1,2})\s+(de\s+)?(November|novembro)\b/i.test(text) || /\b(November|novembro)\s+\d{1,2}\b/i.test(text)) {
+      fail(`${key} ${side} states or infers an exact November day`);
+    }
+  }
+}
+if (data.provenance.delta31_revision !== fiftyR31Revision || data.provenance.delta31_revision_class !== "ADDITIVE_EVENT_KEYS" ||
+    data.provenance.delta31_row_count !== 2) fail("r31 provenance is missing or wrong");
+if (data.provenance.delta32_revision !== fiftyR32Revision || data.provenance.delta32_previous_revision !== fiftyPrevRevision ||
+    data.provenance.delta32_revision_class !== "OVERRIDE_EXISTING_KEYS_WITH_SOURCE_CORRECTION" ||
+    data.provenance.delta32_row_count !== 4) fail("r32 provenance is missing or wrong");
+if (data.provenance.delta31_semantic_authority !== fiftyAuthority || data.provenance.delta32_semantic_authority !== fiftyAuthority) {
+  fail("r31/r32 provenance lost the Project 03 semantic authority reference");
+}
+
 // --- r8 delta spot checks (same-day PART_ILHAS / Artemisa Ferreira event) ---
 // Pins the governed date/time, the free-admission fact established by the
 // Project 03 ruling of 29 August 2026, the official-title identity policy, and
@@ -1329,7 +1582,7 @@ if (warnings.length) {
       const generated = data.keys[row.key];
       if (!generated) {
         fail(`additive package ${relative} declares key "${row.key}" which is absent from the generated artifact — it is therefore uncounted`);
-      } else if (generated.en !== row.source_en || generated.pt !== row.pt) {
+      } else if (!eventRowMatchesGenerated(generated, row, { checkRevision: false })) {
         fail(`additive package ${relative} key "${row.key}" does not match the generated artifact`);
       }
     }

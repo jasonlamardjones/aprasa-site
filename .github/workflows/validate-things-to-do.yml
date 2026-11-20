@@ -426,6 +426,27 @@ jobs:
               echo "A month-precision record serialized an endDate as of $1."
               exit 1
             fi
+            # 50 Anos is also month-precision (end_month 2026-11), withdrawn, with an exact
+            # closing day that Project 03 explicitly did NOT approve. Its two retained detail
+            # routes must never state one, never serialize an endDate, and never assert an
+            # EventScheduled status for a record whose current access is unconfirmed.
+            fifty_pages="things-to-do/50-anos-de-memoria-criacao-e-resistencia/index.html pt/things-to-do/50-anos-de-memoria-criacao-e-resistencia/index.html"
+            if grep -Eq "$november_day" $fifty_pages; then
+              echo "An exact November day was published for 50-anos-de-memoria-criacao-e-resistencia as of $1."
+              exit 1
+            fi
+            if grep -q '2026-11-14' $fifty_pages; then
+              echo "The unapproved closing date 2026-11-14 was published for 50-anos-de-memoria-criacao-e-resistencia as of $1."
+              exit 1
+            fi
+            if grep -q '"endDate"' $fifty_pages; then
+              echo "A month-precision record (50 Anos) serialized an endDate as of $1."
+              exit 1
+            fi
+            if grep -q 'EventScheduled' $fifty_pages; then
+              echo "Withdrawn 50 Anos asserts an EventScheduled status as of $1."
+              exit 1
+            fi
           }
 
           node scripts/generate-things-to-do.mjs --as-of=2026-08-24 --write
@@ -467,8 +488,9 @@ jobs:
           check_preview_cap 2026-08-30
           refute_hub_surfaces 2026-08-30
           check_preview_matches_canonical 2026-08-30
-          # Eligible but outside the governed Home selection: hub only, never lost.
-          check_hub_present 50-anos "50 Anos de Memória, Criação e Resistência" 2026-08-30
+          # 50 Anos is WITHDRAWN (Project 03 ruling 2026-11-19): off the collection at every
+          # --as-of, exactly like Sinergia. Its two historical detail routes stay generated.
+          check_hub_absent 50-anos "50 Anos de Memória, Criação e Resistência" 2026-08-30
           # Editorially expired: absent from the collection, as at 2026-08-24.
           check_hub_absent boxe "4.º Campeonato Nacional Sénior de Boxe" 2026-08-30
           check_hub_absent oficina "Exposição dos trabalhos finais do projeto Oficina Contemporânea Lata" 2026-08-30
@@ -513,12 +535,14 @@ jobs:
           check_hub_absent boxe "4.º Campeonato Nacional Sénior de Boxe" 2026-10-31
           require_past_event eclipse-yuran-henrique 2026-10-31
 
-          # November boundary: REVIEW-DUE. The validator must fail non-zero to
-          # demand reverification (exit 3, distinct from exit 1 expired drift),
-          # while the record stays on Home and off the past-event path. The
-          # expected-exit assertion is why this does not make CI permanently red.
+          # November boundary. No PUBLISHED month-precision record remains in the committed corpus:
+          # Sinergia (withdrawn 2026-10-27) and 50 Anos (withdrawn 2026-11-19, Project 03) are both
+          # WITHDRAWN, so their reached month boundary is a non-blocking evidence-review advisory
+          # and the validator exits 0, asserted below. The blocking exit-3 contract for a PUBLISHED
+          # review-due record is still enforced in CI by test-event-publication-packet-currentness.mjs
+          # (real validator, synthetic published fixture) and test-things-to-do-hub.mjs.
           node scripts/generate-things-to-do.mjs --as-of=2026-11-01 --write
-          expect_currentness_exit 2026-11-01 3
+          expect_currentness_exit 2026-11-01 0
           refute_hub_surfaces 2026-11-01
           node scripts/validate-things-to-do-surface-equivalence.mjs --as-of=2026-11-01
           # Home membership is asserted at EVERY tracked date, this one included: a
@@ -526,12 +550,10 @@ jobs:
           # governed preview slot rather than quietly leaving Home.
           check_preview_cap 2026-11-01
           check_preview_matches_canonical 2026-11-01
-          # A review-due record stays an ordinary public card on the collection
-          # surface too — it is not expired, so it is never dropped from it.
-          # The published review-due record at this boundary is 50 Anos.
-          # Sinergia da Matéria is WITHDRAWN: it is off Home and reported as a
-          # separate evidence-review diagnostic, never as an actionable failure.
-          check_hub_present 50-anos "50 Anos de Memória, Criação e Resistência" 2026-11-01
+          # Both month-precision records are WITHDRAWN at this boundary: off Home and off the
+          # collection, reported as separate evidence-review diagnostics, never as actionable
+          # failures, with their historical detail routes still generated.
+          check_hub_absent 50-anos "50 Anos de Memória, Criação e Resistência" 2026-11-01
           refute_past_event 50-anos-de-memoria-criacao-e-resistencia 2026-11-01
           refute_past_event sinergia-da-materia 2026-11-01
           refute_exact_november_day 2026-11-01
@@ -550,8 +572,15 @@ jobs:
               exit 1
             fi
           done
-          if ! echo "$review_output" | grep -q 'REVIEW-DUE 50-anos-de-memoria-criacao-e-resistencia'; then
-            echo 'Published review-due record 50-anos was not reported for reverification at the November boundary.'
+          # Withdrawn 50 Anos, like Sinergia, keeps its evidence-review diagnostic but must not be
+          # counted as an actionable REVIEW-DUE publication failure.
+          if echo "$review_output" | grep -q 'REVIEW-DUE 50-anos-de-memoria-criacao-e-resistencia'; then
+            echo 'Withdrawn 50-anos was reported as an actionable REVIEW-DUE failure.'
+            echo "$review_output"
+            exit 1
+          fi
+          if ! echo "$review_output" | grep -q 'EVIDENCE-REVIEW (withdrawn) 50-anos-de-memoria-criacao-e-resistencia'; then
+            echo 'Withdrawn 50-anos lost its evidence-review diagnostic at the November boundary.'
             echo "$review_output"
             exit 1
           fi
@@ -570,6 +599,12 @@ jobs:
           # Withdrawn Sinergia must not reappear on actionable Home (EN or PT).
           if grep -q 'data-event-id="sinergia-da-materia"' index.html pt/index.html; then
             echo 'Withdrawn sinergia-da-materia reappeared on Home as of 2026-11-01.'
+            exit 1
+          fi
+          # Nor may withdrawn 50 Anos, and its retained routes must stay free of any exact
+          # November day, the unapproved 2026-11-14, an endDate and an EventScheduled status.
+          if grep -q 'data-event-id="50-anos-de-memoria-criacao-e-resistencia"' index.html pt/index.html; then
+            echo 'Withdrawn 50-anos-de-memoria-criacao-e-resistencia reappeared on Home as of 2026-11-01.'
             exit 1
           fi
 
