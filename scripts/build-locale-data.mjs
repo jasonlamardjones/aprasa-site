@@ -3449,6 +3449,145 @@ for (const row of sinergiaR30.rows) {
 }
 if (sinergiaR30Seen.size !== sinergiaR30Keys.length) fail("r30 Sinergia missing a target key");
 
+// r31: Project 09 additive access disclosure for the withdrawn 50 Anos record
+// (Project 03 ruling of 19 November 2026: WITHDRAW_FROM_CURRENT_DISCOVERY /
+// EXACT_END_DATE_NOT_APPROVED). Strictly additive: it may introduce exactly the two
+// access_notice keys and may not touch any existing key.
+const fiftyId = "50-anos-de-memoria-criacao-e-resistencia";
+const fiftyAuthority = "Project 03 editorial ruling 2026-11-19: WITHDRAW_FROM_CURRENT_DISCOVERY / EXACT_END_DATE_NOT_APPROVED";
+const fiftyR31 = JSON.parse(readFileSync(path.join(LOCALE_DIR, "pt-overlay-r31-50-anos-access-disclosure.source.json"), "utf8"));
+const fiftyR31Revision = "P09-PT-50-ANOS-ACCESS-DISCLOSURE-2026-11-19-r1";
+const fiftyR31Fields = new Set(["access_notice_heading", "access_notice_body"]);
+const fiftyR31Seen = new Set();
+if (fiftyR31.package_id !== "aprasa-pt-50-anos-access-disclosure-2026-11-19" ||
+    fiftyR31.source_revision !== fiftyR31Revision ||
+    fiftyR31.record_id !== fiftyId ||
+    fiftyR31.revision_class !== "ADDITIVE_EVENT_KEYS" ||
+    fiftyR31.project_09_status !== "approved" ||
+    fiftyR31.owning_project !== "Project 03" ||
+    fiftyR31.semantic_authority !== fiftyAuthority ||
+    fiftyR31.review_required !== 0 || fiftyR31.blocking_issue != null ||
+    fiftyR31.rows?.length !== fiftyR31Fields.size) fail("r31 50 Anos provenance or row count changed");
+for (const row of fiftyR31.rows ?? []) {
+  const prefix = `event.${fiftyId}.`;
+  const field = row.key.startsWith(prefix) ? row.key.slice(prefix.length) : "";
+  if (!fiftyR31Fields.has(field) || fiftyR31Seen.has(field) || seen.has(row.key) || keys[row.key] ||
+      row.record_id !== fiftyId || row.source_revision !== fiftyR31Revision ||
+      row.scope_status !== "REQUIRED_FOR_PT_LAUNCH" ||
+      row.identity_policy !== "TRANSLATE_NORMALLY" ||
+      row.translation_status !== "APPROVED" ||
+      typeof row.source_en !== "string" || !row.source_en.trim() ||
+      typeof row.pt !== "string" || !row.pt.trim()) {
+    fail(`r31 50 Anos invalid, unapproved, pre-existing, or duplicate key: ${JSON.stringify(row.key)}`);
+    continue;
+  }
+  for (const text of [row.source_en, row.pt]) {
+    if (/\b(\d{1,2})\s+(de\s+)?(November|novembro)\b/i.test(text) || /\b(November|novembro)\s+\d{1,2}\b/i.test(text)) {
+      fail(`r31 key "${row.key}" infers an exact November day: ${JSON.stringify(text)}`);
+    }
+  }
+  fiftyR31Seen.add(field);
+  seen.add(row.key);
+  keys[row.key] = {
+    key: row.key, en: row.source_en, pt: row.pt,
+    scope_status: row.scope_status, identity_policy: row.identity_policy,
+    record_id: row.record_id, translation_status: row.translation_status,
+    source_revision: row.source_revision,
+    context_notes: row.context_notes || "", linguistic_notes: row.linguistic_notes || "",
+  };
+}
+if (fiftyR31Seen.size !== fiftyR31Fields.size) fail("r31 50 Anos missing field");
+
+// r32: Project 09 presentation SOURCE CORRECTION for the withdrawn 50 Anos record.
+// Overrides exactly four existing keys. The superseded EN/PT and the superseded source
+// revision are preserved per key, and each old value must equal the effective value.
+const fiftyR32 = JSON.parse(readFileSync(path.join(LOCALE_DIR, "pt-overlay-r32-50-anos-withdrawal-presentation-correction.source.json"), "utf8"));
+const fiftyR32Revision = "P09-PT-50-ANOS-WITHDRAWAL-PRESENTATION-2026-11-19-r1";
+const fiftyR32Previous = "P09-PT-50-ANOS-DE-MEMORIA-CRIACAO-E-RESISTENCIA-2026-09-01-r1";
+const fiftyR32Class = "OVERRIDE_EXISTING_KEYS_WITH_SOURCE_CORRECTION";
+const fiftyR32Keys = [
+  "event.50-anos-de-memoria-criacao-e-resistencia.display.status",
+  "event.50-anos-de-memoria-criacao-e-resistencia.detail.fact.dates.label",
+  "event.50-anos-de-memoria-criacao-e-resistencia.detail.fact.dates.value_display",
+  "event.50-anos-de-memoria-criacao-e-resistencia.detail.body",
+];
+if (fiftyR32.package_id !== "aprasa-pt-50-anos-withdrawal-presentation-2026-11-19" ||
+    fiftyR32.source_revision !== fiftyR32Revision ||
+    fiftyR32.previous_revision !== fiftyR32Previous ||
+    fiftyR32.revision_class !== fiftyR32Class ||
+    fiftyR32.owning_project !== "Project 03" ||
+    fiftyR32.semantic_authority !== fiftyAuthority ||
+    fiftyR32.record_id !== fiftyId ||
+    fiftyR32.source_correction_authorized !== true ||
+    fiftyR32.semantic_change !== true ||
+    fiftyR32.superseded_source_status !== "SUPERSEDED" ||
+    fiftyR32.project_09_status !== "approved" ||
+    fiftyR32.review_required !== 0 || fiftyR32.blocking_issue != null ||
+    fiftyR32.supplied_rows_approved !== fiftyR32Keys.length ||
+    fiftyR32.rows?.length !== fiftyR32Keys.length ||
+    fiftyR32.change_control_status?.new_keys_introduced !== 0 ||
+    fiftyR32.change_control_status?.additional_languages_authorized !== 0 ||
+    fiftyR32.change_control_status?.unrelated_keys_touched !== 0) {
+  fail("r32 50 Anos provenance or row count changed");
+}
+const fiftyR32Seen = new Set();
+for (const row of fiftyR32.rows ?? []) {
+  const existing = keys[row.key];
+  if (!fiftyR32Keys.includes(row.key) || fiftyR32Seen.has(row.key) || row.target_key !== row.key) {
+    fail(`r32 50 Anos invalid, duplicate, or unauthorized target: ${JSON.stringify(row.key)}`);
+    continue;
+  }
+  fiftyR32Seen.add(row.key);
+  if (!existing) { fail(`r32 key "${row.key}" does not exist — a correction may not introduce keys`); continue; }
+  if (existing.en !== row.old_en || existing.pt !== row.old_pt) {
+    fail(`r32 key "${row.key}" old EN/PT does not match the effective value`);
+  }
+  if (existing.source_revision !== fiftyR32Previous) {
+    fail(`r32 key "${row.key}" effective source revision ${existing.source_revision} is not the declared previous revision`);
+  }
+  if (!row.new_en?.trim() || !row.new_pt?.trim() || (row.new_en === row.old_en && row.new_pt === row.old_pt)) {
+    fail(`r32 key "${row.key}" has a missing or no-op replacement`);
+  }
+  if (row.record_id !== fiftyId || row.revision_class !== fiftyR32Class ||
+      row.source_revision !== fiftyR32Revision || row.owning_project !== "Project 03" ||
+      row.semantic_change !== true || row.source_correction_authorized !== true ||
+      row.superseded_source_status !== "SUPERSEDED" || !row.replacement_status ||
+      row.translation_status !== "APPROVED" ||
+      row.scope_status !== existing.scope_status || row.identity_policy !== existing.identity_policy) {
+    fail(`r32 key "${row.key}" authorization chain or row metadata is incomplete`);
+  }
+  const enPh = (row.new_en.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+  const ptPh = (row.new_pt.match(/\{[a-zA-Z_]+\}/g) || []).sort();
+  if (JSON.stringify(enPh) !== JSON.stringify(ptPh)) fail(`r32 key "${row.key}" placeholder mismatch`);
+  if (/A PRA[CÇ]A/.test(row.new_pt) || /A PRA[CÇ]A/.test(row.new_en)) fail(`r32 key "${row.key}" corrupts the A PRASA identity`);
+  for (const text of [row.new_en, row.new_pt]) {
+    if (/\b(\d{1,2})\s+(de\s+)?(November|novembro)\b/i.test(text) || /\b(November|novembro)\s+\d{1,2}\b/i.test(text)) {
+      fail(`r32 key "${row.key}" infers an exact November day: ${JSON.stringify(text)}`);
+    }
+  }
+  keys[row.key] = {
+    ...existing,
+    en: row.new_en,
+    pt: row.new_pt,
+    source_revision: row.source_revision,
+    context_notes: row.context_notes || existing.context_notes || "",
+    linguistic_notes: row.linguistic_notes || existing.linguistic_notes || "",
+    source_correction: {
+      revision_class: row.revision_class,
+      owning_project: row.owning_project,
+      semantic_authority: fiftyAuthority,
+      superseded_source_status: row.superseded_source_status,
+      replacement_status: row.replacement_status,
+      semantic_change: true,
+      superseded_en: row.old_en,
+      superseded_pt: row.old_pt,
+      superseded_source_revision: existing.source_revision,
+      ...(existing.source_correction ? { prior_source_correction: existing.source_correction } : {}),
+    },
+  };
+}
+if (fiftyR32Seen.size !== fiftyR32Keys.length) fail("r32 50 Anos missing a target key");
+
 // Aggregate tallies, read off the finished key map that is about to be written.
 const assembled = (() => {
   const values = Object.values(keys);
@@ -3523,6 +3662,8 @@ const output = {
       "data/locales/pt-overlay-r28-ttd-contextual-home-return.source.json",
       "data/locales/pt-overlay-r29-sinergia-access-disclosure.source.json",
       "data/locales/pt-overlay-r30-sinergia-presentation-correction.source.json",
+      "data/locales/pt-overlay-r31-50-anos-access-disclosure.source.json",
+      "data/locales/pt-overlay-r32-50-anos-withdrawal-presentation-correction.source.json",
     ],
     base_revision: pkg.source_revision,
     delta_revision: delta.source_revision,
@@ -3624,6 +3765,19 @@ const output = {
     delta28_project_09_status: delta28.project_09_status,
     delta28_project_09_verdict: delta28.project_09_verdict,
     delta28_project_09_revision_id: delta28.project_09_revision_id,
+    delta31_package_id: fiftyR31.package_id,
+    delta31_revision: fiftyR31.source_revision,
+    delta31_revision_class: fiftyR31.revision_class,
+    delta31_row_count: fiftyR31.rows.length,
+    delta31_semantic_authority: fiftyR31.semantic_authority,
+    delta31_project_09_status: fiftyR31.project_09_status,
+    delta32_package_id: fiftyR32.package_id,
+    delta32_revision: fiftyR32.source_revision,
+    delta32_previous_revision: fiftyR32.previous_revision,
+    delta32_revision_class: fiftyR32.revision_class,
+    delta32_row_count: fiftyR32.rows.length,
+    delta32_semantic_authority: fiftyR32.semantic_authority,
+    delta32_project_09_status: fiftyR32.project_09_status,
     delta9_superseding_ruling: delta9.superseding_ruling,
     delta9_owning_project: delta9.owning_project,
     event_delta_packages: eventDeltaPackages,
@@ -3674,6 +3828,8 @@ const output = {
     r22_delta_rows: delta22.rows.length,
     r23_delta_rows: delta23.rows.length,
     r28_delta_rows: delta28.rows.length,
+    r31_delta_rows: fiftyR31.rows.length,
+    r32_source_correction_rows: fiftyR32.rows.length,
     r10_renamed_rows: r10Renamed.length,
     governed_override_rows: governedOverrideCount,
   },
