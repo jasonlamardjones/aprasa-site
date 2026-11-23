@@ -640,6 +640,22 @@
       "media_alt": "Trainings, Tools & Opportunities",
       "media_width": 800,
       "media_height": 450
+    },
+    {
+      "section": "things-to-do",
+      "title": "URDI 2026 — Cabo Verde Crafts & Design Fair",
+      "provider": "Centro Nacional de Arte, Artesanato e Design (CNAD)",
+      "source_url": "https://www.inforpress.cv/pt/sao-vicente-praca-nova-ganha-forma-para-receber-11-edicao-da-urdi-com-150-artesaos-expositores",
+      "media_type": "editorial-fallback",
+      "media_state": "fallback-final",
+      "media_source": null,
+      "media_asset": null,
+      "fallback_category": "things-culture",
+      "fallback_reason": "No event-specific URDI/CNAD media reuse rights established; shared neutral A PRASA category fallback only.",
+      "media_provenance": "Existing shared A PRASA editorial fallback region; no URDI-specific image is ingested, and no depiction of the fair, organizer, artisans or activities is claimed.",
+      "media_asset_source_url": null,
+      "media_checked_date": null,
+      "media_alt": null
     }
   ]
 }
