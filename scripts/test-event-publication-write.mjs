@@ -143,6 +143,31 @@ function runCanonicalGenerators(root, asOf) {
   run(root, process.execPath, ['scripts/build-sitemap.mjs', '--write']);
 }
 
+// The 28 November historical-baseline simulation must carry the AAI training
+// call across its actual 26 November deadline. This changes only the throwaway
+// test repository; production currentness and its fail-closed validator remain
+// untouched. Keep the historical record and approved locale rows, but clear
+// its actionable EN/PT Home regions through the incumbent generator.
+function expireAAIInFutureTestBaseline(root, asOf) {
+  const file = path.join(root, 'data', 'training-opportunities.json');
+  const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+  const record = data.records.find((item) => item.id === 'aai-portuguese-a1-2026');
+  if (!record || record.lifecycle_class !== 'fixed-window-opportunity' || record.end_date !== '2026-11-26') {
+    throw new Error('AAI future-baseline fixture no longer matches the governed deadline');
+  }
+  if (asOf <= record.end_date) return;
+  if (record.publication_state !== 'CURRENT') throw new Error('AAI future-baseline fixture expected CURRENT before expiry');
+  record.publication_state = 'EXPIRED';
+  writeJsonFile(file, data);
+  for (const [locale, home] of [['en', 'index.html'], ['pt', 'pt/index.html']]) {
+    run(root, process.execPath, ['scripts/generate-training-opportunities.mjs', `--as-of=${asOf}`, `--locale=${locale}`, `--home=${home}`, '--write']);
+    const html = fs.readFileSync(path.join(root, home), 'utf8');
+    const region = html.split('<!-- BEGIN GENERATED TRAINING: aai-portuguese-a1-2026 -->')[1]
+      ?.split('<!-- END GENERATED TRAINING: aai-portuguese-a1-2026 -->')[0];
+    if (region == null || region.trim()) throw new Error(`${home}: expired AAI application still actionable in test baseline`);
+  }
+}
+
 // Derive the synthetic record from the committed fixture packet so it carries a
 // complete, already-approved shape (event, media manifest, PT package) without
 // inventing governed content. Its id, detail route and title are rewritten so it
@@ -261,6 +286,7 @@ function createRepository({ branch = 'feature/phase1b-test', committedAsOf = nul
   if (openMediaGate) installTemporaryMediaGap(root);
   const committed = readCommittedCurrentness(root);
   if (committedAsOf || boundaryDay) runCanonicalGenerators(root, committed);
+  if (committedAsOf) expireAAIInFutureTestBaseline(root, committed);
 
   run(root, 'git', ['init', '-q', '-b', 'main']);
   run(root, 'git', ['config', 'user.name', 'Phase 1B Test']);
