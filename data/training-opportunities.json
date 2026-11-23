@@ -1795,6 +1795,88 @@
           }
         }
       }
+    },
+    {
+      "id": "aai-portuguese-a1-2026",
+      "lifecycle_class": "fixed-window-opportunity",
+      "publication_state": "CURRENT",
+      "ordinary_publication_eligibility": "ELIGIBLE",
+      "ordinary_publication_reason": null,
+      "provider": "Alta Autoridade para a Imigração (AAI)",
+      "source": {
+        "source_url": "https://aai.gov.cv/noticias-aai/465-curso-de-lingua-portuguesa",
+        "provenance": "Project 05 canonical Resource CV-030 (PROV-AAI); evidence CUR-CV030-01, CUR-CV030-02, CUR-CV030-03 and CUR-CV030-04. The official edital and regulation govern over the conflicting Praia/Sal sentence in the announcement. Four municipalities: Santa Catarina de Santiago, Tarrafal de Santiago, Boa Vista and São Vicente; 25 places each. Foreign citizens and immigrants resident in Cabo Verde, age 18+, available for 18:30–20:00 classes three times weekly for 40 hours; valid identification and NIF required, diagnostic assessment excludes A2+; 1,000 CVE administrative registration fee after selection with possible substantiated exemption; certificate conditional on achievement and at least 75% attendance. Online applications close 2026-11-26 23:59 Cabo Verde time. Official edital: https://drive.google.com/file/d/1ZS-q-e-f9Ie_pBIYq_xEu1jhOS72sut7/view ; regulation: https://drive.google.com/file/d/1jgXyNJoC-1ZCpIREqKfov8VjKDTw_KsS/view . Verified 2026-11-22."
+      },
+      "checked_at": "2026-11-22",
+      "end_date": "2026-11-26",
+      "media_manifest_title": "Portuguese Language Course — Basic A1 for Foreign Nationals and Immigrants",
+      "media": {
+        "asset": "assets/environment/praca-trainings-800.webp",
+        "width": 800,
+        "height": 450,
+        "loading": "lazy",
+        "decoding": "async",
+        "alt": {
+          "locale_key": "home.training.title"
+        },
+        "card_class": "card-media",
+        "detail_class": "dialog-media",
+        "layout": "block",
+        "attribute_order": ["src", "width", "height", "loading", "decoding", "alt"]
+      },
+      "card": {
+        "attributes": {
+          "data-application-expires-at": "2026-11-27T01:00:00Z"
+        },
+        "action_tags": null,
+        "status": {
+          "locale_key": "training.record.aai-portuguese-a1-2026.status"
+        },
+        "title": {
+          "locale_key": "training.record.aai-portuguese-a1-2026.title"
+        },
+        "meta": {
+          "locale_key": "training.record.aai-portuguese-a1-2026.meta"
+        },
+        "body": {
+          "locale_key": "training.record.aai-portuguese-a1-2026.body"
+        },
+        "checked": {
+          "locale_key": "training.record.aai-portuguese-a1-2026.checked"
+        },
+        "action": {
+          "href": "https://form.jotform.com/263012358621551",
+          "label": {
+            "locale_key": "training.record.aai-portuguese-a1-2026.action"
+          }
+        }
+      },
+      "detail": {
+        "action_tags": null,
+        "title": {
+          "locale_key": "training.record.aai-portuguese-a1-2026.title"
+        },
+        "facts": null,
+        "details_body": {
+          "locale_key": "training.record.aai-portuguese-a1-2026.body"
+        },
+        "requirements": {
+          "locale_key": "training.record.aai-portuguese-a1-2026.requirements"
+        },
+        "original_posting": null,
+        "good_to_know": {
+          "locale_key": "training.record.aai-portuguese-a1-2026.good"
+        },
+        "checked": {
+          "locale_key": "training.record.aai-portuguese-a1-2026.detail_checked"
+        },
+        "action": {
+          "href": "https://form.jotform.com/263012358621551",
+          "label": {
+            "locale_key": "training.record.aai-portuguese-a1-2026.action"
+          }
+        }
+      }
     }
   ]
 }

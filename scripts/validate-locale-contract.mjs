@@ -258,11 +258,33 @@ if (createHash('sha256').update(haliotisRaw).digest('hex') !== '80aa93ab04b80218
 // on top of the 1000/970 baseline that already includes the r28 contextual Home-return key.
 // r31 (50 Anos access disclosure) likewise adds exactly two REQUIRED_FOR_PT_LAUNCH keys outside the per-event lane.
 const SINERGIA_R29_ROWS = 2 + 2;
-if (keys.length !== 1000 + SINERGIA_R29_ROWS + eventDeltaRequired + eventDeltaUnchanged) fail(`expected ${1000 + SINERGIA_R29_ROWS + eventDeltaRequired + eventDeltaUnchanged} total keys including approved event deltas, got ${keys.length}`);
+const AAI_A1_ROWS = 9;
+if (keys.length !== 1000 + SINERGIA_R29_ROWS + AAI_A1_ROWS + eventDeltaRequired + eventDeltaUnchanged) fail(`expected ${1000 + SINERGIA_R29_ROWS + AAI_A1_ROWS + eventDeltaRequired + eventDeltaUnchanged} total keys including approved event deltas and AAI A1, got ${keys.length}`);
 const required = keys.filter((k) => k.scope_status === "REQUIRED_FOR_PT_LAUNCH");
 const unchanged = keys.filter((k) => k.scope_status === "INTENTIONALLY_UNCHANGED");
-if (required.length !== 970 + SINERGIA_R29_ROWS + eventDeltaRequired) fail(`expected ${970 + SINERGIA_R29_ROWS + eventDeltaRequired} REQUIRED_FOR_PT_LAUNCH keys, got ${required.length}`);
+if (required.length !== 970 + SINERGIA_R29_ROWS + AAI_A1_ROWS + eventDeltaRequired) fail(`expected ${970 + SINERGIA_R29_ROWS + AAI_A1_ROWS + eventDeltaRequired} REQUIRED_FOR_PT_LAUNCH keys, got ${required.length}`);
 if (unchanged.length !== 30 + eventDeltaUnchanged) fail(`expected ${30 + eventDeltaUnchanged} INTENTIONALLY_UNCHANGED keys, got ${unchanged.length}`);
+// An independent digest of the manager's approved nine-row payload pins the
+// exact wording even if the additive source and generated artifact are edited
+// together. Only <RECORD_ID> was substituted in the key templates.
+{
+  const id = 'aai-portuguese-a1-2026';
+  const fields = ['title', 'status', 'meta', 'body', 'requirements', 'good', 'action', 'checked', 'detail_checked'];
+  const rows = fields.map((field) => {
+    const key = `training.record.${id}.${field}`;
+    const row = data.keys[key];
+    if (!row || row.source_revision !== 'P09-PT-TTO-AAI-PORTUGUESE-A1-2026-11-22-r1' ||
+        row.translation_status !== 'APPROVED' || row.scope_status !== 'REQUIRED_FOR_PT_LAUNCH') {
+      fail(`AAI A1 approved key missing or invalid: ${key}`);
+      return null;
+    }
+    return { key_template: `training.record.<RECORD_ID>.${field}`, source_en: row.en, pt: row.pt };
+  });
+  if (rows.every(Boolean) && createHash('sha256').update(JSON.stringify(rows)).digest('hex') !==
+      '4822103a8dab564e74c0562c21623430f19e60e26f85de5873560de1762c0230') {
+    fail('AAI A1 EN/PT pairs differ from the approved attachment');
+  }
+}
 if (data.provenance.delta_revision !== "P03-PT-SOURCE-2026-08-25-r3") {
   fail(`unexpected delta_revision: ${data.provenance.delta_revision}`);
 }

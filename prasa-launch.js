@@ -26,6 +26,34 @@
   let dialogTrigger = null;
   let scrollPosition = 0;
 
+  // CV-030 is a temporary application call. Hide its entire card (including
+  // the application links held in its details template) at 00:00 Cabo Verde
+  // time on 27 November. The canonical record remains in the repository; a
+  // reviewed static expiry release must clear its generated Home regions too.
+  function guardTimedApplicationCards() {
+    document.querySelectorAll(".resource-card[data-application-expires-at]").forEach((card) => {
+      const expiresAt = Date.parse(card.getAttribute("data-application-expires-at"));
+      if (!Number.isFinite(expiresAt)) {
+        card.remove(); // Invalid deadline metadata must never expose an action.
+        return;
+      }
+      const expire = () => {
+        if (Date.now() >= expiresAt) {
+          if (dialogTrigger?.closest(".resource-card") === card) {
+            if (dialog?.open && typeof dialog.close === "function") dialog.close();
+            else dialog?.removeAttribute("open");
+            dialogContent?.replaceChildren();
+          }
+          card.remove();
+        } else {
+          window.setTimeout(expire, Math.min(expiresAt - Date.now(), 2147483647));
+        }
+      };
+      expire();
+    });
+  }
+  guardTimedApplicationCards();
+
   // prasa-launch.js is one shared file loaded from every page at whatever
   // depth that page lives at (src="prasa-launch.js" from the root pages,
   // src="../prasa-launch.js" from about/, src="../../prasa-launch.js" from

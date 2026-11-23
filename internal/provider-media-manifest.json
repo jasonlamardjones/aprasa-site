@@ -622,6 +622,24 @@
       "media_alt": "",
       "media_width": 1200,
       "media_height": 900
+    },
+    {
+      "section": "trainings-tools",
+      "title": "Portuguese Language Course — Basic A1 for Foreign Nationals and Immigrants",
+      "provider": "Alta Autoridade para a Imigração (AAI)",
+      "source_url": "https://aai.gov.cv/noticias-aai/465-curso-de-lingua-portuguesa",
+      "media_type": "aprasa-category",
+      "media_state": "fallback-final",
+      "media_source": null,
+      "media_asset": "assets/environment/praca-trainings-800.webp",
+      "fallback_category": "opportunities-learning-general",
+      "fallback_reason": "No approved provider-owned course image was supplied for this temporary call; use the already-approved A PRASA learning category image without implying a depiction of the course or AAI.",
+      "media_provenance": "A PRASA-owned, language-neutral Trainings, Tools & Opportunities category/environment image already used for the approved Start CV learning fallback. It does not depict AAI, this course, its students, classes or premises.",
+      "media_asset_source_url": null,
+      "media_checked_date": "2026-11-23",
+      "media_alt": "Trainings, Tools & Opportunities",
+      "media_width": 800,
+      "media_height": 450
     }
   ]
 }

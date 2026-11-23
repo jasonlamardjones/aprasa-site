@@ -3276,6 +3276,39 @@ for (const row of ficaseR27.rows) {
 }
 if (ficaseR27Seen.size !== ficaseR27Fields.size) fail("r27 FICASE missing field");
 
+// CV-030: the nine exact Project 09-approved AAI A1 pairs. The source package
+// records the manager-supplied attachment checksum and its original revision;
+// the only substitution is the Project 03-approved website record ID.
+const aaiA1 = JSON.parse(readFileSync(path.join(LOCALE_DIR, "pt-overlay-aai-portuguese-a1-2026.source.json"), "utf8"));
+const aaiA1Id = "aai-portuguese-a1-2026";
+const aaiA1Revision = "P09-PT-TTO-AAI-PORTUGUESE-A1-2026-11-22-r1";
+const aaiA1Fields = new Set(["title", "status", "meta", "body", "requirements", "good", "action", "checked", "detail_checked"]);
+const aaiA1Seen = new Set();
+if (aaiA1.source_revision !== aaiA1Revision || aaiA1.record_id !== aaiA1Id ||
+    aaiA1.project05_resource_id !== "CV-030" || aaiA1.provider_id !== "PROV-AAI" ||
+    aaiA1.approved_attachment_sha256 !== "74a618cc01482b99636c683d0c3929adeaff2c6cd6ec30aa8722a702aa8138e6" ||
+    aaiA1.rows?.length !== aaiA1Fields.size) fail("AAI A1 approved package provenance or row count changed");
+for (const row of aaiA1.rows) {
+  const prefix = `training.record.${aaiA1Id}.`;
+  const field = row.key.startsWith(prefix) ? row.key.slice(prefix.length) : "";
+  if (!aaiA1Fields.has(field) || aaiA1Seen.has(field) || seen.has(row.key) ||
+      row.record_id !== aaiA1Id || row.source_revision !== aaiA1Revision ||
+      row.scope_status !== "REQUIRED_FOR_PT_LAUNCH" || row.translation_status !== "APPROVED" ||
+      typeof row.source_en !== "string" || !row.source_en.trim() ||
+      typeof row.pt !== "string" || !row.pt.trim()) {
+    fail(`AAI A1 invalid, unapproved, or duplicate key: ${JSON.stringify(row.key)}`);
+  }
+  aaiA1Seen.add(field);
+  seen.add(row.key);
+  keys[row.key] = {
+    key: row.key, en: row.source_en, pt: row.pt,
+    scope_status: row.scope_status, identity_policy: row.identity_policy,
+    record_id: row.record_id, translation_status: row.translation_status,
+    source_revision: row.source_revision, context_notes: "", linguistic_notes: "",
+  };
+}
+if (aaiA1Seen.size !== aaiA1Fields.size) fail("AAI A1 missing approved field");
+
 // r28: Things-to-Do detail contextual Home return (Project 03 semantic authority
 // P03-TTD-CONTEXTUAL-HOME-RETURN-2026-10-27-D01; Project 09 linguistic revision
 // P09-PT-TTD-CONTEXTUAL-HOME-RETURN-2026-10-27-r1). Exactly one new key, pinned
@@ -3659,6 +3692,7 @@ const output = {
       "data/locales/pt-overlay-r25-trainings-home-expansion-timbuktoo.source.json",
       "data/locales/pt-overlay-r26-trainings-home-expansion-edtech.source.json",
       "data/locales/pt-overlay-r27-ficase-scholarship-renewals-2026-2027.source.json",
+      "data/locales/pt-overlay-aai-portuguese-a1-2026.source.json",
       "data/locales/pt-overlay-r28-ttd-contextual-home-return.source.json",
       "data/locales/pt-overlay-r29-sinergia-access-disclosure.source.json",
       "data/locales/pt-overlay-r30-sinergia-presentation-correction.source.json",
@@ -3757,6 +3791,9 @@ const output = {
     delta26_project_09_package_id: delta26.project_09_package_id,
     delta26_project_09_revision_id: delta26.project_09_revision_id,
     delta26_lifecycle_disclosure_policy: delta26.lifecycle_disclosure_policy,
+    aai_a1_revision: aaiA1.source_revision,
+    aai_a1_attachment_sha256: aaiA1.approved_attachment_sha256,
+    aai_a1_row_count: aaiA1.rows.length,
     delta28_package_id: delta28.package_id,
     delta28_revision: delta28.source_revision,
     delta28_revision_class: delta28.revision_class,
