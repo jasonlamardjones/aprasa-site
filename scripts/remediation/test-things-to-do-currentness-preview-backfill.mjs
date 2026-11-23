@@ -81,6 +81,12 @@ const RETAINED = 'sinergia-da-materia';
 const UNSELECTED = '50-anos-de-memoria-criacao-e-resistencia';
 // Selected, evergreen and therefore current on both sides of every transition.
 const EVERGREEN = ['taverna-live-music', 'nautilus-live-music'];
+// Selected by HOME_PREVIEW_IDS, but published AFTER this fixture was written.
+// Each is a dated upcoming event, so in the sandbox it is current on BOTH sides
+// of the transition (retained, never expiring, never the control). It takes part
+// only once its record exists in the repository, so the same test holds before
+// and after that record's publication.
+const PUBLISHED_AFTER_FIXTURE = ['urdi-2026-mindelo'];
 
 const TEXT_EXTENSIONS = new Set(['.css', '.html', '.js', '.json', '.md', '.mjs', '.svg', '.txt', '.xml', '.yaml', '.yml']);
 
@@ -234,8 +240,10 @@ try {
   // --- The transition this repair exists for -------------------------------
   const records = readJson(work, 'data/things-to-do-events.json').records;
   const transition = resolvePreviewTransition({ records, fromAsOf: BEFORE, toAsOf: AFTER });
-  assert.deepEqual(transition.previewBefore, [ACTIVE, EXPIRING, RETAINED, ...EVERGREEN].sort());
-  assert.deepEqual(transition.previewAfter, [ACTIVE, RETAINED, ...EVERGREEN].sort());
+  const present = new Set(records.map((record) => record.id));
+  const LATER = PUBLISHED_AFTER_FIXTURE.filter((id) => present.has(id));
+  assert.deepEqual(transition.previewBefore, [ACTIVE, EXPIRING, RETAINED, ...EVERGREEN, ...LATER].sort());
+  assert.deepEqual(transition.previewAfter, [ACTIVE, RETAINED, ...EVERGREEN, ...LATER].sort());
   assert.ok(!transition.previewAfter.includes(EXPIRING), 'the expiring record must leave the preview');
   // The curated selection is why nothing takes its place. 50-anos is eligible on
   // BOTH sides of the transition and simply is not selected, so it is on neither
@@ -251,8 +259,8 @@ try {
 
   nodeOk(work, 'scripts/build-all.mjs', [`--as-of=${BEFORE}`]);
   // Rendered order is Home's marker-slot order, not the selection's order.
-  const HOME_BEFORE = [ACTIVE, RETAINED, EXPIRING, ...EVERGREEN];
-  const HOME_AFTER = [ACTIVE, RETAINED, ...EVERGREEN];
+  const HOME_BEFORE = [ACTIVE, RETAINED, EXPIRING, ...EVERGREEN, ...LATER];
+  const HOME_AFTER = [ACTIVE, RETAINED, ...EVERGREEN, ...LATER];
   assert.deepEqual(homeCardIds(work, 'index.html'), HOME_BEFORE);
   assert.deepEqual(homeCardIds(work, 'pt/index.html'), HOME_BEFORE);
   assert.doesNotThrow(() => assertValidatorResults(incumbentValidatorResults(work, BEFORE)),
@@ -324,7 +332,7 @@ try {
     assert.ok(allowed.includes(`things-to-do/${id}/index.html`), `EN detail page for ${id} must be permitted`);
     assert.ok(allowed.includes(`pt/things-to-do/${id}/index.html`), `PT detail page for ${id} must be permitted`);
   }
-  for (const id of [ACTIVE, RETAINED, UNSELECTED, ...EVERGREEN]) {  // currentness unchanged across the transition
+  for (const id of [ACTIVE, RETAINED, UNSELECTED, ...EVERGREEN, ...LATER]) {  // currentness unchanged across the transition
     assert.ok(!allowed.includes(`things-to-do/${id}/index.html`),
       `${id} keeps its currentness state, so its detail page must NOT be authorized`);
     assert.ok(!allowed.includes(`pt/things-to-do/${id}/index.html`),
