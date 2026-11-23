@@ -356,15 +356,28 @@
 
     addMediaFoundationStyles();
 
+    // Use existing A PRASA-owned Things-to-Do artwork when there is no
+    // event-specific image. The image is decorative, not a claimed depiction
+    // of the event or organizer. Existing flyers and posters always take priority.
+    const thingsToDoFallback = {
+      src: "assets/environment/praca-things-to-do-800.webp",
+      alt: "",
+      width: 800,
+      height: 450
+    };
+    const makeMissingMedia = (className) => sectionId === "things-to-do"
+      ? createProviderMedia(className, thingsToDoFallback)
+      : createEditorialFallback(className, label, note);
+
     section.querySelectorAll(".resource-card").forEach((card) => {
       if (!card.querySelector(":scope > .card-media")) {
-        card.prepend(createEditorialFallback("card-media", label, note));
+        card.prepend(makeMissingMedia("card-media"));
       }
 
       const template = card.querySelector(".details-template");
       const record = template?.content.querySelector(".dialog-record");
       if (record && !record.querySelector(":scope > .dialog-media")) {
-        record.prepend(createEditorialFallback("dialog-media", label, note));
+        record.prepend(makeMissingMedia("dialog-media"));
       }
     });
   }
