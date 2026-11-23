@@ -12,6 +12,7 @@ import {
   mediaGateSummary,
   MEDIA_GATE_OPEN,
   removeTempTree,
+  URDI_APPROVED,
   validationOutcome,
   expectedDryRunChangedFiles,
   loadPacket,
@@ -169,7 +170,10 @@ try {
     media_provenance: 'Dry-run record derived only from the approved publication packet; never committed by Phase 1 automation.',
     media_asset_source_url: packet.media.source_url,
     media_checked_date: packet.event.checked_at,
-    media_alt: media?.alt ?? '',
+    // Incumbent no-media events keep the empty-string alt. URDI alone is approved
+    // with a null alt on its no-asset editorial fallback (Project 03), so its
+    // dry-run record mirrors that exact approved representation.
+    media_alt: media ? media.alt : (packet.event.id === URDI_APPROVED.event_id ? URDI_APPROVED.media_manifest.media_alt : ''),
     ...(media?.width ? { media_width: media.width } : {}),
     ...(media?.height ? { media_height: media.height } : {})
   });

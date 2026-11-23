@@ -906,6 +906,50 @@ if (delta9Corrected !== EXPECTED_DELTA9.row_count) {
 // Phase 1B event deltas are complete Project 09-approved, strictly additive
 // packages. Discovery removes the need to edit this build script for each
 // ordinary event while retaining the same fail-closed row checks as r3-r8.
+//
+// Package-wide revision equality is the rule for every event: each row's
+// source_revision must equal the package's. The ONE exception is the URDI 2026
+// mixed-revision package below (Project 09 r2 over r1), which is an exact,
+// fail-closed lineage check, not a relaxation: it names the event, package,
+// both revisions, the full required key set and the two keys that carry r2.
+// Nothing about it generalizes, and previous_source_revision is rejected on
+// every other event package.
+const URDI_MIXED_REVISION_PACKAGE = Object.freeze({
+  event_id: "urdi-2026-mindelo",
+  package_id: "aprasa-pt-ttd-urdi-2026-mindelo",
+  source_revision: "P09-PT-TTD-URDI-2026-11-23-r2",
+  previous_source_revision: "P09-PT-TTD-URDI-2026-11-22-r1",
+  r2_suffixes: Object.freeze(["display.checked", "detail.checked"]),
+  r1_suffixes: Object.freeze([
+    "title", "summary", "display.status", "display.meta", "detail.body", "detail.good_to_know",
+    "card_action.label", "detail.action_label",
+    "detail.fact.dates.label", "detail.fact.dates.value_display",
+    "detail.fact.venue.label", "detail.fact.venue.value_display",
+    "detail.fact.organizer.label", "detail.fact.organizer.value_display",
+    "seo.title", "seo.description",
+  ]),
+});
+
+function urdiMixedRevisionExpectation(fileName, eventDelta) {
+  const spec = URDI_MIXED_REVISION_PACKAGE;
+  if (eventDelta.package_id !== spec.package_id) fail(`${fileName}: URDI package_id mismatch`);
+  if (eventDelta.source_revision !== spec.source_revision) fail(`${fileName}: URDI source_revision must be ${spec.source_revision}`);
+  if (eventDelta.previous_source_revision !== spec.previous_source_revision) {
+    fail(`${fileName}: URDI previous_source_revision must be ${spec.previous_source_revision}`);
+  }
+  const prefix = `event.${spec.event_id}.`;
+  const expected = new Map([
+    ...spec.r1_suffixes.map((suffix) => [prefix + suffix, spec.previous_source_revision]),
+    ...spec.r2_suffixes.map((suffix) => [prefix + suffix, spec.source_revision]),
+  ]);
+  const actualKeys = eventDelta.rows.map((row) => row.key);
+  if (actualKeys.length !== expected.size || new Set(actualKeys).size !== expected.size
+    || actualKeys.some((key) => !expected.has(key))) {
+    fail(`${fileName}: URDI package must carry exactly the ${expected.size} approved keys`);
+  }
+  return expected;
+}
+
 const eventDeltaFiles = readdirSync(LOCALE_DIR)
   .filter((name) => /^pt-overlay-event-[a-z0-9]+(?:-[a-z0-9]+)*\.source\.json$/.test(name))
   .sort();
@@ -923,6 +967,15 @@ for (const fileName of eventDeltaFiles) {
   if (!Array.isArray(eventDelta.rows) || eventDelta.rows.length === 0) fail(`${fileName}: rows must be non-empty`);
   if (eventDelta.supplied_rows_approved !== eventDelta.rows.length) fail(`${fileName}: approved row count mismatch`);
   if (eventDelta.review_required !== 0 || eventDelta.blocking_issue != null) fail(`${fileName}: unresolved localization review state`);
+  // previous_source_revision is supported ONLY by the exact URDI lineage above.
+  // Anywhere else it is an unapproved field and the strict package-wide
+  // revision equality below stays the only accepted shape.
+  const mixedRevisionExpectation = eventDelta.event_id === URDI_MIXED_REVISION_PACKAGE.event_id
+    ? urdiMixedRevisionExpectation(fileName, eventDelta)
+    : null;
+  if (!mixedRevisionExpectation && Object.hasOwn(eventDelta, "previous_source_revision")) {
+    fail(`${fileName}: previous_source_revision is not supported for event ${eventDelta.event_id}`);
+  }
 
   for (const row of eventDelta.rows) {
     if (seen.has(row.key)) fail(`${fileName}: key "${row.key}" is not strictly additive`);
@@ -930,7 +983,10 @@ for (const fileName of eventDeltaFiles) {
     if (!row.key.startsWith(`event.${eventDelta.event_id}.`) || row.record_id !== eventDelta.event_id) {
       fail(`${fileName}: row ${row.key} is outside event ${eventDelta.event_id}`);
     }
-    if (row.source_revision !== eventDelta.source_revision) fail(`${fileName}: ${row.key} source_revision mismatch`);
+    const expectedRowRevision = mixedRevisionExpectation
+      ? mixedRevisionExpectation.get(row.key)
+      : eventDelta.source_revision;
+    if (row.source_revision !== expectedRowRevision) fail(`${fileName}: ${row.key} source_revision mismatch`);
     if (row.translation_status !== "APPROVED") fail(`${fileName}: ${row.key} is not APPROVED`);
     if (!row.source_en || !row.pt) fail(`${fileName}: ${row.key} is missing EN/PT approved text`);
     if (row.scope_status === "REQUIRED_FOR_PT_LAUNCH") eventDeltaRequired += 1;
@@ -962,6 +1018,7 @@ for (const fileName of eventDeltaFiles) {
     event_id: eventDelta.event_id,
     package_id: eventDelta.package_id,
     source_revision: eventDelta.source_revision,
+    ...(mixedRevisionExpectation ? { previous_source_revision: eventDelta.previous_source_revision } : {}),
     row_count: eventDelta.rows.length,
   });
 }

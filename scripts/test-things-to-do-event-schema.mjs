@@ -1006,6 +1006,130 @@ standaloneMediaRejects('a manifest row with a URL beside a valid reference is re
   record('diagnostics: a malformed source_url is still rejected', validateSourceUnion({ ...cloneJson(writeFixture.event), source_url: 'https:///x' }).some((m) => /source_url must be an HTTP\(S\) URL/.test(m)));
 }
 
+// --- URDI 2026 mixed-revision locale package (Project 09 r2 over r1) ---------
+//
+// The locale builder keeps strict package-wide revision equality for every
+// event. URDI alone is accepted with its exact lineage: 16 rows at r1, the two
+// additive checked rows at r2, previous_source_revision stated explicitly.
+// These tests drive the real builder over throwaway sandbox copies; the row
+// text here is structural (the builder never rewrites it), and the approved
+// copy itself is exercised end to end in test-event-publication-write.mjs.
+{
+  const URDI = 'urdi-2026-mindelo';
+  const R1 = 'P09-PT-TTD-URDI-2026-11-22-r1';
+  const R2 = 'P09-PT-TTD-URDI-2026-11-23-r2';
+  const R1_SUFFIXES = ['title', 'summary', 'display.status', 'display.meta', 'detail.body', 'detail.good_to_know', 'card_action.label', 'detail.action_label',
+    'detail.fact.dates.label', 'detail.fact.dates.value_display', 'detail.fact.venue.label', 'detail.fact.venue.value_display',
+    'detail.fact.organizer.label', 'detail.fact.organizer.value_display', 'seo.title', 'seo.description'];
+  const R2_SUFFIXES = ['display.checked', 'detail.checked'];
+  const urdiPackage = ({ id = URDI, previous = R1, packageId = 'aprasa-pt-ttd-urdi-2026-mindelo', revision = R2 } = {}) => {
+    const row = (suffix, rowRevision) => ({
+      key: `event.${id}.${suffix}`,
+      record_id: id,
+      source_en: `structural EN ${suffix}`,
+      pt: `estrutural PT ${suffix}`,
+      scope_status: 'REQUIRED_FOR_PT_LAUNCH',
+      identity_policy: 'GOVERNED_SOURCE',
+      translation_status: 'APPROVED',
+      source_revision: rowRevision
+    });
+    const rows = [...R1_SUFFIXES.map((suffix) => row(suffix, previous ?? revision)), ...R2_SUFFIXES.map((suffix) => row(suffix, revision))];
+    const pkg = {
+      event_id: id,
+      package_id: packageId,
+      source_revision: revision,
+      project_09_status: 'approved',
+      supplied_rows_approved: rows.length,
+      review_required: 0,
+      blocking_issue: null,
+      rows
+    };
+    if (previous !== undefined && previous !== null) pkg.previous_source_revision = previous;
+    return pkg;
+  };
+  const buildWith = (pkg, mutate = () => {}) => {
+    const dir = sandbox();
+    try {
+      mutate(pkg);
+      fs.writeFileSync(path.join(dir, 'data', 'locales', `pt-overlay-event-${pkg.event_id}.source.json`), `${JSON.stringify(pkg, null, 2)}\n`);
+      const built = runIn(dir, 'build-locale-data.mjs');
+      const generated = built.status === 0
+        ? JSON.parse(fs.readFileSync(path.join(dir, 'data', 'locales', 'locale-data.generated.json'), 'utf8'))
+        : null;
+      const contract = built.status === 0 ? runIn(dir, 'validate-locale-contract.mjs') : null;
+      return { built, generated, contract };
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  };
+  const baseKeyCount = Object.keys(JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'locales', 'locale-data.generated.json'), 'utf8')).keys).length;
+
+  {
+    const { built, generated, contract } = buildWith(urdiPackage());
+    record('locale builder: the exact URDI 16 r1 + 2 r2 package is accepted', built.status === 0, built.out.trim().split('\n').slice(-2).join(' / '));
+    if (generated) {
+      const keys = Object.keys(generated.keys).filter((key) => key.startsWith(`event.${URDI}.`));
+      record('locale builder: all 18 URDI keys are added, strictly additively', keys.length === 18 && Object.keys(generated.keys).length === baseKeyCount + 18, `${keys.length} URDI keys, ${Object.keys(generated.keys).length} total vs ${baseKeyCount} base`);
+      record('locale builder: the 16 approved rows keep r1 provenance and the 2 checked rows carry r2',
+        R1_SUFFIXES.every((suffix) => generated.keys[`event.${URDI}.${suffix}`]?.source_revision === R1)
+        && R2_SUFFIXES.every((suffix) => generated.keys[`event.${URDI}.${suffix}`]?.source_revision === R2));
+      const packageRecord = (generated.provenance?.event_delta_packages ?? []).find((item) => item.event_id === URDI);
+      record('locale builder: the generated package record carries the explicit previous revision',
+        packageRecord?.previous_source_revision === R1 && packageRecord?.source_revision === R2 && packageRecord?.row_count === 18);
+      record('locale contract validator passes with the URDI package merged', contract?.status === 0, String(contract?.out).trim().split('\n').slice(-2).join(' / '));
+    }
+  }
+
+  const refused = (name, pkg, mutate, pattern) => {
+    const { built } = buildWith(pkg, mutate);
+    record(name, built.status !== 0 && pattern.test(built.out), `exit ${built.status}: ${built.out.trim().split('\n').slice(-2).join(' / ')}`);
+  };
+  refused('locale builder: every URDI row at the package revision (no lineage) is refused', urdiPackage(), (pkg) => { for (const row of pkg.rows) row.source_revision = R2; }, /source_revision mismatch/);
+  refused('locale builder: a forged revision on an r1 row is refused', urdiPackage(), (pkg) => { pkg.rows[0].source_revision = R2; }, /source_revision mismatch/);
+  refused('locale builder: an r1 revision on an r2 row is refused', urdiPackage(), (pkg) => { pkg.rows.at(-1).source_revision = R1; }, /source_revision mismatch/);
+  refused('locale builder: an unknown row revision is refused', urdiPackage(), (pkg) => { pkg.rows[3].source_revision = 'P09-PT-TTD-URDI-2026-11-24-r3'; }, /source_revision mismatch/);
+  refused('locale builder: a wrong previous_source_revision is refused', urdiPackage({ previous: 'P09-PT-TTD-URDI-2026-11-21-r0' }), (pkg) => { for (const row of pkg.rows.filter((r) => r.source_revision !== R2)) row.source_revision = R1; }, /previous_source_revision must be/);
+  refused('locale builder: a missing previous_source_revision is refused', urdiPackage(), (pkg) => { delete pkg.previous_source_revision; }, /previous_source_revision must be/);
+  refused('locale builder: a wrong URDI package id is refused', urdiPackage({ packageId: 'aprasa-pt-ttd-other' }), () => {}, /package_id mismatch/);
+  refused('locale builder: a wrong URDI package revision is refused', urdiPackage({ revision: R1 }), () => {}, /source_revision must be/);
+  refused('locale builder: an extra URDI key is refused', urdiPackage(), (pkg) => {
+    pkg.rows.push({ ...structuredClone(pkg.rows[0]), key: `event.${URDI}.detail.unapproved` });
+    pkg.supplied_rows_approved = pkg.rows.length;
+  }, /exactly the 18 approved keys/);
+  refused('locale builder: a missing URDI key is refused', urdiPackage(), (pkg) => {
+    pkg.rows.pop();
+    pkg.supplied_rows_approved = pkg.rows.length;
+  }, /exactly the 18 approved keys/);
+
+  // The allowance is URDI-only: every other event keeps strict package-wide
+  // equality and may not use previous_source_revision at all.
+  const OTHER = 'zz-structural-event';
+  const otherPackage = (previous) => {
+    const pkg = urdiPackage({ id: OTHER, previous: null, packageId: 'aprasa-pt-ttd-zz-structural', revision: 'P09-PT-TTD-ZZ-2026-11-23-r1' });
+    for (const row of pkg.rows) row.source_revision = pkg.source_revision;
+    if (previous) pkg.previous_source_revision = previous;
+    return pkg;
+  };
+  {
+    const { built } = buildWith(otherPackage());
+    record('locale builder: a non-URDI package with package-wide revisions is still accepted', built.status === 0, built.out.trim().split('\n').slice(-2).join(' / '));
+  }
+  refused('locale builder: previous_source_revision is rejected for every other event', otherPackage(R1), () => {}, /previous_source_revision is not supported/);
+  refused('locale builder: a mixed revision on another event is still refused (strict equality kept)', otherPackage(), (pkg) => { pkg.rows[0].source_revision = `${pkg.source_revision}-x`; }, /source_revision mismatch/);
+}
+
+// The packet JSON schema stays synchronized with the contract: the lineage
+// field is an optional, string-typed property of the approved package only.
+{
+  const schema = JSON.parse(fs.readFileSync(path.join(ROOT, 'automation', 'things-to-do', 'event-publication-packet.schema.json'), 'utf8'));
+  const approved = schema.properties.localization.properties.approved_package;
+  record('packet schema: previous_source_revision is an optional string on the approved package', approved.properties.previous_source_revision?.type === 'string'
+    && !approved.required.includes('previous_source_revision') && approved.additionalProperties === false);
+  record('packet schema: the approved package required set is unchanged', JSON.stringify(approved.required) === JSON.stringify(['package_id', 'source_revision', 'project_09_status', 'rows']));
+  record('packet schema: approved package rows still reject unknown fields', approved.properties.rows.items.additionalProperties === false);
+  record('packet schema: the manifest media_alt still admits null', JSON.stringify(schema.properties.media.properties.approved_manifest.properties.media_alt.type) === JSON.stringify(['string', 'null']));
+}
+
 // Public-repo rule: no evidence-locator shape anywhere in the canonical data or
 // the internal manifest, whatever the validators say.
 for (const rel of [EVENTS, path.join('internal', 'provider-media-manifest.json')]) {

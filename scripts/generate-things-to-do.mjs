@@ -341,14 +341,28 @@ function renderFacts(facts = []) {
   }).join('');
 }
 
+// Dated events whose APPROVED public action is the organizer destination in
+// card_action.url while source_url stays the evidence source (Project 03,
+// URDI 2026: CNAD organizer page for the action, Inforpress for the evidence).
+// This is an exact, explicit id list, never a kind- or provider-wide rule, so no
+// other dated event's action changes and source_url is never rewritten. A listed
+// event that carries no card_action.url keeps the default source_url, so the
+// exception can only ever select an approved, event-owned destination.
+const CARD_ACTION_DETAIL_EVENT_IDS = Object.freeze(['urdi-2026-mindelo']);
+
 function publicActionUrl(record) {
   if (record.source_reference != null) {
     throw new Error(`${record.id}: a source_reference record has no public action URL`);
   }
   // Project 03 has approved durable provider destinations for the two current
   // recurring-venue cards. Keep dated-event detail actions on source_url;
-  // only the recurring-venue kind resolves its public action from card_action.
-  return isRecurringVenue(record) ? (record.card_action?.url ?? record.source_url) : record.source_url;
+  // only the recurring-venue kind resolves its public action from card_action,
+  // plus the exact dated events named in CARD_ACTION_DETAIL_EVENT_IDS.
+  if (isRecurringVenue(record)) return record.card_action?.url ?? record.source_url;
+  if (CARD_ACTION_DETAIL_EVENT_IDS.includes(record.id) && record.kind === 'dated-event' && record.card_action?.url) {
+    return record.card_action.url;
+  }
+  return record.source_url;
 }
 
 function renderSchema(record, loc, expired) {

@@ -236,7 +236,7 @@ try {
       state + ' record cannot enter Home through temporal eligibility');
   }
   eq(homePreviewRecords(records, '2026-10-12').map(r => r.id),
-    HOME_PREVIEW_IDS.filter(id => byId[id].publication_state === 'published' &&
+    HOME_PREVIEW_IDS.filter(id => byId[id]?.publication_state === 'published' &&
       incumbentState(byId[id], '2026-10-12') !== 'expired'),
     'Home preview keeps the curated order');
 

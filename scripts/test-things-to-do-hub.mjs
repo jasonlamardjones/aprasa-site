@@ -31,7 +31,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { t } from './lib/locale.mjs';
-import { THINGS_TO_DO_HUB_PUBLIC, hubOutputPath, hubCanonical, homePreviewRecords, isPubliclyPublishable, collectionRecords } from './lib/things-to-do-collection.mjs';
+import { HOME_PREVIEW_IDS, HOME_PREVIEW_LIMIT, HOME_PREVIEW_PENDING_PUBLICATION_IDS, THINGS_TO_DO_HUB_PUBLIC, hubOutputPath, hubCanonical, homePreviewRecords, isPubliclyPublishable, collectionRecords, unknownHomePreviewIds } from './lib/things-to-do-collection.mjs';
 import { isPubliclyCurrent, currentnessState, REVIEW_DUE } from './lib/things-to-do-currentness.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -179,13 +179,24 @@ function generate(dir, asOf) {
 // hub order. The expected ids are stated here independently of the module
 // that produces them, so a change to HOME_PREVIEW_IDS has to be made
 // deliberately in two places rather than silently redefining "approved".
-const APPROVED_HOME_PREVIEW = Object.freeze([
+//
+// Project 03, URDI 2026 (23 November 2026) appends ONE explicit sixth id after
+// the five incumbent ids, which keep their ids and order. The incumbents are
+// restated on their own below so the sixth can never reorder or replace one.
+const INCUMBENT_HOME_PREVIEW = Object.freeze([
   'cartinha-dholanda-mindelo-2026',
   'sinergia-da-materia',
   'voyage-obi-margo-kafe-djan-djan-2026',
   'taverna-live-music',
   'nautilus-live-music',
 ]);
+const URDI_ID = 'urdi-2026-mindelo';
+const APPROVED_HOME_PREVIEW = Object.freeze([...INCUMBENT_HOME_PREVIEW, URDI_ID]);
+
+// The approved selected ids that a given canonical corpus actually carries.
+// URDI is selected ahead of its publication (the guarded writer adds the
+// record later), so until then it is selected but not yet a record.
+const approvedPresent = (records) => APPROVED_HOME_PREVIEW.filter((id) => records.some((record) => record.id === id));
 
 // The last committed as_of at which every approved record was still current.
 // The full five-record selection is asserted here, at a fixed date, so that
@@ -276,13 +287,15 @@ function publishFiftyAnosFixture(dir) {
     // exactly those records -- never a backfill, never a reorder.
     const records = JSON.parse(read(dir, EVENTS)).records;
     const expectedHome = expectedHomeAt(records, asOf);
-    const droppedSelected = APPROVED_HOME_PREVIEW.filter((id) => !expectedHome.includes(id));
+    // Only ids the corpus carries can have "dropped": a selected id with no
+    // record yet (URDI before its guarded publication) was never on Home.
+    const droppedSelected = approvedPresent(records).filter((id) => !expectedHome.includes(id));
     check('Home preview is exactly the approved curated selection less expired selected records (EN)',
       JSON.stringify(enHome) === JSON.stringify(expectedHome), `got [${enHome}] expected [${expectedHome}]`);
     check('Home preview is exactly the approved curated selection less expired selected records (PT)',
       JSON.stringify(ptHome) === JSON.stringify(expectedHome), `got [${ptHome}] expected [${expectedHome}]`);
-    check('Home preview never exceeds the 5 approved records (EN)', enHome.length <= 5, `got ${enHome.length}`);
-    check('Home preview never exceeds the 5 approved records (PT)', ptHome.length <= 5, `got ${ptHome.length}`);
+    check(`Home preview never exceeds the ${APPROVED_HOME_PREVIEW.length} approved records (EN)`, enHome.length <= APPROVED_HOME_PREVIEW.length, `got ${enHome.length}`);
+    check(`Home preview never exceeds the ${APPROVED_HOME_PREVIEW.length} approved records (PT)`, ptHome.length <= APPROVED_HOME_PREVIEW.length, `got ${ptHome.length}`);
     check('Home preview is not emptied at the committed as_of', enHome.length > 0, `got [${enHome}]`);
     // Independent of the currentness module: every selected record that left
     // Home did so because its own day-precision end date has passed, so the
@@ -343,7 +356,7 @@ function publishFiftyAnosFixture(dir) {
 }
 
 // ---------------------------------------------------------------------------
-// 1b. The full five-record approved selection, at a fixed as_of where every
+// 1b. The full approved selection, at a fixed as_of where every
 //     selected record is current. Kept separate from block 1 so it does not
 //     depend on the committed as_of advancing past a selected record's end.
 // ---------------------------------------------------------------------------
@@ -361,14 +374,19 @@ function publishFiftyAnosFixture(dir) {
     fs.writeFileSync(path.join(dir, EVENTS), JSON.stringify(fixtureData, null, 2) + '\n');
     generate(dir, asOf);
     const records = JSON.parse(read(dir, EVENTS)).records;
-    check(`fixture: every approved record is published and current at ${asOf}`,
-      JSON.stringify(expectedHomeAt(records, asOf)) === JSON.stringify(APPROVED_HOME_PREVIEW),
+    // Every approved id the corpus carries, in approved order. Until URDI's
+    // record is published this is the five incumbents; once it is, all six.
+    const presentApproved = approvedPresent(records);
+    check(`fixture: every approved record the corpus carries is published and current at ${asOf}`,
+      JSON.stringify(expectedHomeAt(records, asOf)) === JSON.stringify(presentApproved),
       `got [${expectedHomeAt(records, asOf)}]`);
+    check('fixture: the five incumbent ids are always carried by the corpus',
+      JSON.stringify(presentApproved.slice(0, INCUMBENT_HOME_PREVIEW.length)) === JSON.stringify(INCUMBENT_HOME_PREVIEW));
     for (const [locale, file] of [['EN', 'index.html'], ['PT', 'pt/index.html']]) {
       const home = cardIds(read(dir, file));
       check(`Home preview is exactly the approved curated selection at ${asOf} (${locale})`,
-        JSON.stringify(home) === JSON.stringify(APPROVED_HOME_PREVIEW), `got [${home}]`);
-      check(`Home preview shows exactly 5 records at ${asOf} (${locale})`, home.length === 5, `got ${home.length}`);
+        JSON.stringify(home) === JSON.stringify(presentApproved), `got [${home}]`);
+      check(`Home preview shows exactly ${presentApproved.length} records at ${asOf} (${locale})`, home.length === presentApproved.length, `got ${home.length}`);
     }
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
@@ -964,6 +982,52 @@ for (const state of ['expired', 'withdrawn', 'draft']) {
   check('the collection hub stays unpublished', THINGS_TO_DO_HUB_PUBLIC === false);
 }
 
+// ---------------------------------------------------------------------------
+// URDI sixth curated Home id (Project 03, 23 November 2026): exact selection,
+// the incumbents untouched, and a pending-publication tolerance that is exact.
+// ---------------------------------------------------------------------------
+{
+  check('Home selection is exactly the five incumbent ids, unchanged and in order, then URDI',
+    JSON.stringify([...HOME_PREVIEW_IDS]) === JSON.stringify([...INCUMBENT_HOME_PREVIEW, URDI_ID]),
+    `got [${HOME_PREVIEW_IDS}]`);
+  check('the Home preview limit follows the governed list (6)', HOME_PREVIEW_LIMIT === 6, String(HOME_PREVIEW_LIMIT));
+  check('the pending-publication allowance is exactly the URDI id',
+    JSON.stringify([...HOME_PREVIEW_PENDING_PUBLICATION_IDS]) === JSON.stringify([URDI_ID]));
+  check('every pending-publication id is actually a selected id',
+    HOME_PREVIEW_PENDING_PUBLICATION_IDS.every((id) => HOME_PREVIEW_IDS.includes(id)));
+  const records = JSON.parse(fs.readFileSync(path.join(ROOT, EVENTS), 'utf8')).records;
+  const carriesUrdi = records.some((record) => record.id === URDI_ID);
+  check('selected-but-unpublished URDI is not reported as an unknown id while its record is absent',
+    carriesUrdi || !unknownHomePreviewIds(records).includes(URDI_ID));
+  check('the allowance reports nothing else as known: a record list without URDI reports no unknown ids',
+    JSON.stringify(unknownHomePreviewIds(records.filter((record) => record.id !== URDI_ID))) === '[]');
+  check('an unmatched id outside the allowance is still reported',
+    JSON.stringify(unknownHomePreviewIds(records.filter((record) => record.id !== 'taverna-live-music'))) === JSON.stringify(['taverna-live-music']));
+  check('while URDI is unpublished Home carries no URDI card and the five incumbents are unaffected',
+    carriesUrdi || !homePreviewRecords(records, JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'things-to-do-currentness.json'), 'utf8')).as_of)
+      .some((record) => record.id === URDI_ID));
+}
+
+{
+  // A typo of the URDI id is NOT covered by the allowance: the hub validator
+  // must still report it, so the tolerance cannot hide a mistyped selection.
+  const asOf = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'things-to-do-currentness.json'), 'utf8')).as_of;
+  const dir = sandbox();
+  try {
+    const modulePath = path.join(dir, 'scripts', 'lib', 'things-to-do-collection.mjs');
+    const module = fs.readFileSync(modulePath, 'utf8');
+    const patched = module.replace(`  '${URDI_ID}',\n]);`, `  'urdi-2026-mindello',\n]);`);
+    check('the URDI-typo fixture patched the governed list', patched !== module);
+    fs.writeFileSync(modulePath, patched);
+    const result = run(dir, 'validate-things-to-do-hub.mjs', [`--as-of=${asOf}`]);
+    check('the hub validator rejects a mistyped URDI id even though URDI is allowed to be unpublished',
+      result.status !== 0 && /HOME_PREVIEW_IDS selects "urdi-2026-mindello"/.test(result.out),
+      `exit ${result.status}: ${String(result.out).trim().split('\n').slice(-2).join(' / ')}`);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
 // The positive control for the same rule: published AND current IS visible.
 // (The exhaustive five-ID/order assertions live in block 1 above; this states
 // the pairing explicitly so the negative cases cannot pass vacuously.)
@@ -1023,7 +1087,11 @@ for (const state of ['expired', 'withdrawn', 'draft']) {
 
   function assertHomeReturn(root, label) {
     const pages = detailPages(root);
-    check(`${label}: 30 detail pages are covered (15 EN + 15 PT)`, pages.length === 30, String(pages.length));
+    // 30 incumbent detail pages (15 EN + 15 PT); URDI's EN + PT pair is added
+    // only once its record is carried by the corpus -- exactly +2, never more.
+    const urdiCarried = JSON.parse(fs.readFileSync(path.join(root, EVENTS), 'utf8')).records.some((record) => record.id === URDI_ID);
+    const expectedPages = 30 + (urdiCarried ? 2 : 0);
+    check(`${label}: ${expectedPages} detail pages are covered (${expectedPages / 2} EN + ${expectedPages / 2} PT)`, pages.length === expectedPages, String(pages.length));
     const bad = [];
     for (const rel of pages) {
       const locale = rel.startsWith('pt/') ? 'pt' : 'en';

@@ -113,6 +113,13 @@ export const THINGS_TO_DO_HUB_PUBLIC = false;
  * The order is the approved order and is what the hub validator compares the
  * rendered Home against. It currently coincides with canonical record order,
  * but this list is the authority, not that coincidence.
+ *
+ * Project 03, URDI 2026 (23 November 2026): one explicit sixth id is appended
+ * after the five above, which keep their ids and order unchanged. It is an
+ * exact, time-bounded curated selection, not a rule: the record leaves current
+ * Home discovery on its own through the normal currentness gate (from
+ * 2026-11-30, absent a verified extension), and appending the id publishes
+ * nothing -- the record must still exist, be published and be publicly current.
  */
 export const HOME_PREVIEW_IDS = Object.freeze([
   'cartinha-dholanda-mindelo-2026',
@@ -120,7 +127,24 @@ export const HOME_PREVIEW_IDS = Object.freeze([
   'voyage-obi-margo-kafe-djan-djan-2026',
   'taverna-live-music',
   'nautilus-live-music',
+  'urdi-2026-mindelo',
 ]);
+
+/**
+ * Selected ids approved AHEAD of their record's publication.
+ *
+ * The URDI id is selected here, in the same reviewed change as the guarded-writer
+ * contract, because the guarded writer may not edit this module while publishing
+ * (the real write requires a clean tree at remote main, and its changed-file
+ * scope is the event's data and generated pages only). The record is added later
+ * by that writer. Until then the id matches no record, which unknownHomePreviewIds()
+ * would otherwise report as a typo and fail the hub validator on main.
+ *
+ * This is an exact id list, not a pattern, and it only tolerates "no record
+ * yet": once any record carries the id the normal selection rules apply to it
+ * unchanged, and every other unmatched id is still reported.
+ */
+export const HOME_PREVIEW_PENDING_PUBLICATION_IDS = Object.freeze(['urdi-2026-mindelo']);
 
 /**
  * Number of records the approved Home preview shows.
@@ -203,7 +227,7 @@ export function homePreviewRecords(records, asOf) {
  */
 export function unknownHomePreviewIds(records) {
   const known = new Set((records ?? []).map((record) => record.id));
-  return HOME_PREVIEW_IDS.filter((id) => !known.has(id));
+  return HOME_PREVIEW_IDS.filter((id) => !known.has(id) && !HOME_PREVIEW_PENDING_PUBLICATION_IDS.includes(id));
 }
 
 /** Ids of the approved Home preview records. */

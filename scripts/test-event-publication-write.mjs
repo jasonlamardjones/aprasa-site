@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { assertPublicInputBoundary, mediaIntakeRoot, removeTempTree, validatePacket } from './lib/event-publication-contract.mjs';
+import { assertPublicInputBoundary, expectedChangedFiles, mediaIntakeRoot, removeTempTree, validatePacket } from './lib/event-publication-contract.mjs';
 import { TRANSPORT_API, resolveExecutable, selectTransport } from './lib/github-pr-client.mjs';
 import {
   assertDryRunProof,
@@ -1007,6 +1007,403 @@ record('teardown removes a real freshly-written directory tree', () => {
   }
 }, 'teardown-reliability');
 
+// --- URDI 2026 Tranche A: guarded-writer extension --------------------------
+//
+// Project 03 reconciled input + Project 09 approved r2 package (23 November
+// 2026). The 16 approved rows keep their r1 provenance and the two additive
+// checked rows carry r2; the writer must accept exactly that lineage, the
+// approved no-asset fallback and the approved CNAD action, and nothing wider.
+// The approved text is restated here, independently of the module under test.
+const URDI_ID = 'urdi-2026-mindelo';
+const URDI_R1 = 'P09-PT-TTD-URDI-2026-11-22-r1';
+const URDI_R2 = 'P09-PT-TTD-URDI-2026-11-23-r2';
+const URDI_VENUE = 'Praça Amílcar Cabral (Praça Nova), Mindelo, São Vicente';
+const URDI_SUMMARY_EN = 'The 11th edition of URDI brings Cabo Verdean crafts and design to Praça Nova in Mindelo, from 25 to 29 November 2026.';
+const URDI_SUMMARY_PT = 'A 11.ª edição da URDI leva o artesanato e o design cabo-verdianos à Praça Nova, no Mindelo, de 25 a 29 de novembro de 2026.';
+const URDI_SOURCE_URL = 'https://www.inforpress.cv/pt/sao-vicente-praca-nova-ganha-forma-para-receber-11-edicao-da-urdi-com-150-artesaos-expositores';
+const URDI_CNAD_URL = 'https://www.facebook.com/cnad.cv/';
+// [key suffix, EN, PT, revision]
+const URDI_ROWS = [
+  ['title', 'URDI 2026 — Cabo Verde Crafts & Design Fair', 'URDI 2026 — Feira de Artesanato e Design de Cabo Verde', URDI_R1],
+  ['summary', URDI_SUMMARY_EN, URDI_SUMMARY_PT, URDI_R1],
+  ['display.status', '25–29 November 2026', '25–29 de novembro de 2026', URDI_R1],
+  ['display.meta', URDI_VENUE, URDI_VENUE, URDI_R1],
+  ['detail.body', 'Organized by CNAD, this year\'s fair celebrates 50 years of memory, creation and resistance, with artisan exhibitors and accompanying cultural activities.', 'Organizada pelo CNAD, a feira deste ano celebra 50 anos de memória, criação e resistência, com artesãos expositores e atividades culturais complementares.', URDI_R1],
+  ['detail.good_to_know', 'The fair takes place in a public square. Check CNAD\'s official information for the current programme and any activity-specific access requirements.', 'A feira realiza-se numa praça pública. Consulte as informações oficiais do CNAD para confirmar o programa atual e quaisquer requisitos de acesso específicos de cada atividade.', URDI_R1],
+  ['card_action.label', 'View organizer information', 'Ver informações da organização', URDI_R1],
+  ['detail.action_label', 'View organizer information', 'Ver informações da organização', URDI_R1],
+  ['detail.fact.dates.label', 'Dates', 'Datas', URDI_R1],
+  ['detail.fact.dates.value_display', '25–29 November 2026', '25–29 de novembro de 2026', URDI_R1],
+  ['detail.fact.venue.label', 'Venue', 'Local', URDI_R1],
+  ['detail.fact.venue.value_display', URDI_VENUE, URDI_VENUE, URDI_R1],
+  ['detail.fact.organizer.label', 'Organizer', 'Organização', URDI_R1],
+  ['detail.fact.organizer.value_display', 'Centro Nacional de Arte, Artesanato e Design (CNAD)', 'Centro Nacional de Arte, Artesanato e Design (CNAD)', URDI_R1],
+  ['seo.title', 'URDI 2026 — Cabo Verde Crafts & Design Fair | A PRASA', 'URDI 2026 — Feira de Artesanato e Design de Cabo Verde | A PRASA', URDI_R1],
+  ['seo.description', URDI_SUMMARY_EN, URDI_SUMMARY_PT, URDI_R1],
+  ['display.checked', 'Checked 22 November 2026', 'Revisto em 22 de novembro de 2026', URDI_R2],
+  ['detail.checked', 'Checked 22 November 2026 against current Inforpress reporting based on statements from CNAD\'s director and the corroborating CNAD-origin event announcement.', 'Revisto em 22 de novembro de 2026 com base na reportagem atual da Inforpress, fundamentada em declarações do diretor do CNAD e corroborada pelo anúncio do evento com origem no CNAD.', URDI_R2]
+];
+const urdiKey = (suffix) => `event.${URDI_ID}.${suffix}`;
+const urdiEn = (suffix) => URDI_ROWS.find((row) => row[0] === suffix)[1];
+
+// The approved public packet wrapper. The first 16 rows carry no context or
+// linguistic notes upstream; the wrapper normalizes them to empty strings
+// WITHOUT touching key, EN, PT or revision values.
+function urdiPacket({ baseline, asOf }) {
+  const rows = URDI_ROWS.map(([suffix, en, pt, revision]) => ({
+    key: urdiKey(suffix),
+    source_revision: revision,
+    source_en: en,
+    pt,
+    scope_status: 'REQUIRED_FOR_PT_LAUNCH',
+    identity_policy: 'GOVERNED_SOURCE',
+    context_notes: suffix === 'display.checked' ? 'Card/display currentness line.' : suffix === 'detail.checked' ? 'Detail currentness/provenance line.' : '',
+    record_id: URDI_ID,
+    linguistic_notes: '',
+    translation_status: 'APPROVED'
+  }));
+  const title = urdiEn('title');
+  return {
+    contract_version: 1,
+    event: {
+      id: URDI_ID,
+      kind: 'dated-event',
+      title,
+      provider: 'Centro Nacional de Arte, Artesanato e Design (CNAD)',
+      summary: URDI_SUMMARY_EN,
+      category: 'culture',
+      location: { name: 'Praça Amílcar Cabral (Praça Nova)', locality: 'Mindelo, São Vicente' },
+      source_url: URDI_SOURCE_URL,
+      source_type: 'news-agency-report',
+      start_date: '2026-11-25',
+      start_datetime: null,
+      end_datetime: null,
+      end_date: '2026-11-29',
+      end_precision: 'day',
+      checked_at: '2026-11-22',
+      publication_state: 'published',
+      media_policy: 'fallback_allowed',
+      media_manifest_title: title,
+      detail_page: `things-to-do/${URDI_ID}/`,
+      free_admission: null,
+      display: { status: urdiEn('display.status'), meta: urdiEn('display.meta'), checked: urdiEn('display.checked') },
+      media: null,
+      card_action: { label: urdiEn('card_action.label'), url: URDI_CNAD_URL },
+      detail: {
+        facts: [
+          { label: 'Dates', value: urdiEn('detail.fact.dates.value_display') },
+          { label: 'Venue', value: urdiEn('detail.fact.venue.value_display') },
+          { label: 'Organizer', value: urdiEn('detail.fact.organizer.value_display') }
+        ],
+        body: urdiEn('detail.body'),
+        good_to_know: urdiEn('detail.good_to_know'),
+        checked: urdiEn('detail.checked'),
+        action_label: urdiEn('detail.action_label')
+      },
+      seo: { description: URDI_SUMMARY_EN, title: urdiEn('seo.title'), schema_type: 'Event' }
+    },
+    localization: {
+      pt_status: 'approved',
+      new_strings_required: false,
+      pt_values: Object.fromEntries(URDI_ROWS.map(([suffix, , pt]) => [urdiKey(suffix), pt])),
+      approved_package: {
+        package_id: 'aprasa-pt-ttd-urdi-2026-mindelo',
+        source_revision: URDI_R2,
+        previous_source_revision: URDI_R1,
+        project_09_status: 'approved',
+        rows
+      }
+    },
+    media: {
+      rights_status: 'not_required',
+      alt_status: 'not_required',
+      source_url: null,
+      local_asset: null,
+      supplied_asset: null,
+      asset_sha256: null,
+      approved_manifest: {
+        section: 'things-to-do',
+        title,
+        provider: 'Centro Nacional de Arte, Artesanato e Design (CNAD)',
+        source_url: URDI_SOURCE_URL,
+        media_type: 'editorial-fallback',
+        media_state: 'fallback-final',
+        media_source: null,
+        media_asset: null,
+        fallback_category: 'things-culture',
+        fallback_reason: 'No event-specific URDI/CNAD media reuse rights established; shared neutral A PRASA category fallback only.',
+        media_provenance: 'Existing shared A PRASA editorial fallback region; no URDI-specific image is ingested, and no depiction of the fair, organizer, artisans or activities is claimed.',
+        media_asset_source_url: null,
+        media_checked_date: null,
+        media_alt: null
+      }
+    },
+    governance: { publication_authorized: true, project03_status: 'approved', project09_status: 'approved', media_status: 'approved' },
+    control: {
+      dry_run: false,
+      real_write: true,
+      expected_main_sha: baseline,
+      as_of: asOf,
+      allow_branch: true,
+      allow_commit: true,
+      allow_pr: true,
+      merge_allowed: false
+    }
+  };
+}
+
+const URDI_STATIC = () => urdiPacket({ baseline: 'a'.repeat(40), asOf: '2026-11-23' });
+const urdiRow = (packet, suffix) => packet.localization.approved_package.rows.find((row) => row.key === urdiKey(suffix));
+
+record('URDI: the approved mixed-revision packet (16 r1 + 2 r2, null-alt fallback, CNAD action) is accepted', () => {
+  const packet = URDI_STATIC();
+  const rows = packet.localization.approved_package.rows;
+  if (rows.length !== 18 || rows.filter((row) => row.source_revision === URDI_R1).length !== 16 || rows.filter((row) => row.source_revision === URDI_R2).length !== 2) {
+    throw new Error('test packet is not the 16 r1 + 2 r2 approved shape');
+  }
+  expectState(packet, 'READY_FOR_IMPLEMENTATION');
+}, 'urdi');
+
+record('URDI: previous_source_revision is rejected for every other event', () => {
+  const packet = clone(fixture);
+  packet.localization.approved_package.previous_source_revision = URDI_R1;
+  expectState(packet, 'INVALID_INPUT');
+}, 'urdi');
+
+record('URDI: an incumbent event still needs package-wide revision equality (generic check not weakened)', () => {
+  const packet = clone(fixture);
+  packet.localization.approved_package.rows[0].source_revision = `${packet.localization.approved_package.source_revision}-forged`;
+  expectState(packet, 'BLOCKED_LOCALIZATION');
+}, 'urdi');
+
+record('URDI: a forged revision on an r1 row, or an r1 revision on an r2 row, is refused', () => {
+  const forgedR1 = URDI_STATIC();
+  urdiRow(forgedR1, 'title').source_revision = URDI_R2;
+  expectState(forgedR1, 'BLOCKED_LOCALIZATION');
+  const forgedR2 = URDI_STATIC();
+  urdiRow(forgedR2, 'display.checked').source_revision = URDI_R1;
+  expectState(forgedR2, 'BLOCKED_LOCALIZATION');
+  const unknown = URDI_STATIC();
+  urdiRow(unknown, 'summary').source_revision = 'P09-PT-TTD-URDI-2026-11-24-r3';
+  expectState(unknown, 'BLOCKED_LOCALIZATION');
+}, 'urdi');
+
+record('URDI: every row at the package revision (no mixed lineage) is refused', () => {
+  const packet = URDI_STATIC();
+  for (const row of packet.localization.approved_package.rows) row.source_revision = URDI_R2;
+  expectState(packet, 'BLOCKED_LOCALIZATION');
+}, 'urdi');
+
+record('URDI: a missing or wrong previous_source_revision, package id or package revision is refused', () => {
+  const missing = URDI_STATIC();
+  delete missing.localization.approved_package.previous_source_revision;
+  expectState(missing, 'BLOCKED_LOCALIZATION');
+  const wrongPrevious = URDI_STATIC();
+  wrongPrevious.localization.approved_package.previous_source_revision = 'P09-PT-TTD-URDI-2026-11-21-r0';
+  expectState(wrongPrevious, 'BLOCKED_LOCALIZATION');
+  const wrongPackage = URDI_STATIC();
+  wrongPackage.localization.approved_package.package_id = 'aprasa-pt-ttd-other';
+  expectState(wrongPackage, 'BLOCKED_LOCALIZATION');
+  const wrongRevision = URDI_STATIC();
+  wrongRevision.localization.approved_package.source_revision = URDI_R1;
+  expectState(wrongRevision, 'BLOCKED_LOCALIZATION');
+  const nonString = URDI_STATIC();
+  nonString.localization.approved_package.previous_source_revision = 1;
+  expectState(nonString, 'INVALID_INPUT');
+}, 'urdi');
+
+record('URDI: a missing, extra or duplicated locale row is refused', () => {
+  const missing = URDI_STATIC();
+  missing.localization.approved_package.rows.pop();
+  expectState(missing, 'BLOCKED_LOCALIZATION');
+  const extra = URDI_STATIC();
+  extra.localization.approved_package.rows.push({ ...clone(urdiRow(extra, 'title')), key: urdiKey('detail.unapproved') });
+  expectState(extra, 'INVALID_INPUT');
+  const duplicate = URDI_STATIC();
+  duplicate.localization.approved_package.rows.push(clone(urdiRow(duplicate, 'title')));
+  expectState(duplicate, 'INVALID_INPUT');
+}, 'urdi');
+
+record('URDI: altered approved EN or PT text is refused (approved content is immutable)', () => {
+  const pt = URDI_STATIC();
+  urdiRow(pt, 'summary').pt = `${urdiRow(pt, 'summary').pt} `;
+  expectState(pt, 'BLOCKED_LOCALIZATION');
+  const en = URDI_STATIC();
+  urdiRow(en, 'detail.body').source_en = `${urdiRow(en, 'detail.body').source_en} `;
+  expectState(en, 'INVALID_INPUT');
+}, 'urdi');
+
+record('URDI: the final no-asset fallback must match the approval exactly', () => {
+  const emptyAlt = URDI_STATIC();
+  emptyAlt.media.approved_manifest.media_alt = '';
+  expectState(emptyAlt, 'INVALID_INPUT');
+  const informativeAlt = URDI_STATIC();
+  informativeAlt.media.approved_manifest.media_alt = 'A photograph of the fair';
+  expectState(informativeAlt, 'INVALID_INPUT');
+  const temporary = URDI_STATIC();
+  temporary.media.approved_manifest.media_state = 'fallback-temporary';
+  expectState(temporary, 'INVALID_INPUT');
+  const wrongType = URDI_STATIC();
+  wrongType.media.approved_manifest.media_type = 'provider-supplied';
+  expectState(wrongType, 'INVALID_INPUT');
+  const wrongCategory = URDI_STATIC();
+  wrongCategory.media.approved_manifest.fallback_category = 'things-visual-arts';
+  expectState(wrongCategory, 'INVALID_INPUT');
+  const withAsset = URDI_STATIC();
+  withAsset.media.approved_manifest.media_asset = 'assets/events/urdi-2026-mindelo.jpg';
+  expectState(withAsset, 'INVALID_INPUT');
+  const withSize = URDI_STATIC();
+  withSize.media.approved_manifest.media_width = 1200;
+  expectState(withSize, 'INVALID_INPUT');
+  const emptyProvenance = URDI_STATIC();
+  emptyProvenance.media.approved_manifest.media_provenance = '';
+  expectState(emptyProvenance, 'INVALID_INPUT');
+}, 'urdi');
+
+record('URDI: no media binary, asset path, hash or event media is admitted', () => {
+  const suppliedAsset = URDI_STATIC();
+  suppliedAsset.media.supplied_asset = path.join(os.tmpdir(), 'urdi.jpg');
+  suppliedAsset.media.asset_sha256 = 'b'.repeat(64);
+  expectState(suppliedAsset, 'INVALID_INPUT');
+  const localAsset = URDI_STATIC();
+  localAsset.media.local_asset = 'assets/events/urdi-2026-mindelo.jpg';
+  expectState(localAsset, 'INVALID_INPUT');
+  const eventMedia = URDI_STATIC();
+  eventMedia.event.media = { asset: 'assets/events/urdi-2026-mindelo.jpg', alt: 'x', width: 1, height: 1 };
+  expectState(eventMedia, 'INVALID_INPUT');
+  const required = URDI_STATIC();
+  required.event.media_policy = 'required';
+  expectState(required, 'INVALID_INPUT');
+}, 'urdi');
+
+record('URDI: the null manifest alt is NOT a general allowance for other no-media events', () => {
+  const packet = clone(fixture);
+  packet.event.media = null;
+  packet.event.media_policy = 'fallback_allowed';
+  packet.media.local_asset = null;
+  packet.media.asset_sha256 = null;
+  packet.media.supplied_asset = null;
+  // No event media means no media.alt locale row: drop the fixture's row and value.
+  packet.localization.approved_package.rows = packet.localization.approved_package.rows.filter((row) => !row.key.endsWith('.media.alt'));
+  for (const key of Object.keys(packet.localization.pt_values)) if (key.endsWith('.media.alt')) delete packet.localization.pt_values[key];
+  packet.media.approved_manifest = { ...packet.media.approved_manifest, media_type: 'editorial-fallback', media_state: 'fallback-final', media_asset: null, media_alt: null };
+  delete packet.media.approved_manifest.media_width;
+  delete packet.media.approved_manifest.media_height;
+  expectState(packet, 'BLOCKED_MEDIA');
+  packet.media.approved_manifest.media_alt = '';
+  expectState(packet, 'READY_FOR_IMPLEMENTATION');
+}, 'urdi');
+
+record('URDI: the approved CNAD action URL and the untouched evidence source are both required', () => {
+  const action = URDI_STATIC();
+  action.event.card_action.url = 'https://www.facebook.com/someone-else/';
+  expectState(action, 'INVALID_INPUT');
+  const evidenceSwap = URDI_STATIC();
+  evidenceSwap.event.source_url = URDI_CNAD_URL;
+  evidenceSwap.media.approved_manifest.source_url = URDI_CNAD_URL;
+  expectState(evidenceSwap, 'INVALID_INPUT');
+  const noAction = URDI_STATIC();
+  noAction.event.card_action = null;
+  expectState(noAction, 'INVALID_INPUT');
+}, 'urdi');
+
+record('URDI: the writer\'s expected scope names exactly the approved publication outputs and no technical file', () => {
+  const packet = URDI_STATIC();
+  const expected = expectedChangedFiles(packet).sort();
+  const want = [
+    'automation/things-to-do/runs/urdi-2026-mindelo.json',
+    'automation/things-to-do/runs/urdi-2026-mindelo.md',
+    'data/locales/locale-data.generated.json',
+    'data/locales/pt-overlay-event-urdi-2026-mindelo.source.json',
+    'data/things-to-do-events.json',
+    'index.html',
+    'internal/provider-media-manifest.json',
+    'pt/index.html',
+    'pt/things-to-do/urdi-2026-mindelo/index.html',
+    'sitemap.xml',
+    'things-to-do/urdi-2026-mindelo/index.html'
+  ];
+  if (JSON.stringify(expected) !== JSON.stringify(want)) throw new Error(`unexpected scope: ${expected.join(', ')}`);
+  if (expected.some((file) => file.startsWith('scripts/') || file.startsWith('assets/'))) throw new Error('scope includes a source or media file');
+}, 'urdi');
+
+record('URDI: a real write refuses a stale expected_main_sha and a dirty worktree before writing anything', () => withRepository({ committedAsOf: '2026-11-23' }, (ctx) => {
+  const stale = urdiPacket({ baseline: 'c'.repeat(40), asOf: ctx.committed });
+  const stalePath = writePacket(ctx, stale, 'urdi-stale.json');
+  expectThrow(() => prepareRealWriteCandidate({ ...ctx, packet: stale, packetPath: stalePath }), /STALE_BRANCH_REFUSED/);
+  assertClean(ctx.root, ctx.baseline);
+  const packet = urdiPacket({ baseline: ctx.baseline, asOf: ctx.committed });
+  const packetPath = writePacket(ctx, packet, 'urdi-dirty.json');
+  fs.writeFileSync(path.join(ctx.root, 'stray.txt'), 'dirty\n');
+  expectThrow(() => prepareRealWriteCandidate({ ...ctx, packet, packetPath }), /DIRTY_WORKTREE_REFUSED/);
+  fs.rmSync(path.join(ctx.root, 'stray.txt'));
+  assertClean(ctx.root, ctx.baseline);
+}), 'urdi');
+
+record('URDI: a stale or foreign dry-run proof is refused by the writer', () => withRepository({ committedAsOf: '2026-11-23' }, (ctx) => {
+  const packet = urdiPacket({ baseline: ctx.baseline, asOf: ctx.committed });
+  const packetPath = writePacket(ctx, packet, 'urdi-proof.json');
+  const proof = runTrustedDryRun(ctx.root, packet, packetPath, { head: ctx.baseline, authoritativeMain: ctx.baseline });
+  const stale = { ...clone(proof), base_head_sha: 'd'.repeat(40) };
+  expectThrow(() => assertDryRunProof(ctx.root, packet, packetPath, stale, ctx.baseline, ctx.baseline), /DRY_RUN_PROOF_STALE/);
+  const wrongScope = { ...clone(proof), changed_files: proof.changed_files.filter((file) => file !== 'sitemap.xml') };
+  expectThrow(() => assertDryRunProof(ctx.root, packet, packetPath, wrongScope, ctx.baseline, ctx.baseline), /DRY_RUN_PROOF_SCOPE_MISMATCH/);
+  const changedPacket = clone(packet);
+  changedPacket.event.summary = `${changedPacket.event.summary} `;
+  const changedPath = writePacket(ctx, changedPacket, 'urdi-proof-changed.json');
+  expectThrow(() => assertDryRunProof(ctx.root, changedPacket, changedPath, proof, ctx.baseline, ctx.baseline), /DRY_RUN_PROOF_MISMATCH/);
+}), 'urdi');
+
+record('URDI: the complete guarded write (dry run, build, validators, idempotence, exact scope) succeeds and rolls back clean', () => withRepository({ committedAsOf: '2026-11-23' }, (ctx) => {
+  const packet = urdiPacket({ baseline: ctx.baseline, asOf: ctx.committed });
+  const packetPath = writePacket(ctx, packet, 'urdi-real.json');
+  const result = prepareRealWriteCandidate({ ...ctx, packet, packetPath });
+  try {
+    if (result.status !== 'FOUNDER_APPROVAL_REQUIRED' || result.merge_allowed !== false || !result.idempotent) {
+      throw new Error('successful result did not retain the approval stop gate and idempotence');
+    }
+    const want = expectedChangedFiles(packet).sort();
+    const got = [...result.changed_files].filter((file) => file !== 'data/things-to-do-currentness.json').sort();
+    if (JSON.stringify(got) !== JSON.stringify(want)) throw new Error(`changed-file scope mismatch: got [${got}] want [${want}]`);
+
+    // 16 r1 + 2 r2 survive byte-for-byte into the governed overlay source, with
+    // the explicit lineage field copied through and no metadata rewritten.
+    const overlay = JSON.parse(fs.readFileSync(path.join(ctx.root, `data/locales/pt-overlay-event-${URDI_ID}.source.json`), 'utf8'));
+    if (overlay.previous_source_revision !== URDI_R1 || overlay.source_revision !== URDI_R2) throw new Error('overlay lost the explicit lineage');
+    if (JSON.stringify(overlay.rows) !== JSON.stringify(packet.localization.approved_package.rows)) throw new Error('overlay rows differ from the approved rows');
+    if (overlay.rows.filter((row) => row.source_revision === URDI_R1).length !== 16 || overlay.rows.filter((row) => row.source_revision === URDI_R2).length !== 2) {
+      throw new Error('overlay did not preserve 16 r1 + 2 r2');
+    }
+    const locale = JSON.parse(fs.readFileSync(path.join(ctx.root, 'data/locales/locale-data.generated.json'), 'utf8'));
+    for (const [suffix, , , revision] of URDI_ROWS) {
+      if (locale.keys[urdiKey(suffix)]?.source_revision !== revision) throw new Error(`generated locale key lost its revision: ${suffix}`);
+    }
+
+    // The approved manifest is written verbatim: null alt, no asset, final fallback.
+    const manifest = JSON.parse(fs.readFileSync(path.join(ctx.root, 'internal/provider-media-manifest.json'), 'utf8'));
+    const entry = manifest.records.find((item) => item.title === packet.event.media_manifest_title);
+    if (!entry || JSON.stringify(entry) !== JSON.stringify(packet.media.approved_manifest)) throw new Error('approved manifest was not written verbatim');
+    if (fs.readdirSync(path.join(ctx.root, 'assets', 'events')).some((name) => name.includes(URDI_ID))) throw new Error('a URDI media binary appeared');
+
+    // The CNAD action is the public action on every surface; the evidence stays Inforpress.
+    for (const page of [`things-to-do/${URDI_ID}/index.html`, `pt/things-to-do/${URDI_ID}/index.html`]) {
+      const html = fs.readFileSync(path.join(ctx.root, page), 'utf8');
+      if (!html.includes(`href="${URDI_CNAD_URL}"`)) throw new Error(`${page}: CNAD action URL missing`);
+      if (html.includes(`class="dialog-link" href="${URDI_SOURCE_URL}"`)) throw new Error(`${page}: action still resolves to the evidence source`);
+    }
+    for (const home of ['index.html', 'pt/index.html']) {
+      const html = fs.readFileSync(path.join(ctx.root, home), 'utf8');
+      if (!html.includes(`data-event-id="${URDI_ID}"`)) throw new Error(`${home}: URDI card is not on Home`);
+      if (!html.includes(`href="${URDI_CNAD_URL}"`)) throw new Error(`${home}: CNAD action URL missing from the Home card`);
+    }
+  } finally {
+    rollbackRealWriteCandidate(ctx.root, result);
+  }
+  const status = run(ctx.root, 'git', ['status', '--porcelain']);
+  if (status) throw new Error(`repository was not restored: ${status}`);
+  if (fs.existsSync(path.join(ctx.root, `things-to-do/${URDI_ID}`))) throw new Error('rollback residue remained');
+}), 'urdi');
+
 for (const result of results) {
   console.log(`${result.status} — ${result.name}${result.reason ? `: ${result.reason}` : ''}`);
 }
@@ -1014,5 +1411,7 @@ const failures = results.filter((result) => result.status === 'FAIL');
 const originals = results.filter((result) => result.group === 'original');
 const originalFailures = originals.filter((result) => result.status === 'FAIL');
 console.log(`\nOriginal Phase 1B guarded-write tests: ${originals.length - originalFailures.length}/${originals.length} passed.`);
+const urdiTests = results.filter((result) => result.group === 'urdi');
+console.log(`URDI Tranche A guarded-writer tests: ${urdiTests.filter((result) => result.status === 'PASS').length}/${urdiTests.length} passed.`);
 console.log(`Complete Phase 1B safety tests: ${results.length - failures.length}/${results.length} passed.`);
 if (failures.length) process.exit(1);

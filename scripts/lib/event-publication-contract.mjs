@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { THINGS_TO_DO_HUB_PUBLIC } from './things-to-do-collection.mjs';
+import { HOME_PREVIEW_IDS, THINGS_TO_DO_HUB_PUBLIC } from './things-to-do-collection.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -224,6 +224,120 @@ export const PUBLIC_MANIFEST_SHAPE = obj({
   media_width: NUM_OR_NULL, media_height: NUM_OR_NULL
 });
 const APPROVED_PACKAGE_KEYS = ['package_id', 'source_revision', 'project_09_status', 'rows'];
+// previous_source_revision is an explicit, SCOPED public-package field: it is
+// admitted only for the exact mixed-revision lineage named in URDI_APPROVED
+// below (see validatePublicInputShapesRaw) and is rejected for every other event.
+const SCOPED_APPROVED_PACKAGE_KEYS = ['previous_source_revision'];
+
+/**
+ * The exact, approved shape of the URDI 2026 publication (Project 03 reconciled
+ * input and Project 09 approved r2 localization package, 23 November 2026).
+ *
+ * Everything here is an exact-equality constant, never a pattern, and every
+ * guard built on it is fail-closed and keyed on this one event id. It does not
+ * relax any generic check for any other event.
+ */
+export const URDI_APPROVED = Object.freeze({
+  event_id: 'urdi-2026-mindelo',
+  package_id: 'aprasa-pt-ttd-urdi-2026-mindelo',
+  source_revision: 'P09-PT-TTD-URDI-2026-11-23-r2',
+  previous_source_revision: 'P09-PT-TTD-URDI-2026-11-22-r1',
+  // The two additive keys carry r2; the other 16 keep their approved r1.
+  r2_suffixes: Object.freeze(['display.checked', 'detail.checked']),
+  r1_suffixes: Object.freeze([
+    'title', 'summary', 'display.status', 'display.meta', 'detail.body', 'detail.good_to_know',
+    'card_action.label', 'detail.action_label',
+    'detail.fact.dates.label', 'detail.fact.dates.value_display',
+    'detail.fact.venue.label', 'detail.fact.venue.value_display',
+    'detail.fact.organizer.label', 'detail.fact.organizer.value_display',
+    'seo.title', 'seo.description'
+  ]),
+  source_url: 'https://www.inforpress.cv/pt/sao-vicente-praca-nova-ganha-forma-para-receber-11-edicao-da-urdi-com-150-artesaos-expositores',
+  // The approved public action is the CNAD organizer destination; source_url
+  // stays the evidence source and must never be rewritten to match it.
+  card_action_url: 'https://www.facebook.com/cnad.cv/',
+  media_manifest: Object.freeze({
+    section: 'things-to-do',
+    media_type: 'editorial-fallback',
+    media_state: 'fallback-final',
+    media_asset: null,
+    fallback_category: 'things-culture',
+    media_asset_source_url: null,
+    media_alt: null
+  }),
+  // The five incumbent Home ids, unchanged and in order, then this event.
+  home_preview_ids: Object.freeze([
+    'cartinha-dholanda-mindelo-2026',
+    'sinergia-da-materia',
+    'voyage-obi-margo-kafe-djan-djan-2026',
+    'taverna-live-music',
+    'nautilus-live-music',
+    'urdi-2026-mindelo'
+  ])
+});
+
+const isUrdiEvent = (event) => event?.id === URDI_APPROVED.event_id;
+
+/**
+ * Exact key -> required source_revision map for the URDI approved package: 16 r1
+ * keys plus the 2 r2 keys. This is the whole of the "mixed revision" allowance.
+ */
+function urdiRevisionByKey() {
+  const prefix = `event.${URDI_APPROVED.event_id}.`;
+  return new Map([
+    ...URDI_APPROVED.r1_suffixes.map((suffix) => [prefix + suffix, URDI_APPROVED.previous_source_revision]),
+    ...URDI_APPROVED.r2_suffixes.map((suffix) => [prefix + suffix, URDI_APPROVED.source_revision])
+  ]);
+}
+
+/**
+ * The manifest media_alt this event must carry. Incumbent no-media events keep
+ * the empty-string rule unchanged; only URDI is approved with a null alt (an
+ * editorial fallback depicts nothing, so it has no alt text to supply).
+ */
+function expectedManifestMediaAlt(event) {
+  if (event.media) return event.media.alt;
+  return isUrdiEvent(event) ? URDI_APPROVED.media_manifest.media_alt : '';
+}
+
+/**
+ * URDI-only guards: the approved no-asset final fallback, the approved CNAD
+ * action URL with its untouched evidence source, and the exact sixth Home id.
+ * Returns problem strings (empty when the packet matches the approval).
+ */
+export function urdiApprovalProblems(packet) {
+  const event = packet?.event;
+  if (!isUrdiEvent(event)) return [];
+  const problems = [];
+  if (event.source_url !== URDI_APPROVED.source_url) problems.push('URDI event.source_url must remain the approved evidence source');
+  if (event.card_action?.url !== URDI_APPROVED.card_action_url) problems.push('URDI event.card_action.url must be the approved CNAD organizer action URL');
+  if (event.media !== null) problems.push('URDI event.media must be null: no URDI media is approved');
+  if (event.media_policy !== 'fallback_allowed') problems.push('URDI event.media_policy must be fallback_allowed');
+  const media = packet?.media ?? {};
+  for (const field of ['local_asset', 'supplied_asset', 'asset_sha256', 'source_url']) {
+    if (media[field] != null) problems.push(`URDI media.${field} must be null: no media binary or asset provenance is approved`);
+  }
+  const manifest = media.approved_manifest;
+  if (manifest !== undefined) {
+    if (!isObject(manifest)) {
+      problems.push('URDI media.approved_manifest must be an object');
+    } else {
+      for (const [field, expected] of Object.entries(URDI_APPROVED.media_manifest)) {
+        if (manifest[field] !== expected) problems.push(`URDI media.approved_manifest.${field} must be ${JSON.stringify(expected)}`);
+      }
+      for (const field of ['fallback_reason', 'media_provenance']) {
+        if (typeof manifest[field] !== 'string' || manifest[field].length === 0) problems.push(`URDI media.approved_manifest.${field} must be the approved non-empty text`);
+      }
+      for (const field of ['media_width', 'media_height']) {
+        if (manifest[field] != null) problems.push(`URDI media.approved_manifest.${field} must be absent or null`);
+      }
+    }
+  }
+  if (JSON.stringify(HOME_PREVIEW_IDS) !== JSON.stringify(URDI_APPROVED.home_preview_ids)) {
+    problems.push('Home curated selection must be the five incumbent ids, unchanged and in order, followed by urdi-2026-mindelo');
+  }
+  return problems;
+}
 const LOCALE_ROW_KEYS = ['key', 'source_revision', 'source_en', 'pt', 'scope_status', 'identity_policy', 'context_notes', 'record_id', 'linguistic_notes', 'translation_status'];
 // Narrow screen for restricted-evidence shapes in any value bound for a public
 // file. It is deliberately not a general scanner: ordinary copy and ordinary
@@ -337,7 +451,12 @@ function validatePublicInputShapesRaw(packet) {
       problems.push('localization.approved_package must be an object');
     } else {
       for (const key of Object.keys(approved)) {
-        if (!APPROVED_PACKAGE_KEYS.includes(key)) problems.push(`localization.approved_package.${safeKey(key)} is not an allowed public field`);
+        if (APPROVED_PACKAGE_KEYS.includes(key)) continue;
+        if (SCOPED_APPROVED_PACKAGE_KEYS.includes(key) && isUrdiEvent(packet?.event)) continue;
+        problems.push(`localization.approved_package.${safeKey(key)} is not an allowed public field`);
+      }
+      if (Object.hasOwn(approved, 'previous_source_revision') && typeof approved.previous_source_revision !== 'string') {
+        problems.push('localization.approved_package.previous_source_revision must be a string');
       }
       for (const [index, row] of (Array.isArray(approved.rows) ? approved.rows : []).entries()) {
         if (!isObject(row)) continue;
@@ -765,6 +884,15 @@ export function validatePacket(packet, { root = ROOT, checkRepository = true } =
     } else {
       const expectedRows = requiredLocaleRows(event);
       const seenRows = new Set();
+      // Package-wide revision equality is the rule for every event. URDI alone has
+      // an exact mixed lineage (16 rows at r1, the 2 additive checked rows at r2),
+      // so its expectations are per key and its package-level revisions are exact.
+      const urdiRevisions = isUrdiEvent(event) ? urdiRevisionByKey() : null;
+      if (urdiRevisions && (approvedPackage.package_id !== URDI_APPROVED.package_id
+        || approvedPackage.source_revision !== URDI_APPROVED.source_revision
+        || approvedPackage.previous_source_revision !== URDI_APPROVED.previous_source_revision)) {
+        issues.push(issue('BLOCKED_LOCALIZATION', 'Project 09', 'URDI locale package must carry the approved r2 package id, source revision and explicit previous r1 revision', 'Approved Project 09 URDI r2 package lineage', 'GOVERNANCE_CHECKED'));
+      }
       for (const row of approvedPackage.rows) {
         const requiredFields = ['key', 'source_revision', 'source_en', 'pt', 'scope_status', 'identity_policy', 'context_notes', 'record_id', 'linguistic_notes', 'translation_status'];
         if (!isObject(row) || requiredFields.some((field) => typeof row[field] !== 'string')) {
@@ -781,7 +909,8 @@ export function validatePacket(packet, { root = ROOT, checkRepository = true } =
         if (row.pt !== localization.pt_values?.[row.key] || row.pt.length === 0) {
           issues.push(issue('BLOCKED_LOCALIZATION', 'Project 09', `Approved PT value mismatch for ${safeKey(row.key)}`, 'Matching approved PT value and locale row', 'GOVERNANCE_CHECKED'));
         }
-        if (row.source_revision !== approvedPackage.source_revision || row.record_id !== event.id || row.translation_status !== 'APPROVED') {
+        const expectedRevision = urdiRevisions ? urdiRevisions.get(row.key) : approvedPackage.source_revision;
+        if (row.source_revision !== expectedRevision || row.record_id !== event.id || row.translation_status !== 'APPROVED') {
           issues.push(issue('BLOCKED_LOCALIZATION', 'Project 09', `Locale governance metadata is not approved for ${safeKey(row.key)}`, 'Approved source revision, record id, and translation status', 'GOVERNANCE_CHECKED'));
         }
         if (!['REQUIRED_FOR_PT_LAUNCH', 'INTENTIONALLY_UNCHANGED'].includes(row.scope_status)) {
@@ -821,6 +950,9 @@ export function validatePacket(packet, { root = ROOT, checkRepository = true } =
   if (event.media_policy === 'required' && (!event.media || !media.local_asset)) {
     issues.push(issue('INVALID_INPUT', 'Project 04', 'Required media needs canonical event.media and a local asset path', 'event.media + media.local_asset', 'RECEIVED'));
   }
+  for (const problem of urdiApprovalProblems(packet)) {
+    issues.push(issue('INVALID_INPUT', 'Project 04', problem, 'The exact approved URDI media, action and Home-selection contract', 'RECEIVED'));
+  }
   if (event.media?.asset && media.local_asset && event.media.asset !== media.local_asset) {
     issues.push(issue('INVALID_INPUT', 'Project 04', 'event.media.asset and media.local_asset must identify the same canonical asset', 'Matching media paths', 'RECEIVED'));
   }
@@ -842,7 +974,7 @@ export function validatePacket(packet, { root = ROOT, checkRepository = true } =
       && approvedManifest.source_url === event.source_url
       && !Object.hasOwn(approvedManifest, 'source_reference')
       && approvedManifest.media_asset === (event.media?.asset ?? null)
-      && approvedManifest.media_alt === (event.media?.alt ?? '')
+      && approvedManifest.media_alt === expectedManifestMediaAlt(event)
       && (!event.media || (approvedManifest.media_width === event.media.width && approvedManifest.media_height === event.media.height));
     if (!manifestMatches) {
       issues.push(issue('BLOCKED_MEDIA', 'Owning Project / Project 09 as applicable', 'Real-write mode requires a complete approved media-manifest record matching the event', 'media.approved_manifest', 'GOVERNANCE_CHECKED'));
