@@ -58,6 +58,7 @@ const INCUMBENT_FIXED_WINDOW_IDS = [
   'regea-oral-communications-call-2026',
 ];
 const FICASE_ID = 'ficase-scholarship-renewals-2026-2027';
+const AAI_ID = 'aai-portuguese-a1-2026';
 
 let passed = 0;
 const failures = [];
@@ -227,17 +228,18 @@ function region(dir, locale, id) {
   check('CASE 5: all eight incumbent fixed-window record IDs are preserved',
     INCUMBENT_FIXED_WINDOW_IDS.length === 8 && INCUMBENT_FIXED_WINDOW_IDS.every((id) => fixedIds.includes(id)),
     JSON.stringify(fixedIds));
-  check('CASE 5: FICASE is the sole additional fixed-window record',
-    fixedWindow.length === 9 && fixedIds.filter((id) => id === FICASE_ID).length === 1
-      && fixedIds.every((id) => INCUMBENT_FIXED_WINDOW_IDS.includes(id) || id === FICASE_ID),
+  check('CASE 5: FICASE and AAI are the only additional fixed-window records',
+    fixedWindow.length === 10 && fixedIds.filter((id) => id === FICASE_ID).length === 1
+      && fixedIds.filter((id) => id === AAI_ID).length === 1
+      && fixedIds.every((id) => INCUMBENT_FIXED_WINDOW_IDS.includes(id) || id === FICASE_ID || id === AAI_ID),
     JSON.stringify(fixedIds));
   check('CASE 5: every one still carries a valid ISO end_date',
     fixedWindow.every((r) => /^\d{4}-\d{2}-\d{2}$/.test(r.end_date || '')),
     JSON.stringify(fixedWindow.map((r) => [r.id, r.end_date])));
   const result = validateData(dir);
-  check('CASE 5: the unmodified corpus (9 fixed-window + 1 open-call) is ACCEPTED', result.status === 0, result.out.trim().slice(0, 300));
-  check('CASE 5: validator tallies 9 fixed-window records',
-    result.out.includes(`${FIXED_WINDOW}=9`), result.out.trim().slice(0, 200));
+  check('CASE 5: the unmodified corpus (10 fixed-window + 1 open-call) is ACCEPTED', result.status === 0, result.out.trim().slice(0, 300));
+  check('CASE 5: validator tallies 10 fixed-window records',
+    result.out.includes(`${FIXED_WINDOW}=10`), result.out.trim().slice(0, 200));
   fs.rmSync(dir, { recursive: true, force: true });
 }
 

@@ -1,0 +1,99 @@
+{
+  "source_revision": "P09-PT-TTO-AAI-PORTUGUESE-A1-2026-11-22-r1",
+  "record_id": "aai-portuguese-a1-2026",
+  "project05_resource_id": "CV-030",
+  "provider_id": "PROV-AAI",
+  "approved_attachment_sha256": "74a618cc01482b99636c683d0c3929adeaff2c6cd6ec30aa8722a702aa8138e6",
+  "rows": [
+    {
+      "key": "training.record.aai-portuguese-a1-2026.title",
+      "source_revision": "P09-PT-TTO-AAI-PORTUGUESE-A1-2026-11-22-r1",
+      "source_en": "Portuguese Language Course — Basic A1 for Foreign Nationals and Immigrants",
+      "pt": "Curso de Língua Portuguesa — Nível Básico A1 para Estrangeiros e Imigrantes",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "aai-portuguese-a1-2026",
+      "translation_status": "APPROVED"
+    },
+    {
+      "key": "training.record.aai-portuguese-a1-2026.status",
+      "source_revision": "P09-PT-TTO-AAI-PORTUGUESE-A1-2026-11-22-r1",
+      "source_en": "Apply by 26 November 2026 · 23:59 Cabo Verde time",
+      "pt": "Candidaturas até 26 de novembro de 2026 · 23:59, hora de Cabo Verde",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "aai-portuguese-a1-2026",
+      "translation_status": "APPROVED"
+    },
+    {
+      "key": "training.record.aai-portuguese-a1-2026.meta",
+      "source_revision": "P09-PT-TTO-AAI-PORTUGUESE-A1-2026-11-22-r1",
+      "source_en": "São Vicente · 25 places · After-work classes",
+      "pt": "São Vicente · 25 vagas · Aulas em horário pós-laboral",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "aai-portuguese-a1-2026",
+      "translation_status": "APPROVED"
+    },
+    {
+      "key": "training.record.aai-portuguese-a1-2026.body",
+      "source_revision": "P09-PT-TTO-AAI-PORTUGUESE-A1-2026-11-22-r1",
+      "source_en": "Applications are open for a Basic A1 Portuguese course for foreign nationals and immigrants living in Cabo Verde, including one 25-place class in São Vicente.",
+      "pt": "Estão abertas as candidaturas para um curso de Português de nível básico A1 destinado a cidadãos estrangeiros e imigrantes residentes em Cabo Verde, incluindo uma turma de 25 vagas em São Vicente.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "aai-portuguese-a1-2026",
+      "translation_status": "APPROVED"
+    },
+    {
+      "key": "training.record.aai-portuguese-a1-2026.requirements",
+      "source_revision": "P09-PT-TTO-AAI-PORTUGUESE-A1-2026-11-22-r1",
+      "source_en": "Applicants must be at least 18 and available for after-work classes. Apply online by 11:59 p.m. Cabo Verde time on 26 November 2026.",
+      "pt": "Os candidatos devem ter pelo menos 18 anos e disponibilidade para frequentar aulas em horário pós-laboral. A candidatura deve ser submetida online até às 23:59, hora de Cabo Verde, de 26 de novembro de 2026.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "aai-portuguese-a1-2026",
+      "translation_status": "APPROVED"
+    },
+    {
+      "key": "training.record.aai-portuguese-a1-2026.good",
+      "source_revision": "P09-PT-TTO-AAI-PORTUGUESE-A1-2026-11-22-r1",
+      "source_en": "A CVE 1,000 registration fee applies after selection, with possible exemption for substantiated financial hardship.",
+      "pt": "Após a seleção, aplica-se uma taxa de inscrição de 1.000 CVE, podendo ser concedida isenção em caso de dificuldade financeira devidamente comprovada.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "aai-portuguese-a1-2026",
+      "translation_status": "APPROVED"
+    },
+    {
+      "key": "training.record.aai-portuguese-a1-2026.action",
+      "source_revision": "P09-PT-TTO-AAI-PORTUGUESE-A1-2026-11-22-r1",
+      "source_en": "Apply online",
+      "pt": "Candidatar-se online",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "aai-portuguese-a1-2026",
+      "translation_status": "APPROVED"
+    },
+    {
+      "key": "training.record.aai-portuguese-a1-2026.checked",
+      "source_revision": "P09-PT-TTO-AAI-PORTUGUESE-A1-2026-11-22-r1",
+      "source_en": "Checked 22 November 2026",
+      "pt": "Revisto em 22 de novembro de 2026",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "aai-portuguese-a1-2026",
+      "translation_status": "APPROVED"
+    },
+    {
+      "key": "training.record.aai-portuguese-a1-2026.detail_checked",
+      "source_revision": "P09-PT-TTO-AAI-PORTUGUESE-A1-2026-11-22-r1",
+      "source_en": "Checked 22 November 2026 against the official AAI announcement, edital and regulation.",
+      "pt": "Revisto em 22 de novembro de 2026 com base no anúncio oficial da AAI, no edital e no regulamento.",
+      "scope_status": "REQUIRED_FOR_PT_LAUNCH",
+      "identity_policy": "TRANSLATE_NORMALLY",
+      "record_id": "aai-portuguese-a1-2026",
+      "translation_status": "APPROVED"
+    }
+  ]
+}
