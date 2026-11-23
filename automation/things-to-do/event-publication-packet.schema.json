@@ -162,6 +162,11 @@
           "properties": {
             "package_id": { "type": "string", "minLength": 1 },
             "source_revision": { "type": "string", "minLength": 1 },
+            "previous_source_revision": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Scoped field: admitted only for the exact approved URDI 2026 mixed-revision lineage (16 rows keep this earlier revision, 2 additive rows carry source_revision). The contract rejects it for every other event."
+            },
             "project_09_status": { "const": "approved" },
             "rows": {
               "type": "array",
