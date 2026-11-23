@@ -1,0 +1,90 @@
+{
+  "artifact_version": 1,
+  "artifact_type": "things-to-do-publication-real-write-result",
+  "status": "FOUNDER_APPROVAL_REQUIRED",
+  "event_id": "urdi-2026-mindelo",
+  "packet_sha256": "466633bc9ed97a8f5016c319ffa13a8cb8977429b4da0661a903c1de6d9be571",
+  "dry_run_proof_sha256": "15e9f029425edac46a801740b13e968f941137de32de656fcbaf62b3304e60f3",
+  "base_main_sha": "cc9048f5479223e48db6fec97b798b1025010a52",
+  "branch": "feature/p04-urdi-2026-publication-20261123",
+  "as_of": "2026-11-23",
+  "changed_files": [
+    "automation/things-to-do/runs/urdi-2026-mindelo.json",
+    "automation/things-to-do/runs/urdi-2026-mindelo.md",
+    "data/locales/locale-data.generated.json",
+    "data/locales/pt-overlay-event-urdi-2026-mindelo.source.json",
+    "data/things-to-do-currentness.json",
+    "data/things-to-do-events.json",
+    "index.html",
+    "internal/provider-media-manifest.json",
+    "pt/index.html",
+    "pt/things-to-do/urdi-2026-mindelo/index.html",
+    "sitemap.xml",
+    "things-to-do/urdi-2026-mindelo/index.html"
+  ],
+  "validations": [
+    "scripts/validate-things-to-do-events.mjs",
+    "scripts/validate-things-to-do-currentness.mjs --as-of=2026-11-23",
+    "scripts/validate-things-to-do-surface-equivalence.mjs --as-of=2026-11-23",
+    "scripts/validate-things-to-do-sitemap.mjs",
+    "scripts/validate-card-media.mjs",
+    "scripts/validate-locale-contract.mjs --html pt",
+    "scripts/validate-pt-home-events.mjs",
+    "scripts/validate-training-opportunities-currentness.mjs --as-of=2026-11-23 --home=index.html --home=pt/index.html"
+  ],
+  "validation_outcomes": [
+    {
+      "step": "scripts/validate-things-to-do-events.mjs",
+      "status": 0,
+      "passed": true,
+      "media_gate_open": false
+    },
+    {
+      "step": "scripts/validate-things-to-do-currentness.mjs --as-of=2026-11-23",
+      "status": 0,
+      "passed": true,
+      "media_gate_open": false
+    },
+    {
+      "step": "scripts/validate-things-to-do-surface-equivalence.mjs --as-of=2026-11-23",
+      "status": 0,
+      "passed": true,
+      "media_gate_open": false
+    },
+    {
+      "step": "scripts/validate-things-to-do-sitemap.mjs",
+      "status": 0,
+      "passed": true,
+      "media_gate_open": false
+    },
+    {
+      "step": "scripts/validate-card-media.mjs",
+      "status": 0,
+      "passed": true,
+      "media_gate_open": false
+    },
+    {
+      "step": "scripts/validate-locale-contract.mjs --html pt",
+      "status": 0,
+      "passed": true,
+      "media_gate_open": false
+    },
+    {
+      "step": "scripts/validate-pt-home-events.mjs",
+      "status": 0,
+      "passed": true,
+      "media_gate_open": false
+    },
+    {
+      "step": "scripts/validate-training-opportunities-currentness.mjs --as-of=2026-11-23 --home=index.html --home=pt/index.html",
+      "status": 0,
+      "passed": true,
+      "media_gate_open": false
+    }
+  ],
+  "media_gate": "PASSED",
+  "media_gate_open": false,
+  "idempotent": true,
+  "merge_allowed": false,
+  "created_at": "2026-11-23T21:05:55.595Z"
+}
