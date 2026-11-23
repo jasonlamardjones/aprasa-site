@@ -488,7 +488,33 @@
   }
 
   applyMultilingualSequenceMetadata();
+  // Founder-supplied URDI 2026 poster. Temporary display binding until the
+  // canonical event/manifest media projection is updated through its owner.
+  // It does not reclassify unrelated events or change editorial facts.
+  function displayUrdiPoster() {
+    const media = {
+      src: "assets/events/urdi-2026-poster.webp",
+      alt: "", // The event title, dates and venue are already readable beside the poster.
+      width: 526,
+      height: 526
+    };
+    document.querySelectorAll('.resource-card[data-event-id="urdi-2026-mindelo"]').forEach((card) => {
+      card.querySelector(":scope > .card-media")?.remove();
+      card.prepend(createProviderMedia("card-media card-media-poster", media));
+      const record = card.querySelector(".details-template")?.content.querySelector(".dialog-record");
+      if (record) {
+        record.querySelector(":scope > .dialog-media")?.remove();
+        record.prepend(createProviderMedia("dialog-media dialog-media-poster", media));
+      }
+    });
+    document.querySelectorAll('.record-article[data-event-id="urdi-2026-mindelo"]').forEach((article) => {
+      if (article.querySelector(":scope > .record-media")) return;
+      article.prepend(createProviderMedia("record-media", media));
+    });
+  }
+
   prepareHomeEditorialState();
+  displayUrdiPoster();
 
   document.querySelectorAll("[data-details]").forEach((button) => {
     button.addEventListener("click", () => {
