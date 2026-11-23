@@ -13,6 +13,7 @@ import {
   finalizeRealWriteCandidate,
   prepareRealWriteCandidate,
   rollbackRealWriteCandidate,
+  candidateBuildSteps,
   runTrustedDryRun
 } from './lib/event-publication-write.mjs';
 
@@ -1404,6 +1405,130 @@ record('URDI: the complete guarded write (dry run, build, validators, idempotenc
   if (fs.existsSync(path.join(ctx.root, `things-to-do/${URDI_ID}`))) throw new Error('rollback residue remained');
 }), 'urdi');
 
+// --- Guarded-writer build order: PT Home preservation --------------------------
+//
+// build-static-pages.mjs derives pt/index.html from the English sources, which
+// leaves the PT Home training and Learning Spotlight cards in English until the
+// training-opportunity generators run. The candidate build therefore has to
+// follow the canonical scripts/build-all.mjs order, including those generators.
+// The changed-file scope check cannot see this defect (pt/index.html is in scope
+// for every publication), so it is pinned here by content.
+const GENERATED_EVENT_REGION = /<!-- BEGIN GENERATED EVENT: ([a-z0-9]+(?:-[a-z0-9]+)*) -->[\s\S]*?<!-- END GENERATED EVENT: \1 -->/g;
+const lf = (text) => text.replace(/\r\n/g, '\n');
+const outsideGeneratedEventRegions = (html) => lf(html).replace(GENERATED_EVENT_REGION, '<!-- generated event region -->');
+const withoutUrdiBlock = (html) => lf(html).replace(/\n[ \t]*<!-- BEGIN GENERATED EVENT: urdi-2026-mindelo -->[\s\S]*?<!-- END GENERATED EVENT: urdi-2026-mindelo -->/, '');
+const GOVERNED_URDI_PATHS = [
+  'automation/things-to-do/runs/urdi-2026-mindelo.json',
+  'automation/things-to-do/runs/urdi-2026-mindelo.md',
+  'data/locales/locale-data.generated.json',
+  'data/locales/pt-overlay-event-urdi-2026-mindelo.source.json',
+  'data/things-to-do-currentness.json',
+  'data/things-to-do-events.json',
+  'index.html',
+  'internal/provider-media-manifest.json',
+  'pt/index.html',
+  'pt/things-to-do/urdi-2026-mindelo/index.html',
+  'sitemap.xml',
+  'things-to-do/urdi-2026-mindelo/index.html'
+];
+
+record('build order: the EN then PT training generators run after the PT Things-to-Do pass, before the sitemap, on the packet as_of', () => {
+  const packet = clone(fixture);
+  packet.control.as_of = '2026-11-23';
+  const steps = candidateBuildSteps(packet).map((step) => step.join(' '));
+  const at = (needle) => steps.findIndex((step) => step.includes(needle));
+  const idx = {
+    locale: at('build-locale-data.mjs'),
+    en: at('generate-things-to-do.mjs --as-of=2026-11-23 --locale=en'),
+    statics: at('build-static-pages.mjs'),
+    ptEvents: at('generate-things-to-do.mjs --as-of=2026-11-23 --locale=pt --home=pt/index.html'),
+    trainEn: at('generate-training-opportunities.mjs --as-of=2026-11-23 --locale=en'),
+    trainPt: at('generate-training-opportunities.mjs --as-of=2026-11-23 --locale=pt --home=pt/index.html'),
+    sitemap: at('build-sitemap.mjs')
+  };
+  if (Object.values(idx).some((value) => value < 0)) throw new Error(`a required build step is missing: ${JSON.stringify(idx)}`);
+  const ordered = [idx.locale, idx.en, idx.statics, idx.ptEvents, idx.trainEn, idx.trainPt, idx.sitemap];
+  if (JSON.stringify(ordered) !== JSON.stringify([...ordered].sort((a, b) => a - b))) throw new Error(`build steps are out of canonical order: ${steps.join(' | ')}`);
+  if (steps.length !== 7) throw new Error(`unexpected build step count ${steps.length}`);
+  if (steps.some((step) => /generate-training-opportunities/.test(step) && !step.includes('--as-of=2026-11-23'))) throw new Error('a training generator is not bound to packet.control.as_of');
+  const other = clone(packet);
+  other.control.as_of = '2026-12-01';
+  if (candidateBuildSteps(other).filter((step) => /generate-training/.test(step[0])).some((step) => !step.includes('--as-of=2026-12-01'))) {
+    throw new Error('training generator as_of does not follow the packet');
+  }
+}, 'build-order');
+
+record('build order: the canonical committed PT/EN Home is a fixed point of the candidate sequence, and the old sequence was not', () => {
+  const copy = fs.mkdtempSync(path.join(os.tmpdir(), 'aprasa-build-order-'));
+  try {
+    fs.cpSync(ROOT, copy, { recursive: true, filter: (src) => path.basename(src) !== '.git' });
+    const committedAsOf = JSON.parse(fs.readFileSync(path.join(copy, 'data/things-to-do-currentness.json'), 'utf8')).as_of;
+    const packet = { control: { as_of: committedAsOf } };
+    const committed = {
+      pt: lf(fs.readFileSync(path.join(copy, 'pt/index.html'), 'utf8')),
+      en: lf(fs.readFileSync(path.join(copy, 'index.html'), 'utf8'))
+    };
+    const stepsRun = (steps) => {
+      for (const [script, ...args] of steps) run(copy, process.execPath, [script, ...args], { allowFailure: false });
+    };
+    const all = candidateBuildSteps(packet);
+    // Old sequence: every step except the two training generators.
+    stepsRun(all.filter((step) => !/generate-training-opportunities/.test(step[0])));
+    const oldPt = lf(fs.readFileSync(path.join(copy, 'pt/index.html'), 'utf8'));
+    if (outsideGeneratedEventRegions(oldPt) === outsideGeneratedEventRegions(committed.pt)) {
+      throw new Error('regression pin is vacuous: the sequence without training generators did not alter PT Home');
+    }
+    // Candidate sequence from that same state must restore byte-for-byte equality.
+    stepsRun(all);
+    const nextPt = lf(fs.readFileSync(path.join(copy, 'pt/index.html'), 'utf8'));
+    const nextEn = lf(fs.readFileSync(path.join(copy, 'index.html'), 'utf8'));
+    if (nextPt !== committed.pt) throw new Error('PT Home differs from the committed canonical Home after the candidate build sequence');
+    if (nextEn !== committed.en) throw new Error('EN Home differs from the committed canonical Home after the candidate build sequence');
+  } finally {
+    removeTempTree(copy);
+  }
+}, 'build-order');
+
+record('build order: a complete URDI guarded write changes exactly the 12 governed paths and only adds the approved URDI Home block', () => withRepository({ asOf: '2026-11-23' }, (ctx) => {
+  const packet = urdiPacket({ baseline: ctx.baseline, asOf: '2026-11-23' });
+  const packetPath = writePacket(ctx, packet, 'urdi-build-order.json');
+  const committedHome = {
+    en: lf(fs.readFileSync(path.join(ctx.root, 'index.html'), 'utf8')),
+    pt: lf(fs.readFileSync(path.join(ctx.root, 'pt/index.html'), 'utf8'))
+  };
+  const result = prepareRealWriteCandidate({ ...ctx, packet, packetPath });
+  try {
+    if (JSON.stringify([...result.changed_files].sort()) !== JSON.stringify(GOVERNED_URDI_PATHS)) {
+      throw new Error(`changed-file proof is not the governed 12 paths: ${result.changed_files.join(', ')}`);
+    }
+    if (result.merge_allowed !== false || !result.idempotent || result.status !== 'FOUNDER_APPROVAL_REQUIRED') throw new Error('approval stop gate or idempotence was lost');
+    for (const [label, rel] of [['en', 'index.html'], ['pt', 'pt/index.html']]) {
+      const candidate = lf(fs.readFileSync(path.join(ctx.root, rel), 'utf8'));
+      if (!candidate.includes('data-event-id="urdi-2026-mindelo"')) throw new Error(`${rel}: the approved URDI block is missing`);
+      // Removing exactly the URDI block must give back the committed Home byte-for-byte:
+      // nothing else on the page (including PT training and Learning Spotlight cards) moved.
+      if (withoutUrdiBlock(candidate) !== committedHome[label]) throw new Error(`${rel}: Home changed outside the approved URDI block`);
+      if (outsideGeneratedEventRegions(withoutUrdiBlock(candidate)) !== outsideGeneratedEventRegions(committedHome[label])) throw new Error(`${rel}: content outside the generated event regions changed`);
+    }
+  } finally {
+    rollbackRealWriteCandidate(ctx.root, result);
+  }
+  const status = run(ctx.root, 'git', ['status', '--porcelain']);
+  if (status) throw new Error(`repository was not restored: ${status}`);
+}), 'build-order');
+
+record('build order: the existing guarded-write gates still refuse a stale head, a dirty tree and a stale proof with the repaired sequence', () => withRepository({ asOf: '2026-11-23' }, (ctx) => {
+  const stale = urdiPacket({ baseline: 'e'.repeat(40), asOf: '2026-11-23' });
+  expectThrow(() => prepareRealWriteCandidate({ ...ctx, packet: stale, packetPath: writePacket(ctx, stale, 'urdi-bo-stale.json') }), /STALE_BRANCH_REFUSED/);
+  const packet = urdiPacket({ baseline: ctx.baseline, asOf: '2026-11-23' });
+  const packetPath = writePacket(ctx, packet, 'urdi-bo-dirty.json');
+  fs.writeFileSync(path.join(ctx.root, 'stray-build-order.txt'), 'dirty\n');
+  expectThrow(() => prepareRealWriteCandidate({ ...ctx, packet, packetPath }), /DIRTY_WORKTREE_REFUSED/);
+  fs.rmSync(path.join(ctx.root, 'stray-build-order.txt'));
+  expectThrow(() => prepareRealWriteCandidate({ ...ctx, packet, packetPath, testHooks: { addUnexpectedFile: true } }), /UNEXPECTED_CHANGED_FILE_SCOPE/);
+  assertClean(ctx.root, ctx.baseline);
+}), 'build-order');
+
 for (const result of results) {
   console.log(`${result.status} — ${result.name}${result.reason ? `: ${result.reason}` : ''}`);
 }
@@ -1413,5 +1538,7 @@ const originalFailures = originals.filter((result) => result.status === 'FAIL');
 console.log(`\nOriginal Phase 1B guarded-write tests: ${originals.length - originalFailures.length}/${originals.length} passed.`);
 const urdiTests = results.filter((result) => result.group === 'urdi');
 console.log(`URDI Tranche A guarded-writer tests: ${urdiTests.filter((result) => result.status === 'PASS').length}/${urdiTests.length} passed.`);
+const buildOrderTests = results.filter((result) => result.group === 'build-order');
+console.log(`Writer build-order tests: ${buildOrderTests.filter((result) => result.status === 'PASS').length}/${buildOrderTests.length} passed.`);
 console.log(`Complete Phase 1B safety tests: ${results.length - failures.length}/${results.length} passed.`);
 if (failures.length) process.exit(1);

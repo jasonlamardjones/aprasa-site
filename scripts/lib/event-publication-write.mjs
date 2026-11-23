@@ -118,12 +118,37 @@ function runNode(root, script, args = []) {
   return runNodeStep(root, script, args).stdout;
 }
 
+/**
+ * The candidate build sequence, as ordered [script, ...args] steps.
+ *
+ * It follows the canonical order in scripts/build-all.mjs, which must not be
+ * reordered: build-static-pages derives pt/index.html FROM the English sources,
+ * so every generator that owns a region of pt/index.html has to run AFTER it.
+ * That includes the training-opportunity generators. Without them a candidate
+ * leaves the PT Home training and Learning Spotlight cards in English -- the
+ * temporary state build-static-pages produces -- and the changed-file scope
+ * check cannot see it, because pt/index.html is in scope for every publication.
+ *
+ * Currentness stays distinct, as in build-all: Things-to-Do and the training
+ * generators are both bound to the packet's explicit control.as_of here, never to
+ * the wall clock, so a candidate is reproducible and the real write's idempotence
+ * rebuild produces identical bytes.
+ */
+export function candidateBuildSteps(packet) {
+  const asOf = `--as-of=${packet.control.as_of}`;
+  return [
+    ['scripts/build-locale-data.mjs'],
+    ['scripts/generate-things-to-do.mjs', asOf, '--locale=en', '--write'],
+    ['scripts/build-static-pages.mjs', '--write'],
+    ['scripts/generate-things-to-do.mjs', asOf, '--locale=pt', '--home=pt/index.html', '--write'],
+    ['scripts/generate-training-opportunities.mjs', asOf, '--locale=en', '--write'],
+    ['scripts/generate-training-opportunities.mjs', asOf, '--locale=pt', '--home=pt/index.html', '--write'],
+    ['scripts/build-sitemap.mjs', '--write']
+  ];
+}
+
 function buildCandidate(root, packet) {
-  runNode(root, 'scripts/build-locale-data.mjs');
-  runNode(root, 'scripts/generate-things-to-do.mjs', [`--as-of=${packet.control.as_of}`, '--locale=en', '--write']);
-  runNode(root, 'scripts/build-static-pages.mjs', ['--write']);
-  runNode(root, 'scripts/generate-things-to-do.mjs', [`--as-of=${packet.control.as_of}`, '--locale=pt', '--home=pt/index.html', '--write']);
-  runNode(root, 'scripts/build-sitemap.mjs', ['--write']);
+  for (const [script, ...args] of candidateBuildSteps(packet)) runNode(root, script, args);
 }
 
 function validateCandidate(root, packet) {
