@@ -1062,7 +1062,10 @@ standaloneMediaRejects('a manifest row with a URL beside a valid reference is re
       fs.rmSync(dir, { recursive: true, force: true });
     }
   };
-  const baseKeyCount = Object.keys(JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'locales', 'locale-data.generated.json'), 'utf8')).keys).length;
+  // Keys of every OTHER event: the test adds the URDI package itself, so it must
+  // count the same whether or not URDI has already been published.
+  const baseKeyCount = Object.keys(JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'locales', 'locale-data.generated.json'), 'utf8')).keys)
+    .filter((key) => !key.startsWith(`event.${URDI}.`)).length;
 
   {
     const { built, generated, contract } = buildWith(urdiPackage());

@@ -92,6 +92,56 @@ const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 const BOUNDARY_ID = 'phase1b-temp-lifecycle-boundary';
 const BOUNDARY_TITLE = 'Phase 1B Temporary Lifecycle Boundary';
 
+// The URDI scenarios below rehearse the URDI publication itself: they hand the
+// guarded writer the real URDI packet and expect it to be a NEW event. Once that
+// publication has landed on main the writer correctly refuses it as a collision
+// with an existing canonical id, so those rehearsals would fail on the very
+// repository they exist to protect. Every throwaway repository is therefore
+// returned to the state it had immediately before the URDI publication, whether
+// or not URDI has since been published: a no-op until then, and the same
+// pre-publication baseline afterwards. Only the isolated copy is touched.
+const URDI_PUBLISHED_ID = 'urdi-2026-mindelo';
+const PRE_URDI_AS_OF = '2026-11-18';
+
+function stripPublishedUrdi(root) {
+  const eventsPath = path.join(root, 'data', 'things-to-do-events.json');
+  const events = JSON.parse(fs.readFileSync(eventsPath, 'utf8'));
+  const published = events.records.find((item) => item.id === URDI_PUBLISHED_ID);
+  if (!published) return false;
+
+  events.records = events.records.filter((item) => item.id !== URDI_PUBLISHED_ID);
+  writeJsonFile(eventsPath, events);
+
+  const manifestPath = path.join(root, 'internal', 'provider-media-manifest.json');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  manifest.records = manifest.records.filter((item) => item.title !== published.media_manifest_title);
+  writeJsonFile(manifestPath, manifest);
+
+  for (const relative of [
+    `data/locales/pt-overlay-event-${URDI_PUBLISHED_ID}.source.json`,
+    `automation/things-to-do/runs/${URDI_PUBLISHED_ID}.json`,
+    `automation/things-to-do/runs/${URDI_PUBLISHED_ID}.md`,
+    `things-to-do/${URDI_PUBLISHED_ID}`,
+    `pt/things-to-do/${URDI_PUBLISHED_ID}`
+  ]) fs.rmSync(path.join(root, relative), { recursive: true, force: true });
+
+  const block = new RegExp(`\\r?\\n[ \\t]*<!-- BEGIN GENERATED EVENT: ${URDI_PUBLISHED_ID} -->[\\s\\S]*?<!-- END GENERATED EVENT: ${URDI_PUBLISHED_ID} -->`);
+  for (const relative of ['index.html', path.join('pt', 'index.html')]) {
+    const file = path.join(root, relative);
+    const html = fs.readFileSync(file, 'utf8');
+    if (!block.test(html)) throw new Error(`${relative}: the published URDI Home block was not found to strip`);
+    fs.writeFileSync(file, html.replace(block, ''));
+  }
+
+  writeJsonFile(path.join(root, CURRENTNESS_FILE), { ...JSON.parse(fs.readFileSync(path.join(root, CURRENTNESS_FILE), 'utf8')), as_of: PRE_URDI_AS_OF });
+  // The writer's own build sequence, so the generated surfaces (locale data,
+  // Home, PT Home training content, sitemap) are rebuilt exactly as it builds them.
+  for (const [script, ...args] of candidateBuildSteps({ control: { as_of: PRE_URDI_AS_OF } })) {
+    run(root, process.execPath, [script, ...args]);
+  }
+  return true;
+}
+
 function readCommittedCurrentness(root) {
   const value = JSON.parse(fs.readFileSync(path.join(root, CURRENTNESS_FILE), 'utf8')).as_of;
   if (!ISO_DAY.test(value ?? '')) {
@@ -278,6 +328,7 @@ function createRepository({ branch = 'feature/phase1b-test', committedAsOf = nul
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aprasa-phase1b-test-'));
   const remote = `${root}-remote.git`;
   fs.cpSync(ROOT, root, { recursive: true, filter: (src) => path.basename(src) !== '.git' });
+  stripPublishedUrdi(root);
 
   if (committedAsOf) {
     if (!ISO_DAY.test(committedAsOf)) throw new Error(`simulated committed baseline is not an ISO day: ${committedAsOf}`);
