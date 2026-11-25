@@ -207,9 +207,11 @@ function expireAAIInFutureTestBaseline(root, asOf) {
     throw new Error('AAI future-baseline fixture no longer matches the governed deadline');
   }
   if (asOf <= record.end_date) return;
-  if (record.publication_state !== 'CURRENT') throw new Error('AAI future-baseline fixture expected CURRENT before expiry');
-  record.publication_state = 'EXPIRED';
-  writeJsonFile(file, data);
+  if (!['CURRENT', 'EXPIRED'].includes(record.publication_state)) throw new Error('AAI future-baseline fixture has unexpected publication state');
+  if (record.publication_state === 'CURRENT') {
+    record.publication_state = 'EXPIRED';
+    writeJsonFile(file, data);
+  }
   for (const [locale, home] of [['en', 'index.html'], ['pt', 'pt/index.html']]) {
     run(root, process.execPath, ['scripts/generate-training-opportunities.mjs', `--as-of=${asOf}`, `--locale=${locale}`, `--home=${home}`, '--write']);
     const html = fs.readFileSync(path.join(root, home), 'utf8');

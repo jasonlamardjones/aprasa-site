@@ -15,7 +15,7 @@ const record = data.records.find((item) => item.id === id);
 assert.equal(data.records.length, 22);
 assert.equal(data.records.filter((item) => item.id === id).length, 1);
 assert.equal(record.lifecycle_class, 'fixed-window-opportunity');
-assert.equal(record.publication_state, 'CURRENT');
+assert.equal(record.publication_state, 'EXPIRED');
 assert.equal(record.end_date, '2026-11-26');
 assert.equal(record.card.attributes['data-application-expires-at'], '2026-11-27T01:00:00Z');
 assert.equal(new Intl.DateTimeFormat('en-CA', {timeZone:'Atlantic/Cape_Verde', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', hourCycle:'h23'}).format(new Date('2026-11-27T01:00:00Z')), '2026-11-27, 00');
@@ -26,16 +26,17 @@ for (const row of overlay.rows) {
   assert.equal(keys[row.key].en, row.source_en);
   assert.equal(keys[row.key].pt, row.pt);
 }
+// After the authorized static transition the exact canonical marker pairs remain,
+// but neither Home may present the AAI card, dialog content or application URL.
 for (const [locale, file] of [['en', 'index.html'], ['pt', 'pt/index.html']]) {
   const html = fs.readFileSync(path.join(root, file), 'utf8');
-  const region = html.split(`<!-- BEGIN GENERATED TRAINING: ${id} -->`)[1]?.split(`<!-- END GENERATED TRAINING: ${id} -->`)[0];
-  assert.ok(region, `${locale}: AAI region`);
-  for (const field of ['title','status','meta','body','requirements','good','action','checked','detail_checked']) {
-    assert.ok(region.includes(keys[`training.record.${id}.${field}`][locale]), `${locale}: ${field} is approved wording`);
-  }
-  assert.equal((region.match(/href="https:\/\/form.jotform.com\/263012358621551"/g) || []).length, 2);
-  assert.ok(region.includes('praca-trainings-800.webp'));
-  assert.ok(!region.includes('Praia') && !region.includes('Sal'));
+  const parts = html.split(`<!-- BEGIN GENERATED TRAINING: ${id} -->`);
+  assert.equal(parts.length, 2, `${locale}: exactly one AAI begin marker`);
+  const end = parts[1].split(`<!-- END GENERATED TRAINING: ${id} -->`);
+  assert.equal(end.length, 2, `${locale}: exactly one AAI end marker`);
+  assert.equal(end[0].trim(), '', `${locale}: AAI region is non-actionable`);
+  assert.ok(!html.includes(`data-event-id="${id}"`), `${locale}: no active AAI card`);
+  assert.ok(!html.includes('form.jotform.com/263012358621551'), `${locale}: no AAI application action`);
 }
 
 // Drive the actual browser guard function with a controlled clock. At the
@@ -66,28 +67,47 @@ assert.deepEqual(runtimeProbe(Date.parse('2026-11-27T01:00:00Z'), true), {remove
 function run(cwd, script, args=[]) {
   return spawnSync(process.execPath, [script, ...args], {cwd, encoding:'utf8'});
 }
+// The after-deadline currentness validator now accepts the canonical EXPIRED state.
 const current = run(root, 'scripts/validate-training-opportunities-currentness.mjs', ['--as-of=2026-11-27','--home=index.html','--home=pt/index.html']);
-assert.notEqual(current.status, 0, 'a still-CURRENT canonical record fails after expiry');
-assert.match(current.stderr, /aai-portuguese-a1-2026.*after deadline/);
+assert.equal(current.status, 0, current.stderr);
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'aprasa-aai-expiry-'));
 try {
   fs.cpSync(root, tmp, {recursive:true, filter: (src) => !['.git', 'node_modules'].includes(path.basename(src))});
   const p = path.join(tmp, 'data/training-opportunities.json');
-  const expired = JSON.parse(fs.readFileSync(p, 'utf8'));
-  expired.records.find((item) => item.id === id).publication_state = 'EXPIRED';
-  fs.writeFileSync(p, JSON.stringify(expired, null, 2) + '\n');
+  const historical = JSON.parse(fs.readFileSync(p, 'utf8'));
+  assert.equal(historical.records.length, 22, 'historical canonical record preserved');
+  const aai = historical.records.find((item) => item.id === id);
+  assert.equal(aai.publication_state, 'EXPIRED');
+  // Recreate the PRE-expiry fixture only inside this disposable copy. This
+  // proves the still-approved presentation is intact without republishing it.
+  aai.publication_state = 'CURRENT';
+  fs.writeFileSync(p, JSON.stringify(historical, null, 2) + '\n');
   for (const [locale, home] of [['en', 'index.html'], ['pt', 'pt/index.html']]) {
-    const result = run(tmp, 'scripts/generate-training-opportunities.mjs', [`--locale=${locale}`, '--as-of=2026-11-27', `--home=${home}`, '--write']);
+    let result = run(tmp, 'scripts/generate-training-opportunities.mjs', [`--locale=${locale}`, '--as-of=2026-11-26', `--home=${home}`, '--write']);
     assert.equal(result.status, 0, result.stderr);
-    const html = fs.readFileSync(path.join(tmp, home), 'utf8');
-    const region = html.split(`<!-- BEGIN GENERATED TRAINING: ${id} -->`)[1]?.split(`<!-- END GENERATED TRAINING: ${id} -->`)[0];
-    assert.equal(region.trim(), '', `${locale}: no actionable application presentation`);
+    let html = fs.readFileSync(path.join(tmp, home), 'utf8');
+    let region = html.split(`<!-- BEGIN GENERATED TRAINING: ${id} -->`)[1]?.split(`<!-- END GENERATED TRAINING: ${id} -->`)[0];
+    assert.ok(region, `${locale}: historical AAI region exists`);
+    for (const field of ['title','status','meta','body','requirements','good','action','checked','detail_checked']) {
+      assert.ok(region.includes(keys[`training.record.${id}.${field}`][locale]), `${locale}: ${field} approved wording preserved`);
+    }
+    assert.equal((region.match(/href="https:\/\/form.jotform.com\/263012358621551"/g) || []).length, 2);
+    aai.publication_state = 'EXPIRED';
+    fs.writeFileSync(p, JSON.stringify(historical, null, 2) + '\n');
+    result = run(tmp, 'scripts/generate-training-opportunities.mjs', [`--locale=${locale}`, '--as-of=2026-11-27', `--home=${home}`, '--write']);
+    assert.equal(result.status, 0, result.stderr);
+    html = fs.readFileSync(path.join(tmp, home), 'utf8');
+    region = html.split(`<!-- BEGIN GENERATED TRAINING: ${id} -->`)[1]?.split(`<!-- END GENERATED TRAINING: ${id} -->`)[0];
+    assert.equal(region.trim(), '', `${locale}: expired AAI has no actionable application presentation`);
+    aai.publication_state = 'CURRENT';
+    fs.writeFileSync(p, JSON.stringify(historical, null, 2) + '\n');
   }
+  aai.publication_state = 'EXPIRED';
+  fs.writeFileSync(p, JSON.stringify(historical, null, 2) + '\n');
   const valid = run(tmp, 'scripts/validate-training-opportunities-currentness.mjs', ['--as-of=2026-11-27','--home=index.html','--home=pt/index.html']);
   assert.equal(valid.status, 0, valid.stderr);
-  assert.equal(expired.records.length, 22, 'historical canonical record is preserved');
 } finally {
   fs.rmSync(tmp, {recursive:true, force:true});
 }
-console.log('AAI A1: nine exact EN/PT pairs, both Home surfaces, 26/27 Nov runtime boundary and canonical expiry release passed.');
+console.log('AAI A1: nine exact EN/PT pairs, runtime boundary, preserved pre-expiry wording and post-expiry static retirement passed.');
