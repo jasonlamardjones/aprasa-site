@@ -1667,6 +1667,27 @@
             "locale_key": "training.record.timbuktoo-greentech-launchpad.action"
           }
         }
+      },
+      "media": {
+        "asset": "assets/environment/praca-trainings-800.webp",
+        "width": 800,
+        "height": 450,
+        "loading": "lazy",
+        "decoding": "async",
+        "alt": {
+          "locale_key": "home.training.title"
+        },
+        "card_class": "card-media",
+        "detail_class": "dialog-media",
+        "layout": "block",
+        "attribute_order": [
+          "src",
+          "width",
+          "height",
+          "loading",
+          "decoding",
+          "alt"
+        ]
       }
     },
     {
@@ -1729,6 +1750,27 @@
             "locale_key": "training.record.timbuktoo-edtech-pan-african-incubation.action"
           }
         }
+      },
+      "media": {
+        "asset": "assets/environment/praca-trainings-800.webp",
+        "width": 800,
+        "height": 450,
+        "loading": "lazy",
+        "decoding": "async",
+        "alt": {
+          "locale_key": "home.training.title"
+        },
+        "card_class": "card-media",
+        "detail_class": "dialog-media",
+        "layout": "block",
+        "attribute_order": [
+          "src",
+          "width",
+          "height",
+          "loading",
+          "decoding",
+          "alt"
+        ]
       }
     },
     {
@@ -1822,7 +1864,14 @@
         "card_class": "card-media",
         "detail_class": "dialog-media",
         "layout": "block",
-        "attribute_order": ["src", "width", "height", "loading", "decoding", "alt"]
+        "attribute_order": [
+          "src",
+          "width",
+          "height",
+          "loading",
+          "decoding",
+          "alt"
+        ]
       },
       "card": {
         "attributes": {

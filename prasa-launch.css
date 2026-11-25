@@ -90,7 +90,7 @@ h1 { max-width: 19ch; margin: .45rem 0 0; font-size: clamp(1.45rem, 5.2vw, 2.35r
 .hero-wordmark { display: block; margin-top: .7rem; }
 .hero-wordmark img {
   display: block;
-  width: clamp(15rem, 42vw, 19rem);
+  width: clamp(16.5rem, 44vw, 21rem);
   height: auto;
   margin: 0;
 }
