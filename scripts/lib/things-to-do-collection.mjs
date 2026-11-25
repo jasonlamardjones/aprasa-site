@@ -114,20 +114,21 @@ export const THINGS_TO_DO_HUB_PUBLIC = false;
  * rendered Home against. It currently coincides with canonical record order,
  * but this list is the authority, not that coincidence.
  *
- * Project 03, URDI 2026 (23 November 2026): one explicit sixth id is appended
- * after the five above, which keep their ids and order unchanged. It is an
- * exact, time-bounded curated selection, not a rule: the record leaves current
- * Home discovery on its own through the normal currentness gate (from
- * 2026-11-30, absent a verified extension), and appending the id publishes
- * nothing -- the record must still exist, be published and be publicly current.
+ * Project 03, URDI 2026 (23 November 2026): one explicit sixth id was
+ * originally appended after the previous five. Founder-approved Home polish
+ * (25 November 2026) places this currently dated URDI card before the two
+ * recurring venue cards, without changing approved membership or currentness.
+ * URDI leaves Home through its existing currentness gate from 2026-11-30,
+ * absent a verified extension. Selecting an id cannot publish an ineligible
+ * record -- it must still exist, be published and be publicly current.
  */
 export const HOME_PREVIEW_IDS = Object.freeze([
   'cartinha-dholanda-mindelo-2026',
   'sinergia-da-materia',
   'voyage-obi-margo-kafe-djan-djan-2026',
+  'urdi-2026-mindelo',
   'taverna-live-music',
   'nautilus-live-music',
-  'urdi-2026-mindelo',
 ]);
 
 /**
